@@ -4,6 +4,7 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut } from 'lucide-react';
 
 export default function Profile() {
   const { user, logout } = useAuthContext();
@@ -167,8 +168,8 @@ export default function Profile() {
         
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-bold flex items-center gap-2 transition-colors">
-                ← Voltar
+            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white font-bold flex items-center gap-1.5 p-2 hover:bg-gray-150 rounded-xl transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Voltar
             </button>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Meu Perfil</h1>
             <div className="w-8"></div>
@@ -178,8 +179,8 @@ export default function Profile() {
             
             {/* Aviso Alteração */}
             {isDirty && (
-                <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-center text-xs font-bold py-2 absolute top-0 w-full z-10 animate-fade-in">
-                    ⚠️ Você tem alterações não salvas
+                <div className="bg-yellow-105 dark:bg-yellow-900/30 text-yellow-750 dark:text-yellow-405 text-center text-xs font-bold py-2 absolute top-0 w-full z-10 animate-fade-in flex items-center justify-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Você tem alterações não salvas
                 </div>
             )}
 
@@ -187,15 +188,18 @@ export default function Profile() {
             <div className="h-32 bg-gradient-to-r from-blue-600 to-purple-600 relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                     <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl relative group">
-                        <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-4xl overflow-hidden font-bold text-gray-400">
+                        <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-400">
                             {formData.photoURL ? (
                                 <img src={formData.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <span>{formData.displayName?.charAt(0).toUpperCase() || '👤'}</span>
+                                <span className="text-lg text-gray-500 dark:text-gray-400 flex items-center justify-center">
+                                  {formData.displayName?.charAt(0).toUpperCase() || <User className="w-10 h-10" />}
+                                </span>
                             )}
                         </div>
-                        <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-                            <span className="text-xs font-bold">Trocar 📷</span>
+                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                            <Camera className="w-5 h-5 mb-0.5" />
+                            <span className="text-[10px] font-bold">Alterar</span>
                             <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                         </label>
                     </div>
@@ -225,17 +229,17 @@ export default function Profile() {
                                 name="goal"
                                 value={formData.goal} 
                                 onChange={handleChange}
-                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white cursor-pointer"
+                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white cursor-pointer font-bold"
                             >
-                                <option value="Hipertrofia">💪 Hipertrofia</option>
-                                <option value="Emagrecimento">🔥 Emagrecimento</option>
-                                <option value="Força">🏋️ Força Pura</option>
-                                <option value="Resistência">🏃 Resistência</option>
+                                <option value="Hipertrofia">Hipertrofia</option>
+                                <option value="Emagrecimento">Emagrecimento</option>
+                                <option value="Força">Força Pura</option>
+                                <option value="Resistência">Resistência</option>
                             </select>
                         </div>
                     </div>
 
-                    {/* --- NOVO: CARD DO TREINADOR --- */}
+                    {/* --- CARD DO TREINADOR --- */}
                     {coachData && (
                         <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-4 flex items-center justify-between">
                             <div>
@@ -253,9 +257,9 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/chat')}
-                                className="bg-white dark:bg-gray-800 text-blue-600 px-3 py-2 rounded-xl shadow-sm font-bold text-xs hover:bg-blue-50 transition-colors border border-blue-100 dark:border-gray-700"
+                                className="bg-white dark:bg-gray-800 text-blue-600 px-3 py-2 rounded-xl shadow-sm font-bold text-xs hover:bg-blue-50 transition-colors border border-blue-100 dark:border-gray-700 flex items-center gap-1"
                             >
-                                💬 Chat
+                                <MessageSquare className="w-3.5 h-3.5" /> Chat
                             </button>
                         </div>
                     )}
@@ -334,11 +338,15 @@ export default function Profile() {
                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed shadow-none'
                             }`}
                         >
-                            {isDirty ? 'Salvar Alterações 💾' : 'Tudo atualizado ✨'}
+                            {isDirty ? (
+                                <><Save className="w-5 h-5 text-white" /> Salvar Alterações</>
+                            ) : (
+                                <><CheckCircle className="w-5 h-5 text-gray-400" /> Tudo atualizado</>
+                            )}
                         </button>
                         
-                        <button type="button" onClick={handleLogout} className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold py-4 rounded-xl hover:bg-red-100 transition-colors">
-                            Sair da Conta 🚪
+                        <button type="button" onClick={handleLogout} className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold py-4 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                            <LogOut className="w-4 h-4" /> Sair da Conta
                         </button>
                     </div>
 

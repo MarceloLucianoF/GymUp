@@ -3,6 +3,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { ArrowLeft } from 'lucide-react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -30,7 +31,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 transition-colors">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700 animate-fade-in-up">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-black text-gray-800 dark:text-white">Recuperar Senha</h2>
           <p className="text-gray-500 text-sm mt-2">Digite seu email para receber o link.</p>
@@ -60,8 +61,8 @@ export default function ForgotPassword() {
         </form>
 
         <div className="text-center mt-6">
-          <Link to="/login" className="text-sm font-bold text-gray-500 hover:text-blue-500 transition-colors">
-            ← Voltar para o Login
+          <Link to="/login" className="text-sm font-bold text-gray-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-1.5">
+            <ArrowLeft className="w-4 h-4" /> Voltar para o Login
           </Link>
         </div>
       </div>

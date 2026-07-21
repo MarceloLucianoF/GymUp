@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useAdmin } from '../../hooks/useAdmin';
-import { Home, Dumbbell, Calendar, Bot, User, Shield } from 'lucide-react';
+import { Home, Dumbbell, Calendar, User, Shield, MessageSquare } from 'lucide-react';
 
 // --- LOGO DEFINITIVO (Geometry Solid) ---
 const AcademyLogo = ({ className, isWhite = false }) => {
@@ -101,8 +101,8 @@ export default function Navbar() {
               <Link to="/history" className={`text-sm font-bold transition-colors hover:text-blue-600 ${isActive('/history') ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'}`}>
                 Histórico
               </Link>
-              <Link to="/agents" className={`text-sm font-bold transition-colors hover:text-blue-600 flex items-center gap-1.5 ${isActive('/agents') ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'}`}>
-                <Bot className="w-4 h-4" /> Agentes IA
+              <Link to={userProfile?.role === 'coach' ? "/coach/chat" : "/chat"} className={`text-sm font-bold transition-colors hover:text-blue-600 flex items-center gap-1.5 ${isActive('/chat') || isActive('/coach/chat') ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                <MessageSquare className="w-4 h-4" /> Chat
               </Link>
               {isAdmin && (
                 <Link to="/admin" className="text-sm font-bold text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1 rounded-full flex items-center gap-1">
@@ -162,14 +162,14 @@ export default function Navbar() {
               <span className={`text-[10px] font-bold ${isActive('/trainings') ? 'text-blue-600' : 'text-gray-400'}`}>Treinos</span>
             </Link>
 
-            {/* BOTÃO FLUTUANTE COM AGENTES IA */}
+            {/* BOTÃO FLUTUANTE COM CHAT */}
             <div className="relative -top-6">
                 <Link 
-                  to="/agents" 
+                  to={userProfile?.role === 'coach' ? "/coach/chat" : "/chat"} 
                   className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-xl shadow-blue-600/30 border-4 border-white dark:border-gray-800 transform active:scale-95 transition-all p-3"
-                  title="Agentes IA"
+                  title="Chat"
                 >
-                  <Bot className="w-6 h-6 text-white" />
+                  <MessageSquare className="w-6 h-6 text-white" />
                 </Link>
             </div>
 
