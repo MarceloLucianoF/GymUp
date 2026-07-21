@@ -5,6 +5,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
 import MonthCalendar from '../../components/dashboard/MonthCalendar';
 import { useNavigate } from 'react-router-dom';
+import { Clock, Dumbbell, Flame, Search, Trash2, ArrowUpRight } from 'lucide-react';
 
 export default function HistoryPage() {
   const { user } = useAuthContext();
@@ -99,7 +100,7 @@ export default function HistoryPage() {
             </button>
         </div>
       </div>
-    ), { duration: 4000, icon: '🗑️' });
+    ), { duration: 4000, icon: <Trash2 className="w-5 h-5 text-red-500" /> });
   };
 
   const deleteItem = async (itemId) => {
@@ -118,53 +119,51 @@ export default function HistoryPage() {
     return `${mins} min`;
   };
 
-  const formatDate = (isoString) => {
-    if (!isoString) return { day: '--', month: '--', full: '' };
-    const date = new Date(isoString);
-    return {
-        day: date.getDate(),
-        month: date.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase(),
-        full: date.toLocaleDateString('pt-BR', { weekday: 'long', hour: '2-digit', minute: '2-digit' })
-    };
+  const formatDate = (dateString) => {
+      const d = new Date(dateString);
+      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return {
+          day: d.getDate(),
+          month: months[d.getMonth()],
+          weekday: days[d.getDay()],
+          full: d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+      };
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-300 pb-24">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 pb-32 transition-colors">
+      <div className="max-w-4xl mx-auto space-y-6">
         
-        {/* Header e Calendário */}
-        <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Diário de Treinos 📅</h1>
-            <MonthCalendar history={history} />
+        {/* Cabeçalho */}
+        <div>
+            <h1 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">Histórico de Treinos</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Veja tudo o que você já realizou.</p>
         </div>
 
-        {/* Controles de Filtro e Busca */}
-        <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 py-2 mb-4 space-y-3">
-            <div className="flex gap-2">
+        {/* Calendário Mensal */}
+        <MonthCalendar history={history} />
+
+        {/* Barra de Filtros */}
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+            <div className="flex-1 flex gap-2">
                 <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
                     <input 
                         type="text" 
                         placeholder="Buscar treino ou exercício..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white"
+                        className="w-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white pl-9 pr-4 py-3 rounded-xl border border-gray-150 dark:border-gray-700 outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
                     />
                 </div>
+                
                 <select 
                     value={timeFilter}
                     onChange={(e) => setTimeFilter(e.target.value)}
-                    className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-bold text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-4 py-3 rounded-xl border border-gray-150 dark:border-gray-700 outline-none text-sm font-bold shadow-sm"
                 >
-                    <option value="all">Tudo</option>
+                    <option value="all">Sempre</option>
                     <option value="month">Este Mês</option>
                     <option value="last_month">Mês Passado</option>
                 </select>
@@ -178,8 +177,8 @@ export default function HistoryPage() {
 
         {/* Lista de Resultados */}
         {filteredHistory.length === 0 ? (
-          <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-            <p className="text-4xl mb-4 opacity-50">🕵️‍♂️</p>
+          <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center">
+            <Search className="w-12 h-12 text-gray-400 mb-4 opacity-50" />
             <h3 className="text-lg font-bold text-gray-700 dark:text-white">Nada encontrado</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
           </div>
@@ -191,7 +190,6 @@ export default function HistoryPage() {
                 return (
                   <div 
                     key={item.firestoreId} 
-                    // ✅ AÇÃO PRINCIPAL: Ir para Detalhes
                     onClick={() => navigate(`/history/${item.firestoreId}`)}
                     className="bg-white dark:bg-gray-800 rounded-2xl p-0 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden group relative transition-all hover:shadow-md cursor-pointer"
                   >
@@ -216,16 +214,16 @@ export default function HistoryPage() {
                             {/* Badges */}
                             <div className="flex flex-wrap gap-2">
                                 <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                    ⏱️ {formatDuration(item.duration)}
+                                    <Clock className="w-3 h-3 text-blue-500" /> {formatDuration(item.duration)}
                                 </span>
                                 {item.totalVolume > 0 && (
                                     <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                        🏋️ {item.totalVolume}kg
+                                        <Dumbbell className="w-3 h-3 text-purple-500" /> {item.totalVolume}kg
                                     </span>
                                 )}
                                 {item.totalSetsDone !== undefined && (
                                     <span className="inline-flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                        🔥 {item.totalSetsDone} Sets
+                                        <Flame className="w-3 h-3 text-orange-500" /> {item.totalSetsDone} Sets
                                     </span>
                                 )}
                             </div>
@@ -234,13 +232,13 @@ export default function HistoryPage() {
                          {/* Botão Delete (Com stopPropagation) */}
                          <button 
                             onClick={(e) => {
-                                e.stopPropagation(); // 🛑 Evita abrir detalhes ao deletar
+                                e.stopPropagation();
                                 handleDeleteRequest(item.firestoreId);
                             }}
                             className="absolute top-4 right-4 text-gray-300 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Apagar registro"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
 
@@ -256,7 +254,7 @@ export default function HistoryPage() {
                                         <div 
                                             key={i} 
                                             onClick={(e) => {
-                                                e.stopPropagation(); // 🛑 Evita abrir detalhes do treino ao clicar no analytics do exercício
+                                                e.stopPropagation();
                                                 navigate(`/analytics/${encodeURIComponent(ex.name)}`);
                                             }}
                                             className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-700/40 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer group transition-colors border border-transparent hover:border-blue-200 dark:hover:border-gray-600"
@@ -265,7 +263,7 @@ export default function HistoryPage() {
                                                 <span className="text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors truncate">
                                                     {ex.name}
                                                 </span>
-                                                <span className="text-[10px] text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">↗</span>
+                                                <ArrowUpRight className="w-3 h-3 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                             </div>
                                             
                                             <div className="text-right flex items-center gap-3 shrink-0">

@@ -20,6 +20,7 @@ import MeasurementsPage from './pages/user/MeasurementsPage'; // ✅ NOVO
 import ExerciseAnalytics from './pages/user/ExerciseAnalytics'; // ✅ NOVO
 import UserChatPage from './pages/user/UserChatPage'; // ✅ Novo
 import WorkoutDetailsPage from './pages/user/WorkoutDetailsPage'; // ✅ Novo
+import AgentsPage from './pages/user/AgentsPage';
 
 // --- PÁGINAS: ADMIN (TREINADOR) ---
 import AdminPanel from './pages/admin/AdminPanel';
@@ -92,6 +93,7 @@ function AppRoutes() {
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/measurements" element={<ProtectedRoute><MeasurementsPage /></ProtectedRoute>} /> {/* 🔥 Dashboard Evolução */}
+          <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
           
           {/* Fluxo de Treino */}
           <Route path="/trainings" element={<ProtectedRoute><TrainingsPage /></ProtectedRoute>} />

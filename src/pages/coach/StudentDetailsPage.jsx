@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
+import { ArrowLeft, MessageSquare, Clock, Scale } from 'lucide-react';
 
 // Componente simples de Gráfico de Barras (Volume)
 const VolumeChart = ({ data }) => {
@@ -83,16 +84,16 @@ export default function StudentDetailsPage() {
         fetchDetails();
     }, [studentId, navigate]);
 
-    if (loading) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
+    if (loading) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
             <div className="max-w-5xl mx-auto space-y-6">
                 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
-                    <button onClick={() => navigate('/coach/students')} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 transition-colors">
-                        ←
+                    <button onClick={() => navigate('/coach/students')} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 transition-colors flex items-center justify-center">
+                        <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="flex items-center gap-4 flex-1">
                         <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md overflow-hidden">
@@ -108,7 +109,7 @@ export default function StudentDetailsPage() {
                             onClick={() => navigate('/coach/chat', { state: { targetUser: { uid: student.id, displayName: student.displayName, photoURL: student.photoURL } } })}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2"
                         >
-                            💬 Mensagem
+                            <MessageSquare className="w-4 h-4 text-white" /> Mensagem
                         </button>
                     </div>
                 </div>
@@ -161,9 +162,9 @@ export default function StudentDetailsPage() {
                                                 <h4 className="font-bold text-sm text-gray-800 dark:text-white">{item.trainingName}</h4>
                                                 <span className="text-[10px] text-gray-400">{new Date(item.date).toLocaleDateString()}</span>
                                             </div>
-                                            <div className="flex gap-3 mt-1 text-xs text-gray-500 font-mono">
-                                                <span>⏱ {Math.floor(item.duration / 60)}min</span>
-                                                <span>🏗 {(item.totalVolume / 1000).toFixed(1)}t</span>
+                                            <div className="flex gap-3 mt-1 text-xs text-gray-500 font-mono items-center">
+                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-gray-400" /> {Math.floor(item.duration / 60)}min</span>
+                                                <span className="flex items-center gap-1"><Scale className="w-3 h-3 text-gray-400" /> {(item.totalVolume / 1000).toFixed(1)}t</span>
                                             </div>
                                         </div>
                                     </div>

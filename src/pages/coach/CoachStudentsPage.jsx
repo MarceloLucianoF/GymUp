@@ -4,6 +4,7 @@ import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { ArrowLeft, Megaphone, User, ClipboardList, AlertTriangle, MessageSquare, DollarSign, X } from 'lucide-react';
 
 export default function CoachStudentsPage() {
   const { user } = useAuthContext();
@@ -71,7 +72,7 @@ export default function CoachStudentsPage() {
               s.id === selectedStudent.id ? { ...s, currentTrainingId: trainingId } : s
           ));
 
-          toast.success("Ficha atualizada!", { id: loadingToast });
+          toast.success("Ficha updated!", { id: loadingToast });
           setShowModal(false);
       } catch (error) {
           console.error(error);
@@ -92,34 +93,36 @@ export default function CoachStudentsPage() {
       });
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in-down">
             <div>
-                <button onClick={() => navigate('/coach/dashboard')} className="text-gray-500 hover:text-blue-500 text-sm font-bold mb-2">← Voltar</button>
-                <h1 className="text-3xl font-black text-gray-800 dark:text-white">Meus Alunos 👥</h1>
+                <button onClick={() => navigate('/coach/dashboard')} className="text-gray-500 hover:text-blue-550 text-sm font-bold mb-2 flex items-center gap-1.5 p-2 hover:bg-gray-150 rounded-xl transition-colors">
+                    <ArrowLeft className="w-4 h-4" /> Voltar
+                </button>
+                <h1 className="text-3xl font-black text-gray-800 dark:text-white flex items-center gap-2">Meus Alunos</h1>
                 <p className="text-gray-500 text-sm">Gerencie o acesso e as fichas de treino.</p>
             </div>
             
             {/* Botão de convite rápido */}
             <button 
                 onClick={() => navigate('/coach/dashboard')} 
-                className="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-gray-50 transition-colors"
+                className="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5"
             >
-                📢 Pegar Código de Convite
+                <Megaphone className="w-4 h-4 text-gray-500" /> Pegar Código de Convite
             </button>
         </div>
 
         {/* Lista de Alunos */}
         {students.length === 0 ? (
-            <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                <span className="text-4xl block mb-2 opacity-50">🦗</span>
-                <p className="text-gray-500">Nenhum aluno vinculado ainda.</p>
+            <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+                <User className="w-12 h-12 text-gray-400 mb-2 opacity-50" />
+                <p className="text-gray-500 font-bold">Nenhum aluno vinculado ainda.</p>
                 <p className="text-sm text-gray-400 mt-1">Envie seu código de convite para começar.</p>
             </div>
         ) : (
@@ -133,7 +136,7 @@ export default function CoachStudentsPage() {
                             {/* Info do Aluno (Clicável para ir aos Detalhes) */}
                             <div 
                                 className="flex items-center gap-4 w-full md:w-auto cursor-pointer"
-                                onClick={() => navigate(`/coach/students/${student.id}`)} // ✅ Navegação para Detalhes
+                                onClick={() => navigate(`/coach/students/${student.id}`)} 
                                 title="Ver Prontuário"
                             >
                                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shrink-0 shadow-md overflow-hidden relative">
@@ -156,11 +159,11 @@ export default function CoachStudentsPage() {
                                         <p className="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Ficha Atual</p>
                                         {currentTrainingName ? (
                                             <p className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2 text-sm truncate">
-                                                <span>📋</span> {currentTrainingName}
+                                                <ClipboardList className="w-4 h-4" /> {currentTrainingName}
                                             </p>
                                         ) : (
-                                            <p className="text-sm text-red-400 italic flex items-center gap-1">
-                                                <span>⚠️</span> Sem ficha ativa
+                                            <p className="text-sm text-red-400 italic flex items-center gap-1.5">
+                                                <AlertTriangle className="w-4 h-4 text-red-400" /> Sem ficha ativa
                                             </p>
                                         )}
                                     </div>
@@ -180,14 +183,14 @@ export default function CoachStudentsPage() {
                                     className="flex-1 md:flex-none px-5 py-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-100 transition-colors rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                                     title="Abrir Chat"
                                 >
-                                    💬 Chat
+                                    <MessageSquare className="w-4 h-4 text-blue-600" /> Chat
                                 </button>
                                 <button 
                                     onClick={() => navigate(`/coach/financial`)} 
                                     className="flex-1 md:flex-none px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-green-400 hover:text-green-500 transition-colors rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                                     title="Financeiro"
                                 >
-                                    💲
+                                    <DollarSign className="w-4 h-4 text-gray-500 group-hover:text-green-500" />
                                 </button>
                             </div>
                         </div>
@@ -199,7 +202,7 @@ export default function CoachStudentsPage() {
         {/* MODAL DE ATRIBUIÇÃO DE TREINO */}
         {showModal && selectedStudent && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-                <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl relative flex flex-col max-h-[85vh]">
+                <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl relative flex flex-col max-h-[85vh] border border-gray-100 dark:border-gray-700">
                     
                     {/* Header Modal */}
                     <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
@@ -207,14 +210,16 @@ export default function CoachStudentsPage() {
                             <h3 className="text-xl font-black text-gray-800 dark:text-white">Definir Ficha</h3>
                             <p className="text-sm text-gray-500">Para: <span className="font-bold text-blue-600">{selectedStudent.displayName}</span></p>
                         </div>
-                        <button onClick={() => setShowModal(false)} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-500">✕</button>
+                        <button onClick={() => setShowModal(false)} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full hover:bg-gray-250 dark:hover:bg-gray-650 transition-colors text-gray-500 flex items-center justify-center">
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
 
                     {/* Lista de Fichas Disponíveis */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/50">
                         {trainings.length === 0 ? (
-                            <div className="text-center py-10 text-gray-400">
-                                <span className="text-4xl block mb-2">📝</span>
+                            <div className="text-center py-10 text-gray-400 flex flex-col items-center justify-center">
+                                <ClipboardList className="w-12 h-12 text-gray-400 mb-2 opacity-50" />
                                 <p>Você não criou nenhuma ficha ainda.</p>
                                 <button 
                                     onClick={() => navigate('/admin/trainings')} 

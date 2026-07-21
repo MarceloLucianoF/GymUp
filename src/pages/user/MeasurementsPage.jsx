@@ -4,6 +4,7 @@ import { collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, del
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { Camera, Scale, TrendingDown, X, Plus, Calendar, ArrowLeft } from 'lucide-react';
 
 // --- SUB-COMPONENTES ---
 
@@ -11,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 const WeightChart = ({ data }) => {
   if (!data || data.length < 2) return (
     <div className="h-48 flex flex-col items-center justify-center text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-        <span className="text-2xl mb-2">📉</span>
+        <TrendingDown className="w-8 h-8 text-gray-400 mb-2 opacity-60" />
         <p className="text-sm">Registre pelo menos 2 pesagens.</p>
     </div>
   );
@@ -110,7 +111,9 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-450 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <X className="w-4 h-4" />
+                </button>
                 
                 <h2 className="text-xl font-black text-gray-800 dark:text-white mb-6">Nova Medição</h2>
                 
@@ -136,7 +139,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                                     <img src={preview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
                                 ) : (
                                     <>
-                                        <span className="text-2xl mb-1">📷</span>
+                                        <Camera className="w-6 h-6 text-gray-400 mb-1" />
                                         <span className="text-xs text-gray-400">Clique para enviar</span>
                                     </>
                                 )}
@@ -150,7 +153,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                         type="submit" 
                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 active:scale-95 transition-all disabled:opacity-50"
                     >
-                        {isSaving ? 'Salvando...' : 'Registrar Evolução 🚀'}
+                        {isSaving ? 'Salvando...' : 'Registrar Evolução'}
                     </button>
                 </form>
             </div>
@@ -278,20 +281,20 @@ export default function MeasurementsPage() {
         
         {/* Header */}
         <div className="flex justify-between items-center">
-            <button onClick={() => navigate('/home')} className="text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center gap-2">
-                ← Voltar
+            <button onClick={() => navigate('/home')} className="text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Voltar
             </button>
             <button 
                 onClick={() => setShowModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-all text-xs flex items-center gap-2"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-all text-xs flex items-center gap-1.5"
             >
-                <span>📷</span> Nova Medida
+                <Plus className="w-3.5 h-3.5" /> Nova Medida
             </button>
         </div>
 
         {measurements.length === 0 ? (
-            <div className="text-center py-20">
-                <div className="text-6xl mb-4 opacity-50">⚖️</div>
+            <div className="text-center py-20 flex flex-col items-center justify-center">
+                <Scale className="w-16 h-16 text-gray-400 mb-4 opacity-50" />
                 <h2 className="text-2xl font-bold text-gray-700 dark:text-white">Comece sua jornada</h2>
                 <p className="text-gray-500 mb-6">Registre seu peso hoje para acompanhar sua evolução.</p>
                 <button onClick={() => setShowModal(true)} className="text-blue-500 font-bold underline">Registrar agora</button>

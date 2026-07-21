@@ -4,6 +4,7 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, Calendar, ChevronRight, ClipboardList } from 'lucide-react';
 
 // --- COMPONENTES VISUAIS ---
 
@@ -75,19 +76,19 @@ export default function TrainingsPage() {
   }, [user]);
 
   // 2. Helpers
-  const getTrainingEmoji = (name) => {
+  const getTrainingIconComponent = (name) => {
     const lower = (name || '').toLowerCase();
-    if (lower.includes('peito') || lower.includes('superior')) return '🦍';
-    if (lower.includes('perna') || lower.includes('inferior')) return '🦵';
-    if (lower.includes('costas') || lower.includes('dorsal')) return '🐍';
-    if (lower.includes('braço') || lower.includes('bíceps')) return '💪';
-    if (lower.includes('cardio') || lower.includes('aeróbico')) return '🏃';
-    if (lower.includes('full') || lower.includes('corpo')) return '⚡';
+    if (lower.includes('peito') || lower.includes('superior')) return Dumbbell;
+    if (lower.includes('perna') || lower.includes('inferior') || lower.includes('glúteo')) return Footprints;
+    if (lower.includes('costas') || lower.includes('dorsal')) return Activity;
+    if (lower.includes('braço') || lower.includes('bíceps') || lower.includes('tríceps')) return Dumbbell;
+    if (lower.includes('cardio') || lower.includes('aeróbico')) return Activity;
+    if (lower.includes('full') || lower.includes('corpo')) return Zap;
     
     const match = (name || '').match(/Treino\s+([A-Z])/i);
     const letter = match ? match[1].toUpperCase() : '';
-    const map = { 'A': '🔥', 'B': '⚡', 'C': '💣', 'D': '🧱', 'E': '🚀' };
-    return map[letter] || '🏋️';
+    const map = { 'A': Flame, 'B': Zap, 'C': Dumbbell, 'D': Activity, 'E': Rocket };
+    return map[letter] || Dumbbell;
   };
 
   const getDifficultyColor = (diff) => {
@@ -171,7 +172,7 @@ export default function TrainingsPage() {
 
               const lastDate = historyMap[validId];
               const lastDoneText = formatLastDone(lastDate);
-              const emoji = getTrainingEmoji(training.name);
+              const IconComponent = getTrainingIconComponent(training.name);
               const estimatedTime = (training.exercises?.length || 0) * 5 + 10; 
 
               return (
@@ -190,8 +191,8 @@ export default function TrainingsPage() {
 
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center text-3xl shadow-sm group-hover:scale-110 transition-transform group-hover:bg-white dark:group-hover:bg-gray-600">
-                            {emoji}
+                        <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform group-hover:bg-white dark:group-hover:bg-gray-600">
+                            <IconComponent className="w-7 h-7 text-blue-600 dark:text-blue-400 group-hover:text-blue-500" />
                         </div>
                         
                         <div className="text-right">
@@ -215,15 +216,15 @@ export default function TrainingsPage() {
                     <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-4">
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-1 rounded-lg">
-                                <span>📋</span> {training.exercises?.length || 0}
+                                <ClipboardList className="w-3.5 h-3.5 text-gray-500" /> {training.exercises?.length || 0}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-1 rounded-lg">
-                                <span>⏱️</span> ~{estimatedTime} min
+                                <Clock className="w-3.5 h-3.5 text-gray-500" /> ~{estimatedTime} min
                             </div>
                         </div>
                         
                         <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                            ➔
+                            <ChevronRight className="w-4 h-4" />
                         </div>
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useAdmin } from '../../hooks/useAdmin';
 import { Navigate } from 'react-router-dom';
+import { Wrench, FileJson, Edit3, Trash2, Check, Save, PlusCircle, CheckCircle, Sparkles } from 'lucide-react';
 
 export default function AdminPanel() {
   const { isAdmin, loading: authLoading } = useAdmin();
@@ -100,7 +101,7 @@ export default function AdminPanel() {
                  if (docData.muscleGroup) docData.muscleGroup = docData.muscleGroup.toLowerCase();
              }
 
-             // LÓGICA DE TREINOS (O PULO DO GATO 🐱)
+             // LÓGICA DE TREINOS (O PULO DO GATO)
              if (targetCollection === 'trainings' && Array.isArray(item.exercises)) {
                  // Substitui [101, 102] por ["dgz...", "u3u..."]
                  const resolvedExercises = item.exercises.map(oldId => {
@@ -118,71 +119,71 @@ export default function AdminPanel() {
 
         await batch.commit();
         toast.success(`${count} itens importados e vinculados!`, { id: loadingToast });
-        fetchData(); 
-      } catch (err) {
-        console.error(err);
-        toast.error('Erro no JSON.', { id: loadingToast });
+        fetchData(); // Recarrega tela
+      } catch (error) {
+        console.error(error);
+        toast.error("Erro na importação. Verifique formato.", { id: loadingToast });
       }
     };
     reader.readAsText(file);
-    e.target.value = null; 
   };
 
   // --- LÓGICA DE EXERCÍCIOS ---
   const handleSaveExercise = async (e) => {
     e.preventDefault();
-    const loadingToast = toast.loading('Salvando...');
-
+    const loadingToast = toast.loading("Salvando...");
     try {
-      const cleanData = {
-        name: String(exForm.name || '').trim(),
-        muscleGroup: String(exForm.muscleGroup || 'geral').toLowerCase(),
-        machineImage: String(exForm.machineImage || ''),
-        videoUrl: String(exForm.videoUrl || ''),
-        execution: String(exForm.execution || ''),
-        sets: Number(exForm.sets) || 0,
-        reps: String(exForm.reps || ''),
-        rest: Number(exForm.rest) || 0,
-        updatedAt: new Date().toISOString()
-      };
+        const payload = {
+            ...exForm,
+            sets: Number(exForm.sets),
+            rest: Number(exForm.rest)
+        };
 
-      if (editingId) {
-        await updateDoc(doc(db, 'exercises', editingId), cleanData);
-        toast.success('Atualizado!', { id: loadingToast });
-      } else {
-        cleanData.createdAt = new Date().toISOString();
-        await addDoc(collection(db, 'exercises'), cleanData);
-        toast.success('Criado!', { id: loadingToast });
-      }
-      resetExerciseForm();
-      fetchData();
+        if (editingId) {
+            await updateDoc(doc(db, 'exercises', editingId), payload);
+            toast.success("Exercício atualizado!", { id: loadingToast });
+        } else {
+            await addDoc(collection(db, 'exercises'), payload);
+            toast.success("Exercício criado!", { id: loadingToast });
+        }
+        
+        resetExerciseForm();
+        fetchData();
     } catch (error) {
-      console.error(error);
-      toast.error(`Erro: ${error.message}`, { id: loadingToast });
+        console.error(error);
+        toast.error("Erro ao salvar.", { id: loadingToast });
     }
   };
 
   const handleEditExercise = (ex) => {
-    setExForm({
-        ...ex,
-        muscleGroup: ex.muscleGroup ? ex.muscleGroup.toLowerCase() : ''
-    });
-    setEditingId(ex.firestoreId);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const resetExerciseForm = () => {
-    setExForm(initialExForm);
-    setEditingId(null);
+      setEditingId(ex.firestoreId);
+      setExForm({
+          name: ex.name || '',
+          muscleGroup: ex.muscleGroup || '',
+          machineImage: ex.machineImage || '',
+          videoUrl: ex.videoUrl || '',
+          sets: ex.sets || 3,
+          reps: ex.reps || '12',
+          rest: ex.rest || 60,
+          execution: ex.execution || ''
+      });
   };
 
   const handleDeleteExercise = async (id) => {
     if(!window.confirm("Apagar exercício?")) return;
     try {
         await deleteDoc(doc(db, 'exercises', id));
-        toast.success("Apagado.");
+        toast.success("Exercício removido!");
         fetchData();
-    } catch (e) { toast.error("Erro ao apagar"); }
+    } catch (error) {
+        console.error(error);
+        toast.error("Erro ao deletar.");
+    }
+  };
+
+  const resetExerciseForm = () => {
+      setEditingId(null);
+      setExForm(initialExForm);
   };
 
   // --- LÓGICA DE TREINOS ---
@@ -190,66 +191,65 @@ export default function AdminPanel() {
     e.preventDefault();
     if (selectedExercises.length === 0) return toast.error("Selecione exercícios!");
     
-    const loadingToast = toast.loading('Salvando...');
-
+    const loadingToast = toast.loading("Salvando...");
     try {
-      const payload = {
-        name: String(trainingForm.name || '').trim(),
-        description: String(trainingForm.description || ''),
-        difficulty: String(trainingForm.difficulty || 'Iniciante'),
-        exercises: selectedExercises,
-        updatedAt: new Date().toISOString()
-      };
+        const payload = {
+            ...trainingForm,
+            exercises: selectedExercises,
+            updatedAt: new Date().toISOString()
+        };
 
-      if (editingId) {
-        await updateDoc(doc(db, 'trainings', editingId), payload);
-        toast.success('Atualizado!', { id: loadingToast });
-      } else {
-        payload.createdAt = new Date().toISOString();
-        await addDoc(collection(db, 'trainings'), payload);
-        toast.success('Criado!', { id: loadingToast });
-      }
-      resetTrainingForm();
-      fetchData();
+        if (editingId) {
+            await updateDoc(doc(db, 'trainings', editingId), payload);
+            toast.success("Treino atualizado!", { id: loadingToast });
+        } else {
+            payload.createdAt = new Date().toISOString();
+            await addDoc(collection(db, 'trainings'), payload);
+            toast.success("Treino criado!", { id: loadingToast });
+        }
+        
+        resetTrainingForm();
+        fetchData();
     } catch (error) {
-      console.error(error);
-      toast.error(`Erro: ${error.message}`, { id: loadingToast });
+        console.error(error);
+        toast.error("Erro ao salvar.", { id: loadingToast });
     }
   };
 
   const handleEditTraining = (tr) => {
-    setTrainingForm({
-        name: tr.name,
-        description: tr.description,
-        difficulty: tr.difficulty
-    });
-    // O tr.exercises agora já deve vir com IDs reais do Firestore graças à importação inteligente
-    setSelectedExercises(tr.exercises || []);
-    setEditingId(tr.firestoreId);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const resetTrainingForm = () => {
-    setTrainingForm(initialTrainingForm);
-    setSelectedExercises([]);
-    setEditingId(null);
+      setEditingId(tr.firestoreId);
+      setTrainingForm({
+          name: tr.name || '',
+          description: tr.description || '',
+          difficulty: tr.difficulty || 'Iniciante'
+      });
+      setSelectedExercises(tr.exercises || []);
   };
 
   const handleDeleteTraining = async (id) => {
       if(!window.confirm("Apagar treino?")) return;
       try {
           await deleteDoc(doc(db, 'trainings', id));
-          toast.success("Removido.");
+          toast.success("Treino removido!");
           fetchData();
-      } catch (e) { toast.error("Erro ao apagar"); }
+      } catch (error) {
+          console.error(error);
+          toast.error("Erro ao deletar.");
+      }
   };
 
-  const toggleExerciseSelection = (exId) => {
-    if (selectedExercises.includes(exId)) {
-        setSelectedExercises(prev => prev.filter(id => id !== exId));
-    } else {
-        setSelectedExercises(prev => [...prev, exId]);
-    }
+  const resetTrainingForm = () => {
+      setEditingId(null);
+      setTrainingForm(initialTrainingForm);
+      setSelectedExercises([]);
+  };
+
+  const toggleExerciseSelection = (id) => {
+      if (selectedExercises.includes(id)) {
+          setSelectedExercises(prev => prev.filter(x => x !== id));
+      } else {
+          setSelectedExercises(prev => [...prev, id]);
+      }
   };
 
   if (authLoading) return null;
@@ -263,13 +263,13 @@ export default function AdminPanel() {
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Painel do Treinador 🧢</h1>
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2">Painel do Treinador <Wrench className="w-7 h-7 text-blue-600 dark:text-blue-400" /></h1>
                 <p className="text-gray-500">Gerencie o conteúdo do aplicativo.</p>
             </div>
 
             <div className="relative overflow-hidden group">
                 <button className="bg-gray-800 dark:bg-white text-white dark:text-gray-900 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-700 transition-colors shadow-lg">
-                    📂 {importLabel}
+                    <FileJson className="w-4 h-4" /> {importLabel}
                 </button>
                 <input 
                     type="file" 
@@ -303,8 +303,9 @@ export default function AdminPanel() {
                 {/* Formuário */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 h-fit sticky top-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-xl text-gray-800 dark:text-white">
-                            {editingId ? '✏️ Editar Exercício' : '✨ Novo Exercício'}
+                        <h3 className="font-bold text-xl text-gray-800 dark:text-white flex items-center gap-1.5">
+                            {editingId ? <Edit3 className="w-5 h-5 text-orange-500" /> : <PlusCircle className="w-5 h-5 text-green-500" />}
+                            {editingId ? 'Editar Exercício' : 'Novo Exercício'}
                         </h3>
                         {editingId && (
                             <button onClick={resetExerciseForm} className="text-xs text-red-500 hover:underline">Cancelar</button>
@@ -353,8 +354,9 @@ export default function AdminPanel() {
                             <textarea rows="3" value={exForm.execution} onChange={e => setExForm({...exForm, execution: e.target.value})} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Descreva como fazer..." />
                         </div>
                         
-                        <button type="submit" className={`w-full text-white font-bold py-4 rounded-xl transition-colors shadow-lg ${editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}>
-                            {editingId ? 'Salvar Alterações 💾' : 'Cadastrar Exercício 🚀'}
+                        <button type="submit" className={`w-full text-white font-bold py-4 rounded-xl transition-colors shadow-lg flex items-center justify-center gap-1.5 ${editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}>
+                            {editingId ? <CheckCircle className="w-5 h-5 text-white" /> : <PlusCircle className="w-5 h-5 text-white" />}
+                            {editingId ? 'Salvar Alterações' : 'Cadastrar Exercício'}
                         </button>
                     </form>
                 </div>
@@ -374,11 +376,11 @@ export default function AdminPanel() {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => handleEditExercise(ex)} className="text-gray-400 hover:text-blue-500 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors">
-                                    ✏️
+                                <button onClick={() => handleEditExercise(ex)} className="text-gray-400 hover:text-blue-500 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors flex items-center justify-center">
+                                    <Edit3 className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => handleDeleteExercise(ex.firestoreId)} className="text-gray-400 hover:text-red-500 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors">
-                                    🗑️
+                                <button onClick={() => handleDeleteExercise(ex.firestoreId)} className="text-gray-400 hover:text-red-500 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors flex items-center justify-center">
+                                    <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -394,8 +396,9 @@ export default function AdminPanel() {
                 {/* Construtor */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 h-fit sticky top-6">
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-xl text-gray-800 dark:text-white">
-                            {editingId ? '✏️ Editar Ficha' : '✨ Nova Ficha'}
+                        <h3 className="font-bold text-xl text-gray-800 dark:text-white flex items-center gap-1.5">
+                            {editingId ? <Edit3 className="w-5 h-5 text-orange-500" /> : <Sparkles className="w-5 h-5 text-blue-500" />}
+                            {editingId ? 'Editar Ficha' : 'Nova Ficha'}
                         </h3>
                         {editingId && (
                             <button onClick={resetTrainingForm} className="text-xs text-red-500 hover:underline">Cancelar</button>
@@ -435,14 +438,15 @@ export default function AdminPanel() {
                                         }`}
                                     >
                                         <span>{ex.name}</span>
-                                        {selectedExercises.includes(ex.firestoreId) && <span>✅</span>}
+                                        {selectedExercises.includes(ex.firestoreId) && <Check className="w-4 h-4 text-green-600 dark:text-green-400" />}
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <button type="submit" className={`w-full text-white font-bold py-4 rounded-xl transition-colors shadow-lg ${editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                            {editingId ? 'Salvar Ficha 💾' : 'Criar Ficha 💾'}
+                        <button type="submit" className={`w-full text-white font-bold py-4 rounded-xl transition-colors shadow-lg flex items-center justify-center gap-1.5 ${editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                            <Save className="w-5 h-5 text-white" />
+                            {editingId ? 'Salvar Ficha' : 'Criar Ficha'}
                         </button>
                      </form>
                 </div>
@@ -458,11 +462,11 @@ export default function AdminPanel() {
                                     <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-bold text-gray-600 dark:text-gray-300">{tr.difficulty}</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleEditTraining(tr)} className="text-gray-400 hover:text-blue-500 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg transition-colors">
-                                        ✏️
+                                    <button onClick={() => handleEditTraining(tr)} className="text-gray-400 hover:text-blue-500 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg transition-colors flex items-center justify-center">
+                                        <Edit3 className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => handleDeleteTraining(tr.firestoreId)} className="text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg transition-colors">
-                                        🗑️
+                                    <button onClick={() => handleDeleteTraining(tr.firestoreId)} className="text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg transition-colors flex items-center justify-center">
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>

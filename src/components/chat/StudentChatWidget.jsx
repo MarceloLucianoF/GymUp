@@ -3,6 +3,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useChat } from '../../hooks/useChat';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { MessageSquare, X, Send } from 'lucide-react';
 
 export default function StudentChatWidget() {
     const { user } = useAuthContext();
@@ -58,9 +59,7 @@ export default function StudentChatWidget() {
                     onClick={() => setIsOpen(true)}
                     className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 z-50 animate-bounce-in"
                 >
-                    <span className="text-2xl">💬</span>
-                    {/* Badge de notificação (Opcional futuro) */}
-                    {/* <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white"></span> */}
+                    <MessageSquare className="w-6 h-6 text-white" />
                 </button>
             )}
 
@@ -85,8 +84,8 @@ export default function StudentChatWidget() {
                                 </p>
                             </div>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                            ✕
+                        <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center">
+                            <X className="w-4 h-4 text-white" />
                         </button>
                     </div>
 
@@ -94,7 +93,7 @@ export default function StudentChatWidget() {
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/50">
                         {messages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 text-xs text-center p-6">
-                                <span className="text-4xl mb-2">👋</span>
+                                <p className="text-2xl mb-2">👋</p>
                                 <p>Tire suas dúvidas ou peça feedback do seu treino.</p>
                             </div>
                         ) : (
@@ -121,7 +120,7 @@ export default function StudentChatWidget() {
 
                     {/* Input Area */}
                     <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 shrink-0">
-                        <form onSubmit={handleSend} className="flex gap-2">
+                        <form onSubmit={handleSend} className="flex gap-2 items-center">
                             <input 
                                 type="text"
                                 value={inputText}
@@ -132,9 +131,9 @@ export default function StudentChatWidget() {
                             <button 
                                 type="submit" 
                                 disabled={!inputText.trim()}
-                                className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                                className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-sm disabled:opacity-50 transition-all active:scale-95 shrink-0"
                             >
-                                ➤
+                                <Send className="w-4 h-4 text-white" />
                             </button>
                         </form>
                     </div>

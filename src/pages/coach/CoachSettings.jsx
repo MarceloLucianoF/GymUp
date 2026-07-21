@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth'; // Para atualizar o Auth core
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, User } from 'lucide-react';
 
 export default function CoachSettings() {
-  const { user, auth } = useAuthContext(); // auth pode ser necessário dependendo do seu hook
+  const { user } = useAuthContext();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(false);
@@ -66,15 +66,6 @@ export default function CoachSettings() {
             updatedAt: new Date().toISOString()
         });
 
-        // 2. Tenta atualizar o Auth Profile (Opcional, mas bom para consistência)
-        if (user) {
-            // Nota: Dependendo da versão do Firebase SDK, pode ser updateProfile(user, ...)
-            // Se der erro aqui, pode comentar, pois o Firestore é o que importa pro app.
-            try {
-               // await updateProfile(user, { displayName: formData.displayName, photoURL: formData.photoURL });
-            } catch (err) { console.log("Auth update skip"); }
-        }
-
         toast.success("Perfil atualizado!", { id: toastId });
     } catch (error) {
         console.error(error);
@@ -85,26 +76,28 @@ export default function CoachSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
         <div className="max-w-2xl mx-auto">
             
             {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-                <button onClick={() => navigate('/coach/dashboard')} className="text-gray-500 hover:text-blue-500 font-bold">← Voltar</button>
+            <div className="flex items-center gap-4 mb-8 animate-fade-in-down">
+                <button onClick={() => navigate('/coach/dashboard')} className="text-gray-500 hover:text-blue-550 text-sm font-bold flex items-center gap-1.5 p-2 hover:bg-gray-150 rounded-xl transition-colors">
+                    <ArrowLeft className="w-4 h-4" /> Voltar
+                </button>
                 <h1 className="text-2xl font-black text-gray-800 dark:text-white">Configurações do Perfil</h1>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 animate-fade-in-up">
                 
                 <form onSubmit={handleSave} className="space-y-6">
                     
                     {/* Foto de Perfil */}
                     <div className="flex flex-col items-center gap-4 mb-6">
-                        <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-4 border-white dark:border-gray-600 shadow-lg relative group">
+                        <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-4 border-white dark:border-gray-600 shadow-lg relative group flex items-center justify-center">
                             {formData.photoURL ? (
                                 <img src={formData.photoURL} className="w-full h-full object-cover" alt="Perfil" />
                             ) : (
-                                <div className="flex items-center justify-center h-full text-4xl">👤</div>
+                                <User className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                             )}
                             <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs font-bold">
                                 Alterar

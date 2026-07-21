@@ -6,6 +6,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti'; 
 import VideoModal from '../../components/common/VideoModal';
+import { Dumbbell, Video, Award, Trophy, Play, CheckCircle2, Flame, Clock } from 'lucide-react';
 
 // --- COMPONENTE TIMER DE DESCANSO ---
 const RestTimer = ({ initialSeconds, onFinish, onClose }) => {
@@ -268,7 +269,9 @@ export default function TrainingExecutionPage() {
                     <div className={`${isFocusMode ? 'w-24 h-24' : 'w-16 h-16'} bg-gray-200 dark:bg-gray-700 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600 transition-all`}>
                         {ex.machineImage ? 
                             <img src={ex.machineImage} className="w-full h-full object-cover" alt="" onClick={() => isFocusMode && setShowVideo(true)}/> : 
-                            <div className="h-full flex items-center justify-center text-2xl">🏋️</div>
+                            <div className="h-full flex items-center justify-center">
+                                <Dumbbell className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                            </div>
                         }
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -281,7 +284,9 @@ export default function TrainingExecutionPage() {
                     </div>
                     {/* Botão de Dica/Vídeo no header */}
                     {isFocusMode && ex.videoUrl && (
-                        <button onClick={() => setShowVideo(true)} className="absolute top-4 right-4 text-2xl opacity-50 hover:opacity-100">🎥</button>
+                        <button onClick={() => setShowVideo(true)} className="absolute top-4 right-4 text-xl opacity-50 hover:opacity-100 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                            <Video className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        </button>
                     )}
                 </div>
 
@@ -404,7 +409,7 @@ export default function TrainingExecutionPage() {
                     onClick={finishWorkout}
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
                 >
-                    <span>🏁</span> FINALIZAR TREINO
+                    <Award className="w-5 h-5 text-white" /> FINALIZAR TREINO
                 </button>
             </div>
 

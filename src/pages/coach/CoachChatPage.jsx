@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useChat } from '../../hooks/useChat';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Search, MessageSquare, Send, Zap } from 'lucide-react';
 
 export default function CoachChatPage() {
   const { user } = useAuthContext();
@@ -59,7 +60,7 @@ export default function CoachChatPage() {
   if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden transition-colors">
       
       {/* --- SIDEBAR (LISTA DE ALUNOS) --- */}
       {/* Esconde no mobile se tiver chat aberto */}
@@ -71,14 +72,14 @@ export default function CoachChatPage() {
                 <h2 className="text-xl font-black text-gray-800 dark:text-white">Mensagens</h2>
                 <button 
                     onClick={() => navigate('/coach/dashboard')} 
-                    className="text-xs font-bold text-gray-500 hover:text-blue-500 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+                    className="text-xs font-bold text-gray-500 hover:text-blue-500 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                 >
-                    Voltar
+                    <ArrowLeft className="w-3 h-3" /> Voltar
                 </button>
             </div>
             {/* Input de Busca */}
             <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input 
                     type="text" 
                     placeholder="Buscar aluno..." 
@@ -93,7 +94,7 @@ export default function CoachChatPage() {
         <div className="flex-1 overflow-y-auto">
             {filteredChats.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center justify-center h-full">
-                    <span className="text-3xl mb-2">📭</span>
+                    <MessageSquare className="w-8 h-8 text-gray-400 opacity-50 mb-2" />
                     <p>Nenhuma conversa encontrada.</p>
                 </div>
             ) : (
@@ -145,8 +146,8 @@ export default function CoachChatPage() {
             <>
                 {/* Header Chat */}
                 <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 shadow-sm z-10">
-                    <button onClick={() => setActiveChat(null)} className="md:hidden text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors">
-                        ←
+                    <button onClick={() => setActiveChat(null)} className="md:hidden text-gray-500 hover:bg-gray-150 p-2 rounded-full transition-colors flex items-center justify-center">
+                        <ArrowLeft className="w-5 h-5" />
                     </button>
                     
                     {(() => {
@@ -175,7 +176,7 @@ export default function CoachChatPage() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
                     {messages.length === 0 && (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
-                            <span className="text-6xl mb-4">💬</span>
+                            <MessageSquare className="w-12 h-12 text-gray-400 opacity-50 mb-4" />
                             <p className="text-sm">Inicie o atendimento com este aluno.</p>
                         </div>
                     )}
@@ -202,7 +203,7 @@ export default function CoachChatPage() {
 
                 {/* Área de Input */}
                 <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                    <form onSubmit={handleSend} className="flex gap-3 max-w-4xl mx-auto">
+                    <form onSubmit={handleSend} className="flex gap-3 max-w-4xl mx-auto items-center">
                         <input 
                             type="text" 
                             value={inputText}
@@ -213,9 +214,9 @@ export default function CoachChatPage() {
                         <button 
                             type="submit" 
                             disabled={!inputText.trim()}
-                            className="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                         >
-                            ➤
+                            <Send className="w-5 h-5 text-white" />
                         </button>
                     </form>
                 </div>
@@ -224,7 +225,7 @@ export default function CoachChatPage() {
             // Estado Vazio (Nenhum chat selecionado)
             <div className="flex-1 flex flex-col items-center justify-center text-gray-300 dark:text-gray-600 bg-gray-50 dark:bg-gray-900">
                 <div className="w-24 h-24 bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                    <span className="text-4xl opacity-30">⚡</span>
+                    <Zap className="w-12 h-12 text-gray-400 opacity-30" />
                 </div>
                 <h3 className="text-xl font-black text-gray-400 dark:text-gray-500">Central de Alunos</h3>
                 <p className="text-sm mt-2 text-gray-400 max-w-xs text-center">Selecione uma conversa na lista lateral para iniciar o atendimento.</p>

@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { ArrowLeft, BarChart2, Calendar, Trophy, TrendingDown } from 'lucide-react';
 
 // --- GRÁFICO PRO (Layout Espaçoso) ---
 const ProgressChart = ({ data }) => {
   if (!data || data.length === 0) return (
     <div className="h-64 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-gray-400 text-sm">
-        <span className="text-2xl mb-2">📉</span>
+        <TrendingDown className="w-8 h-8 text-gray-400 mb-2 opacity-60" />
         <p>Sem dados suficientes.</p>
     </div>
   );
@@ -252,7 +253,7 @@ export default function ExerciseAnalytics() {
                 onClick={() => navigate(-1)} 
                 className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-                ←
+                <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Evolução</p>
@@ -264,7 +265,7 @@ export default function ExerciseAnalytics() {
 
         {history.length === 0 ? (
             <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                <span className="text-4xl block mb-2">📊</span>
+                <BarChart2 className="w-12 h-12 text-gray-400 mx-auto mb-2 opacity-50" />
                 <h3 className="text-lg font-bold text-gray-700 dark:text-white">Sem dados suficientes</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     Continue treinando para gerar gráficos!
@@ -296,7 +297,7 @@ export default function ExerciseAnalytics() {
                 {/* Lista Histórico */}
                 <div>
                     <h3 className="font-bold text-gray-800 dark:text-white mb-4 mt-8 flex items-center gap-2">
-                        <span>📅</span> Diário Detalhado
+                        <Calendar className="w-5 h-5 text-gray-500" /> Diário Detalhado
                     </h3>
                     <div className="space-y-3">
                         {[...history].reverse().map((log, i) => (
@@ -310,7 +311,7 @@ export default function ExerciseAnalytics() {
                                 <div className="text-right">
                                     <div className="flex items-center gap-2 justify-end">
                                         <span className="text-lg font-black text-blue-600 dark:text-blue-400">{log.weight}kg</span>
-                                        {log.weight === stats.pr && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold shadow-sm">PR 🏆</span>}
+                                        {log.weight === stats.pr && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold shadow-sm flex items-center gap-1">PR <Trophy className="w-3 h-3 text-yellow-600 fill-yellow-600" /></span>}
                                     </div>
                                     <p className="text-[10px] text-gray-400 uppercase font-bold">Carga Máxima</p>
                                 </div>

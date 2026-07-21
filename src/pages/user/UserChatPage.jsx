@@ -4,6 +4,7 @@ import { useChat } from '../../hooks/useChat';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { ArrowLeft, Send, ShieldAlert } from 'lucide-react';
 
 export default function UserChatPage() {
   const { user } = useAuthContext();
@@ -60,7 +61,7 @@ export default function UserChatPage() {
   if (!coach && !loading && !activeChat) {
       return (
           <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 text-center">
-              <div className="text-6xl mb-4">🤷‍♂️</div>
+              <ShieldAlert className="w-16 h-16 text-gray-400 mb-4 opacity-50 mx-auto" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Sem Treinador Vinculado</h2>
               <p className="text-gray-500 max-w-xs mb-6">Peça o código de convite ao seu treinador para iniciar uma conversa.</p>
               <button onClick={() => navigate('/home')} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold">Voltar ao Início</button>
@@ -69,11 +70,13 @@ export default function UserChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
         
         {/* Header */}
         <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 shadow-sm z-10 sticky top-0">
-            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-blue-600 pr-2">←</button>
+            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-blue-600 pr-2 flex items-center justify-center">
+                <ArrowLeft className="w-5 h-5" />
+            </button>
             <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-lg font-bold text-blue-600 border border-blue-200 dark:border-blue-800">
                 {coach?.displayName?.[0] || 'C'}
             </div>
@@ -115,7 +118,7 @@ export default function UserChatPage() {
 
         {/* Input */}
         <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-            <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto">
+            <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto items-center">
                 <input 
                     type="text" 
                     value={inputText}
@@ -126,9 +129,9 @@ export default function UserChatPage() {
                 <button 
                     type="submit" 
                     disabled={!inputText.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-12 h-12 flex items-center justify-center"
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-12 h-12 flex items-center justify-center shrink-0"
                 >
-                    ➤
+                    <Send className="w-5 h-5 text-white" />
                 </button>
             </form>
         </div>

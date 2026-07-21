@@ -4,6 +4,7 @@ import { doc, getDoc, collection, getDocs, query, where, orderBy, limit } from '
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
+import { Dumbbell, Flame, Scale, ClipboardList } from 'lucide-react';
 
 export default function TrainingPage() {
   const { trainingId } = useParams();
@@ -236,10 +237,10 @@ export default function TrainingPage() {
 
             <div className="flex gap-3">
                 <span className="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full text-xs font-bold text-gray-600 dark:text-gray-300">
-                    📋 {exerciseList.filter((_,i) => selectedExercises[i]).length} Exercícios
+                    <ClipboardList className="w-3.5 h-3.5 text-gray-500" /> {exerciseList.filter((_,i) => selectedExercises[i]).length} Exercícios
                 </span>
                 <span className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full text-xs font-bold text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800/30">
-                    ⚖️ Vol. Est: {calculateEstimatedVolume() > 0 ? `${(calculateEstimatedVolume() / 1000).toFixed(1)}t` : '--'}
+                    <Scale className="w-3.5 h-3.5 text-blue-500" /> Vol. Est: {calculateEstimatedVolume() > 0 ? `${(calculateEstimatedVolume() / 1000).toFixed(1)}t` : '--'}
                 </span>
             </div>
         </div>
@@ -285,7 +286,9 @@ export default function TrainingPage() {
                             {exercise.machineImage ? (
                                 <img src={exercise.machineImage} alt={exercise.name} className="w-full h-full object-cover" loading="lazy" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xl">🏋️</div>
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <Dumbbell className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                                </div>
                             )}
                             <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-tl-md backdrop-blur-sm">
                                 #{index + 1}
@@ -324,7 +327,7 @@ export default function TrainingPage() {
                 onClick={handleStartTraining}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-4 rounded-2xl shadow-xl shadow-blue-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
             >
-                <span className="group-hover:scale-110 transition-transform">🔥</span> 
+                <Flame className="w-5 h-5 text-white fill-current group-hover:scale-110 transition-transform" /> 
                 INICIAR TREINO 
             </button>
         </div>
