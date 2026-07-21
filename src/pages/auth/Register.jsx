@@ -128,11 +128,11 @@ export default function Register() {
       </div>
 
       {/* Lado Direito (Form) */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-[#0D1117]">
         <div className="w-full max-w-md space-y-8 animate-fade-in-up">
           
           <div className="text-center lg:text-left">
-            <h2 className="lg:hidden text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">Academy<span className="text-blue-600">Up</span></h2>
+            <h2 className="lg:hidden text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-[#FFC107]">UP</span></h2>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Crie sua conta</h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Comece hoje mesmo.</p>
           </div>
@@ -140,12 +140,12 @@ export default function Register() {
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Nome Completo</label>
-              <input type="text" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Ex: João Silva" />
+              <input type="text" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#FFC107] outline-none transition-all" placeholder="Ex: João Silva" />
             </div>
 
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Email</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="seu@email.com" />
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#FFC107] outline-none transition-all" placeholder="seu@email.com" />
             </div>
 
             {/* Grid de Senhas */}
@@ -158,7 +158,7 @@ export default function Register() {
                             required 
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-10" 
+                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#FFC107] outline-none transition-all pr-10" 
                             placeholder="••••••" 
                         />
                         <button 
@@ -181,7 +181,7 @@ export default function Register() {
                         required 
                         value={confirmPassword} 
                         onChange={(e) => setConfirmPassword(e.target.value)} 
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
+                        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#FFC107] outline-none transition-all" 
                         placeholder="••••••" 
                     />
                 </div>
@@ -189,7 +189,7 @@ export default function Register() {
 
             {/* CAMPO DE CÓDIGO DO TREINADOR */}
             <div className="pt-2">
-                <label className="text-xs font-bold text-blue-500 uppercase ml-1 flex justify-between cursor-pointer group">
+                <label className="text-xs font-bold text-[#FFC107] uppercase ml-1 flex justify-between cursor-pointer group">
                     <span>Código do Treinador (Opcional)</span>
                     <span className="text-[10px] opacity-70 group-hover:opacity-100 transition-opacity">Peça ao seu coach</span>
                 </label>
@@ -202,10 +202,10 @@ export default function Register() {
                         onBlur={handleBlurCoachCode}
                         onChange={(e) => { setCoachCode(e.target.value); setCoachName(null); }} 
                         value={coachCode}
-                        className={`w-full bg-blue-50 dark:bg-blue-900/10 border p-3 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all font-mono tracking-wider text-sm ${coachName ? 'border-green-500' : 'border-blue-100 dark:border-blue-800/30'}`}
+                        className={`w-full bg-amber-50/10 dark:bg-[#1F2937]/50 border p-3 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white transition-all font-mono tracking-wider text-sm ${coachName ? 'border-green-500' : 'border-gray-200 dark:border-gray-800'}`}
                         placeholder="Ex: CÓDIGO-DO-COACH"
                     />
-                    {isCheckingCode && <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>}
+                    {isCheckingCode && <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-[#FFC107] rounded-full border-t-transparent"></div>}
                 </div>
                 {/* Feedback Visual do Nome do Coach */}
                 {coachName && (
@@ -219,11 +219,11 @@ export default function Register() {
             <button
               type="submit"
               disabled={localLoading || isCheckingCode}
-              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-blue-600/20 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-[#FFC107]/20 text-sm font-black text-black bg-gradient-to-r from-[#FFC107] to-[#FF9800] hover:from-[#FFC107] hover:to-[#FFB300] transition-all transform active:scale-[0.98] hover:shadow-[0_0_20px_rgba(255,193,7,0.35)] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {localLoading ? (
                   <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                     Processando...
                   </span>
               ) : 'Cadastrar Gratuitamente'}
@@ -233,7 +233,7 @@ export default function Register() {
           <div className="text-center pt-2">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Já tem conta?{' '}
-              <Link to="/login" className="font-bold text-blue-600 hover:text-blue-500 transition-colors">
+              <Link to="/login" className="font-bold text-[#FFC107] hover:text-[#FFB300] transition-colors">
                 Fazer Login
               </Link>
             </p>

@@ -77,20 +77,20 @@ function AppRoutes() {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
         <Routes>
           {/* --- ROTAS PÚBLICAS --- */}
-          <Route path="/login" element={!user ? <Login /> : <Navigate to="/home" />} />
-          <Route path="/register" element={!user ? <Register /> : <Navigate to="/home" />} />
+          {/* --- ROTAS PÚBLICAS --- */}
+          <Route path="/login" element={!user ? <Login /> : <Navigate to={user.role === 'coach' ? '/coach/dashboard' : '/dashboard'} replace />} />
+          <Route path="/register" element={!user ? <Register /> : <Navigate to={user.role === 'coach' ? '/coach/dashboard' : '/dashboard'} replace />} />
+          <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to={user.role === 'coach' ? '/coach/dashboard' : '/dashboard'} replace />} />
           
-          <Route path="/" element={<Navigate to={user ? "/home" : "/login"} replace />} />
-          <Route path="/" element={!user ? <LandingPage /> : <Navigate to={user.role === 'coach' ? '/coach/dashboard' : '/home'} />} />
-          <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/home" />} />
-          
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/home" element={<Navigate to={user?.role === 'coach' ? '/coach/dashboard' : '/dashboard'} replace />} />
           
           {/* --- ROTAS PROTEGIDAS (ALUNO) --- */}
           <Route path="/history/:checkInId" element={<ProtectedRoute><WorkoutDetailsPage /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><UserChatPage /></ProtectedRoute>} />
           
           {/* Dashboard & Perfil */}
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/measurements" element={<ProtectedRoute><MeasurementsPage /></ProtectedRoute>} /> {/* 🔥 Dashboard Evolução */}
 
@@ -123,7 +123,7 @@ function AppRoutes() {
           <Route path="/coach/settings" element={<ProtectedRoute><CoachSettings /></ProtectedRoute>} />
 
           {/* Rota 404/Fallback */}
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={<Navigate to={user?.role === 'coach' ? '/coach/dashboard' : '/dashboard'} replace />} />
         </Routes>
     </div>
   );

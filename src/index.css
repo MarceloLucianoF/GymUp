@@ -1,14 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Outfit:wght@400;500;600;700;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-gray-100 text-gray-900 transition-colors duration-300;
+    font-family: 'Inter', sans-serif;
+    @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+  }
+  
+  h1, h2, h3, h4, h5, h6, .font-black {
+    font-family: 'Outfit', sans-serif;
   }
   
   /* Quando a classe .dark estiver ativa, aplica isso no body */
   .dark body {
-    @apply bg-gray-900 text-gray-100;
+    @apply bg-[#0B0F19] text-gray-100;
   }
+}
+
+@layer utilities {
+  /* Efeito de brilho premium da marca (Amarelo) */
+  .glow-brand {
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.2);
+  }
+  .hover-glow-brand:hover {
+    box-shadow: 0 0 25px rgba(255, 193, 7, 0.3);
+    @apply border-[#FFC107]/30;
+  }
+  
+  /* Efeito vidro premium escuro */
+  .glass-dark {
+    background: rgba(31, 41, 55, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Glassmorphism premium dark */
+  .glass-dark-premium {
+    background: rgba(17, 24, 39, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 193, 7, 0.08);
+  }
+  
+  /* Gradiente premium dourado */
+  .bg-gold-gradient {
+    background: linear-gradient(135deg, #FFC107 0%, #FFB300 100%);
+  }
+
+  /* Gradiente dual-tone âmbar-gold */
+  .bg-amber-gold-gradient {
+    background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
+  }
+  
+  /* Botão premium com micro-animação */
+  .btn-premium {
+    @apply transition-all duration-300 ease-out transform active:scale-95 hover:scale-[1.02];
+  }
+}
+
+/* Animação suave para as modais e elementos */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
 }

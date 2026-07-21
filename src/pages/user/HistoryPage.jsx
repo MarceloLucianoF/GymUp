@@ -154,7 +154,7 @@ export default function HistoryPage() {
                         placeholder="Buscar treino ou exercício..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white pl-9 pr-4 py-3 rounded-xl border border-gray-150 dark:border-gray-700 outline-none text-sm focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                        className="w-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white pl-9 pr-4 py-3 rounded-xl border border-gray-150 dark:border-gray-700 outline-none text-sm focus:ring-2 focus:ring-[#FFC107] transition-all shadow-sm"
                     />
                 </div>
                 
@@ -177,7 +177,7 @@ export default function HistoryPage() {
 
         {/* Lista de Resultados */}
         {filteredHistory.length === 0 ? (
-          <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center">
+          <div className="text-center py-20 bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl border border-dashed border-gray-300 dark:border-[#FFC107]/10 flex flex-col items-center justify-center">
             <Search className="w-12 h-12 text-gray-400 mb-4 opacity-50" />
             <h3 className="text-lg font-bold text-gray-700 dark:text-white">Nada encontrado</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
@@ -191,7 +191,7 @@ export default function HistoryPage() {
                   <div 
                     key={item.firestoreId} 
                     onClick={() => navigate(`/history/${item.firestoreId}`)}
-                    className="bg-white dark:bg-gray-800 rounded-2xl p-0 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden group relative transition-all hover:shadow-md cursor-pointer"
+                    className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl p-0 shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/30 overflow-hidden group relative transition-all duration-300 hover:shadow-lg cursor-pointer"
                   >
                     {/* Header do Card */}
                     <div className="p-5 flex gap-5 border-b border-gray-50 dark:border-gray-700/50">
@@ -213,8 +213,8 @@ export default function HistoryPage() {
                             
                             {/* Badges */}
                             <div className="flex flex-wrap gap-2">
-                                <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                    <Clock className="w-3 h-3 text-blue-500" /> {formatDuration(item.duration)}
+                                <span className="inline-flex items-center gap-1 bg-[#FFC107]/10 text-[#FFC107] border border-[#FFC107]/20 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                    <Clock className="w-3 h-3 text-[#FFC107]" /> {formatDuration(item.duration)}
                                 </span>
                                 {item.totalVolume > 0 && (
                                     <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
@@ -257,13 +257,13 @@ export default function HistoryPage() {
                                                 e.stopPropagation();
                                                 navigate(`/analytics/${encodeURIComponent(ex.name)}`);
                                             }}
-                                            className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-700/40 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer group transition-colors border border-transparent hover:border-blue-200 dark:hover:border-gray-600"
+                                            className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-700/40 rounded-lg hover:bg-[#FFC107]/10 dark:hover:bg-[#FFC107]/5 cursor-pointer group transition-all duration-300 border border-transparent hover:border-[#FFC107]/30 hover:scale-[1.005]"
                                         >
                                             <div className="flex items-center gap-2 overflow-hidden">
-                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors truncate">
+                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-[#FFB300] transition-colors truncate">
                                                     {ex.name}
                                                 </span>
-                                                <ArrowUpRight className="w-3 h-3 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                                <ArrowUpRight className="w-3 h-3 text-[#FFC107] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                             </div>
                                             
                                             <div className="text-right flex items-center gap-3 shrink-0">

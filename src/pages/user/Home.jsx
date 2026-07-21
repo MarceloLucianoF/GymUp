@@ -7,7 +7,7 @@ import WeeklyChart from '../../components/dashboard/WeeklyChart';
 import { useRole } from '../../hooks/useRole';
 import toast from 'react-hot-toast';
 import StudentChatWidget from '../../components/chat/StudentChatWidget'; // ✅ Importação do Widget
-import { Flame, Trophy, Target, Scale, Link2, Wrench, Clock, ClipboardList, Sparkles, Smile, Play, Calendar, AlertCircle } from 'lucide-react';
+import { Flame, Trophy, Target, Scale, Link2, Wrench, Clock, ClipboardList, Sparkles, Smile, Play } from 'lucide-react';
 
 // --- MODAL PARA VINCULAR TREINADOR ---
 const LinkCoachModal = ({ isOpen, onClose, currentUserId, onSuccess }) => {
@@ -62,7 +62,7 @@ const LinkCoachModal = ({ isOpen, onClose, currentUserId, onSuccess }) => {
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Cole o código aqui..."
-                    className="w-full bg-gray-100 dark:bg-gray-700 p-3 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono text-center tracking-widest text-sm"
+                    className="w-full bg-gray-100 dark:bg-gray-700 p-3 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center tracking-widest text-sm"
                 />
 
                 <div className="flex gap-2">
@@ -70,7 +70,7 @@ const LinkCoachModal = ({ isOpen, onClose, currentUserId, onSuccess }) => {
                     <button 
                         onClick={handleLink} 
                         disabled={loading}
-                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                        className="flex-1 py-2 bg-[#FFC107] hover:bg-[#FFB300] text-black font-bold text-sm rounded-xl shadow-lg shadow-[#FFC107]/10 disabled:opacity-50"
                     >
                         {loading ? 'Vinculando...' : 'Confirmar'}
                     </button>
@@ -111,44 +111,48 @@ const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTra
   );
 
   return (
-    <div className={`rounded-3xl p-6 shadow-xl text-white relative overflow-hidden mb-8 group transition-all transform hover:scale-[1.01] duration-300 ${
+    <div className={`rounded-3xl p-6 shadow-xl relative overflow-hidden mb-8 group transition-all transform hover:scale-[1.01] hover:-translate-y-0.5 duration-350 border ${
         isAssigned 
-        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-purple-600/30' 
-        : 'bg-gradient-to-r from-blue-600 to-cyan-600 shadow-blue-600/30'
+        ? 'bg-gradient-to-br from-[#FFC107] to-[#FF9800] text-black shadow-[#FFC107]/10 border-[#FFC107]/20 hover:shadow-[0_0_30px_rgba(255,193,7,0.2)]' 
+        : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-800 dark:text-white shadow-black/5 dark:shadow-black/25 border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/30 hover:shadow-[0_0_25px_rgba(255,193,7,0.06)]'
     }`}>
         <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-4 pointer-events-none group-hover:rotate-12 transition-transform duration-700">
-            {isAssigned ? <Target className="w-32 h-32 text-white" /> : <Flame className="w-32 h-32 text-white" />}
+            {isAssigned ? <Target className="w-32 h-32 text-black" /> : <Flame className="w-32 h-32 text-white" />}
         </div>
         
         <div className="relative z-10">
             <div className="flex items-center gap-2 mb-3">
-                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1.5 ${isAssigned ? 'bg-white/20 backdrop-blur-md text-white' : 'bg-black/20 text-white/90'}`}>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1.5 ${isAssigned ? 'bg-black/10 text-black' : 'bg-black/20 text-white/90'}`}>
                     {isAssigned ? (
                         <><Sparkles className="w-3 h-3" /> Prescrito pelo Coach</>
                     ) : (
                         'Sugestão do Dia'
                     )}
                 </span>
-                <span className="text-[10px] font-bold opacity-80 uppercase tracking-wider bg-black/10 px-2 py-1 rounded">
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${isAssigned ? 'bg-black/10 text-black/80' : 'bg-[#FFC107]/10 text-[#FFC107]'}`}>
                     {nextTraining.difficulty}
                 </span>
             </div>
             
             <h2 className="text-3xl font-black mb-2 leading-tight">{nextTraining.name}</h2>
-            <p className="text-white/80 text-sm mb-6 max-w-lg line-clamp-2">
+            <p className={`text-sm mb-6 max-w-lg line-clamp-2 ${isAssigned ? 'text-black/80' : 'text-gray-400 dark:text-gray-300'}`}>
                 {nextTraining.description || "Foco total no progresso e consistência."}
             </p>
             
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <button 
                     onClick={() => onStart(nextTraining.firestoreId)}
-                    className="bg-white text-gray-900 px-8 py-3.5 rounded-xl font-black shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 hover:bg-gray-50"
+                    className={`px-8 py-3.5 rounded-xl font-black shadow-lg flex items-center justify-center gap-2 btn-premium hover-glow-brand transition-all duration-300 group ${
+                        isAssigned 
+                        ? 'bg-black text-white hover:bg-black/90' 
+                        : 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black hover:from-[#FFC107] hover:to-[#FFB300] hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]'
+                    }`}
                 >
-                    <Play className="w-4 h-4 fill-current" /> INICIAR TREINO
+                    <Play className="w-4 h-4 fill-current transition-transform duration-300 group-hover:scale-110 group-hover:translate-x-0.5" /> INICIAR TREINO
                 </button>
-                <div className="flex items-center gap-4 text-xs font-bold text-white/90 bg-black/10 px-4 py-2 rounded-lg w-fit">
+                <div className={`flex items-center gap-4 text-xs font-bold px-4 py-2 rounded-lg w-fit ${isAssigned ? 'bg-black/10 text-black/90' : 'bg-gray-100 dark:bg-gray-800/80 text-gray-700 dark:text-white/90 border border-gray-200 dark:border-gray-700'}`}>
                     <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~45 min</span>
-                    <span className="w-1 h-1 bg-white/50 rounded-full"></span>
+                    <span className={`w-1 h-1 rounded-full ${isAssigned ? 'bg-black/30' : 'bg-white/50'}`}></span>
                     <span className="flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {nextTraining.exercises?.length || 0} Exercícios</span>
                 </div>
             </div>
@@ -163,12 +167,12 @@ const ConsistencyCard = ({ history }) => {
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const recentWorkouts = history.filter(h => new Date(h.date) >= twoWeeksAgo).length;
     let status = "Iniciando";
-    let color = "text-blue-500 bg-blue-50 dark:bg-blue-900/20";
-    if(recentWorkouts >= 8) { status = "Imparável"; color = "text-orange-500 bg-orange-50 dark:bg-orange-900/20"; }
-    else if(recentWorkouts >= 4) { status = "Constante"; color = "text-green-500 bg-green-50 dark:bg-green-900/20"; }
+    let color = "text-[#FFC107] bg-[#FFC107]/10 border border-[#FFC107]/25";
+    if(recentWorkouts >= 8) { status = "Imparável"; color = "text-orange-500 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900"; }
+    else if(recentWorkouts >= 4) { status = "Constante"; color = "text-green-500 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900"; }
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between h-full">
+        <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 flex flex-col justify-between h-full">
             <div className="flex justify-between items-start mb-2 gap-2">
                 <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider leading-tight">Frequência (14d)</h3>
                 <span className={`text-[9px] font-bold px-2 py-1 rounded whitespace-nowrap ${color}`}>{status}</span>
@@ -297,21 +301,21 @@ export default function Home() {
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-2 gap-4">
-            <div className="flex items-center gap-3">
-                <div onClick={() => navigate('/profile')} className="w-14 h-14 rounded-full overflow-hidden shadow-md border-2 border-white dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity">
+        <div className="flex flex-row justify-between items-center px-1 sm:px-2 gap-2 sm:gap-4">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div onClick={() => navigate('/profile')} className="w-14 h-14 rounded-full overflow-hidden shadow-md border-2 border-white dark:border-gray-850 cursor-pointer hover:opacity-90 transition-opacity shrink-0">
                     {photoURL ? (
                         <img src={photoURL} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
+                        <div className="w-full h-full bg-gradient-to-br from-[#FFC107] to-[#FFB300] flex items-center justify-center text-black font-bold text-xl">
                             {firstName[0]}
                         </div>
                     )}
                 </div>
-                <div>
-                    <h1 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Olá, {firstName}!</h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-blue-200 dark:border-blue-800">{stats.level}</span>
+                <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-black text-gray-800 dark:text-white tracking-tight truncate">Olá, {firstName}!</h1>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="bg-[#FFC107]/10 text-[#FFC107] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#FFC107]/20">{stats.level}</span>
                         
                         {/* BOTÃO VINCULAR (Só aparece se não tiver coach) */}
                         {!userProfile?.coachId && (
@@ -325,11 +329,11 @@ export default function Home() {
                     </div>
                 </div>
             </div>
-            <div className="text-center bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3 self-end sm:self-auto">
-                <Flame className="w-6 h-6 text-orange-500 fill-orange-500 animate-bounce" />
+            <div className="bg-white dark:bg-gray-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-gray-100 dark:border-gray-750 shadow-sm flex items-center gap-2 sm:gap-3 shrink-0">
+                <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 fill-orange-500" />
                 <div className="text-left">
-                    <p className="text-xs text-gray-400 font-bold uppercase">Sequência</p>
-                    <p className="text-lg font-black text-gray-800 dark:text-gray-200 leading-none">{stats.streak} dias</p>
+                    <p className="text-[9px] sm:text-xs text-gray-400 font-bold uppercase">Racha</p>
+                    <p className="text-sm sm:text-lg font-black text-gray-800 dark:text-gray-200 leading-none">{stats.streak} dias</p>
                 </div>
             </div>
         </div>
@@ -363,25 +367,27 @@ export default function Home() {
         />
 
         {/* METRICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:border-blue-200 transition-colors flex flex-col justify-between h-full">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 relative overflow-hidden group hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
                 <div>
-                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                    <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1">Próxima Meta <Target className="w-3 h-3 text-blue-500" /></h3>
+                    <div className="absolute top-0 left-0 w-1 h-full bg-[#FFC107]"></div>
+                    <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1">Próxima Meta <Target className="w-3 h-3 text-[#FFC107]" /></h3>
                     <div className="flex justify-between items-end mb-2">
                         <span className="text-3xl font-black text-gray-800 dark:text-white">{stats.nextLevelTreinos}</span>
                         <span className="text-xs font-bold text-gray-400 mb-1">treinos</span>
                     </div>
                     <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-blue-500 h-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
+                        <div className="bg-[#FFC107] h-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
                     </div>
                 </div>
                 <p className="text-[10px] text-gray-400 mt-2 text-right">Faltam {stats.nextLevelTreinos - stats.totalTreinos}</p>
             </div>
 
-            <ConsistencyCard history={history} />
+            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-0 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
+                <ConsistencyCard history={history} />
+            </div>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between h-full">
+            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
                 <div>
                     <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Maior Carga (PR)</h3>
                     <div className="flex items-end gap-1">
@@ -389,20 +395,20 @@ export default function Home() {
                         <span className="text-sm font-bold text-gray-400 mb-1">kg</span>
                     </div>
                 </div>
-                <p className="text-[10px] text-purple-600 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded w-fit mt-2 font-bold flex items-center gap-1">
-                    <Trophy className="w-3 h-3 text-purple-500 fill-purple-500" /> Seu recorde pessoal
+                <p className="text-[10px] text-[#FFC107] bg-[#FFC107]/10 px-2 py-1 rounded w-fit mt-2 font-bold flex items-center gap-1">
+                    <Trophy className="w-3 h-3 text-[#FFC107] fill-[#FFC107]" /> Seu recorde pessoal
                 </p>
             </div>
 
-            <div onClick={() => navigate('/measurements')} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 cursor-pointer hover:border-blue-300 transition-colors group flex flex-col justify-between h-full">
+            <div onClick={() => navigate('/measurements')} className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 cursor-pointer hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 group flex flex-col justify-between h-full hover-glow-brand">
                 <div className="flex justify-between items-start">
                     <div>
                         <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Peso Corporal</h3>
                         <span className="text-3xl font-black text-gray-800 dark:text-white">{userProfile?.weight || '--'}kg</span>
                     </div>
-                    <Scale className="w-6 h-6 text-gray-400 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-300" />
+                    <Scale className="w-6 h-6 text-gray-400 group-hover:text-[#FFC107] group-hover:scale-110 transition-all duration-300" />
                 </div>
-                <p className="text-[10px] text-blue-500 mt-2 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Atualizar medidas →</p>
+                <p className="text-[10px] text-[#FFC107] mt-2 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Atualizar medidas →</p>
             </div>
         </div>
 
@@ -416,7 +422,7 @@ export default function Home() {
                 <WeeklyChart history={history} />
             </div>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full">
+            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 flex flex-col h-full hover:border-[#FFC107]/20 transition-all duration-300">
                 <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-6">Última Conquista</h3>
                 {history.length > 0 ? (
                     <div className="flex-1 flex flex-col">
@@ -445,7 +451,7 @@ export default function Home() {
                     <div className="flex-1 flex flex-col justify-center items-center text-center py-8 text-gray-400">
                         <Smile className="w-10 h-10 text-gray-400 mb-2 opacity-50" />
                         <p className="text-sm font-medium">Nenhum treino ainda.</p>
-                        <button onClick={() => navigate('/trainings')} className="text-blue-500 font-bold text-xs mt-2 hover:underline">Começar Jornada</button>
+                        <button onClick={() => navigate('/trainings')} className="text-[#FFC107] font-bold text-xs mt-2 hover:underline">Começar Jornada</button>
                     </div>
                 )}
             </div>

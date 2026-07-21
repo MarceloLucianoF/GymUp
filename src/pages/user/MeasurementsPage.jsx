@@ -151,7 +151,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                     <button 
                         disabled={!weight || isSaving}
                         type="submit" 
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 active:scale-95 transition-all disabled:opacity-50"
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] disabled:opacity-50"
                     >
                         {isSaving ? 'Salvando...' : 'Registrar Evolução'}
                     </button>
@@ -273,7 +273,7 @@ export default function MeasurementsPage() {
   // Filtra apenas medidas com fotos para a galeria
   const galleryPhotos = measurements.filter(m => m.photo).reverse();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 transition-colors duration-300 pb-32">
@@ -286,7 +286,7 @@ export default function MeasurementsPage() {
             </button>
             <button 
                 onClick={() => setShowModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-all text-xs flex items-center gap-1.5"
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-xs flex items-center gap-1.5 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]"
             >
                 <Plus className="w-3.5 h-3.5" /> Nova Medida
             </button>
@@ -297,7 +297,7 @@ export default function MeasurementsPage() {
                 <Scale className="w-16 h-16 text-gray-400 mb-4 opacity-50" />
                 <h2 className="text-2xl font-bold text-gray-700 dark:text-white">Comece sua jornada</h2>
                 <p className="text-gray-500 mb-6">Registre seu peso hoje para acompanhar sua evolução.</p>
-                <button onClick={() => setShowModal(true)} className="text-blue-500 font-bold underline">Registrar agora</button>
+                <button onClick={() => setShowModal(true)} className="text-[#FFC107] hover:text-[#FFB300] font-bold underline transition-colors">Registrar agora</button>
             </div>
         ) : (
             <>
@@ -322,7 +322,7 @@ export default function MeasurementsPage() {
                     </div>
                     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" onClick={() => setShowModal(true)}>
                         <span className="text-2xl mb-1">➕</span>
-                        <span className="text-xs font-bold text-blue-500">Adicionar</span>
+                        <span className="text-xs font-bold text-[#FFC107] group-hover:text-[#FFB300] transition-colors">Adicionar</span>
                     </div>
                 </div>
 

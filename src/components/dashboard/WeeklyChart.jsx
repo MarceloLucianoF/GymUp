@@ -65,9 +65,9 @@ export default function WeeklyChart({ history }) {
                 style={{ height: `${heightPct}%` }}
                 className={`w-full rounded-t-md transition-all duration-700 ease-out relative ${
                     item.count > 0 
-                    ? 'bg-blue-500 dark:bg-blue-600 group-hover:bg-blue-400'  // Cor quando tem treino
+                    ? 'bg-[#FFC107] dark:bg-[#FFB300] group-hover:bg-[#FFC107]/80'  // Cor quando tem treino
                     : 'bg-gray-100 dark:bg-gray-700/50' // <--- CORREÇÃO: Cor cinza quando vazio (antes estava transparent)
-                } ${item.isToday ? 'ring-2 ring-blue-200 dark:ring-blue-900/50' : ''}`}
+                } ${item.isToday ? 'ring-2 ring-[#FFC107]/20 dark:ring-[#FFC107]/10' : ''}`}
               >
                  {/* Brilho no topo da barra ativa */}
                  {item.count > 0 && (
@@ -77,7 +77,7 @@ export default function WeeklyChart({ history }) {
 
               {/* Label do Dia */}
               <span className={`text-[10px] mt-3 font-bold uppercase transition-colors ${
-                  item.isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
+                  item.isToday ? 'text-[#FFC107] dark:text-[#FFC107]' : 'text-gray-400 dark:text-gray-500'
               }`}>
                 {item.day}
               </span>

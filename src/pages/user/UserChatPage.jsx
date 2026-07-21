@@ -55,7 +55,7 @@ export default function UserChatPage() {
       return new Date(timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
 
   // Se não tem coach vinculado
   if (!coach && !loading && !activeChat) {
@@ -64,7 +64,7 @@ export default function UserChatPage() {
               <ShieldAlert className="w-16 h-16 text-gray-400 mb-4 opacity-50 mx-auto" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Sem Treinador Vinculado</h2>
               <p className="text-gray-500 max-w-xs mb-6">Peça o código de convite ao seu treinador para iniciar uma conversa.</p>
-              <button onClick={() => navigate('/home')} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold">Voltar ao Início</button>
+              <button onClick={() => navigate('/home')} className="bg-[#FFC107] hover:bg-[#FFB300] text-black px-6 py-3 rounded-xl font-bold transition-colors">Voltar ao Início</button>
           </div>
       );
   }
@@ -74,10 +74,10 @@ export default function UserChatPage() {
         
         {/* Header */}
         <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 shadow-sm z-10 sticky top-0">
-            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-blue-600 pr-2 flex items-center justify-center">
+            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-[#FFC107] pr-2 flex items-center justify-center transition-colors">
                 <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-lg font-bold text-blue-600 border border-blue-200 dark:border-blue-800">
+            <div className="w-10 h-10 rounded-full bg-[#FFC107]/10 flex items-center justify-center text-lg font-bold text-[#FFC107] border border-[#FFC107]/20">
                 {coach?.displayName?.[0] || 'C'}
             </div>
             <div>
@@ -102,11 +102,11 @@ export default function UserChatPage() {
                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm relative group ${
                             isMe 
-                            ? 'bg-blue-600 text-white rounded-tr-none' 
+                            ? 'bg-[#FFC107] text-black rounded-tr-none' 
                             : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-gray-700'
                         }`}>
                             <p className="leading-relaxed">{msg.text}</p>
-                            <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-blue-100' : 'text-gray-400'}`}>
+                            <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-black/85' : 'text-gray-400'}`}>
                                 {formatTime(msg.createdAt)}
                             </p>
                         </div>
@@ -124,14 +124,14 @@ export default function UserChatPage() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-3 rounded-full focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-3 rounded-full focus:ring-2 focus:ring-[#FFC107] outline-none transition-all"
                 />
                 <button 
                     type="submit" 
                     disabled={!inputText.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-12 h-12 flex items-center justify-center shrink-0"
+                    className="bg-[#FFC107] hover:bg-[#FFB300] text-black p-3 rounded-full shadow-lg shadow-[#FFC107]/10 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-12 h-12 flex items-center justify-center shrink-0"
                 >
-                    <Send className="w-5 h-5 text-white" />
+                    <Send className="w-5 h-5 text-black" />
                 </button>
             </form>
         </div>

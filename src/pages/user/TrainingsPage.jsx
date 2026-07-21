@@ -9,7 +9,7 @@ import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight
 // --- COMPONENTES VISUAIS ---
 
 const TrainingSkeleton = () => (
-  <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 h-48 border border-gray-100 dark:border-gray-700 animate-pulse flex flex-col justify-between">
+  <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-3xl p-6 h-48 border border-gray-100 dark:border-[#FFC107]/10 animate-pulse flex flex-col justify-between">
     <div className="flex justify-between">
       <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
       <div className="w-20 h-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
@@ -31,8 +31,8 @@ const FilterChip = ({ label, active, onClick }) => (
     onClick={onClick}
     className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
       active 
-      ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20' 
-      : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400'
+      ? 'bg-[#FFC107] text-black border-[#FFC107] shadow-lg shadow-[#FFC107]/15' 
+      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-[#FFC107]/10 hover:border-[#FFC107]/40'
     }`}
   >
     {label}
@@ -178,19 +178,19 @@ export default function TrainingsPage() {
       <Link 
         to={`/training/${validId}`} 
         key={validId} 
-        className="group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:bg-gradient-to-br from-white to-blue-50 dark:from-gray-800 dark:to-gray-800/80"
+        className="group relative overflow-hidden bg-white dark:bg-[#1F2937]/45 dark:backdrop-blur-md rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/45 hover-glow-brand"
       >
         {/* Badge Recomendado */}
         {(!lastDate || (new Date() - lastDate) / (1000 * 60 * 60 * 24) > 7) && (
-            <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-lg z-10">
+            <div className="absolute top-0 right-0 bg-[#FFC107] text-black text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-lg z-10">
                 RECOMENDADO
             </div>
         )}
 
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
-              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform group-hover:bg-white dark:group-hover:bg-gray-600">
-                  <IconComponent className="w-6 h-6 text-blue-600 dark:text-blue-400 group-hover:text-blue-500" />
+              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-900/60 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform group-hover:bg-white dark:group-hover:bg-[#1F2937]">
+                  <IconComponent className="w-6 h-6 text-[#FFC107] dark:text-[#FFC107] group-hover:text-[#FFB300]" />
               </div>
               
               <div className="text-right">
@@ -203,7 +203,7 @@ export default function TrainingsPage() {
               </div>
           </div>
 
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1 group-hover:text-[#FFB300] transition-colors line-clamp-1">
               {training.name || 'Treino Sem Nome'}
           </h3>
           
@@ -211,17 +211,17 @@ export default function TrainingsPage() {
               {training.day ? `${training.day} • ` : ''}{training.description || "Foco total no desenvolvimento muscular."}
           </p>
 
-          <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-3">
+          <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
               <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-1 rounded-lg">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-gray-900/60 px-2 py-1 rounded-lg">
                       <ClipboardList className="w-3.5 h-3.5 text-gray-500" /> {training.exercises?.length || 0}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-1 rounded-lg">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-gray-900/60 px-2 py-1 rounded-lg">
                       <Clock className="w-3.5 h-3.5 text-gray-500" /> ~{estimatedTime} min
                   </div>
               </div>
               
-              <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-[#FFC107]/10 flex items-center justify-center text-[#FFC107] group-hover:bg-[#FFC107] group-hover:text-black transition-all duration-300 group-hover:scale-110 active:scale-95 shadow-sm">
                   <ChevronRight className="w-4 h-4" />
               </div>
           </div>
@@ -272,23 +272,23 @@ export default function TrainingsPage() {
                   {/* Package Header */}
                   <button
                     onClick={() => togglePackageCollapse(pkg.id)}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl p-5 shadow-lg shadow-blue-600/10 hover:shadow-xl transition-all text-left group"
+                    className="w-full bg-[#1F2937] dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-lg hover:border-[#FFC107]/45 transition-all text-left group hover-glow-brand hover:scale-[1.005] duration-300"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                          <Package className="w-6 h-6 text-white" />
+                        <div className="w-12 h-12 bg-[#FFC107]/10 border border-[#FFC107]/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                          <Package className="w-6 h-6 text-[#FFC107]" />
                         </div>
                         <div>
                           <h2 className="text-lg font-black text-white leading-tight">{pkg.name}</h2>
-                          <p className="text-blue-100 text-sm mt-0.5 line-clamp-1">{pkg.description}</p>
+                          <p className="text-gray-300 text-sm mt-0.5 line-clamp-1">{pkg.description}</p>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-3">
                         <div className="hidden sm:flex items-center gap-2">
                           {pkg.tags?.slice(0, 2).map(tag => (
-                            <span key={tag} className="text-[10px] font-bold text-white/80 bg-white/15 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                            <span key={tag} className="text-[10px] font-bold text-white/80 bg-white/10 px-2.5 py-1 rounded-full backdrop-blur-sm">
                               {tag}
                             </span>
                           ))}
@@ -329,7 +329,7 @@ export default function TrainingsPage() {
 
             {/* Empty State */}
             {Object.keys(packagedTrainings).length === 0 && looseTrainings.length === 0 && (
-              <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+              <div className="text-center py-20 bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-3xl border border-dashed border-gray-200 dark:border-[#FFC107]/10">
                 <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg font-bold">Nenhum treino encontrado.</p>
                 <p className="text-gray-400 text-sm mt-1">Aplique os filtros ou aguarde o treinador criar seus pacotes.</p>

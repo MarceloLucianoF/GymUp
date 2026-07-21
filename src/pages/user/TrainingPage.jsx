@@ -325,9 +325,9 @@ export default function TrainingPage() {
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-[60] pb-8 md:pb-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
             <button 
                 onClick={handleStartTraining}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-4 rounded-2xl shadow-xl shadow-blue-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+                className="w-full bg-gradient-to-r from-[#FFC107] to-[#FF9800] hover:from-[#FFC107] hover:to-[#FFB300] text-black font-black text-lg py-4 rounded-2xl shadow-xl shadow-[#FFC107]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group hover-glow-brand"
             >
-                <Flame className="w-5 h-5 text-white fill-current group-hover:scale-110 transition-transform" /> 
+                <Flame className="w-5 h-5 text-black fill-current group-hover:scale-110 transition-transform" /> 
                 INICIAR TREINO 
             </button>
         </div>

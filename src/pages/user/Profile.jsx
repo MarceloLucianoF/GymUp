@@ -160,7 +160,7 @@ export default function Profile() {
 
   const imcData = calculateIMC();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 transition-colors duration-300 pb-24">
@@ -185,7 +185,7 @@ export default function Profile() {
             )}
 
             {/* Capa / Avatar */}
-            <div className="h-32 bg-gradient-to-r from-blue-600 to-purple-600 relative">
+            <div className="h-32 bg-gradient-to-r from-[#FFC107] to-[#FFB300] relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                     <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl relative group">
                         <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-400">
@@ -219,7 +219,7 @@ export default function Profile() {
                                 value={formData.displayName} 
                                 onChange={handleChange}
                                 placeholder="Seu nome"
-                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-bold"
+                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-bold"
                             />
                         </div>
 
@@ -229,7 +229,7 @@ export default function Profile() {
                                 name="goal"
                                 value={formData.goal} 
                                 onChange={handleChange}
-                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white cursor-pointer font-bold"
+                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white cursor-pointer font-bold"
                             >
                                 <option value="Hipertrofia">Hipertrofia</option>
                                 <option value="Emagrecimento">Emagrecimento</option>
@@ -241,11 +241,11 @@ export default function Profile() {
 
                     {/* --- CARD DO TREINADOR --- */}
                     {coachData && (
-                        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-4 flex items-center justify-between">
+                        <div className="bg-[#FFC107]/10 border border-[#FFC107]/20 rounded-2xl p-4 flex items-center justify-between">
                             <div>
-                                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase mb-1">Seu Treinador</p>
+                                <p className="text-[10px] font-bold text-[#FFC107] dark:text-[#FFC107] uppercase mb-1">Seu Treinador</p>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-sm">
+                                    <div className="w-10 h-10 rounded-full bg-[#FFC107]/20 dark:bg-[#FFC107]/10 flex items-center justify-center text-[#FFC107] dark:text-[#FFB300] font-bold text-sm">
                                         {coachData.displayName?.charAt(0)}
                                     </div>
                                     <div>
@@ -257,7 +257,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/chat')}
-                                className="bg-white dark:bg-gray-800 text-blue-600 px-3 py-2 rounded-xl shadow-sm font-bold text-xs hover:bg-blue-50 transition-colors border border-blue-100 dark:border-gray-700 flex items-center gap-1"
+                                className="bg-white dark:bg-gray-800 text-[#FFC107] px-3 py-2 rounded-xl shadow-sm font-bold text-xs hover:bg-[#FFC107]/10 transition-colors border border-[#FFC107]/25 dark:border-gray-700 flex items-center gap-1"
                             >
                                 <MessageSquare className="w-3.5 h-3.5" /> Chat
                             </button>
@@ -288,7 +288,7 @@ export default function Profile() {
                                     placeholder="00.0"
                                     value={formData.weight} 
                                     onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center"
                                 />
                             </div>
                             <div>
@@ -300,7 +300,7 @@ export default function Profile() {
                                     placeholder="000"
                                     value={formData.height} 
                                     onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center"
                                 />
                             </div>
                             <div>
@@ -312,7 +312,7 @@ export default function Profile() {
                                     placeholder="00"
                                     value={formData.age} 
                                     onChange={handleIntegerChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center"
                                 />
                             </div>
                         </div>
@@ -321,7 +321,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/measurements')}
-                                className="text-xs text-blue-500 font-bold hover:underline"
+                                className="text-xs text-[#FFC107] font-bold hover:underline"
                             >
                                 Ver histórico de evolução →
                             </button>
@@ -334,7 +334,7 @@ export default function Profile() {
                             disabled={!isDirty}
                             className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
                                 isDirty 
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20' 
+                                ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] hover:from-[#FFC107] hover:to-[#FFB300] text-black shadow-lg shadow-[#FFC107]/20 hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]' 
                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed shadow-none'
                             }`}
                         >
