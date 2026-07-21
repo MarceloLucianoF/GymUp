@@ -430,6 +430,7 @@ async function runSeed() {
   // Limpar coleções principais
   await deleteCollection("exercises");
   await deleteCollection("trainings");
+  await deleteCollection("trainingPackages");
   await deleteCollection("users");
   await deleteCollection("checkIns");
   await deleteCollection("measurements");
@@ -482,13 +483,31 @@ async function runSeed() {
   }
   console.log(`✅ ${exercisesData.length} Exercícios criados!`);
 
-  // 3. Criar Fichas de Treino vinculando aos Exercícios
+  // 3. Criar Pacote de Treino
+  console.log("📦 Criando pacote de treino...");
+  const packageRef = db.collection("trainingPackages").doc();
+  const packagePayload = {
+    name: "Split ABC — Treino Personalizado",
+    description: "Rotina de 3 dias focada em desenvolvimento muscular balanceado. Peitoral + Dorsal + CORE, Pernas + Ombros, Bíceps + Tríceps + CORE.",
+    trainingsCount: trainingsData.length,
+    difficulty: "Intermediário",
+    tags: ["hipertrofia", "3x semana", "split ABC"],
+    createdBy: "coach_default_id",
+    createdAt: now,
+    updatedAt: now
+  };
+  await packageRef.set(packagePayload);
+  const packageId = packageRef.id;
+  console.log(`✅ Pacote "${packagePayload.name}" criado (${packageId})!`);
+
+  // 4. Criar Fichas de Treino vinculando aos Exercícios e ao Pacote
   console.log("📋 Montando treinos e vinculando exercícios...");
   let firstTrainingId = null;
-  for (const tr of trainingsData) {
+  for (let i = 0; i < trainingsData.length; i++) {
+    const tr = trainingsData[i];
     const docRef = db.collection("trainings").doc();
     
-    // Converte os IDs locais (ex1, ex2) para os novos IDs gerados no Firestore
+    // Converte os IDs locais para os novos IDs gerados no Firestore
     const resolvedExercises = tr.exercises
       .map(oldId => exerciseIdMap[oldId])
       .filter(Boolean);
@@ -499,6 +518,9 @@ async function runSeed() {
       duration: tr.duration,
       difficulty: tr.difficulty,
       exercises: resolvedExercises,
+      packageId: packageId,
+      packageName: packagePayload.name,
+      order: i,
       createdAt: now,
       updatedAt: now
     };
@@ -508,7 +530,7 @@ async function runSeed() {
       firstTrainingId = docRef.id;
     }
   }
-  console.log(`✅ ${trainingsData.length} Fichas de treinos criadas e associadas!`);
+  console.log(`✅ ${trainingsData.length} Fichas de treinos criadas e associadas ao pacote!`);
 
   if (firstTrainingId) {
     console.log(`🔗 Associando Treino A (${firstTrainingId}) ao Aluno Determinado...`);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -6,34 +6,52 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti'; 
 import VideoModal from '../../components/common/VideoModal';
-import { Dumbbell, Video, Award, Trophy, Play, CheckCircle2, Flame, Clock } from 'lucide-react';
+import { Dumbbell, Video, Award, List, Search, SkipForward, Timer, ChevronLeft, ChevronRight, Check, Circle } from 'lucide-react';
 
 // --- COMPONENTE TIMER DE DESCANSO ---
 const RestTimer = ({ initialSeconds, onFinish, onClose }) => {
     const [seconds, setSeconds] = useState(initialSeconds);
+    const totalRef = useRef(initialSeconds);
+
+    const handleFinish = useCallback(() => {
+        // Vibra no mobile ao terminar
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200, 100, 300]);
+        }
+        onFinish();
+    }, [onFinish]);
 
     useEffect(() => {
         if (seconds <= 0) {
-            onFinish();
+            handleFinish();
             return;
         }
         const timer = setInterval(() => setSeconds(s => s - 1), 1000);
         return () => clearInterval(timer);
-    }, [seconds, onFinish]);
+    }, [seconds, handleFinish]);
+
+    // Calcular progresso do SVG
+    const circumference = 2 * Math.PI * 120;
+    const progress = seconds / totalRef.current;
+    const strokeDashoffset = circumference * (1 - progress);
 
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-fade-in p-6">
             <div className="text-center text-white w-full max-w-sm">
-                <p className="text-sm font-bold uppercase tracking-[0.2em] mb-6 text-gray-400">Recuperando</p>
+                <p className="text-sm font-bold uppercase tracking-[0.2em] mb-6 text-gray-400">
+                    <Timer className="w-4 h-4 inline-block mr-2 -mt-0.5" />
+                    Recuperando
+                </p>
                 
                 <div className="relative w-64 h-64 mx-auto flex items-center justify-center mb-8">
                     <svg className="absolute inset-0 w-full h-full transform -rotate-90">
                         <circle cx="128" cy="128" r="120" stroke="#333" strokeWidth="8" fill="transparent" />
                         <circle 
                             cx="128" cy="128" r="120" stroke="#3b82f6" strokeWidth="8" fill="transparent"
-                            strokeDasharray={2 * Math.PI * 120}
-                            strokeDashoffset={0} 
-                            className="text-blue-500 transition-all duration-1000"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round"
+                            className="transition-all duration-1000 ease-linear"
                         />
                     </svg>
                     <div className="text-7xl font-black font-mono tracking-tighter">
@@ -41,9 +59,12 @@ const RestTimer = ({ initialSeconds, onFinish, onClose }) => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => setSeconds(s => s + 30)} className="py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-bold transition-colors">+30s</button>
-                    <button onClick={onClose} className="py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-bold transition-colors shadow-lg shadow-red-600/20">Pular ⏭</button>
+                <div className="grid grid-cols-3 gap-3">
+                    <button onClick={() => { setSeconds(s => Math.max(0, s - 15)); }} className="py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-bold transition-colors text-sm">-15s</button>
+                    <button onClick={() => setSeconds(s => s + 30)} className="py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-bold transition-colors text-sm">+30s</button>
+                    <button onClick={onClose} className="py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-bold transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 text-sm">
+                        <SkipForward className="w-4 h-4" /> Pular
+                    </button>
                 </div>
             </div>
         </div>
@@ -154,7 +175,7 @@ export default function TrainingExecutionPage() {
     }, [trainingId, user, navigate, location.state]);
 
     // 2. Lógica Avançada de Inputs
-    const handleCheckSet = (exIndex, setIndex, targetReps, totalSets) => {
+    const handleCheckSet = (exIndex, setIndex, targetReps, totalSets, restSeconds) => {
         const key = `${exIndex}-${setIndex}`;
         const current = sessionData[key] || {};
         const isCompleting = !current.completed;
@@ -172,17 +193,19 @@ export default function TrainingExecutionPage() {
         // Se completou a série
         if (isCompleting) {
             const isLastSetOfExercise = setIndex === totalSets - 1;
+            // Usa o tempo de descanso do exercício, ou fallback de 60s
+            const restTime = restSeconds || 60;
             
             if (!isLastSetOfExercise) {
-                setRestTimer(60); 
+                setRestTimer(restTime); 
             } else if (viewMode === 'focus' && isLastSetOfExercise) {
                 toast.success("Exercício concluído! Próximo...", { duration: 2000 });
                 setTimeout(() => {
                     if (activeExerciseIndex < training.exercises.length - 1) {
                         setActiveExerciseIndex(prev => prev + 1);
-                        setRestTimer(60); 
+                        setRestTimer(restTime); 
                     } else {
-                        toast("Treino finalizado! Clique em terminar.", { icon: '🏆' });
+                        toast.success("Treino finalizado! Clique em terminar.", { duration: 3000 });
                     }
                 }, 500);
             }
@@ -256,11 +279,17 @@ export default function TrainingExecutionPage() {
 
     if (loading || !training) return <div className="h-screen bg-gray-900 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div></div>;
 
+    // Calcular progresso geral
+    const totalSetsInTraining = training.exercises.reduce((acc, ex) => acc + (parseInt(ex.sets) || 3), 0);
+    const completedSetsCount = Object.values(sessionData).filter(s => s.completed).length;
+    const progressPercent = totalSetsInTraining > 0 ? Math.round((completedSetsCount / totalSetsInTraining) * 100) : 0;
+
     // Helper para renderizar um card de exercício
     const renderExerciseCard = (ex, exIndex, isFocusMode = false) => {
         const setsCount = parseInt(ex.sets) || 3;
         const setsArray = Array.from({ length: setsCount });
         const lastLoad = historyMap[ex.name];
+        const restSeconds = ex.rest || 60;
 
         return (
             <div key={exIndex} className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden ${isFocusMode ? 'min-h-[60vh] flex flex-col' : ''}`}>
@@ -268,7 +297,7 @@ export default function TrainingExecutionPage() {
                 <div className="p-4 flex gap-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800 relative">
                     <div className={`${isFocusMode ? 'w-24 h-24' : 'w-16 h-16'} bg-gray-200 dark:bg-gray-700 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600 transition-all`}>
                         {ex.machineImage ? 
-                            <img src={ex.machineImage} className="w-full h-full object-cover" alt="" onClick={() => isFocusMode && setShowVideo(true)}/> : 
+                            <img src={ex.machineImage} className="w-full h-full object-cover" alt={ex.name} onClick={() => isFocusMode && setShowVideo(true)}/> : 
                             <div className="h-full flex items-center justify-center">
                                 <Dumbbell className="w-6 h-6 text-gray-400 dark:text-gray-500" />
                             </div>
@@ -280,6 +309,9 @@ export default function TrainingExecutionPage() {
                         <div className="flex items-center gap-2 mt-2">
                             <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">Meta: {ex.sets}x {ex.reps}</span>
                             {lastLoad && <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold">↺ {lastLoad}kg</span>}
+                            <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                                <Timer className="w-3 h-3" /> {restSeconds}s
+                            </span>
                         </div>
                     </div>
                     {/* Botão de Dica/Vídeo no header */}
@@ -313,7 +345,7 @@ export default function TrainingExecutionPage() {
                                     </div>
                                     <div className="relative">
                                         <input 
-                                            type="number" inputMode="numeric" placeholder={ex.reps.split('-')[0]}
+                                            type="number" inputMode="numeric" placeholder={String(ex.reps).split('-')[0]}
                                             value={data.reps || ''}
                                             onChange={(e) => handleInput(exIndex, setIndex, 'reps', e.target.value)}
                                             className={`w-full bg-gray-100 dark:bg-gray-700/50 rounded-xl px-3 py-3 text-center font-bold text-xl text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isFocusMode ? 'h-14' : ''}`}
@@ -323,12 +355,12 @@ export default function TrainingExecutionPage() {
                                 </div>
 
                                 <button 
-                                    onClick={() => handleCheckSet(exIndex, setIndex, ex.reps.split('-')[0], setsCount)}
+                                    onClick={() => handleCheckSet(exIndex, setIndex, String(ex.reps).split('-')[0], setsCount, restSeconds)}
                                     className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-sm ${
                                         isDone ? 'bg-green-500 text-white shadow-green-500/30' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                                     }`}
                                 >
-                                    {isDone ? <span className="text-2xl">✓</span> : <span className="text-xl">○</span>}
+                                    {isDone ? <Check className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
                                 </button>
                             </div>
                         );
@@ -342,33 +374,56 @@ export default function TrainingExecutionPage() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-40 transition-colors">
             
             {/* HEADER FIXO */}
-            <div className="fixed top-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md z-40 px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center shadow-sm">
-                <div>
-                    <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight">{training.name}</h2>
-                    <p className="text-[10px] text-gray-500">
-                        {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')} • {training.exercises.length} Ex
-                    </p>
+            <div className="fixed top-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md z-40 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+                <div className="flex justify-between items-center">
+                    <div className="flex-1 min-w-0">
+                        <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight truncate">{training.name}</h2>
+                        <p className="text-[10px] text-gray-500">
+                            {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')} • {training.exercises.length} Ex
+                        </p>
+                    </div>
+                    
+                    {/* Barra de Progresso */}
+                    <div className="hidden sm:flex items-center gap-2 mx-4">
+                        <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                style={{ width: `${progressPercent}%` }}
+                            />
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-400">{progressPercent}%</span>
+                    </div>
+                    
+                    {/* Toggle de Modo */}
+                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                        <button 
+                            onClick={() => setViewMode('list')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400'}`}
+                        >
+                            <List className="w-3.5 h-3.5" /> Lista
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('focus')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400'}`}
+                        >
+                            <Search className="w-3.5 h-3.5" /> Foco
+                        </button>
+                    </div>
                 </div>
                 
-                {/* Toggle de Modo */}
-                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                    <button 
-                        onClick={() => setViewMode('list')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400'}`}
-                    >
-                        📋 Lista
-                    </button>
-                    <button 
-                        onClick={() => setViewMode('focus')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400'}`}
-                    >
-                        🔍 Foco
-                    </button>
+                {/* Barra de Progresso Mobile */}
+                <div className="sm:hidden mt-2">
+                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                            className="h-full bg-green-500 rounded-full transition-all duration-500"
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
                 </div>
             </div>
 
             {/* ÁREA DE CONTEÚDO */}
-            <div className="pt-24 px-4 max-w-2xl mx-auto space-y-6">
+            <div className="pt-28 sm:pt-24 px-4 max-w-2xl mx-auto space-y-6">
                 
                 {viewMode === 'list' ? (
                     // MODO LISTA: Renderiza todos
@@ -380,9 +435,9 @@ export default function TrainingExecutionPage() {
                             <button 
                                 onClick={() => setActiveExerciseIndex(i => Math.max(0, i - 1))}
                                 disabled={activeExerciseIndex === 0}
-                                className="text-sm font-bold text-gray-400 disabled:opacity-30 hover:text-blue-500"
+                                className="text-sm font-bold text-gray-400 disabled:opacity-30 hover:text-blue-500 flex items-center gap-1"
                             >
-                                ← Anterior
+                                <ChevronLeft className="w-4 h-4" /> Anterior
                             </button>
                             <span className="text-xs font-bold text-gray-300">
                                 {activeExerciseIndex + 1} / {training.exercises.length}
@@ -390,9 +445,9 @@ export default function TrainingExecutionPage() {
                             <button 
                                 onClick={() => setActiveExerciseIndex(i => Math.min(training.exercises.length - 1, i + 1))}
                                 disabled={activeExerciseIndex === training.exercises.length - 1}
-                                className="text-sm font-bold text-gray-400 disabled:opacity-30 hover:text-blue-500"
+                                className="text-sm font-bold text-gray-400 disabled:opacity-30 hover:text-blue-500 flex items-center gap-1"
                             >
-                                Próximo →
+                                Próximo <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
                         
@@ -402,8 +457,7 @@ export default function TrainingExecutionPage() {
 
             </div>
 
-            {/* BOTÃO FINALIZAR (Correção do Footer) */}
-            {/* Adicionado pb-10 md:pb-4 para garantir que em mobile fique bem acima da barra de gestos */}
+            {/* BOTÃO FINALIZAR */}
             <div className="fixed bottom-0 left-0 right-0 p-4 pb-10 md:pb-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-[60] shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.1)]">
                 <button 
                     onClick={finishWorkout}
@@ -417,7 +471,7 @@ export default function TrainingExecutionPage() {
             {restTimer && (
                 <RestTimer 
                     initialSeconds={restTimer} 
-                    onFinish={() => { setRestTimer(null); toast("Bora pra próxima! 🔥", { icon: '🔔' }); }} 
+                    onFinish={() => { setRestTimer(null); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
                     onClose={() => setRestTimer(null)} 
                 />
             )}
