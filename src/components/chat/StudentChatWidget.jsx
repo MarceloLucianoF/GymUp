@@ -7,7 +7,7 @@ import { MessageSquare, X, Send } from 'lucide-react';
 
 export default function StudentChatWidget() {
     const { user } = useAuthContext();
-    const { messages, activeChat, sendMessage, openChatWithUser } = useChat(user);
+    const { messages, sendMessage, openChatWithUser } = useChat(user);
     
     const [isOpen, setIsOpen] = useState(false);
     const [inputText, setInputText] = useState('');
@@ -18,22 +18,23 @@ export default function StudentChatWidget() {
     useEffect(() => {
         const init = async () => {
             if (!user) return;
-            // Busca coachId no perfil
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists() && userDoc.data().coachId) {
-                const coachId = userDoc.data().coachId;
-                // Busca dados do Coach
-                const coachDoc = await getDoc(doc(db, 'users', coachId));
-                if (coachDoc.exists()) {
-                    const coachData = { uid: coachDoc.id, ...coachDoc.data() };
-                    setCoach(coachData);
-                    // Garante que o chat ativo esteja setado
-                    openChatWithUser(coachData);
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists() && userDoc.data().coachId) {
+                    const coachId = userDoc.data().coachId;
+                    const coachDoc = await getDoc(doc(db, 'users', coachId));
+                    if (coachDoc.exists()) {
+                        const coachData = { uid: coachDoc.id, ...coachDoc.data() };
+                        setCoach(coachData);
+                        openChatWithUser(coachData);
+                    }
                 }
+            } catch (err) {
+                console.error("Erro no ChatWidget:", err);
             }
         };
         init();
-    }, [user, isOpen]); // Tenta reconectar ao abrir
+    }, [user, openChatWithUser]);
 
     // Scroll automático
     useEffect(() => {
@@ -44,70 +45,73 @@ export default function StudentChatWidget() {
 
     const handleSend = (e) => {
         e.preventDefault();
+        if (!inputText.trim()) return;
         sendMessage(inputText);
         setInputText('');
     };
 
-    // Se não tiver coach vinculado, nem mostra o widget (ou mostra estado vazio)
+    // Se não tiver coach vinculado, não renderiza o widget flutuante
     if (!coach) return null;
 
     return (
         <>
-            {/* BOTÃO FLUTUANTE (FAB) */}
+            {/* BOTÃO FLUTUANTE DESKTOP (FAB - No mobile o chat é acessado pela Navbar) */}
             {!isOpen && (
                 <button 
                     onClick={() => setIsOpen(true)}
-                    className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 z-50 animate-bounce-in"
+                    className="hidden md:flex fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-[#FFC107] to-[#FF9800] hover:from-[#FFB300] hover:to-[#FF8F00] text-black rounded-full shadow-2xl shadow-[#FFC107]/25 items-center justify-center transition-all hover:scale-110 active:scale-95 z-40 border-2 border-white dark:border-gray-900"
+                    title="Abrir Chat com Treinador"
                 >
-                    <MessageSquare className="w-6 h-6 text-white" />
+                    <MessageSquare className="w-6 h-6 text-black fill-current" />
                 </button>
             )}
 
             {/* JANELA DO CHAT */}
             {isOpen && (
-                <div className="fixed bottom-0 right-0 md:bottom-6 md:right-6 w-full md:w-96 h-[100dvh] md:h-[500px] bg-white dark:bg-gray-800 md:rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden border border-gray-200 dark:border-gray-700 animate-slide-up">
+                <div className="fixed bottom-20 right-2 left-2 md:left-auto md:bottom-6 md:right-6 w-auto md:w-96 h-[calc(100dvh-7rem)] md:h-[520px] bg-white dark:bg-[#1F2937] rounded-3xl shadow-2xl flex flex-col z-50 overflow-hidden border border-gray-200 dark:border-gray-700 animate-slide-up">
                     
                     {/* Header */}
-                    <div className="p-4 bg-blue-600 text-white flex justify-between items-center shadow-md shrink-0">
+                    <div className="p-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white flex justify-between items-center shadow-md shrink-0 border-b border-gray-700">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden border border-white/30">
+                            <div className="w-10 h-10 rounded-full bg-[#FFC107]/20 flex items-center justify-center overflow-hidden border border-[#FFC107]/40">
                                 {coach.photoURL ? (
-                                    <img src={coach.photoURL} className="w-full h-full object-cover" />
+                                    <img src={coach.photoURL} alt={coach.displayName || 'Treinador'} className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="font-bold">{coach.displayName[0]}</span>
+                                    <span className="font-bold text-[#FFC107]">{coach.displayName?.[0]}</span>
                                 )}
                             </div>
                             <div>
-                                <h3 className="font-bold text-sm">{coach.displayName}</h3>
-                                <p className="text-[10px] text-blue-100 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> Treinador
+                                <h3 className="font-bold text-sm text-white">{coach.displayName}</h3>
+                                <p className="text-[10px] text-[#FFC107] flex items-center gap-1 font-bold">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Treinador
                                 </p>
                             </div>
                         </div>
                         <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center">
-                            <X className="w-4 h-4 text-white" />
+                            <X className="w-4 h-4 text-gray-300" />
                         </button>
                     </div>
 
                     {/* Area de Mensagens */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/50">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/60">
                         {messages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 text-xs text-center p-6">
-                                <p className="text-2xl mb-2">👋</p>
-                                <p>Tire suas dúvidas ou peça feedback do seu treino.</p>
+                                <MessageSquare className="w-8 h-8 text-[#FFC107] mb-2 opacity-60" />
+                                <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Converse com seu Treinador</p>
+                                <p className="text-gray-400">Tire suas dúvidas sobre execução ou peça ajustes nas cargas.</p>
                             </div>
                         ) : (
                             messages.map((msg) => {
                                 const isMe = msg.senderId === user.uid;
                                 return (
                                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm relative ${
+                                        <div className={`max-w-[85%] p-3 rounded-2xl text-xs sm:text-sm relative ${
                                             isMe 
-                                            ? 'bg-blue-600 text-white rounded-tr-none' 
-                                            : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-600'
+                                            ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black font-medium rounded-tr-none shadow-sm' 
+                                            : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700'
                                         }`}>
                                             <p>{msg.text}</p>
-                                            <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-blue-100' : 'text-gray-400'}`}>
+                                            <p className={`text-[9px] mt-1 text-right font-bold ${isMe ? 'text-black/60' : 'text-gray-400'}`}>
                                                 {msg.createdAt?.seconds ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}
                                             </p>
                                         </div>
@@ -125,15 +129,15 @@ export default function StudentChatWidget() {
                                 type="text"
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                placeholder="Digite..."
-                                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2.5 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Digite sua mensagem..."
+                                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2.5 rounded-2xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#FFC107]"
                             />
                             <button 
                                 type="submit" 
                                 disabled={!inputText.trim()}
-                                className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-sm disabled:opacity-50 transition-all active:scale-95 shrink-0"
+                                className="w-10 h-10 btn-primary-gradient rounded-xl flex items-center justify-center shadow-sm disabled:opacity-50 transition-all active:scale-95 shrink-0"
                             >
-                                <Send className="w-4 h-4 text-white" />
+                                <Send className="w-4 h-4 text-black" />
                             </button>
                         </form>
                     </div>

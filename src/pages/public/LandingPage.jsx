@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Smartphone, Dumbbell, Flame, CheckCircle, Shield, Award, Users, Target, Zap, Heart, TrendingUp } from 'lucide-react';
+import { Smartphone, Dumbbell, Flame, CheckCircle, Shield, Award, Users, Target, Zap, Heart, TrendingUp, Play } from 'lucide-react';
+import { useAuthContext } from '../../hooks/AuthContext';
+import { activeWorkoutService } from '../../services/activeWorkoutService';
 
 // --- LOGO OFICIAL DA MARCA (A + U + Halter + Seta) ---
 const AcademyUpLogo = ({ className = "w-10 h-10" }) => {
@@ -56,6 +58,15 @@ const AcademyUpLogo = ({ className = "w-10 h-10" }) => {
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuthContext();
+  const [activeSession, setActiveSession] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      const session = activeWorkoutService.getActiveSession(user.uid);
+      setActiveSession(session);
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-[#0D1117] text-white selection:bg-[#FFC107] selection:text-black transition-colors duration-300 font-sans">
@@ -66,7 +77,7 @@ export default function LandingPage() {
 
       {/* Navbar */}
       <nav className="relative flex justify-between items-center p-6 max-w-7xl mx-auto z-10">
-        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate('/')}>
+        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate(user ? '/dashboard' : '/')}>
           <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center border border-[#FFC107]/20 group-hover:border-[#FFC107]/60 group-hover:scale-105 transition-all p-1">
             <AcademyUpLogo className="w-full h-full text-white" />
           </div>
@@ -77,19 +88,41 @@ export default function LandingPage() {
             <span className="text-[9px] text-gray-500 font-bold tracking-[0.2em] mt-0.5">TREINE • EVOLUA • SUPERE</span>
           </div>
         </div>
-        <div className="flex gap-4 items-center">
-          <button 
-            onClick={() => navigate('/login')} 
-            className="text-gray-300 font-bold hover:text-[#FFC107] transition-colors text-sm px-4 py-2"
-          >
-            Entrar
-          </button>
-          <button 
-            onClick={() => navigate('/register')} 
-            className="bg-[#FFC107] hover:bg-[#FFB300] text-black px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-[#FFC107]/10 hover:shadow-[#FFC107]/20 transition-all hover:-translate-y-0.5 text-sm"
-          >
-            Começar Grátis
-          </button>
+
+        <div className="flex gap-3 items-center">
+          {user ? (
+            <>
+              {activeSession ? (
+                <button 
+                  onClick={() => navigate(`/execution/${activeSession.trainingId}`)}
+                  className="bg-gradient-to-r from-orange-500 to-[#FFC107] text-black font-black text-xs sm:text-sm px-4 sm:px-6 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 hover:scale-105 transition-all flex items-center gap-2 animate-pulse"
+                >
+                  <Flame className="w-4 h-4 fill-current text-black" /> Continuar Treino
+                </button>
+              ) : null}
+              <button 
+                onClick={() => navigate('/dashboard')} 
+                className="btn-primary-gradient text-xs sm:text-sm px-4 sm:px-6 py-2.5"
+              >
+                Acessar Meu Painel
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={() => navigate('/login')} 
+                className="text-gray-300 font-bold hover:text-[#FFC107] transition-colors text-sm px-4 py-2"
+              >
+                Entrar
+              </button>
+              <button 
+                onClick={() => navigate('/register')} 
+                className="btn-primary-gradient text-sm px-6 py-3"
+              >
+                Começar Grátis
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -112,18 +145,54 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto sm:max-w-none">
-          <button 
-            onClick={() => navigate('/register')}
-            className="bg-[#FFC107] hover:bg-[#FFB300] text-black text-lg px-8 py-4.5 rounded-2xl font-black shadow-xl shadow-[#FFC107]/20 hover:shadow-[#FFC107]/30 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
-          >
-            <Flame className="w-5 h-5 fill-current" /> Criar Minha Conta
-          </button>
-          <button 
-            onClick={() => navigate('/login')}
-            className="bg-[#1F2937] hover:bg-gray-800 text-gray-200 border border-gray-800 text-lg px-8 py-4.5 rounded-2xl font-bold transition-all hover:border-[#FFC107]/30"
-          >
-            Acessar Meu Painel
-          </button>
+          {user ? (
+            activeSession ? (
+              <>
+                <button 
+                  onClick={() => navigate(`/execution/${activeSession.trainingId}`)}
+                  className="btn-primary-gradient text-lg px-8 py-4.5 bg-gradient-to-r from-orange-500 to-[#FFC107]"
+                >
+                  <Flame className="w-5 h-5 fill-current" /> Continuar Treino Ativo
+                </button>
+                <button 
+                  onClick={() => navigate('/dashboard')}
+                  className="btn-secondary-dark text-lg px-8 py-4.5"
+                >
+                  Ir para Meu Painel
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/dashboard')}
+                  className="btn-primary-gradient text-lg px-8 py-4.5"
+                >
+                  <Play className="w-5 h-5 fill-current" /> Ir para Meu Painel
+                </button>
+                <button 
+                  onClick={() => navigate('/trainings')}
+                  className="btn-secondary-dark text-lg px-8 py-4.5"
+                >
+                  Explorar Treinos
+                </button>
+              </>
+            )
+          ) : (
+            <>
+              <button 
+                onClick={() => navigate('/register')}
+                className="btn-primary-gradient text-lg px-8 py-4.5"
+              >
+                <Flame className="w-5 h-5 fill-current" /> Criar Minha Conta
+              </button>
+              <button 
+                onClick={() => navigate('/login')}
+                className="btn-secondary-dark text-lg px-8 py-4.5"
+              >
+                Acessar Meu Painel
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -199,12 +268,22 @@ export default function LandingPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#FFC107]/5 rounded-full blur-[80px] pointer-events-none"></div>
         <h2 className="text-4xl md:text-5xl font-black mb-6">Pronto para o próximo nível?</h2>
         <p className="text-gray-400 mb-10 text-lg max-w-xl mx-auto">Cadastre-se hoje mesmo e comece a treinar com disciplina e inteligência.</p>
-        <button 
-          onClick={() => navigate('/register')}
-          className="bg-[#FFC107] hover:bg-[#FFB300] text-black text-lg font-black px-10 py-5 rounded-2xl shadow-xl shadow-[#FFC107]/10 hover:shadow-[#FFC107]/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
-        >
-          Iniciar Agora Gratuitamente
-        </button>
+        {user ? (
+          <button 
+            onClick={() => navigate(activeSession ? `/execution/${activeSession.trainingId}` : '/dashboard')}
+            className="btn-primary-gradient text-lg px-10 py-5 mx-auto flex items-center justify-center gap-2"
+          >
+            <Flame className="w-5 h-5 fill-current" />
+            {activeSession ? 'Continuar Treino Ativo 🔥' : 'Acessar Meu Painel'}
+          </button>
+        ) : (
+          <button 
+            onClick={() => navigate('/register')}
+            className="btn-primary-gradient text-lg px-10 py-5 mx-auto"
+          >
+            Iniciar Agora Gratuitamente
+          </button>
+        )}
       </section>
 
       {/* Footer */}
@@ -230,11 +309,11 @@ const AttributeBadge = ({ icon, text }) => (
 );
 
 const PillarCard = ({ icon, title, desc }) => (
-  <div className="bg-[#1F2937]/40 border border-gray-800/80 p-8 rounded-3xl hover:border-[#FFC107]/30 transition-all duration-300 group hover:-translate-y-0.5">
-    <div className="w-12 h-12 bg-[#FFC107] rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-[#FFC107]/10 group-hover:scale-105 transition-transform">
+  <div className="bg-[#1F2937]/50 backdrop-blur-md border border-[#FFC107]/10 p-8 rounded-3xl hover:border-[#FFC107]/40 hover:shadow-[0_0_30px_rgba(255,193,7,0.1)] transition-all duration-300 group hover:-translate-y-1">
+    <div className="w-13 h-13 bg-gradient-to-br from-[#FFC107] to-[#FF9800] rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-[#FFC107]/20 group-hover:scale-110 transition-transform">
       {icon}
     </div>
-    <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
+    <h3 className="text-xl font-black text-white mb-3 tracking-tight">{title}</h3>
     <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
   </div>
 );

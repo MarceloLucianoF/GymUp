@@ -1,93 +1,195 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, addDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
+import { activeWorkoutService } from '../../services/activeWorkoutService';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti'; 
 import VideoModal from '../../components/common/VideoModal';
-import { Dumbbell, Video, Award, List, Search, SkipForward, Timer, ChevronLeft, ChevronRight, Check, Circle } from 'lucide-react';
+import { exercises as defaultExercises } from '../../data/exercises';
+import { Dumbbell, Video, Award, List, Search, SkipForward, Timer, ChevronLeft, ChevronRight, Check, Circle, Pause, Play, Wifi, WifiOff, History, X, Trophy } from 'lucide-react';
 
-// --- COMPONENTE TIMER DE DESCANSO ---
-const RestTimer = ({ initialSeconds, onFinish, onClose }) => {
-    const parsedInitial = parseInt(initialSeconds, 10) || 60;
-    const [seconds, setSeconds] = useState(parsedInitial);
-    const totalRef = useRef(parsedInitial);
+// ... rest timer components ...
+
+// --- COMPONENTE TIMER DE DESCANSO (TIMESTAMP REAL - RESILIENTE A BACKGROUND) ---
+const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
+    const [remaining, setRemaining] = useState(() => Math.max(0, Math.ceil((endTime - Date.now()) / 1000)));
+    const [isPaused, setIsPaused] = useState(false);
+    const pausedTimeRef = useRef(null);
+
+    const totalDuration = duration || 60;
 
     const handleFinish = useCallback(() => {
-        // Vibra no mobile ao terminar
         if (navigator.vibrate) {
             navigator.vibrate([200, 100, 200, 100, 300]);
         }
+        activeWorkoutService.playRestBeep();
         onFinish();
     }, [onFinish]);
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            setSeconds(s => {
-                if (s <= 1) {
-                    clearInterval(timer);
-                    return 0;
-                }
-                return s - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, []);
+        if (isPaused) return;
 
-    useEffect(() => {
-        if (seconds === 0) {
-            handleFinish();
-        }
-    }, [seconds, handleFinish]);
+        const interval = setInterval(() => {
+            const now = Date.now();
+            const left = Math.max(0, Math.ceil((endTime - now) / 1000));
+            setRemaining(left);
 
-    const adjustSeconds = (amount) => {
-        setSeconds(s => {
-            const next = s + amount;
-            if (next <= 0) return 0;
-            if (next > totalRef.current) {
-                totalRef.current = next;
+            if (left <= 0) {
+                clearInterval(interval);
+                handleFinish();
             }
-            return next;
-        });
+        }, 250);
+
+        return () => clearInterval(interval);
+    }, [endTime, isPaused, handleFinish]);
+
+    const togglePause = () => {
+        if (isPaused) {
+            // Retomar: recalcular endTime baseado no tempo pausado
+            const pausedDuration = Date.now() - pausedTimeRef.current;
+            onAdjust(pausedDuration);
+            setIsPaused(false);
+        } else {
+            // Pausar
+            pausedTimeRef.current = Date.now();
+            setIsPaused(true);
+        }
     };
 
     // Calcular progresso do SVG
     const circumference = 2 * Math.PI * 120;
-    const progress = totalRef.current > 0 ? (seconds / totalRef.current) : 0;
+    const progress = totalDuration > 0 ? (remaining / totalDuration) : 0;
     const strokeDashoffset = circumference * (1 - progress);
 
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-fade-in p-6">
             <div className="text-center text-white w-full max-w-sm">
-                <p className="text-sm font-bold uppercase tracking-[0.2em] mb-6 text-gray-400">
-                    <Timer className="w-4 h-4 inline-block mr-2 -mt-0.5" />
-                    Recuperando
-                </p>
+                <div className="flex items-center justify-center gap-2 mb-6">
+                    <Timer className="w-5 h-5 text-[#FFC107] animate-spin" style={{ animationDuration: '3s' }} />
+                    <p className="text-sm font-black uppercase tracking-[0.2em] text-gray-300">
+                        Descanso Ativo {isPaused && '(Pausado)'}
+                    </p>
+                </div>
                 
                 <div className="relative w-64 h-64 mx-auto flex items-center justify-center mb-8">
                     <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-                        <circle cx="128" cy="128" r="120" stroke="#333" strokeWidth="8" fill="transparent" />
+                        <circle cx="128" cy="128" r="120" stroke="#222" strokeWidth="8" fill="transparent" />
                         <circle 
-                            cx="128" cy="128" r="120" stroke="#FFC107" strokeWidth="8" fill="transparent"
+                            cx="128" cy="128" r="120" stroke={isPaused ? "#888" : "#FFC107"} strokeWidth="8" fill="transparent"
                             strokeDasharray={circumference}
                             strokeDashoffset={strokeDashoffset}
                             strokeLinecap="round"
-                            className="transition-all duration-1000 ease-linear"
+                            className="transition-all duration-300 ease-linear"
                         />
                     </svg>
                     <div className="text-7xl font-black font-mono tracking-tighter">
-                        {Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, '0')}
+                        {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                    <button onClick={() => adjustSeconds(-15)} className="py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-bold transition-colors text-sm">-15s</button>
-                    <button onClick={() => adjustSeconds(30)} className="py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-bold transition-colors text-sm">+30s</button>
-                    <button onClick={onClose} className="py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-bold transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 text-sm">
-                        <SkipForward className="w-4 h-4" /> Pular
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                    <button onClick={() => onAdjust(-15000)} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors">-15s</button>
+                    <button onClick={() => onAdjust(30000)} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors">+30s</button>
+                    <button onClick={() => onAdjust(60000)} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors">+60s</button>
+                    <button onClick={togglePause} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1">
+                        {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                     </button>
                 </div>
+
+                <button onClick={onClose} className="w-full py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-black transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 text-sm active:scale-95">
+                    <SkipForward className="w-4 h-4" /> Pular Descanso
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// --- MODAL DE HISTÓRICO DE CARGAS DO EXERCÍCIO ---
+const LoadHistoryModal = ({ exerciseName, historyLogs, onClose }) => {
+    if (!exerciseName) return null;
+
+    return (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
+            <div className="bg-white dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <span className="text-[10px] font-bold text-[#FFC107] uppercase tracking-wider">Histórico de Cargas</span>
+                        <h3 className="text-lg font-black text-gray-800 dark:text-white leading-tight">{exerciseName}</h3>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full bg-gray-100 dark:bg-gray-800">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {historyLogs && historyLogs.length > 0 ? (
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                        {historyLogs.map((item, idx) => (
+                            <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-100 dark:border-gray-700/60 flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-200">{item.date}</p>
+                                    <p className="text-[10px] text-gray-400">{item.setsCount} séries efetuadas</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-base font-black text-[#FFC107]">{item.maxWeight}kg</span>
+                                    <p className="text-[10px] text-gray-400">Máxima</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="py-8 text-center text-gray-400">
+                        <History className="w-8 h-8 mx-auto mb-2 opacity-50 text-[#FFC107]" />
+                        <p className="text-xs font-medium">Nenhum registro anterior encontrado para este exercício.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// --- MODAL DE CELEBRAÇÃO / TREINO CONCLUÍDO ---
+const CelebrationModal = ({ stats, onFinish }) => {
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
+            <div className="bg-white dark:bg-[#1F2937] border border-[#FFC107]/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden animate-fade-in-up">
+                <div className="w-20 h-20 bg-gradient-to-br from-[#FFC107] to-[#FF9800] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#FFC107]/20">
+                    <Trophy className="w-10 h-10 text-black fill-current animate-bounce" />
+                </div>
+
+                <span className="bg-[#FFC107]/10 text-[#FFC107] text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider border border-[#FFC107]/20 inline-block mb-2">
+                    Sensacional! 🔥
+                </span>
+
+                <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">TREINO CONCLUÍDO!</h2>
+                <p className="text-gray-400 text-xs mb-8">Excelente trabalho! Mais um passo em direção ao seu objetivo.</p>
+
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Tempo Total</p>
+                        <p className="text-xl font-black text-[#FFC107] font-mono mt-0.5">{stats.timeStr}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Volume Total</p>
+                        <p className="text-xl font-black text-white font-mono mt-0.5">{stats.volumeKg}kg</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Séries Concluídas</p>
+                        <p className="text-xl font-black text-white font-mono mt-0.5">{stats.completedSetsCount}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Exercícios</p>
+                        <p className="text-xl font-black text-white font-mono mt-0.5">{stats.executedExercisesCount}</p>
+                    </div>
+                </div>
+
+                <button 
+                    onClick={onFinish}
+                    className="w-full btn-primary-gradient py-4 text-base rounded-2xl"
+                >
+                    VOLTAR AO PAINEL
+                </button>
             </div>
         </div>
     );
@@ -102,25 +204,82 @@ export default function TrainingExecutionPage() {
 
     const [training, setTraining] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
     
     // Estado da Execução
     const [elapsedTime, setElapsedTime] = useState(0); 
-    const [restTimer, setRestTimer] = useState(null); 
-    
+    const [restTimerObj, setRestTimerObj] = useState(null); // { endTime, duration }
+    const startedAtRef = useRef(null);
+
     // Modos de Visualização
     const [viewMode, setViewMode] = useState('list'); 
     const [activeExerciseIndex, setActiveExerciseIndex] = useState(0); 
 
     // Histórico de Cargas e Inputs
     const [historyMap, setHistoryMap] = useState({});
+    const [rawHistoryDocs, setRawHistoryDocs] = useState([]);
     const [sessionData, setSessionData] = useState({});
     
+    // Modais e UI
     const [showVideo, setShowVideo] = useState(false);
-    const [zoomedImage, setZoomedImage] = useState(null); // ✅ Estado de Zoom da Imagem/GIF
+    const [zoomedImage, setZoomedImage] = useState(null);
+    const [selectedHistoryExercise, setSelectedHistoryExercise] = useState(null);
+    const [showCelebration, setShowCelebration] = useState(false);
+    const [celebrationStats, setCelebrationStats] = useState(null);
+
+    const syncPendingOfflineCheckIns = useCallback(async () => {
+        if (!user) return;
+        const pending = activeWorkoutService.getOfflineCheckIns(user.uid);
+        if (pending.length === 0) return;
+        try {
+            for (const payload of pending) {
+                await addDoc(collection(db, 'checkIns'), payload);
+            }
+            activeWorkoutService.clearOfflineCheckIns(user.uid);
+            toast.success("✓ Treinos offline sincronizados com sucesso!");
+        } catch (err) {
+            console.error("Erro ao sincronizar treinos offline:", err);
+        }
+    }, [user]);
+
+    // Conectividade e Sync Offline
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true);
+            toast.success("Conexão reestabelecida. Sincronizando...", { id: 'online-status' });
+            syncPendingOfflineCheckIns();
+        };
+        const handleOffline = () => {
+            setIsOnline(false);
+            toast.error("Você está offline. Seu treino continua salvo no celular.", { id: 'offline-status', duration: 4000 });
+        };
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [user, syncPendingOfflineCheckIns]);
+
+    // Auto-Save do Treino em Andamento
+    useEffect(() => {
+        if (!user || !training) return;
+        activeWorkoutService.saveActiveSession(user.uid, {
+            trainingId: training.id,
+            trainingName: training.name,
+            hydratedExercises: training.exercises,
+            sessionData,
+            activeExerciseIndex,
+            viewMode,
+            elapsedTime,
+            startedAt: startedAtRef.current,
+            restTimerObj,
+            currentExerciseName: training.exercises[activeExerciseIndex]?.name || ''
+        });
+    }, [user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj]);
 
     // 1. Inicialização e Detecção de Dispositivo
     useEffect(() => {
-        // Detecta se é mobile (largura < 768px) para definir o modo padrão
         const isMobile = window.innerWidth < 768;
         setViewMode(isMobile ? 'focus' : 'list');
 
@@ -146,32 +305,128 @@ export default function TrainingExecutionPage() {
                     }
                 }
 
-                let finalExercises = [];
-                if (location.state?.customExerciseList) {
-                    finalExercises = location.state.customExerciseList;
-                } else {
-                    finalExercises = trainingData.exercises || [];
+                // Busca biblioteca do Firestore para resolver IDs de documentos (ex: amtIl9nD3xmjp1nZ65vt)
+                let firestoreLib = [];
+                try {
+                    const exercisesSnap = await getDocs(collection(db, 'exercises'));
+                    firestoreLib = exercisesSnap.docs.map(d => ({ firestoreId: d.id, id: d.id, ...d.data() }));
+                } catch (e) {
+                    console.warn("Erro ao buscar biblioteca do Firestore:", e);
                 }
 
-                setTraining({ 
+                const combinedLibrary = [
+                    ...firestoreLib,
+                    ...defaultExercises.filter(d => !firestoreLib.some(f => f.name?.toLowerCase() === d.name?.toLowerCase()))
+                ];
+
+                let rawExercises = [];
+                if (location.state?.customExerciseList) {
+                    rawExercises = location.state.customExerciseList;
+                } else {
+                    rawExercises = trainingData.exercises || [];
+                }
+
+                // Normalização e hidratação completa dos exercícios cruzando Firestore + Defaults
+                const hydratedExercises = rawExercises.map((ex, idx) => {
+                    if (!ex) return {
+                        firestoreId: `ex-${idx}`,
+                        name: `Exercício ${idx + 1}`,
+                        muscleGroup: 'Geral',
+                        sets: '3',
+                        reps: '10',
+                        rest: 60
+                    };
+
+                    let idToFind = null;
+                    let nameToFind = null;
+
+                    if (typeof ex === 'string') {
+                        idToFind = ex;
+                    } else if (typeof ex === 'object') {
+                        idToFind = ex.firestoreId || ex.id || ex.exerciseId;
+                        nameToFind = ex.name || ex.title || ex.exerciseName;
+                    }
+
+                    const libEx = combinedLibrary.find(e => 
+                        (idToFind && (String(e.firestoreId) === String(idToFind) || String(e.id) === String(idToFind))) ||
+                        (nameToFind && e.name?.toLowerCase() === String(nameToFind).toLowerCase())
+                    );
+
+                    const exObj = typeof ex === 'object' ? ex : {};
+                    const name = exObj.name || exObj.title || exObj.exerciseName || libEx?.name || `Exercício ${idx + 1}`;
+                    const muscleGroup = exObj.muscleGroup || libEx?.muscleGroup || 'Geral';
+                    
+                    let sets = exObj.sets || exObj.series || libEx?.sets || 3;
+                    if (!sets || String(sets) === 'undefined') sets = 3;
+                    
+                    let reps = exObj.reps || exObj.repeticoes || libEx?.reps || '10';
+                    if (!reps || String(reps) === 'undefined') reps = '10';
+
+                    let rest = exObj.rest || exObj.restSeconds || libEx?.rest || 60;
+                    if (!rest || String(rest) === 'undefined') rest = 60;
+
+                    return {
+                        ...libEx,
+                        ...exObj,
+                        firestoreId: idToFind || libEx?.firestoreId || `ex-${idx}`,
+                        name,
+                        muscleGroup,
+                        sets: String(sets),
+                        reps: String(reps),
+                        rest: Number(rest) || 60,
+                        machineImage: exObj.machineImage || libEx?.machineImage || libEx?.demoUrl || null,
+                        videoUrl: exObj.videoUrl || libEx?.videoUrl || null,
+                        description: exObj.description || libEx?.description || '',
+                        execution: exObj.execution || libEx?.execution || ''
+                    };
+                });
+
+                const loadedTraining = { 
                     id: trainingDocId, 
                     ...trainingData, 
-                    exercises: finalExercises 
-                });
+                    exercises: hydratedExercises 
+                };
+
+                // Restauração de sessão ativa salva
+                const savedSession = activeWorkoutService.getActiveSession(user.uid);
+                if (savedSession && savedSession.trainingId === trainingDocId) {
+                    if (savedSession.sessionData) setSessionData(savedSession.sessionData);
+                    if (typeof savedSession.activeExerciseIndex === 'number') setActiveExerciseIndex(savedSession.activeExerciseIndex);
+                    if (savedSession.viewMode) setViewMode(savedSession.viewMode);
+                    if (savedSession.startedAt) {
+                        startedAtRef.current = savedSession.startedAt;
+                    } else if (typeof savedSession.elapsedTime === 'number') {
+                        startedAtRef.current = Date.now() - (savedSession.elapsedTime * 1000);
+                    }
+                    if (savedSession.restTimerObj && savedSession.restTimerObj.endTime > Date.now()) {
+                        setRestTimerObj(savedSession.restTimerObj);
+                    }
+                    if (savedSession.hydratedExercises && savedSession.hydratedExercises.length > 0) {
+                        loadedTraining.exercises = savedSession.hydratedExercises;
+                    }
+                    toast.success("🏋️ Treino em andamento restaurado!", { id: 'restore-session-toast' });
+                } else {
+                    startedAtRef.current = Date.now();
+                }
+
+                setTraining(loadedTraining);
 
                 // Busca histórico para placeholder de carga
                 const qHistory = query(
                     collection(db, 'checkIns'), 
                     where('userId', '==', user.uid),
                     orderBy('date', 'desc'),
-                    limit(10)
+                    limit(15)
                 );
                 const historySnap = await getDocs(qHistory);
                 const loadMap = {};
-                historySnap.docs.forEach(doc => {
-                    const d = doc.data();
-                    if (d.exercises) {
-                        d.exercises.forEach(ex => {
+                const rawDocs = [];
+
+                historySnap.docs.forEach(d => {
+                    const data = d.data();
+                    rawDocs.push(data);
+                    if (data.exercises) {
+                        data.exercises.forEach(ex => {
                             if (!loadMap[ex.name]) {
                                 const max = Math.max(...(ex.sets?.map(s => Number(s.weight)||0) || [0]));
                                 if (max > 0) loadMap[ex.name] = max;
@@ -180,6 +435,7 @@ export default function TrainingExecutionPage() {
                     }
                 });
                 setHistoryMap(loadMap);
+                setRawHistoryDocs(rawDocs);
 
             } catch (error) {
                 console.error("Erro ao iniciar execução:", error);
@@ -193,7 +449,13 @@ export default function TrainingExecutionPage() {
             initTraining();
         }
 
-        const globalTimer = setInterval(() => setElapsedTime(t => t + 1), 1000);
+        const globalTimer = setInterval(() => {
+            if (startedAtRef.current) {
+                const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
+                setElapsedTime(Math.max(0, elapsed));
+            }
+        }, 500);
+
         return () => clearInterval(globalTimer);
     }, [trainingId, user, navigate, location.state]);
 
@@ -209,7 +471,6 @@ export default function TrainingExecutionPage() {
         if (isCompleting) {
             // Reps auto-fill
             if (!finalReps) {
-                // Check if any previous set of this exercise has reps
                 for (let s = setIndex - 1; s >= 0; s--) {
                     const prevVal = sessionData[`${exIndex}-${s}`]?.reps;
                     if (prevVal) {
@@ -222,7 +483,6 @@ export default function TrainingExecutionPage() {
 
             // Weight auto-fill
             if (!finalWeight) {
-                // Check if any previous set of this exercise has weight
                 for (let s = setIndex - 1; s >= 0; s--) {
                     const prevVal = sessionData[`${exIndex}-${s}`]?.weight;
                     if (prevVal) {
@@ -230,7 +490,6 @@ export default function TrainingExecutionPage() {
                         break;
                     }
                 }
-                // Fallback to last session's PR / load
                 if (!finalWeight) {
                     finalWeight = historyMap[exName] || '';
                 }
@@ -250,17 +509,17 @@ export default function TrainingExecutionPage() {
         // Se completou a série
         if (isCompleting) {
             const isLastSetOfExercise = setIndex === totalSets - 1;
-            // Usa o tempo de descanso do exercício, ou fallback de 60s
             const restTime = restSeconds || 60;
+            const endTime = Date.now() + restTime * 1000;
             
             if (!isLastSetOfExercise) {
-                setRestTimer(restTime); 
+                setRestTimerObj({ endTime, duration: restTime }); 
             } else if (viewMode === 'focus' && isLastSetOfExercise) {
                 toast.success("Exercício concluído! Próximo...", { duration: 2000 });
                 setTimeout(() => {
                     if (activeExerciseIndex < training.exercises.length - 1) {
                         setActiveExerciseIndex(prev => prev + 1);
-                        setRestTimer(restTime); 
+                        setRestTimerObj({ endTime, duration: restTime }); 
                     } else {
                         toast.success("Treino finalizado! Clique em terminar.", { duration: 3000 });
                     }
@@ -275,6 +534,26 @@ export default function TrainingExecutionPage() {
             ...prev,
             [key]: { ...prev[key], [field]: value }
         }));
+    };
+
+    const handleOpenLoadHistory = (exerciseName) => {
+        const logs = [];
+        rawHistoryDocs.forEach(d => {
+            if (d.exercises) {
+                const found = d.exercises.find(e => e.name === exerciseName);
+                if (found && found.sets && found.sets.length > 0) {
+                    const weights = found.sets.map(s => Number(s.weight) || 0);
+                    const maxWeight = Math.max(...weights);
+                    const dateStr = d.date ? new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'Recente';
+                    logs.push({
+                        date: dateStr,
+                        maxWeight,
+                        setsCount: found.sets.length
+                    });
+                }
+            }
+        });
+        setSelectedHistoryExercise({ exerciseName, historyLogs: logs });
     };
 
     // 3. Finalizar Treino
@@ -317,16 +596,38 @@ export default function TrainingExecutionPage() {
                 totalVolume,
                 setsCompleted,
                 exercises: executedExercises,
-                createdAt: serverTimestamp()
+                createdAt: new Date().toISOString()
             };
 
-            await addDoc(collection(db, 'checkIns'), checkInPayload);
-            await updateDoc(doc(db, 'users', user.uid), { lastWorkoutDate: new Date().toISOString() });
+            if (navigator.onLine) {
+                try {
+                    await addDoc(collection(db, 'checkIns'), checkInPayload);
+                    await updateDoc(doc(db, 'users', user.uid), { lastWorkoutDate: new Date().toISOString() });
+                } catch (err) {
+                    console.warn("Sem rede no Firestore, enfileirando offline:", err);
+                    activeWorkoutService.saveOfflineCheckIn(user.uid, checkInPayload);
+                }
+            } else {
+                activeWorkoutService.saveOfflineCheckIn(user.uid, checkInPayload);
+            }
+
+            // Limpa o rascunho de sessão
+            activeWorkoutService.clearActiveSession(user.uid);
 
             try { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); } catch(e){}
+
+            const timeMinutes = Math.floor(elapsedTime / 60);
+            const timeSecs = elapsedTime % 60;
+
+            setCelebrationStats({
+                timeStr: `${timeMinutes}m ${(timeSecs).toString().padStart(2, '0')}s`,
+                volumeKg: totalVolume,
+                completedSetsCount: setsCompleted,
+                executedExercisesCount: executedExercises.length
+            });
             
-            toast.success("Treino salvo com sucesso!", { id: toastId });
-            navigate('/home');
+            toast.dismiss(toastId);
+            setShowCelebration(true);
 
         } catch (error) {
             console.error(error);
@@ -338,18 +639,24 @@ export default function TrainingExecutionPage() {
 
     // Calcular progresso geral
     const totalSetsInTraining = training.exercises.reduce((acc, ex) => acc + (parseInt(ex.sets) || 3), 0);
-    const completedSetsCount = Object.values(sessionData).filter(s => s.completed).length;
+    const completedSetsCount = Object.values(sessionData).filter(s => s?.completed).length;
     const progressPercent = totalSetsInTraining > 0 ? Math.round((completedSetsCount / totalSetsInTraining) * 100) : 0;
 
     // Helper para renderizar um card de exercício
     const renderExerciseCard = (ex, exIndex, isFocusMode = false) => {
-        const setsCount = parseInt(ex.sets) || 3;
+        if (!ex) return null;
+
+        const setsCount = parseInt(ex.sets, 10) || 3;
         const setsArray = Array.from({ length: setsCount });
-        const lastLoad = historyMap[ex.name];
+        const exName = ex.name || `Exercício ${exIndex + 1}`;
+        const lastLoad = historyMap[exName];
         const restSeconds = ex.rest || 60;
 
+        const repsRaw = (ex.reps && String(ex.reps) !== 'undefined') ? String(ex.reps) : '10';
+        const repsPlaceholder = repsRaw.includes('-') ? repsRaw.split('-')[0] : (repsRaw !== 'undefined' ? repsRaw : '10');
+
         return (
-            <div key={exIndex} className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden ${isFocusMode ? 'min-h-[60vh] flex flex-col' : ''}`}>
+            <div key={exIndex} className={`bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/25 transition-all duration-300 overflow-hidden ${isFocusMode ? 'min-h-[60vh] flex flex-col' : ''}`}>
                 {/* Card Header */}
                 <div className="p-4 flex gap-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-850 relative">
                     <div className={`${isFocusMode ? 'w-24 h-24' : 'w-16 h-16'} bg-gray-250 dark:bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-800 transition-all cursor-zoom-in group`}>
@@ -357,13 +664,13 @@ export default function TrainingExecutionPage() {
                             <img 
                                 src={ex.machineImage} 
                                 className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-300" 
-                                alt={ex.name} 
+                                alt={exName} 
                                 onClick={() => setZoomedImage({
                                     image: ex.machineImage,
-                                    name: ex.name,
-                                    muscleGroup: ex.muscleGroup,
-                                    description: ex.description,
-                                    execution: ex.execution
+                                    name: exName,
+                                    muscleGroup: ex.muscleGroup || 'Geral',
+                                    description: ex.description || '',
+                                    execution: ex.execution || ''
                                 })}
                             /> : 
                             <div className="h-full flex items-center justify-center">
@@ -372,11 +679,19 @@ export default function TrainingExecutionPage() {
                         }
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <h3 className={`${isFocusMode ? 'text-xl' : 'text-lg'} font-black text-gray-800 dark:text-white leading-tight truncate`}>{ex.name}</h3>
-                        <p className="text-xs text-gray-500 mt-1 uppercase font-bold">{ex.muscleGroup}</p>
+                        <h3 className={`${isFocusMode ? 'text-xl' : 'text-lg'} font-black text-gray-800 dark:text-white leading-tight truncate`}>{exName}</h3>
+                        <p className="text-xs text-gray-500 mt-1 uppercase font-bold">{ex.muscleGroup || 'Geral'}</p>
                         <div className="flex items-center gap-2 mt-2">
-                            <span className="text-[10px] bg-[#FFC107]/10 text-[#FFC107] border border-[#FFC107]/20 px-2 py-0.5 rounded font-bold">Meta: {ex.sets}x {ex.reps}</span>
-                            {lastLoad && <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold">↺ {lastLoad}kg</span>}
+                            <span className="text-[10px] bg-[#FFC107]/10 text-[#FFC107] border border-[#FFC107]/20 px-2 py-0.5 rounded font-bold">Meta: {setsCount}x {repsRaw}</span>
+                            {lastLoad ? (
+                                <button 
+                                    onClick={() => handleOpenLoadHistory(exName)} 
+                                    className="text-[10px] bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 px-2 py-0.5 rounded font-bold hover:scale-105 active:scale-95 transition-all flex items-center gap-1"
+                                    title="Ver histórico de cargas deste exercício"
+                                >
+                                    <History className="w-3 h-3" /> ↺ {lastLoad}kg
+                                </button>
+                            ) : null}
                             <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
                                 <Timer className="w-3 h-3" /> {restSeconds}s
                             </span>
@@ -413,7 +728,7 @@ export default function TrainingExecutionPage() {
                                     </div>
                                     <div className="relative">
                                         <input 
-                                            type="number" inputMode="numeric" placeholder={String(ex.reps).split('-')[0]}
+                                            type="number" inputMode="numeric" placeholder={repsPlaceholder}
                                             value={data.reps || ''}
                                             onChange={(e) => handleInput(exIndex, setIndex, 'reps', e.target.value)}
                                             className={`w-full bg-gray-100 dark:bg-gray-700/50 rounded-xl px-3 py-3 text-center font-bold text-xl text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-[#FFC107] transition-all ${isFocusMode ? 'h-14' : ''}`}
@@ -423,7 +738,7 @@ export default function TrainingExecutionPage() {
                                 </div>
 
                                 <button 
-                                    onClick={() => handleCheckSet(exIndex, setIndex, String(ex.reps).split('-')[0], setsCount, restSeconds, ex.name)}
+                                    onClick={() => handleCheckSet(exIndex, setIndex, repsPlaceholder, setsCount, restSeconds, exName)}
                                     className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-sm ${
                                         isDone ? 'bg-green-500 text-white shadow-green-500/30' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                                     }`}
@@ -445,7 +760,13 @@ export default function TrainingExecutionPage() {
             <div className="fixed top-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md z-40 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shadow-sm">
                 <div className="flex justify-between items-center">
                     <div className="flex-1 min-w-0">
-                        <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight truncate">{training.name}</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight truncate">{training.name}</h2>
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${isOnline ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 animate-pulse'}`}>
+                                {isOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
+                                {isOnline ? 'Sincronizado' : 'Offline'}
+                            </span>
+                        </div>
                         <p className="text-[10px] text-gray-500 flex items-center gap-1.5 mt-0.5">
                             <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -453,7 +774,7 @@ export default function TrainingExecutionPage() {
                             </span>
                             <span className="font-mono font-bold text-[#FFC107]">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
                             <span>•</span>
-                            <span className="font-bold">{training.exercises.length} Ex</span>
+                            <span className="font-bold">{completedSetsCount}/{totalSetsInTraining} séries</span>
                         </p>
                     </div>
                     
@@ -542,11 +863,31 @@ export default function TrainingExecutionPage() {
             </div>
 
             {/* MODAIS */}
-            {restTimer && (
+            {restTimerObj && (
                 <RestTimer 
-                    initialSeconds={restTimer} 
-                    onFinish={() => { setRestTimer(null); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
-                    onClose={() => setRestTimer(null)} 
+                    endTime={restTimerObj.endTime}
+                    duration={restTimerObj.duration} 
+                    onFinish={() => { setRestTimerObj(null); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
+                    onClose={() => setRestTimerObj(null)} 
+                    onAdjust={(ms) => setRestTimerObj(prev => prev ? ({ ...prev, endTime: prev.endTime + ms }) : null)}
+                />
+            )}
+
+            {selectedHistoryExercise && (
+                <LoadHistoryModal 
+                    exerciseName={selectedHistoryExercise.exerciseName}
+                    historyLogs={selectedHistoryExercise.historyLogs}
+                    onClose={() => setSelectedHistoryExercise(null)}
+                />
+            )}
+
+            {showCelebration && celebrationStats && (
+                <CelebrationModal 
+                    stats={celebrationStats}
+                    onFinish={() => {
+                        setShowCelebration(false);
+                        navigate('/home');
+                    }}
                 />
             )}
 

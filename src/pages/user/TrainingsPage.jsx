@@ -29,10 +29,10 @@ const TrainingSkeleton = () => (
 const FilterChip = ({ label, active, onClick }) => (
   <button 
     onClick={onClick}
-    className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+    className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all duration-300 border ${
       active 
-      ? 'bg-[#FFC107] text-black border-[#FFC107] shadow-lg shadow-[#FFC107]/15' 
-      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-[#FFC107]/10 hover:border-[#FFC107]/40'
+      ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black border-transparent shadow-lg shadow-[#FFC107]/20 scale-105' 
+      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-[#FFC107]/10 hover:border-[#FFC107]/40 hover:text-white'
     }`}
   >
     {label}

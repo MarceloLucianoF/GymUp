@@ -9,7 +9,7 @@ import { ArrowLeft, Send, ShieldAlert } from 'lucide-react';
 export default function UserChatPage() {
   const { user } = useAuthContext();
   const navigate = useNavigate();
-  const { chats, messages, activeChat, setActiveChat, sendMessage, openChatWithUser, loading } = useChat(user);
+  const { messages, sendMessage, openChatWithUser, loading } = useChat(user);
   
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef(null);
@@ -37,7 +37,7 @@ export default function UserChatPage() {
           }
       };
       initChat();
-  }, [user]);
+  }, [user, openChatWithUser]);
 
   // Scroll automático
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function UserChatPage() {
   if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
 
   // Se não tem coach vinculado
-  if (!coach && !loading && !activeChat) {
+  if (!coach && !loading) {
       return (
           <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 text-center">
               <ShieldAlert className="w-16 h-16 text-gray-400 mb-4 opacity-50 mx-auto" />
@@ -124,12 +124,12 @@ export default function UserChatPage() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-3 rounded-full focus:ring-2 focus:ring-[#FFC107] outline-none transition-all"
+                    className="flex-1 bg-gray-100 dark:bg-[#1F2937]/70 border border-transparent dark:border-gray-700 text-gray-800 dark:text-white px-5 py-3.5 rounded-2xl focus:ring-2 focus:ring-[#FFC107] outline-none transition-all"
                 />
                 <button 
                     type="submit" 
                     disabled={!inputText.trim()}
-                    className="bg-[#FFC107] hover:bg-[#FFB300] text-black p-3 rounded-full shadow-lg shadow-[#FFC107]/10 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-12 h-12 flex items-center justify-center shrink-0"
+                    className="btn-primary-gradient p-3 rounded-2xl w-12 h-12 flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     <Send className="w-5 h-5 text-black" />
                 </button>

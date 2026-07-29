@@ -4,7 +4,7 @@ import { collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, del
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Scale, TrendingDown, X, Plus, Calendar, ArrowLeft } from 'lucide-react';
+import { Camera, Scale, TrendingDown, X, Plus, ArrowLeft } from 'lucide-react';
 
 // --- SUB-COMPONENTES ---
 

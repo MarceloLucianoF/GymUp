@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useAdmin } from '../../hooks/useAdmin';
-import { Home, Dumbbell, Calendar, User, Shield, MessageSquare } from 'lucide-react';
+import { activeWorkoutService } from '../../services/activeWorkoutService';
+import { Home, Dumbbell, Calendar, User, Shield, MessageSquare, Flame } from 'lucide-react';
 
 // --- LOGO OFICIAL DA MARCA (A + U + Halter + Seta) ---
 const AcademyUpLogo = ({ className = "w-10 h-10" }) => {
@@ -60,6 +61,14 @@ export default function Navbar() {
   const { user, userProfile } = useAuthContext();
   const { isAdmin } = useAdmin();
   const location = useLocation();
+  const [activeSession, setActiveSession] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      const session = activeWorkoutService.getActiveSession(user.uid);
+      setActiveSession(session);
+    }
+  }, [user, location]);
 
   const isActive = (path) => {
     if (path === '/dashboard' && location.pathname === '/') return true;
@@ -152,7 +161,7 @@ export default function Navbar() {
                 )}
               </Link>
               {isAdmin && (
-                <Link to="/admin" className="text-sm font-bold text-[#FFC107] hover:text-[#FFB300] bg-[#FFC107]/10 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-[#FFC107]/20 transition-all">
+                <Link to="/admin" className="text-xs font-bold text-[#FFC107] hover:text-black bg-[#FFC107]/10 hover:bg-[#FFC107] border border-[#FFC107]/30 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm">
                   <Shield className="w-3.5 h-3.5" /> Painel Admin
                 </Link>
               )}
@@ -183,9 +192,9 @@ export default function Navbar() {
                 </Link>
               </>
             ) : (
-              <div className="flex gap-4">
-                <Link to="/login" className="text-gray-600 dark:text-gray-300 font-bold hover:text-[#FFC107] py-2">Login</Link>
-                <Link to="/register" className="bg-[#FFC107] text-black px-6 py-2 rounded-xl font-bold hover:bg-[#FFB300] shadow-lg shadow-[#FFC107]/10 transition-all hover:-translate-y-0.5">
+              <div className="flex gap-4 items-center">
+                <Link to="/login" className="text-gray-600 dark:text-gray-300 font-bold hover:text-[#FFC107] px-4 py-2 transition-colors">Login</Link>
+                <Link to="/register" className="btn-primary-gradient text-sm px-6 py-2.5">
                   Começar
                 </Link>
               </div>
@@ -210,23 +219,32 @@ export default function Navbar() {
             </Link>
 
             <Link 
-              to="/trainings" 
-              className={`flex flex-col items-center justify-center rounded-xl py-1.5 px-3.5 transition-all duration-300 ${
-                isActive('/trainings') ? 'bg-[#FFC107]/10 text-[#FFC107]' : 'text-gray-400 hover:text-[#FFC107]'
+              to={activeSession ? `/execution/${activeSession.trainingId}` : "/trainings"} 
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 px-3.5 transition-all duration-300 relative ${
+                isActive('/trainings') || isActive('/execution') ? 'bg-[#FFC107]/10 text-[#FFC107]' : 'text-gray-400 hover:text-[#FFC107]'
               }`}
             >
-              <Icons.Trainings active={isActive('/trainings')} />
-              <span className="text-[9px] font-black tracking-wide mt-0.5">Treinos</span>
+              {activeSession ? (
+                <div className="relative">
+                  <Flame className="w-5 h-5 text-orange-400 fill-orange-400 animate-pulse" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full"></span>
+                </div>
+              ) : (
+                <Icons.Trainings active={isActive('/trainings')} />
+              )}
+              <span className={`text-[9px] font-black tracking-wide mt-0.5 ${activeSession ? 'text-orange-400' : ''}`}>
+                {activeSession ? 'Treinos 🔥' : 'Treinos'}
+              </span>
             </Link>
 
             {/* BOTÃO FLUTUANTE COM CHAT */}
             <div className="relative -top-5">
                 <Link 
                   to={userProfile?.role === 'coach' ? "/coach/chat" : "/chat"} 
-                  className="w-13 h-13 bg-gradient-to-br from-[#FFC107] to-[#FF9800] rounded-full flex items-center justify-center shadow-lg shadow-[#FFC107]/25 border-4 border-white dark:border-[#0B0F19] transform hover:scale-110 hover:rotate-6 active:scale-95 transition-all p-3"
+                  className="w-12 h-12 bg-gradient-to-br from-[#FFC107] to-[#FF9800] rounded-full flex items-center justify-center shadow-lg shadow-[#FFC107]/25 border-4 border-white dark:border-[#0B0F19] transform hover:scale-110 active:scale-95 transition-all p-2.5"
                   title="Chat"
                 >
-                  <MessageSquare className="w-5.5 h-5.5 text-black" />
+                  <MessageSquare className="w-5 h-5 text-black fill-current" />
                 </Link>
             </div>
 
@@ -246,9 +264,9 @@ export default function Navbar() {
                 isActive('/profile') ? 'bg-[#FFC107]/10 text-[#FFC107]' : 'text-gray-400 hover:text-[#FFC107]'
               }`}
             >
-              <div className={`w-5.5 h-5.5 rounded-full overflow-hidden border transition-all ${isActive('/profile') ? 'border-[#FFC107]' : 'border-transparent'}`}>
+              <div className={`w-5 h-5 rounded-full overflow-hidden border transition-all ${isActive('/profile') ? 'border-[#FFC107]' : 'border-transparent'}`}>
                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Me" className="w-full h-full object-cover" />
+                    <img src={avatarUrl} alt="Perfil" className="w-full h-full object-cover" />
                  ) : (
                     <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-500">
                         {initial}

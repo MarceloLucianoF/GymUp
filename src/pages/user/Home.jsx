@@ -1,13 +1,86 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import WeeklyChart from '../../components/dashboard/WeeklyChart';
 import { useRole } from '../../hooks/useRole';
 import toast from 'react-hot-toast';
-import StudentChatWidget from '../../components/chat/StudentChatWidget'; // ✅ Importação do Widget
-import { Flame, Trophy, Target, Scale, Link2, Wrench, Clock, ClipboardList, Sparkles, Smile, Play } from 'lucide-react';
+import StudentChatWidget from '../../components/chat/StudentChatWidget';
+import { activeWorkoutService } from '../../services/activeWorkoutService';
+import { Flame, Trophy, Target, Scale, Link2, Wrench, Clock, ClipboardList, Sparkles, Smile, Play, Trash2, RotateCcw } from 'lucide-react';
+
+// --- MODAL DE CONFIRMAÇÃO DE DESCARTE ---
+const ConfirmDiscardModal = ({ isOpen, onClose, onConfirm }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white dark:bg-[#1F2937] w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-800">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Descartar treino em andamento?</h3>
+                <p className="text-xs text-gray-400 mb-6">As séries registradas neste rascunho serão perdidas. Deseja realmente descartar?</p>
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 text-gray-500 font-bold text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors">Cancelar</button>
+                    <button 
+                        onClick={onConfirm}
+                        className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-red-600/20 transition-all flex items-center justify-center gap-1.5"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" /> Descartar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- CARD DE TREINO EM ANDAMENTO (RECUPERAÇÃO AUTOMÁTICA) ---
+const ActiveWorkoutBanner = ({ activeSession, onContinue, onDiscard }) => {
+    if (!activeSession) return null;
+    
+    // Contar séries concluídas
+    const completedSetsCount = activeSession.sessionData 
+      ? Object.values(activeSession.sessionData).filter(s => s?.completed).length 
+      : 0;
+
+    return (
+        <div className="bg-gradient-to-r from-orange-600 via-[#FF9800] to-[#FFC107] p-0.5 rounded-3xl shadow-xl animate-fade-in-up mb-8">
+            <div className="bg-gray-900/90 backdrop-blur-xl p-5 sm:p-6 rounded-[22px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-orange-500/20">
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center shrink-0 mt-1">
+                        <Flame className="w-6 h-6 text-orange-400 animate-pulse fill-orange-400" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-orange-400">Treino em Andamento</span>
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">{activeSession.trainingName}</h3>
+                        <p className="text-xs text-gray-300 mt-1">
+                            <span className="font-bold text-white">{completedSetsCount}</span> séries concluídas • Clique para retornar de onde parou
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex gap-2.5 w-full sm:w-auto shrink-0 pt-2 sm:pt-0">
+                    <button 
+                        onClick={onDiscard} 
+                        className="px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" /> Descartar
+                    </button>
+                    <button 
+                        onClick={onContinue}
+                        className="flex-1 sm:flex-initial btn-primary-gradient text-xs px-6 py-3"
+                    >
+                        <RotateCcw className="w-4 h-4" /> CONTINUAR TREINO
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- MODAL PARA VINCULAR TREINADOR ---
 const LinkCoachModal = ({ isOpen, onClose, currentUserId, onSuccess }) => {
@@ -201,6 +274,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [showLinkCoach, setShowLinkCoach] = useState(false); 
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
+
+  // Sessão Ativa de Treino (Persistência)
+  const [activeSession, setActiveSession] = useState(null);
+  const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
   
   const [stats, setStats] = useState({ 
     totalTreinos: 0, 
@@ -215,6 +292,16 @@ export default function Home() {
     const fetchHomeData = async () => {
       try {
         if (!user) return;
+
+        // 0. Sincroniza check-ins offline pendentes (se houver)
+        const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, addDoc, collection);
+        if (synced > 0) {
+          toast.success(`✓ ${synced} treino(s) pendente(s) sincronizado(s)!`);
+        }
+
+        // 0.1. Verifica treino em andamento
+        const savedSession = activeWorkoutService.getActiveSession(user.uid);
+        setActiveSession(savedSession);
 
         // 1. Perfil
         const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -243,7 +330,27 @@ export default function Home() {
     };
 
     fetchHomeData();
+
+    const handleOnline = async () => {
+      if (user) {
+        const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, addDoc, collection);
+        if (synced > 0) {
+          toast.success(`✓ ${synced} treino(s) pendente(s) sincronizado(s)!`);
+          setRefreshTrigger(prev => prev + 1);
+        }
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, [user, refreshTrigger]); 
+
+  const handleDiscardActiveWorkout = () => {
+    if (!user) return;
+    activeWorkoutService.clearActiveSession(user.uid);
+    setActiveSession(null);
+    setShowConfirmDiscard(false);
+    toast.success("Treino em andamento descartado.");
+  }; 
 
   const calculateGamification = (data) => {
     const totalTreinos = data.length;
@@ -338,33 +445,41 @@ export default function Home() {
             </div>
         </div>
 
+        {/* CARD PRINCIPAL DE TREINO (EXIBE EM ANDAMENTO OU RECOMENDADO) */}
+        {activeSession ? (
+            <ActiveWorkoutBanner 
+                activeSession={activeSession}
+                onContinue={() => navigate(`/execution/${activeSession.trainingId}`)}
+                onDiscard={() => setShowConfirmDiscard(true)}
+            />
+        ) : (
+            <RecommendedWorkoutCard 
+                lastWorkoutId={lastWorkoutId} 
+                trainings={trainings} 
+                assignedTrainingId={userProfile?.currentTrainingId} 
+                onStart={(id) => navigate(`/training/${id}`)}
+            />
+        )}
+
         {/* --- CARD DO TREINADOR (ADMIN/COACH) --- */}
         {isCoach && (
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl p-6 text-white shadow-xl flex flex-col sm:flex-row justify-between items-center relative overflow-hidden group border border-gray-700 gap-4">
+            <div className="bg-[#1F2937]/50 backdrop-blur-md rounded-3xl p-6 text-white shadow-xl flex flex-col sm:flex-row justify-between items-center relative overflow-hidden group border border-[#FFC107]/20 gap-4 hover:border-[#FFC107]/40 transition-all">
                 <div className="absolute right-0 top-0 h-full w-1/2 bg-white/5 skew-x-12 transform translate-x-10"></div>
                 <div className="relative z-10 text-center sm:text-left">
                     <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                        <span className="bg-yellow-500 text-black text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Modo Coach</span>
+                        <span className="bg-[#FFC107] text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Modo Coach</span>
                     </div>
-                    <h3 className="text-lg font-bold">Painel do Treinador</h3>
-                    <p className="text-gray-400 text-xs max-w-xs">Gerencie seus alunos e prescreva treinos.</p>
+                    <h3 className="text-xl font-black tracking-tight">Painel do Treinador</h3>
+                    <p className="text-gray-400 text-xs max-w-xs mt-1">Gerencie seus alunos e prescreva treinos com controle total.</p>
                 </div>
                 <button 
                     onClick={() => navigate('/coach/dashboard')}
-                    className="relative z-10 bg-white text-gray-900 px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center gap-2 text-sm w-full sm:w-auto justify-center"
+                    className="relative z-10 btn-primary-gradient px-6 py-3 text-sm w-full sm:w-auto justify-center"
                 >
-                    <Wrench className="w-4 h-4 text-gray-800" /> Acessar Painel
+                    <Wrench className="w-4 h-4 text-black" /> Acessar Painel
                 </button>
             </div>
         )}
-
-        {/* CARD DE TREINO */}
-        <RecommendedWorkoutCard 
-            lastWorkoutId={lastWorkoutId} 
-            trainings={trainings} 
-            assignedTrainingId={userProfile?.currentTrainingId} 
-            onStart={(id) => navigate(`/training/${id}`)}
-        />
 
         {/* METRICAS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -456,6 +571,13 @@ export default function Home() {
                 )}
             </div>
         </div>
+
+        {/* MODAL DE CONFIRMAÇÃO DE DESCARTE DE TREINO */}
+        <ConfirmDiscardModal 
+            isOpen={showConfirmDiscard}
+            onClose={() => setShowConfirmDiscard(false)}
+            onConfirm={handleDiscardActiveWorkout}
+        />
 
         {/* MODAL DE VINCULAR */}
         <LinkCoachModal 
