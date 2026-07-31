@@ -61,17 +61,17 @@ export default function WorkoutDetailsPage() {
 
         {/* Resumo Geral (Stats) */}
         <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center flex flex-col items-center justify-center">
+            <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
                 <Clock className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
                 <p className="text-[10px] uppercase font-bold text-gray-400">Duração</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{durationMinutes} min</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center flex flex-col items-center justify-center">
+            <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
                 <Scale className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
                 <p className="text-[10px] uppercase font-bold text-gray-400">Volume</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{(workout.totalVolume / 1000).toFixed(1)} ton</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center flex flex-col items-center justify-center">
+            <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
                 <CheckCircle2 className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
                 <p className="text-[10px] uppercase font-bold text-gray-400">Exercícios</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{workout.exercises?.length || 0}</p>
@@ -83,7 +83,7 @@ export default function WorkoutDetailsPage() {
             <h3 className="font-bold text-gray-700 dark:text-gray-300 ml-1 text-sm uppercase tracking-wider">Detalhes da Sessão</h3>
             
             {workout.exercises?.map((ex, i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div key={i} className="card-premium-glass p-5">
                     <div className="flex items-center gap-4 mb-4 border-b border-gray-50 dark:border-gray-700/50 pb-3">
                         <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden flex items-center justify-center">
                              {ex.machineImage ? (

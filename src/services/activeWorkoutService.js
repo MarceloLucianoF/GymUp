@@ -18,6 +18,9 @@ export const activeWorkoutService = {
         lastUpdated: Date.now()
       };
       localStorage.setItem(key, JSON.stringify(payload));
+      try {
+        window.dispatchEvent(new CustomEvent('active-workout-updated', { detail: { userId } }));
+      } catch (e) {}
     } catch (err) {
       console.error('Erro ao salvar sessão local de treino:', err);
     }
@@ -55,6 +58,9 @@ export const activeWorkoutService = {
     try {
       const key = `${ACTIVE_WORKOUT_PREFIX}${userId}`;
       localStorage.removeItem(key);
+      try {
+        window.dispatchEvent(new CustomEvent('active-workout-updated', { detail: { userId } }));
+      } catch (e) {}
     } catch (err) {
       console.error('Erro ao limpar sessão local de treino:', err);
     }

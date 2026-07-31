@@ -4,7 +4,8 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers } from 'lucide-react';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles } from 'lucide-react';
+import AICoachModal from '../../components/ai/AICoachModal';
 
 // --- COMPONENTES VISUAIS ---
 
@@ -40,8 +41,8 @@ const FilterChip = ({ label, active, onClick }) => (
 );
 
 export default function TrainingsPage() {
-  const { trainings, loading: loadingTrainings, error } = useAdmin();
-  const { user } = useAuthContext();
+  const { trainings, loading: loadingTrainings, error, refreshData } = useAdmin();
+  const { user, userProfile } = useAuthContext();
   
   const [historyMap, setHistoryMap] = useState({});
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -49,6 +50,7 @@ export default function TrainingsPage() {
   const [packages, setPackages] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [collapsedPackages, setCollapsedPackages] = useState({});
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   // 1. Busca Histórico
   useEffect(() => {
@@ -238,15 +240,26 @@ export default function TrainingsPage() {
         
         {/* Header */}
         <div className="mb-8">
-            <h1 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight mb-2">
-                Fichas de Treino
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
-                Escolha sua missão. Organizado por pacotes para você.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                <div>
+                    <h1 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">
+                        Fichas de Treino
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                        Escolha sua missão ou gere uma ficha inteligente por IA.
+                    </p>
+                </div>
+                <button
+                    onClick={() => setIsAIModalOpen(true)}
+                    className="btn-primary-gradient px-4 py-3 rounded-2xl touch-target text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-[#FFC107]/20 shrink-0"
+                >
+                    <Sparkles className="w-4 h-4 fill-current" />
+                    Gerar Treino com IA ✨
+                </button>
+            </div>
 
             {/* Filtros */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-4">
                 {['Todos', 'Iniciante', 'Intermediário', 'Avançado'].map(f => (
                     <FilterChip key={f} label={f} active={filter === f} onClick={() => setFilter(f)} />
                 ))}
@@ -338,6 +351,18 @@ export default function TrainingsPage() {
           </div>
         )}
       </div>
+
+      {/* MODAL DO COACH IA */}
+      <AICoachModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        userProfile={userProfile}
+        user={user}
+        customExercises={[]}
+        onWorkoutSaved={() => {
+          if (refreshData) refreshData();
+        }}
+      />
     </div>
   );
 }

@@ -303,26 +303,26 @@ export default function MeasurementsPage() {
             <>
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="card-premium-glass p-5">
                         <p className="text-xs font-bold text-gray-400 uppercase">Peso Atual</p>
                         <h3 className="text-3xl font-black text-gray-800 dark:text-white mt-1">{stats.current}kg</h3>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="card-premium-glass p-5">
                         <p className="text-xs font-bold text-gray-400 uppercase">Variação Total</p>
                         <h3 className={`text-3xl font-black mt-1 ${Number(stats.diff) <= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             {stats.diffSign}{stats.diff}kg
                         </h3>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="card-premium-glass p-5">
                         <p className="text-xs font-bold text-gray-400 uppercase">IMC Estimado</p>
                         <div className="flex items-baseline gap-2 mt-1">
                             <h3 className="text-3xl font-black text-gray-800 dark:text-white">{stats.imc || '--'}</h3>
                             <span className={`text-xs font-bold ${stats.imcColor}`}>{stats.imcLabel}</span>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" onClick={() => setShowModal(true)}>
+                    <div className="card-premium-glass p-5 flex flex-col justify-center items-center cursor-pointer hover:border-[#FFC107]/50 transition-colors" onClick={() => setShowModal(true)}>
                         <span className="text-2xl mb-1">➕</span>
-                        <span className="text-xs font-bold text-[#FFC107] group-hover:text-[#FFB300] transition-colors">Adicionar</span>
+                        <span className="text-xs font-bold text-[#FFC107] transition-colors">Adicionar</span>
                     </div>
                 </div>
 

@@ -150,20 +150,20 @@ export default function HistoryPage() {
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
             <div className="flex-1 flex gap-2">
                 <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-4" />
                     <input 
                         type="text" 
                         placeholder="Buscar treino ou exercício..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white pl-9 pr-4 py-3 rounded-xl border border-gray-150 dark:border-gray-700 outline-none text-sm focus:ring-2 focus:ring-[#FFC107] transition-all shadow-sm"
+                        className="w-full input-brand-dark pl-10 pr-4 text-sm"
                     />
                 </div>
                 
                 <select 
                     value={timeFilter}
                     onChange={(e) => setTimeFilter(e.target.value)}
-                    className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-4 py-3 rounded-xl border border-gray-150 dark:border-gray-700 outline-none text-sm font-bold shadow-sm"
+                    className="input-brand-dark text-sm font-bold px-4"
                 >
                     <option value="all">Sempre</option>
                     <option value="month">Este Mês</option>
@@ -179,7 +179,7 @@ export default function HistoryPage() {
 
         {/* Lista de Resultados */}
         {filteredHistory.length === 0 ? (
-          <div className="text-center py-20 bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl border border-dashed border-gray-300 dark:border-[#FFC107]/10 flex flex-col items-center justify-center">
+          <div className="text-center py-20 card-premium-glass border-dashed flex flex-col items-center justify-center">
             <Search className="w-12 h-12 text-gray-400 mb-4 opacity-50" />
             <h3 className="text-lg font-bold text-gray-700 dark:text-white">Nada encontrado</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
@@ -193,7 +193,7 @@ export default function HistoryPage() {
                   <div 
                     key={item.firestoreId} 
                     onClick={() => navigate(`/history/${item.firestoreId}`)}
-                    className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl p-0 shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/30 overflow-hidden group relative transition-all duration-300 hover:shadow-lg cursor-pointer"
+                    className="card-premium-glass p-0 overflow-hidden group relative transition-all duration-300 hover:shadow-lg cursor-pointer"
                   >
                     {/* Header do Card */}
                     <div className="p-5 flex gap-5 border-b border-gray-50 dark:border-gray-700/50">

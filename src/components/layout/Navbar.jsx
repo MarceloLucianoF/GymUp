@@ -64,10 +64,18 @@ export default function Navbar() {
   const [activeSession, setActiveSession] = useState(null);
 
   useEffect(() => {
-    if (user) {
-      const session = activeWorkoutService.getActiveSession(user.uid);
-      setActiveSession(session);
-    }
+    const updateSession = () => {
+      if (user) {
+        const session = activeWorkoutService.getActiveSession(user.uid);
+        setActiveSession(session);
+      } else {
+        setActiveSession(null);
+      }
+    };
+
+    updateSession();
+    window.addEventListener('active-workout-updated', updateSession);
+    return () => window.removeEventListener('active-workout-updated', updateSession);
   }, [user, location]);
 
   const isActive = (path) => {
@@ -203,9 +211,28 @@ export default function Navbar() {
         </div>
       </nav>
 
+      {/* BARRA PERSISTENTE GLOBAL DE TREINO ATIVO (MOBILE) */}
+      {user && activeSession && !location.pathname.startsWith('/execution') && (
+        <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black px-4 py-2 flex items-center justify-between shadow-2xl border-b border-black/10">
+          <div className="flex items-center gap-2 min-w-0 pr-2">
+            <Flame className="w-4 h-4 text-black fill-current animate-pulse shrink-0" />
+            <div className="min-w-0 text-xs">
+              <span className="font-black uppercase tracking-wider block leading-none text-[9px] opacity-80">Treino Ativo</span>
+              <span className="font-bold truncate block">{activeSession.trainingName || 'Treino em andamento'} {activeSession.currentExerciseName ? `• ${activeSession.currentExerciseName}` : ''}</span>
+            </div>
+          </div>
+          <Link
+            to={`/execution/${activeSession.trainingId}`}
+            className="bg-black text-[#FFC107] font-black text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0 hover:bg-gray-900 transition-colors shadow-sm"
+          >
+            Continuar →
+          </Link>
+        </div>
+      )}
+
       {/* ================= MOBILE NAVBAR ================= */}
       {user && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1F2937]/90 dark:backdrop-blur-md border-t border-gray-150 dark:border-gray-800 pb-safe z-50 transition-colors">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1F2937]/90 dark:backdrop-blur-md border-t border-gray-200 dark:border-gray-800 pb-safe z-50 transition-colors">
           <div className="flex justify-between items-center px-4 h-16 relative">
             
             <Link 

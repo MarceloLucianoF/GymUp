@@ -4,16 +4,18 @@ import { useChat } from '../../hooks/useChat';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { ArrowLeft, Send, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Send, ShieldAlert, Sparkles, Bot } from 'lucide-react';
+import AICoachModal from '../../components/ai/AICoachModal';
 
 export default function UserChatPage() {
-  const { user } = useAuthContext();
+  const { user, userProfile } = useAuthContext();
   const navigate = useNavigate();
   const { messages, sendMessage, openChatWithUser, loading } = useChat(user);
   
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef(null);
   const [coach, setCoach] = useState(null);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   // 1. Identificar o Coach do aluno e abrir o chat
   useEffect(() => {
@@ -60,36 +62,61 @@ export default function UserChatPage() {
   // Se não tem coach vinculado
   if (!coach && !loading) {
       return (
-          <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 text-center">
-              <ShieldAlert className="w-16 h-16 text-gray-400 mb-4 opacity-50 mx-auto" />
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Sem Treinador Vinculado</h2>
-              <p className="text-gray-500 max-w-xs mb-6">Peça o código de convite ao seu treinador para iniciar uma conversa.</p>
-              <button onClick={() => navigate('/home')} className="bg-[#FFC107] hover:bg-[#FFB300] text-black px-6 py-3 rounded-xl font-bold transition-colors">Voltar ao Início</button>
+          <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-[#0B0F19] p-6 text-center">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-[#FFC107] to-[#FF9800] flex items-center justify-center text-black font-black mb-4 shadow-xl shadow-[#FFC107]/20">
+                  <Bot className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Treine com o Coach IA ✨</h2>
+              <p className="text-gray-400 text-xs max-w-xs mb-6">Você ainda não tem um treinador humano vinculado, mas pode conversar com nosso Coach IA sobre treinos, nutrição e metas!</p>
+              <div className="flex flex-col gap-3 w-full max-w-xs">
+                <button onClick={() => setIsAIModalOpen(true)} className="btn-primary-gradient py-3.5 px-6 rounded-2xl font-black text-xs shadow-lg flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4 fill-current" /> Conversar com Coach IA
+                </button>
+                <button onClick={() => navigate('/home')} className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 py-3 px-6 rounded-2xl font-bold text-xs hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    Voltar ao Início
+                </button>
+              </div>
+
+              <AICoachModal 
+                isOpen={isAIModalOpen}
+                onClose={() => setIsAIModalOpen(false)}
+                userProfile={userProfile}
+                user={user}
+              />
           </div>
       );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0B0F19] transition-colors pb-safe-nav">
         
         {/* Header */}
-        <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 shadow-sm z-10 sticky top-0">
-            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-[#FFC107] pr-2 flex items-center justify-center transition-colors">
-                <ArrowLeft className="w-5 h-5" />
+        <div className="p-4 bg-white dark:bg-[#1F2937]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-sm z-10 sticky top-0">
+            <div className="flex items-center gap-3">
+                <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-[#FFC107] pr-2 flex items-center justify-center transition-colors">
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="w-10 h-10 rounded-full bg-[#FFC107]/10 flex items-center justify-center text-lg font-bold text-[#FFC107] border border-[#FFC107]/20">
+                    {coach?.displayName?.[0] || 'C'}
+                </div>
+                <div>
+                    <h3 className="font-bold text-gray-800 dark:text-white">{coach?.displayName || 'Treinador'}</h3>
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
+                    </p>
+                </div>
+            </div>
+
+            <button
+              onClick={() => setIsAIModalOpen(true)}
+              className="bg-[#FFC107]/10 hover:bg-[#FFC107]/20 text-[#FFC107] border border-[#FFC107]/30 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-current" /> Coach IA
             </button>
-            <div className="w-10 h-10 rounded-full bg-[#FFC107]/10 flex items-center justify-center text-lg font-bold text-[#FFC107] border border-[#FFC107]/20">
-                {coach?.displayName?.[0] || 'C'}
-            </div>
-            <div>
-                <h3 className="font-bold text-gray-800 dark:text-white">{coach?.displayName || 'Treinador'}</h3>
-                <p className="text-xs text-green-500 font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
-                </p>
-            </div>
         </div>
 
         {/* Mensagens */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#0B0F19]">
             {messages.length === 0 && (
                 <div className="text-center py-10 text-gray-400 text-sm">
                     <p>Inicie a conversa com seu treinador. 👋</p>
@@ -100,13 +127,13 @@ export default function UserChatPage() {
                 const isMe = msg.senderId === user.uid;
                 return (
                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm relative group ${
+                        <div className={`max-w-[80%] p-3.5 rounded-2xl text-sm shadow-sm relative group ${
                             isMe 
-                            ? 'bg-[#FFC107] text-black rounded-tr-none' 
-                            : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-gray-700'
+                            ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black font-medium rounded-tr-none' 
+                            : 'card-premium-glass text-gray-800 dark:text-gray-100 rounded-tl-none p-3.5'
                         }`}>
                             <p className="leading-relaxed">{msg.text}</p>
-                            <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-black/85' : 'text-gray-400'}`}>
+                            <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-black/85 font-bold' : 'text-gray-400'}`}>
                                 {formatTime(msg.createdAt)}
                             </p>
                         </div>
@@ -117,24 +144,32 @@ export default function UserChatPage() {
         </div>
 
         {/* Input */}
-        <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-3 bg-white dark:bg-[#1F2937]/90 border-t border-gray-200 dark:border-gray-800">
             <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto items-center">
                 <input 
                     type="text" 
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 bg-gray-100 dark:bg-[#1F2937]/70 border border-transparent dark:border-gray-700 text-gray-800 dark:text-white px-5 py-3.5 rounded-2xl focus:ring-2 focus:ring-[#FFC107] outline-none transition-all"
+                    className="flex-1 input-brand-dark text-sm"
                 />
                 <button 
                     type="submit" 
                     disabled={!inputText.trim()}
-                    className="btn-primary-gradient p-3 rounded-2xl w-12 h-12 flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="btn-primary-gradient px-4 py-3 rounded-xl touch-target text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <Send className="w-5 h-5 text-black" />
+                    <Send className="w-4 h-4" />
                 </button>
             </form>
         </div>
+
+        {/* MODAL DO COACH IA */}
+        <AICoachModal 
+            isOpen={isAIModalOpen}
+            onClose={() => setIsAIModalOpen(false)}
+            userProfile={userProfile}
+            user={user}
+        />
     </div>
   );
 }

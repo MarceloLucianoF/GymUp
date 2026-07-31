@@ -8,6 +8,7 @@ import { useRole } from '../../hooks/useRole';
 import toast from 'react-hot-toast';
 import StudentChatWidget from '../../components/chat/StudentChatWidget';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
+import AICoachModal from '../../components/ai/AICoachModal';
 import { Flame, Trophy, Target, Scale, Link2, Wrench, Clock, ClipboardList, Sparkles, Smile, Play, Trash2, RotateCcw } from 'lucide-react';
 
 // --- MODAL DE CONFIRMAÇÃO DE DESCARTE ---
@@ -278,6 +279,7 @@ export default function Home() {
   // Sessão Ativa de Treino (Persistência)
   const [activeSession, setActiveSession] = useState(null);
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   
   const [stats, setStats] = useState({ 
     totalTreinos: 0, 
@@ -331,6 +333,12 @@ export default function Home() {
 
     fetchHomeData();
 
+    const handleWorkoutUpdate = () => {
+      if (user) {
+        setActiveSession(activeWorkoutService.getActiveSession(user.uid));
+      }
+    };
+
     const handleOnline = async () => {
       if (user) {
         const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, addDoc, collection);
@@ -341,7 +349,11 @@ export default function Home() {
       }
     };
     window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+    window.addEventListener('active-workout-updated', handleWorkoutUpdate);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('active-workout-updated', handleWorkoutUpdate);
+    };
   }, [user, refreshTrigger]); 
 
   const handleDiscardActiveWorkout = () => {
@@ -460,6 +472,28 @@ export default function Home() {
                 onStart={(id) => navigate(`/training/${id}`)}
             />
         )}
+
+        {/* CARD DE ASSISTENTE DE IA: COACH & NUTRIÇÃO */}
+        <div className="card-premium-glass p-5 rounded-3xl border border-[#FFC107]/30 bg-gradient-to-r from-gray-900 via-[#1F2937] to-gray-900 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FFC107] to-[#FF9800] flex items-center justify-center text-black font-black shadow-lg shadow-[#FFC107]/25 shrink-0">
+                    <Sparkles className="w-6 h-6 fill-current animate-pulse" />
+                </div>
+                <div>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-white">Coach IA & Guia de Nutrição</h3>
+                        <span className="bg-[#FFC107]/10 text-[#FFC107] text-[9px] font-black px-2.5 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">Novo ✨</span>
+                    </div>
+                    <p className="text-xs text-gray-300 mt-0.5">Gere treinos sob medida, consulte macros e tire dúvidas nutricionais.</p>
+                </div>
+            </div>
+            <button
+                onClick={() => setIsAIModalOpen(true)}
+                className="w-full sm:w-auto btn-primary-gradient px-5 py-3 rounded-2xl touch-target text-xs font-black shrink-0 flex items-center justify-center gap-2"
+            >
+                Acessar Coach IA →
+            </button>
+        </div>
 
         {/* --- CARD DO TREINADOR (ADMIN/COACH) --- */}
         {isCoach && (
@@ -585,6 +619,16 @@ export default function Home() {
             onClose={() => setShowLinkCoach(false)} 
             currentUserId={user.uid}
             onSuccess={() => setRefreshTrigger(prev => prev + 1)} 
+        />
+
+        {/* MODAL DO COACH IA & NUTRIÇÃO */}
+        <AICoachModal 
+            isOpen={isAIModalOpen} 
+            onClose={() => setIsAIModalOpen(false)} 
+            userProfile={userProfile}
+            user={user}
+            customExercises={[]}
+            onWorkoutSaved={() => setRefreshTrigger(prev => prev + 1)}
         />
 
         {/* ✅ WIDGET DE CHAT (Aparece sozinho se tiver coach) */}

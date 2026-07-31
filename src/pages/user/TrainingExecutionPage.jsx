@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti'; 
 import VideoModal from '../../components/common/VideoModal';
 import { exercises as defaultExercises } from '../../data/exercises';
-import { Dumbbell, Video, Award, List, Search, SkipForward, Timer, ChevronLeft, ChevronRight, Check, Circle, Pause, Play, Wifi, WifiOff, History, X, Trophy } from 'lucide-react';
+import { Dumbbell, Video, Award, List, Search, SkipForward, Timer, ChevronLeft, ChevronRight, Check, Circle, Pause, Play, Wifi, WifiOff, History, X, Trophy, Sparkles, ArrowRight } from 'lucide-react';
 
 // ... rest timer components ...
 
@@ -163,7 +163,18 @@ const CelebrationModal = ({ stats, onFinish }) => {
                 </span>
 
                 <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">TREINO CONCLUÍDO!</h2>
-                <p className="text-gray-400 text-xs mb-8">Excelente trabalho! Mais um passo em direção ao seu objetivo.</p>
+                <p className="text-gray-400 text-xs mb-6">Excelente trabalho! Mais um passo em direção ao seu objetivo.</p>
+
+                {stats.newPRs && stats.newPRs.length > 0 && (
+                    <div className="mb-6 p-3.5 bg-[#FFC107]/10 border border-[#FFC107]/30 rounded-2xl text-left">
+                        <div className="flex items-center gap-1.5 text-xs font-black text-[#FFC107] uppercase tracking-wider mb-1">
+                            <Trophy className="w-4 h-4 fill-current" /> Novo Recorde Pessoal!
+                        </div>
+                        <p className="text-xs text-gray-300">
+                            Superou sua marca anterior em <span className="font-bold text-white">{stats.newPRs.join(', ')}</span>! 🚀
+                        </p>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3 mb-8">
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
@@ -186,7 +197,7 @@ const CelebrationModal = ({ stats, onFinish }) => {
 
                 <button 
                     onClick={onFinish}
-                    className="w-full btn-primary-gradient py-4 text-base rounded-2xl"
+                    className="w-full btn-primary-gradient py-4 text-base rounded-2xl touch-target"
                 >
                     VOLTAR AO PAINEL
                 </button>
@@ -614,6 +625,24 @@ export default function TrainingExecutionPage() {
             // Limpa o rascunho de sessão
             activeWorkoutService.clearActiveSession(user.uid);
 
+            // Detector de Novos Recordes (PRs)
+            const newPRs = [];
+            training.exercises.forEach((ex, exIndex) => {
+                const numSets = Number(ex.sets) || 3;
+                let maxWeight = 0;
+                for (let i = 0; i < numSets; i++) {
+                    const data = sessionData[`${exIndex}-${i}`];
+                    if (data?.completed) {
+                        const w = parseFloat(data.weight) || 0;
+                        if (w > maxWeight) maxWeight = w;
+                    }
+                }
+                const prevMax = historyMap[ex.name] || 0;
+                if (maxWeight > 0 && prevMax > 0 && maxWeight > prevMax) {
+                    newPRs.push(ex.name);
+                }
+            });
+
             try { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); } catch(e){}
 
             const timeMinutes = Math.floor(elapsedTime / 60);
@@ -623,7 +652,8 @@ export default function TrainingExecutionPage() {
                 timeStr: `${timeMinutes}m ${(timeSecs).toString().padStart(2, '0')}s`,
                 volumeKg: totalVolume,
                 completedSetsCount: setsCompleted,
-                executedExercisesCount: executedExercises.length
+                executedExercisesCount: executedExercises.length,
+                newPRs
             });
             
             toast.dismiss(toastId);
@@ -654,6 +684,30 @@ export default function TrainingExecutionPage() {
 
         const repsRaw = (ex.reps && String(ex.reps) !== 'undefined') ? String(ex.reps) : '10';
         const repsPlaceholder = repsRaw.includes('-') ? repsRaw.split('-')[0] : (repsRaw !== 'undefined' ? repsRaw : '10');
+
+        // Inteligência de Progressão de Carga + Repetições
+        let lastReps = null;
+        rawHistoryDocs.forEach(d => {
+            if (d.exercises && !lastReps) {
+                const found = d.exercises.find(e => e.name === exName);
+                if (found && found.sets && found.sets.length > 0) {
+                    const highestSet = found.sets.reduce((max, s) => (Number(s.weight) || 0) >= (Number(max.weight) || 0) ? s : max, found.sets[0]);
+                    lastReps = Number(highestSet.reps) || null;
+                }
+            }
+        });
+
+        const targetRepsNum = parseInt(repsPlaceholder, 10) || 10;
+        let smartTip = 'Defina sua primeira carga de referência para este exercício.';
+        if (lastLoad) {
+            if (lastReps && lastReps >= targetRepsNum) {
+                smartTip = `💡 Meta de Hoje: Subir para ${lastLoad + 2}kg (Progresso de Carga)!`;
+            } else if (lastReps && lastReps < targetRepsNum) {
+                smartTip = `💡 Meta de Hoje: Buscar ${lastReps + 1}-${targetRepsNum} reps com ${lastLoad}kg (Progresso de Repetições)!`;
+            } else {
+                smartTip = `💡 Última Carga: ${lastLoad}kg. Tente manter a constância hoje!`;
+            }
+        }
 
         return (
             <div key={exIndex} className={`bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/25 transition-all duration-300 overflow-hidden ${isFocusMode ? 'min-h-[60vh] flex flex-col' : ''}`}>
@@ -705,6 +759,16 @@ export default function TrainingExecutionPage() {
                     )}
                 </div>
 
+                {/* Dica Inteligente de Progresso de Cargas */}
+                <div className="bg-[#FFC107]/10 border-y border-[#FFC107]/20 px-4 py-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <Sparkles className="w-4 h-4 text-[#FFC107] shrink-0 animate-pulse" />
+                        <span className="font-bold text-[#FFC107] truncate">
+                            {smartTip}
+                        </span>
+                    </div>
+                </div>
+
                 {/* Séries */}
                 <div className="divide-y divide-gray-100 dark:divide-gray-700/50 flex-1 overflow-y-auto">
                     {setsArray.map((_, setIndex) => {
@@ -749,6 +813,42 @@ export default function TrainingExecutionPage() {
                         );
                     })}
                 </div>
+
+                {/* BARRA DE AÇÃO RÁPIDA 1-TOQUE (ERGONOMIA DE MÃO ÚNICA) */}
+                {isFocusMode && (
+                    <div className="p-4 bg-gray-50/80 dark:bg-gray-900/60 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-2 mt-auto">
+                        {setsArray.every((_, sIdx) => sessionData[`${exIndex}-${sIdx}`]?.completed) ? (
+                            <button
+                                onClick={() => {
+                                    if (activeExerciseIndex < training.exercises.length - 1) {
+                                        setActiveExerciseIndex(prev => prev + 1);
+                                    } else {
+                                        finishWorkout();
+                                    }
+                                }}
+                                className="w-full btn-primary-gradient py-4 text-sm font-black rounded-2xl touch-target shadow-xl flex items-center justify-center gap-2"
+                            >
+                                {activeExerciseIndex < training.exercises.length - 1 ? (
+                                    <>PRÓXIMO EXERCÍCIO <ArrowRight className="w-5 h-5" /></>
+                                ) : (
+                                    <>FINALIZAR TREINO <Trophy className="w-5 h-5 text-black" /></>
+                                )}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => {
+                                    const nextUndoneIndex = setsArray.findIndex((_, sIdx) => !sessionData[`${exIndex}-${sIdx}`]?.completed);
+                                    if (nextUndoneIndex !== -1) {
+                                        handleCheckSet(exIndex, nextUndoneIndex, repsPlaceholder, setsCount, restSeconds, exName);
+                                    }
+                                }}
+                                className="w-full bg-[#FFC107]/20 hover:bg-[#FFC107]/30 text-[#FFC107] border border-[#FFC107]/40 py-4 text-sm font-black rounded-2xl touch-target flex items-center justify-center gap-2 transition-all active:scale-95"
+                            >
+                                <Check className="w-5 h-5" /> CONCLUIR SÉRIE #{setsArray.findIndex((_, sIdx) => !sessionData[`${exIndex}-${sIdx}`]?.completed) + 1} & DESCANSAR
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         );
     };

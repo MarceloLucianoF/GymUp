@@ -275,15 +275,15 @@ export default function ExerciseAnalytics() {
             <>
                 {/* Cards de Stats */}
                 <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-blue-600 text-white p-4 rounded-2xl shadow-lg shadow-blue-600/20">
-                        <p className="text-[10px] font-bold opacity-80 uppercase">Recorde (PR)</p>
+                    <div className="bg-gradient-to-br from-[#FFC107] to-[#FF9800] text-black p-4 rounded-2xl shadow-lg shadow-[#FFC107]/20">
+                        <p className="text-[10px] font-black opacity-80 uppercase">Recorde (PR)</p>
                         <h3 className="text-2xl font-black">{stats.pr}kg</h3>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="card-premium-glass p-4">
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Volume Total</p>
                         <h3 className="text-2xl font-black text-gray-800 dark:text-white">{stats.totalReps}</h3>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="card-premium-glass p-4">
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Treinos</p>
                         <h3 className="text-2xl font-black text-gray-800 dark:text-white">{stats.count}</h3>
                     </div>
@@ -301,7 +301,7 @@ export default function ExerciseAnalytics() {
                     </h3>
                     <div className="space-y-3">
                         {[...history].reverse().map((log, i) => (
-                            <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center hover:border-blue-200 transition-colors">
+                            <div key={i} className="card-premium-glass p-4 flex justify-between items-center hover:border-[#FFC107]/30 transition-colors">
                                 <div>
                                     <p className="text-sm font-bold text-gray-800 dark:text-white capitalize">
                                         {new Date(log.date).toLocaleDateString('pt-BR', {weekday: 'long', day:'numeric', month:'long'})}

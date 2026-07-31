@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
+import { useTheme } from '../../hooks/ThemeContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
 
 export default function Profile() {
   const { user, logout } = useAuthContext();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
@@ -328,7 +330,41 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    <div className="pt-4 flex flex-col gap-4">
+                    {/* PREFERÊNCIAS DE APARÊNCIA */}
+                    <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl border border-gray-200 dark:border-[#FFC107]/10 shadow-sm transition-colors">
+                        <h2 className="text-base font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                            {theme === 'dark' ? <Moon className="w-5 h-5 text-[#FFC107]" /> : <Sun className="w-5 h-5 text-amber-500" />}
+                            Aparência da Aplicação
+                        </h2>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-bold text-gray-800 dark:text-white">
+                                    {theme === 'dark' ? 'Modo Escuro (Nativo)' : 'Modo Claro'}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    {theme === 'dark' ? 'Identidade principal para uso no celular' : 'Visual claro alternativo'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={toggleTheme}
+                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    theme === 'dark' ? 'bg-[#FFC107]' : 'bg-gray-300'
+                                }`}
+                                title="Alternar entre modo escuro e claro"
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-black dark:bg-white shadow-lg ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                                        theme === 'dark' ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                >
+                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-[#FFC107]" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="pt-2 flex flex-col gap-4">
                         <button 
                             type="submit" 
                             disabled={!isDirty}
