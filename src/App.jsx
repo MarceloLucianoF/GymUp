@@ -1,9 +1,10 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuthContext } from './hooks/AuthContext';
 import { ThemeProvider } from './hooks/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/layout/Navbar';
+import PwaLayer from './components/pwa/PwaLayer';
 
 // --- PÁGINAS: AUTH ---
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -19,6 +20,8 @@ const HistoryPage = lazy(() => import('./pages/user/HistoryPage'));
 const Profile = lazy(() => import('./pages/user/Profile'));
 const MeasurementsPage = lazy(() => import('./pages/user/MeasurementsPage'));
 const ExerciseAnalytics = lazy(() => import('./pages/user/ExerciseAnalytics'));
+const ExerciseProgressList = lazy(() => import('./pages/user/ExerciseProgressList'));
+const Onboarding = lazy(() => import('./pages/user/Onboarding'));
 const UserChatPage = lazy(() => import('./pages/user/UserChatPage'));
 const WorkoutDetailsPage = lazy(() => import('./pages/user/WorkoutDetailsPage'));
 
@@ -76,8 +79,12 @@ const ProfileAccessError = () => {
   );
 };
 
+// Aluno novo (sem objetivo definido e sem onboarding concluído/pulado) passa pelo onboarding.
+const needsOnboarding = (profile) => profile?.role === 'user' && !profile.onboardedAt && !profile.goal;
+
 const ProtectedRoute = ({ children, allowedRoles = VALID_ROLES }) => {
   const { user, userProfile, authLoading } = useAuthContext();
+  const { pathname } = useLocation();
 
   if (authLoading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
@@ -85,6 +92,7 @@ const ProtectedRoute = ({ children, allowedRoles = VALID_ROLES }) => {
   const role = userProfile?.role;
   if (!VALID_ROLES.includes(role)) return <ProfileAccessError />;
   if (!allowedRoles.includes(role)) return <Navigate to={getRoleHome(role)} replace />;
+  if (needsOnboarding(userProfile) && pathname !== '/onboarding') return <Navigate to="/onboarding" replace />;
 
   return (
     <>
@@ -92,6 +100,16 @@ const ProtectedRoute = ({ children, allowedRoles = VALID_ROLES }) => {
       {children}
     </>
   );
+};
+
+const OnboardingRoute = ({ children }) => {
+  const { user, userProfile, authLoading } = useAuthContext();
+
+  if (authLoading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (userProfile?.role !== 'user') return <Navigate to={getRoleHome(userProfile?.role) || '/'} replace />;
+  if (!needsOnboarding(userProfile)) return <Navigate to="/dashboard" replace />;
+  return children;
 };
 
 const PublicOnlyRoute = ({ children }) => {
@@ -145,6 +163,8 @@ function AppRoutes() {
           
           {/* Histórico & Analytics */}
           <Route path="/history" element={<ProtectedRoute allowedRoles={['user']}><HistoryPage /></ProtectedRoute>} />
+          <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute allowedRoles={['user']}><ExerciseProgressList /></ProtectedRoute>} />
           <Route path="/analytics/:exerciseName" element={<ProtectedRoute allowedRoles={['user']}><ExerciseAnalytics /></ProtectedRoute>} /> {/* 🔥 Performance */}
           
           {/* --- ROTAS PROTEGIDAS (ADMIN) --- */}
@@ -179,6 +199,7 @@ export default function App() {
           
           {/* As rotas ficam aqui dentro para ter acesso aos contextos */}
           <AppRoutes />
+          <PwaLayer />
           
           <Toaster 
             position="top-center"
