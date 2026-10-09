@@ -54,7 +54,7 @@ export default function ForgotPassword() {
           <button 
             type="submit" 
             disabled={loading} 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 transition-transform active:scale-95 disabled:opacity-50"
+            className="w-full bg-brand hover:bg-brand-dark text-black font-bold py-4 rounded-xl shadow-lg shadow-brand/20 transition-transform active:scale-95 disabled:opacity-50"
           >
             {loading ? 'Enviando...' : 'Enviar Link de Recuperação'}
           </button>

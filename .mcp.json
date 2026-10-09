@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "academyup": {
+      "command": "node",
+      "args": ["mcp/server.js"]
+    }
+  }
+}

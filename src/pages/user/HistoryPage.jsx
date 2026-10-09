@@ -6,6 +6,10 @@ import toast from 'react-hot-toast';
 import MonthCalendar from '../../components/dashboard/MonthCalendar';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Dumbbell, Flame, Search, Trash2, ArrowUpRight } from 'lucide-react';
+import { SkeletonList } from '../../components/common/Skeleton';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
+import { formatDate as formatLocaleDate } from '../../utils/format';
 
 export default function HistoryPage() {
   const { user } = useAuthContext();
@@ -13,6 +17,8 @@ export default function HistoryPage() {
   
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   
   // Filtros Locais
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +27,7 @@ export default function HistoryPage() {
   // 1. ARQUITETURA REAL-TIME (onSnapshot)
   useEffect(() => {
     if (!user) return;
+    setError(false);
 
     // Query Base
     const q = query(
@@ -40,11 +47,12 @@ export default function HistoryPage() {
     }, (error) => {
       console.error("Erro realtime:", error);
       toast.error('Erro de conexão com histórico.');
+      setError(true);
       setLoading(false);
     });
 
     return () => unsubscribe(); // Limpa listener ao desmontar
-  }, [user]);
+  }, [user, reloadKey]);
 
   // 2. LÓGICA DE FILTRO MEMOIZADA (Performance)
   const filteredHistory = useMemo(() => {
@@ -127,11 +135,15 @@ export default function HistoryPage() {
           day: d.getDate(),
           month: months[d.getMonth()],
           weekday: days[d.getDay()],
-          full: d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+          full: formatLocaleDate(d, { day: 'numeric', month: 'long', year: 'numeric' })
       };
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8"><div className="max-w-4xl mx-auto"><SkeletonList count={4} itemClassName="h-32 w-full" /></div></div>;
+
+  if (error) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8"><ErrorState message="Não foi possível carregar o histórico." onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
+
+  if (history.length === 0) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8"><EmptyState icon={Dumbbell} title="Nenhum treino registrado" description="Finalize um treino para vê-lo aqui." /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 pb-32 transition-colors">
@@ -215,8 +227,8 @@ export default function HistoryPage() {
                             
                             {/* Badges */}
                             <div className="flex flex-wrap gap-2">
-                                <span className="inline-flex items-center gap-1 bg-[#FFC107]/10 text-[#FFC107] border border-[#FFC107]/20 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                    <Clock className="w-3 h-3 text-[#FFC107]" /> {formatDuration(item.duration)}
+                                <span className="inline-flex items-center gap-1 bg-brand/10 text-brand border border-brand/20 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                    <Clock className="w-3 h-3 text-brand" /> {formatDuration(item.duration)}
                                 </span>
                                 {item.totalVolume > 0 && (
                                     <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
@@ -259,13 +271,13 @@ export default function HistoryPage() {
                                                 e.stopPropagation();
                                                 navigate(`/analytics/${encodeURIComponent(ex.name)}`);
                                             }}
-                                            className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-700/40 rounded-lg hover:bg-[#FFC107]/10 dark:hover:bg-[#FFC107]/5 cursor-pointer group transition-all duration-300 border border-transparent hover:border-[#FFC107]/30 hover:scale-[1.005]"
+                                            className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-700/40 rounded-lg hover:bg-brand/10 dark:hover:bg-brand/5 cursor-pointer group transition-all duration-300 border border-transparent hover:border-brand/30 hover:scale-[1.005]"
                                         >
                                             <div className="flex items-center gap-2 overflow-hidden">
-                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-[#FFB300] transition-colors truncate">
+                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-brand-dark transition-colors truncate">
                                                     {ex.name}
                                                 </span>
-                                                <ArrowUpRight className="w-3 h-3 text-[#FFC107] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                                <ArrowUpRight className="w-3 h-3 text-brand opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                             </div>
                                             
                                             <div className="text-right flex items-center gap-3 shrink-0">

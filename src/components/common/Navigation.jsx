@@ -30,7 +30,7 @@ export default function Navigation() {
           <Link to="/profile" className="hover:text-blue-400 transition">Perfil</Link>
 
           {/* Botão de Tema */}
-          <button 
+          <button aria-label="Alternar tema" 
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-gray-700 dark:hover:bg-gray-800 transition"
             title={theme === 'dark' ? 'Mudar para Claro' : 'Mudar para Escuro'}

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, collection, getDocs, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
+import Modal from '../../components/common/Modal';
 
 export default function WorkoutEditor() {
   const { trainingId } = useParams();
@@ -83,7 +84,7 @@ export default function WorkoutEditor() {
       }
   };
 
-  if (loading || !training) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
+  if (loading || !training) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand"></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 pb-32">
@@ -182,7 +183,7 @@ export default function WorkoutEditor() {
 
         {/* MODAL DE SELEÇÃO */}
         {showAddModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <Modal onClose={() => setShowAddModal(false)} label="Biblioteca de exercícios" className="w-full max-w-2xl">
                 <div className="bg-white dark:bg-gray-800 w-full max-w-2xl h-[80vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
                     <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                         <h3 className="font-bold text-lg dark:text-white">Biblioteca de Exercícios</h3>
@@ -215,7 +216,7 @@ export default function WorkoutEditor() {
                         )}
                     </div>
                 </div>
-            </div>
+            </Modal>
         )}
 
       </div>

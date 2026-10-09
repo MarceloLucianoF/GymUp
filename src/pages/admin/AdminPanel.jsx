@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
+import { useConfirm } from '../../hooks/useConfirm';
 import { useAdmin } from '../../hooks/useAdmin';
 import { Navigate } from 'react-router-dom';
 import { Wrench, FileJson, Edit3, Trash2, Check, Save, PlusCircle, CheckCircle, Sparkles } from 'lucide-react';
 
 export default function AdminPanel() {
+  const { confirm, dialog } = useConfirm();
   const { isAdmin, loading: authLoading } = useAdmin();
   const [activeTab, setActiveTab] = useState('exercises');
   
   const [exercises, setExercises] = useState([]);
   const [trainings, setTrainings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   // Estados de Edição
   const [editingId, setEditingId] = useState(null);
@@ -170,7 +172,7 @@ export default function AdminPanel() {
   };
 
   const handleDeleteExercise = async (id) => {
-    if(!window.confirm("Apagar exercício?")) return;
+    if (!(await confirm({ title: "Apagar exercício", message: "Apagar exercício?", confirmLabel: "Apagar", danger: true }))) return;
     try {
         await deleteDoc(doc(db, 'exercises', id));
         toast.success("Exercício removido!");
@@ -227,7 +229,7 @@ export default function AdminPanel() {
   };
 
   const handleDeleteTraining = async (id) => {
-      if(!window.confirm("Apagar treino?")) return;
+      if (!(await confirm({ title: "Apagar treino", message: "Apagar treino?", confirmLabel: "Apagar", danger: true }))) return;
       try {
           await deleteDoc(doc(db, 'trainings', id));
           toast.success("Treino removido!");
@@ -259,6 +261,7 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 pb-24 transition-colors">
+    {dialog}
       <div className="max-w-6xl mx-auto">
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">

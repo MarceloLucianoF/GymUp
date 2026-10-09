@@ -153,7 +153,7 @@ export default function CoachSettings() {
                     <button 
                         type="submit" 
                         disabled={loading}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 disabled:opacity-70"
+                        className="w-full bg-brand hover:bg-brand-dark text-black font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 disabled:opacity-70"
                     >
                         {loading ? 'Salvando...' : 'Salvar Alterações'}
                     </button>

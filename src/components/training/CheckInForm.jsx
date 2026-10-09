@@ -1,15 +1,15 @@
-// src/components/CheckInForm.jsx
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 
 function CheckInForm({ exercise, onSubmit, onCancel }) {
-  const [repsCompleted, setRepsCompleted] = useState(exercise.reps); // Valor padrão: repetições sugeridas<br/>
+  const [repsCompleted, setRepsCompleted] = useState(exercise.reps); // Valor padrão: repetições sugeridas
   const [setsCompleted, setSetsCompleted] = useState(exercise.sets); // Valor padrão: séries sugeridas
   const [notes, setNotes] = useState(''); // Notas adicionais
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (repsCompleted <= 0 || setsCompleted <= 0) {
-      alert('Repetições e séries devem ser maiores que zero.');
+      toast.error('Repetições e séries devem ser maiores que zero.');
       return;
     }
     onSubmit({

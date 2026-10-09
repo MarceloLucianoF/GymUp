@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDate } from '../../utils/format';
 
 export default function WeeklyChart({ history }) {
   // 1. Gera os últimos 7 dias (Dinâmico)
@@ -12,7 +13,7 @@ export default function WeeklyChart({ history }) {
   // 2. Mapeia os dados
   const chartData = last7Days.map(date => {
     // Formata dia da semana (Seg, Ter...)
-    const dayStr = date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').slice(0, 3);
+    const dayStr = formatDate(date, { weekday: 'short' }, '').replace('.', '').slice(0, 3);
     
     // Conta treinos neste dia
     const count = history.filter(h => {
@@ -65,9 +66,9 @@ export default function WeeklyChart({ history }) {
                 style={{ height: `${heightPct}%` }}
                 className={`w-full rounded-t-md transition-all duration-700 ease-out relative ${
                     item.count > 0 
-                    ? 'bg-[#FFC107] dark:bg-[#FFB300] group-hover:bg-[#FFC107]/80'  // Cor quando tem treino
+                    ? 'bg-brand dark:bg-brand-dark group-hover:bg-brand/80'  // Cor quando tem treino
                     : 'bg-gray-100 dark:bg-gray-700/50' // <--- CORREÇÃO: Cor cinza quando vazio (antes estava transparent)
-                } ${item.isToday ? 'ring-2 ring-[#FFC107]/20 dark:ring-[#FFC107]/10' : ''}`}
+                } ${item.isToday ? 'ring-2 ring-brand/20 dark:ring-brand/10' : ''}`}
               >
                  {/* Brilho no topo da barra ativa */}
                  {item.count > 0 && (
@@ -77,7 +78,7 @@ export default function WeeklyChart({ history }) {
 
               {/* Label do Dia */}
               <span className={`text-[10px] mt-3 font-bold uppercase transition-colors ${
-                  item.isToday ? 'text-[#FFC107] dark:text-[#FFC107]' : 'text-gray-400 dark:text-gray-500'
+                  item.isToday ? 'text-brand dark:text-brand' : 'text-gray-400 dark:text-gray-500'
               }`}>
                 {item.day}
               </span>

@@ -89,16 +89,16 @@ export default function Navbar() {
 
   const Icons = {
     Home: ({ active }) => (
-      <Home className={`w-6 h-6 transition-colors ${active ? 'text-[#FFC107]' : 'text-gray-400'}`} />
+      <Home className={`w-6 h-6 transition-colors ${active ? 'text-brand' : 'text-gray-400'}`} />
     ),
     Trainings: ({ active }) => (
-      <Dumbbell className={`w-6 h-6 transition-colors ${active ? 'text-[#FFC107]' : 'text-gray-400'}`} />
+      <Dumbbell className={`w-6 h-6 transition-colors ${active ? 'text-brand' : 'text-gray-400'}`} />
     ),
     History: ({ active }) => (
-      <Calendar className={`w-6 h-6 transition-colors ${active ? 'text-[#FFC107]' : 'text-gray-400'}`} />
+      <Calendar className={`w-6 h-6 transition-colors ${active ? 'text-brand' : 'text-gray-400'}`} />
     ),
     Profile: ({ active }) => (
-      <User className={`w-6 h-6 transition-colors ${active ? 'text-[#FFC107]' : 'text-gray-400'}`} />
+      <User className={`w-6 h-6 transition-colors ${active ? 'text-brand' : 'text-gray-400'}`} />
     ),
   };
 
@@ -115,7 +115,7 @@ export default function Navbar() {
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-black text-gray-800 dark:text-white tracking-tighter leading-none">
-                ACADEMY<span className="text-[#FFC107]">UP</span>
+                ACADEMY<span className="text-brand">UP</span>
               </span>
               <span className="text-[7px] text-gray-400 dark:text-gray-500 font-bold tracking-[0.2em] mt-0.5">TREINE • EVOLUA</span>
             </div>
@@ -126,50 +126,50 @@ export default function Navbar() {
             <div className="flex items-center gap-8">
               <Link 
                 to="/dashboard" 
-                className={`text-sm font-bold transition-all relative py-2 hover:text-[#FFC107] ${
-                  isActive('/dashboard') ? 'text-[#FFC107] dark:text-[#FFC107]' : 'text-gray-500 dark:text-gray-300'
+                className={`text-sm font-bold transition-all relative py-2 hover:text-brand ${
+                  isActive('/dashboard') ? 'text-brand dark:text-brand' : 'text-gray-500 dark:text-gray-300'
                 }`}
               >
                 Dashboard
                 {isActive('/dashboard') && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#FFC107] rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-brand rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
                 )}
               </Link>
               <Link 
                 to="/trainings" 
-                className={`text-sm font-bold transition-all relative py-2 hover:text-[#FFC107] ${
-                  isActive('/trainings') ? 'text-[#FFC107] dark:text-[#FFC107]' : 'text-gray-500 dark:text-gray-300'
+                className={`text-sm font-bold transition-all relative py-2 hover:text-brand ${
+                  isActive('/trainings') ? 'text-brand dark:text-brand' : 'text-gray-500 dark:text-gray-300'
                 }`}
               >
                 Treinos
                 {isActive('/trainings') && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#FFC107] rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-brand rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
                 )}
               </Link>
               <Link 
                 to="/history" 
-                className={`text-sm font-bold transition-all relative py-2 hover:text-[#FFC107] ${
-                  isActive('/history') ? 'text-[#FFC107] dark:text-[#FFC107]' : 'text-gray-500 dark:text-gray-300'
+                className={`text-sm font-bold transition-all relative py-2 hover:text-brand ${
+                  isActive('/history') ? 'text-brand dark:text-brand' : 'text-gray-500 dark:text-gray-300'
                 }`}
               >
                 Histórico
                 {isActive('/history') && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#FFC107] rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-brand rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
                 )}
               </Link>
               <Link 
                 to={userProfile?.role === 'coach' ? "/coach/chat" : "/chat"} 
-                className={`text-sm font-bold transition-all relative py-2 hover:text-[#FFC107] flex items-center gap-1.5 ${
-                  isActive('/chat') || isActive('/coach/chat') ? 'text-[#FFC107] dark:text-[#FFC107]' : 'text-gray-500 dark:text-gray-300'
+                className={`text-sm font-bold transition-all relative py-2 hover:text-brand flex items-center gap-1.5 ${
+                  isActive('/chat') || isActive('/coach/chat') ? 'text-brand dark:text-brand' : 'text-gray-500 dark:text-gray-300'
                 }`}
               >
                 <MessageSquare className="w-4 h-4" /> Chat
                 {(isActive('/chat') || isActive('/coach/chat')) && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#FFC107] rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-brand rounded-full shadow-[0_0_8px_#FFC107] animate-pulse"></span>
                 )}
               </Link>
               {isAdmin && (
-                <Link to="/admin" className="text-xs font-bold text-[#FFC107] hover:text-black bg-[#FFC107]/10 hover:bg-[#FFC107] border border-[#FFC107]/30 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm">
+                <Link to="/admin" className="text-xs font-bold text-brand hover:text-black bg-brand/10 hover:bg-brand border border-brand/30 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm">
                   <Shield className="w-3.5 h-3.5" /> Painel Admin
                 </Link>
               )}
@@ -183,16 +183,16 @@ export default function Navbar() {
                 <div className="h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
                 <Link to="/profile" className="flex items-center gap-3 group">
                   <div className="text-right hidden lg:block">
-                    <p className="text-sm font-bold text-gray-800 dark:text-white group-hover:text-[#FFC107] transition-colors">
+                    <p className="text-sm font-bold text-gray-800 dark:text-white group-hover:text-brand transition-colors">
                       {displayName}
                     </p>
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ver Perfil</p>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-2 border-transparent group-hover:border-[#FFC107] transition-all shadow-sm">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-2 border-transparent group-hover:border-brand transition-all shadow-sm">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="Perfil" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-[#FFC107] to-[#FFB300] flex items-center justify-center text-black font-bold">
+                      <div className="w-full h-full bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-black font-bold">
                         {initial}
                       </div>
                     )}
@@ -201,7 +201,7 @@ export default function Navbar() {
               </>
             ) : (
               <div className="flex gap-4 items-center">
-                <Link to="/login" className="text-gray-600 dark:text-gray-300 font-bold hover:text-[#FFC107] px-4 py-2 transition-colors">Login</Link>
+                <Link to="/login" className="text-gray-600 dark:text-gray-300 font-bold hover:text-brand px-4 py-2 transition-colors">Login</Link>
                 <Link to="/register" className="btn-primary-gradient text-sm px-6 py-2.5">
                   Começar
                 </Link>
@@ -213,7 +213,7 @@ export default function Navbar() {
 
       {/* BARRA PERSISTENTE GLOBAL DE TREINO ATIVO (MOBILE) */}
       {user && activeSession && !location.pathname.startsWith('/execution') && (
-        <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black px-4 py-2 flex items-center justify-between shadow-2xl border-b border-black/10">
+        <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-gradient-to-r from-brand to-[#FF9800] text-black px-4 py-2 flex items-center justify-between shadow-2xl border-b border-black/10">
           <div className="flex items-center gap-2 min-w-0 pr-2">
             <Flame className="w-4 h-4 text-black fill-current animate-pulse shrink-0" />
             <div className="min-w-0 text-xs">
@@ -223,7 +223,7 @@ export default function Navbar() {
           </div>
           <Link
             to={`/execution/${activeSession.trainingId}`}
-            className="bg-black text-[#FFC107] font-black text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0 hover:bg-gray-900 transition-colors shadow-sm"
+            className="bg-black text-brand font-black text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0 hover:bg-gray-900 transition-colors shadow-sm"
           >
             Continuar →
           </Link>
@@ -238,7 +238,7 @@ export default function Navbar() {
             <Link 
               to="/dashboard" 
               className={`flex flex-col items-center justify-center rounded-xl py-1.5 px-3.5 transition-all duration-300 ${
-                isActive('/dashboard') ? 'bg-[#FFC107]/10 text-[#FFC107]' : 'text-gray-400 hover:text-[#FFC107]'
+                isActive('/dashboard') ? 'bg-brand/10 text-brand' : 'text-gray-400 hover:text-brand'
               }`}
             >
               <Icons.Home active={isActive('/dashboard')} />
@@ -248,7 +248,7 @@ export default function Navbar() {
             <Link 
               to={activeSession ? `/execution/${activeSession.trainingId}` : "/trainings"} 
               className={`flex flex-col items-center justify-center rounded-xl py-1.5 px-3.5 transition-all duration-300 relative ${
-                isActive('/trainings') || isActive('/execution') ? 'bg-[#FFC107]/10 text-[#FFC107]' : 'text-gray-400 hover:text-[#FFC107]'
+                isActive('/trainings') || isActive('/execution') ? 'bg-brand/10 text-brand' : 'text-gray-400 hover:text-brand'
               }`}
             >
               {activeSession ? (
@@ -268,7 +268,7 @@ export default function Navbar() {
             <div className="relative -top-5">
                 <Link 
                   to={userProfile?.role === 'coach' ? "/coach/chat" : "/chat"} 
-                  className="w-12 h-12 bg-gradient-to-br from-[#FFC107] to-[#FF9800] rounded-full flex items-center justify-center shadow-lg shadow-[#FFC107]/25 border-4 border-white dark:border-[#0B0F19] transform hover:scale-110 active:scale-95 transition-all p-2.5"
+                  className="w-12 h-12 bg-gradient-to-br from-brand to-[#FF9800] rounded-full flex items-center justify-center shadow-lg shadow-brand/25 border-4 border-white dark:border-[#0B0F19] transform hover:scale-110 active:scale-95 transition-all p-2.5"
                   title="Chat"
                 >
                   <MessageSquare className="w-5 h-5 text-black fill-current" />
@@ -278,7 +278,7 @@ export default function Navbar() {
             <Link 
               to="/history" 
               className={`flex flex-col items-center justify-center rounded-xl py-1.5 px-3.5 transition-all duration-300 ${
-                isActive('/history') ? 'bg-[#FFC107]/10 text-[#FFC107]' : 'text-gray-400 hover:text-[#FFC107]'
+                isActive('/history') ? 'bg-brand/10 text-brand' : 'text-gray-400 hover:text-brand'
               }`}
             >
               <Icons.History active={isActive('/history')} />
@@ -288,10 +288,10 @@ export default function Navbar() {
             <Link 
               to="/profile" 
               className={`flex flex-col items-center justify-center rounded-xl py-1.5 px-3.5 transition-all duration-300 ${
-                isActive('/profile') ? 'bg-[#FFC107]/10 text-[#FFC107]' : 'text-gray-400 hover:text-[#FFC107]'
+                isActive('/profile') ? 'bg-brand/10 text-brand' : 'text-gray-400 hover:text-brand'
               }`}
             >
-              <div className={`w-5 h-5 rounded-full overflow-hidden border transition-all ${isActive('/profile') ? 'border-[#FFC107]' : 'border-transparent'}`}>
+              <div className={`w-5 h-5 rounded-full overflow-hidden border transition-all ${isActive('/profile') ? 'border-brand' : 'border-transparent'}`}>
                  {avatarUrl ? (
                     <img src={avatarUrl} alt="Perfil" className="w-full h-full object-cover" />
                  ) : (

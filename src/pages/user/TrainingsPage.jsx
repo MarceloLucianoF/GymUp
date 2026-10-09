@@ -6,11 +6,14 @@ import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles } from 'lucide-react';
 import AICoachModal from '../../components/ai/AICoachModal';
+import { formatDate } from '../../utils/format';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 
 // --- COMPONENTES VISUAIS ---
 
 const TrainingSkeleton = () => (
-  <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-3xl p-6 h-48 border border-gray-100 dark:border-[#FFC107]/10 animate-pulse flex flex-col justify-between">
+  <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-3xl p-6 h-48 border border-gray-100 dark:border-brand/10 animate-pulse flex flex-col justify-between">
     <div className="flex justify-between">
       <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
       <div className="w-20 h-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
@@ -32,8 +35,8 @@ const FilterChip = ({ label, active, onClick }) => (
     onClick={onClick}
     className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all duration-300 border ${
       active 
-      ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black border-transparent shadow-lg shadow-[#FFC107]/20 scale-105' 
-      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-[#FFC107]/10 hover:border-[#FFC107]/40 hover:text-white'
+      ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black border-transparent shadow-lg shadow-brand/20 scale-105' 
+      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-brand/10 hover:border-brand/40 hover:text-white'
     }`}
   >
     {label}
@@ -41,7 +44,7 @@ const FilterChip = ({ label, active, onClick }) => (
 );
 
 export default function TrainingsPage() {
-  const { trainings, loading: loadingTrainings, error, refreshData } = useAdmin();
+  const { trainings, trainingsLoading, trainingsError, refreshData } = useAdmin();
   const { user, userProfile } = useAuthContext();
   
   const [historyMap, setHistoryMap] = useState({});
@@ -49,6 +52,8 @@ export default function TrainingsPage() {
   const [filter, setFilter] = useState('Todos');
   const [packages, setPackages] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
+  const [packagesError, setPackagesError] = useState(false);
+  const [packagesReload, setPackagesReload] = useState(0);
   const [collapsedPackages, setCollapsedPackages] = useState({});
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
@@ -83,6 +88,7 @@ export default function TrainingsPage() {
   // 2. Busca Pacotes de Treino
   useEffect(() => {
     const fetchPackages = async () => {
+      setPackagesError(false);
       try {
         const q = query(collection(db, 'trainingPackages'), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
@@ -90,12 +96,13 @@ export default function TrainingsPage() {
         setPackages(pkgs);
       } catch (err) {
         console.error("Erro ao buscar pacotes:", err);
+        setPackagesError(true);
       } finally {
         setLoadingPackages(false);
       }
     };
     fetchPackages();
-  }, []);
+  }, [packagesReload]);
 
   // 3. Helpers
   const getTrainingIconComponent = (name) => {
@@ -128,7 +135,7 @@ export default function TrainingsPage() {
       if (diff === 0) return 'Hoje';
       if (diff === 1) return 'Ontem';
       if (diff < 7) return `Há ${diff} dias`;
-      return date.toLocaleDateString('pt-BR');
+      return formatDate(date);
   };
 
   const togglePackageCollapse = (pkgId) => {
@@ -136,7 +143,7 @@ export default function TrainingsPage() {
   };
 
   // 4. Processamento
-  const isLoading = loadingTrainings || loadingHistory || loadingPackages;
+  const isLoading = trainingsLoading || loadingHistory || loadingPackages;
 
   const filteredTrainings = trainings.filter(t => {
       if (filter === 'Todos') return true;
@@ -180,11 +187,11 @@ export default function TrainingsPage() {
       <Link 
         to={`/training/${validId}`} 
         key={validId} 
-        className="group relative overflow-hidden bg-white dark:bg-[#1F2937]/45 dark:backdrop-blur-md rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/45 hover-glow-brand"
+        className="group relative overflow-hidden bg-white dark:bg-[#1F2937]/45 dark:backdrop-blur-md rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border border-gray-100 dark:border-brand/10 hover:border-brand/45 hover-glow-brand"
       >
         {/* Badge Recomendado */}
         {(!lastDate || (new Date() - lastDate) / (1000 * 60 * 60 * 24) > 7) && (
-            <div className="absolute top-0 right-0 bg-[#FFC107] text-black text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-lg z-10">
+            <div className="absolute top-0 right-0 bg-brand text-black text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-lg z-10">
                 RECOMENDADO
             </div>
         )}
@@ -192,7 +199,7 @@ export default function TrainingsPage() {
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
               <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-900/60 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform group-hover:bg-white dark:group-hover:bg-[#1F2937]">
-                  <IconComponent className="w-6 h-6 text-[#FFC107] dark:text-[#FFC107] group-hover:text-[#FFB300]" />
+                  <IconComponent className="w-6 h-6 text-brand dark:text-brand group-hover:text-brand-dark" />
               </div>
               
               <div className="text-right">
@@ -205,7 +212,7 @@ export default function TrainingsPage() {
               </div>
           </div>
 
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1 group-hover:text-[#FFB300] transition-colors line-clamp-1">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1 group-hover:text-brand-dark transition-colors line-clamp-1">
               {training.name || 'Treino Sem Nome'}
           </h3>
           
@@ -223,7 +230,7 @@ export default function TrainingsPage() {
                   </div>
               </div>
               
-              <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-[#FFC107]/10 flex items-center justify-center text-[#FFC107] group-hover:bg-[#FFC107] group-hover:text-black transition-all duration-300 group-hover:scale-110 active:scale-95 shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-brand/10 flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-black transition-all duration-300 group-hover:scale-110 active:scale-95 shadow-sm">
                   <ChevronRight className="w-4 h-4" />
               </div>
           </div>
@@ -232,7 +239,20 @@ export default function TrainingsPage() {
     );
   };
 
-  if (error) return <div className="min-h-screen flex items-center justify-center dark:text-white">Erro: {error}</div>;
+  if (trainingsError || packagesError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <ErrorState
+          message={trainingsError || 'Não foi possível carregar os pacotes de treino.'}
+          onRetry={() => {
+            setLoadingPackages(true);
+            setPackagesReload(k => k + 1);
+            refreshData();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 pb-24 transition-colors duration-300">
@@ -251,7 +271,7 @@ export default function TrainingsPage() {
                 </div>
                 <button
                     onClick={() => setIsAIModalOpen(true)}
-                    className="btn-primary-gradient px-4 py-3 rounded-2xl touch-target text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-[#FFC107]/20 shrink-0"
+                    className="btn-primary-gradient px-4 py-3 rounded-2xl touch-target text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-brand/20 shrink-0"
                 >
                     <Sparkles className="w-4 h-4 fill-current" />
                     Gerar Treino com IA ✨
@@ -285,12 +305,12 @@ export default function TrainingsPage() {
                   {/* Package Header */}
                   <button
                     onClick={() => togglePackageCollapse(pkg.id)}
-                    className="w-full bg-[#1F2937] dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-lg hover:border-[#FFC107]/45 transition-all text-left group hover-glow-brand hover:scale-[1.005] duration-300"
+                    className="w-full bg-[#1F2937] dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-lg hover:border-brand/45 transition-all text-left group hover-glow-brand hover:scale-[1.005] duration-300"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#FFC107]/10 border border-[#FFC107]/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                          <Package className="w-6 h-6 text-[#FFC107]" />
+                        <div className="w-12 h-12 bg-brand/10 border border-brand/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                          <Package className="w-6 h-6 text-brand" />
                         </div>
                         <div>
                           <h2 className="text-lg font-black text-white leading-tight">{pkg.name}</h2>
@@ -342,11 +362,11 @@ export default function TrainingsPage() {
 
             {/* Empty State */}
             {Object.keys(packagedTrainings).length === 0 && looseTrainings.length === 0 && (
-              <div className="text-center py-20 bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-3xl border border-dashed border-gray-200 dark:border-[#FFC107]/10">
-                <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg font-bold">Nenhum treino encontrado.</p>
-                <p className="text-gray-400 text-sm mt-1">Aplique os filtros ou aguarde o treinador criar seus pacotes.</p>
-              </div>
+              <EmptyState
+                icon={Package}
+                title="Nenhum treino encontrado."
+                description="Aplique os filtros ou aguarde o treinador criar seus pacotes."
+              />
             )}
           </div>
         )}

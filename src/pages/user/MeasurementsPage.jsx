@@ -3,8 +3,14 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
+import { useConfirm } from '../../hooks/useConfirm';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Scale, TrendingDown, X, Plus, ArrowLeft } from 'lucide-react';
+import { formatDate } from '../../utils/format';
+import Modal from '../../components/common/Modal';
+import { SkeletonList } from '../../components/common/Skeleton';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 
 // --- SUB-COMPONENTES ---
 
@@ -70,8 +76,8 @@ const WeightChart = ({ data }) => {
         </svg>
       </div>
       <div className="flex justify-between text-[10px] text-gray-400 mt-2 font-mono uppercase">
-         <span>{new Date(data[0].date).toLocaleDateString('pt-BR')}</span>
-         <span>{new Date(data[data.length-1].date).toLocaleDateString('pt-BR')}</span>
+         <span>{formatDate(data[0].date)}</span>
+         <span>{formatDate(data[data.length-1].date)}</span>
       </div>
     </div>
   );
@@ -109,9 +115,9 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+        <Modal onClose={onClose} label="Registrar medidas" className="w-full max-w-sm">
             <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-450 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <button aria-label="Fechar" onClick={onClose} className="absolute top-4 right-4 text-gray-450 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     <X className="w-4 h-4" />
                 </button>
                 
@@ -157,18 +163,21 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                     </button>
                 </form>
             </div>
-        </div>
+        </Modal>
     );
 };
 
 // --- PÁGINA PRINCIPAL ---
 
 export default function MeasurementsPage() {
+  const { confirm, dialog } = useConfirm();
   const { user } = useAuthContext();
   const navigate = useNavigate();
   
   const [measurements, setMeasurements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [userHeight, setUserHeight] = useState(null);
 
@@ -176,6 +185,7 @@ export default function MeasurementsPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
+      setError(false);
       try {
         // Busca Medidas
         const q = query(
@@ -195,12 +205,13 @@ export default function MeasurementsPage() {
 
       } catch (error) {
         console.error("Erro medidas:", error);
+        setError(true);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [user]);
+  }, [user, reloadKey]);
 
   // 2. Salvar Nova Medida
   const handleSaveMeasurement = async (data) => {
@@ -228,7 +239,7 @@ export default function MeasurementsPage() {
   };
 
   const handleDelete = async (id) => {
-      if(window.confirm("Apagar este registro?")) {
+      if (await confirm({ title: "Apagar registro", message: "Apagar este registro?", confirmLabel: "Apagar", danger: true })) {
           try {
               await deleteDoc(doc(db, 'measurements', id));
               setMeasurements(prev => prev.filter(m => m.id !== id));
@@ -273,10 +284,13 @@ export default function MeasurementsPage() {
   // Filtra apenas medidas com fotos para a galeria
   const galleryPhotos = measurements.filter(m => m.photo).reverse();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4"><SkeletonList count={4} itemClassName="h-24 w-full" /></div>;
+
+  if (error) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4"><ErrorState onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 transition-colors duration-300 pb-32">
+    {dialog}
       <div className="max-w-4xl mx-auto space-y-8">
         
         {/* Header */}
@@ -293,12 +307,12 @@ export default function MeasurementsPage() {
         </div>
 
         {measurements.length === 0 ? (
-            <div className="text-center py-20 flex flex-col items-center justify-center">
-                <Scale className="w-16 h-16 text-gray-400 mb-4 opacity-50" />
-                <h2 className="text-2xl font-bold text-gray-700 dark:text-white">Comece sua jornada</h2>
-                <p className="text-gray-500 mb-6">Registre seu peso hoje para acompanhar sua evolução.</p>
-                <button onClick={() => setShowModal(true)} className="text-[#FFC107] hover:text-[#FFB300] font-bold underline transition-colors">Registrar agora</button>
-            </div>
+            <EmptyState
+                icon={Scale}
+                title="Comece sua jornada"
+                description="Registre seu peso hoje para acompanhar sua evolução."
+                action={<button onClick={() => setShowModal(true)} className="text-brand hover:text-brand-dark font-bold underline transition-colors">Registrar agora</button>}
+            />
         ) : (
             <>
                 {/* KPI Cards */}
@@ -320,9 +334,9 @@ export default function MeasurementsPage() {
                             <span className={`text-xs font-bold ${stats.imcColor}`}>{stats.imcLabel}</span>
                         </div>
                     </div>
-                    <div className="card-premium-glass p-5 flex flex-col justify-center items-center cursor-pointer hover:border-[#FFC107]/50 transition-colors" onClick={() => setShowModal(true)}>
+                    <div className="card-premium-glass p-5 flex flex-col justify-center items-center cursor-pointer hover:border-brand/50 transition-colors" onClick={() => setShowModal(true)}>
                         <span className="text-2xl mb-1">➕</span>
-                        <span className="text-xs font-bold text-[#FFC107] transition-colors">Adicionar</span>
+                        <span className="text-xs font-bold text-brand transition-colors">Adicionar</span>
                     </div>
                 </div>
 
@@ -343,7 +357,7 @@ export default function MeasurementsPage() {
                                     </div>
                                     <div className="mt-2 text-center">
                                         <p className="text-sm font-bold text-gray-800 dark:text-white">{item.weight}kg</p>
-                                        <p className="text-[10px] text-gray-500 uppercase">{new Date(item.date).toLocaleDateString('pt-BR')}</p>
+                                        <p className="text-[10px] text-gray-500 uppercase">{formatDate(item.date)}</p>
                                     </div>
                                 </div>
                             ))}
@@ -362,7 +376,7 @@ export default function MeasurementsPage() {
                                 <div>
                                     <p className="font-bold text-gray-800 dark:text-white">{item.weight}kg</p>
                                     <p className="text-xs text-gray-400 capitalize">
-                                        {new Date(item.date).toLocaleDateString('pt-BR', {weekday: 'short', day: 'numeric', month: 'long'})}
+                                        {formatDate(item.date, {weekday: 'short', day: 'numeric', month: 'long'})}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-4">

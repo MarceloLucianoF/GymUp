@@ -5,6 +5,10 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Megaphone, User, ClipboardList, AlertTriangle, MessageSquare, DollarSign, X } from 'lucide-react';
+import Modal from '../../components/common/Modal';
+import { SkeletonList } from '../../components/common/Skeleton';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 
 export default function CoachStudentsPage() {
   const { user } = useAuthContext();
@@ -13,6 +17,8 @@ export default function CoachStudentsPage() {
   const [students, setStudents] = useState([]);
   const [trainings, setTrainings] = useState([]); // Para o modal de seleção
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   
   // Controle do Modal de Atribuição
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -21,9 +27,14 @@ export default function CoachStudentsPage() {
   // 1. Buscar Dados (Alunos e Treinos do Coach)
   useEffect(() => {
     const fetchData = async () => {
+      setError(false);
       try {
         // A. Buscar Alunos
-        const qStudents = query(collection(db, 'users'), where('coachId', '==', user.uid));
+        const qStudents = query(
+          collection(db, 'users'),
+          where('role', '==', 'user'),
+          where('coachId', '==', user.uid)
+        );
         const studentsSnap = await getDocs(qStudents);
         const studentsList = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -40,13 +51,14 @@ export default function CoachStudentsPage() {
         setTrainings(trainingsList);
       } catch (error) {
         console.error(error);
+        setError(true);
         toast.error("Erro ao carregar dados.");
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [user]);
+  }, [user, reloadKey]);
 
   // 2. Helper para mostrar o nome do treino atual
   const getTrainingName = (trainingId) => {
@@ -93,7 +105,9 @@ export default function CoachStudentsPage() {
       });
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><SkeletonList count={4} itemClassName="h-24 w-full" /></div>;
+
+  if (error) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><ErrorState onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
@@ -120,11 +134,7 @@ export default function CoachStudentsPage() {
 
         {/* Lista de Alunos */}
         {students.length === 0 ? (
-            <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
-                <User className="w-12 h-12 text-gray-400 mb-2 opacity-50" />
-                <p className="text-gray-500 font-bold">Nenhum aluno vinculado ainda.</p>
-                <p className="text-sm text-gray-400 mt-1">Envie seu código de convite para começar.</p>
-            </div>
+            <EmptyState icon={User} title="Nenhum aluno vinculado ainda." description="Envie seu código de convite para começar." />
         ) : (
             <div className="grid grid-cols-1 gap-4 animate-fade-in-up">
                 {students.map(student => {
@@ -201,7 +211,7 @@ export default function CoachStudentsPage() {
 
         {/* MODAL DE ATRIBUIÇÃO DE TREINO */}
         {showModal && selectedStudent && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <Modal onClose={() => setShowModal(false)} label="Definir ficha" className="w-full max-w-lg">
                 <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl relative flex flex-col max-h-[85vh] border border-gray-100 dark:border-gray-700">
                     
                     {/* Header Modal */}
@@ -271,7 +281,7 @@ export default function CoachStudentsPage() {
                         )}
                     </div>
                 </div>
-            </div>
+            </Modal>
         )}
 
       </div>

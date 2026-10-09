@@ -1,68 +1,265 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- FUNÇÕES AUXILIARES ---
-    function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
-    }
-    
-    function isCoach() {
-      return request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach" || isAdmin());
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // --- PERFIL DE USUÁRIOS ---
-    match /users/{userId} {
-      allow read: if request.auth != null && (
-        request.auth.uid == userId || 
-        resource.data.role == 'coach' || 
-        resource.data.role == 'admin' ||
-        isCoach()
+    function hasRole(role) {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isCoach() {
+      return hasRole('coach');
+    }
+
+    function isTrainerId(uid) {
+      return uid is string && uid.size() > 0
+        && get(/databases/$(database)/documents/users/$(uid)).data.role in ['coach', 'admin'];
+    }
+
+    function linkedStudent(data) {
+      return isCoach() && data.role == 'user'
+        && data.get('coachId', null) == request.auth.uid;
+    }
+
+    function canAccessUserData(uid) {
+      return signedIn() && uid is string && (
+        request.auth.uid == uid || isAdmin()
+        || linkedStudent(get(/databases/$(database)/documents/users/$(uid)).data)
       );
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (request.auth.uid == userId || isCoach());
+    }
+
+    // coachId is consent granted by the student, never a coach's self-assignment.
+    function validCoachLink(data, uid) {
+      let coachId = data.get('coachId', null);
+      return coachId == null || (
+        data.role == 'user' && coachId != uid && isTrainerId(coachId)
+      );
+    }
+
+    function validUser(data, uid) {
+      return data.role in ['user', 'coach', 'admin']
+        && data.get('uid', uid) == uid
+        && validCoachLink(data, uid);
+    }
+
+    function ownProfileChanges() {
+      let fields = request.resource.data.diff(resource.data).affectedKeys();
+      return fields.hasOnly([
+        'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
+        'updatedAt', 'lastWorkoutDate', 'coachId'
+      ]) || (isCoach() && fields.hasOnly([
+        'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
+        'updatedAt', 'lastWorkoutDate', 'bio', 'phone', 'pixKey', 'defaultMonthlyFee'
+      ]));
+    }
+
+    function validCoachAssignment() {
+      let nextId = request.resource.data.get('currentTrainingId', null);
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['currentTrainingId'])
+        || nextId == null
+        || (nextId is string
+          && ownsCoachTraining(get(/databases/$(database)/documents/trainings/$(nextId)).data));
+    }
+
+    match /users/{userId} {
+      allow get, list: if signedIn() && (
+        request.auth.uid == userId || isAdmin() || linkedStudent(resource.data)
+      );
+      allow create: if signedIn() && validUser(request.resource.data, userId) && (
+        isAdmin() || (
+          request.auth.uid == userId
+          && request.resource.data.uid == userId
+          && request.resource.data.role == 'user'
+          && request.resource.data.get('currentTrainingId', null) == null
+          && request.resource.data.keys().hasOnly([
+            'uid', 'displayName', 'email', 'role', 'createdAt', 'age',
+            'weight', 'height', 'photoURL', 'coachId', 'currentTrainingId'
+          ])
+        )
+      );
+      allow update: if signedIn() && validUser(request.resource.data, userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid'])
+        && (
+          isAdmin() || (
+            request.resource.data.role == resource.data.role
+            && (
+              (request.auth.uid == userId && ownProfileChanges())
+              || (linkedStudent(resource.data) && validCoachAssignment()
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'currentTrainingId', 'monthlyFee', 'paymentStatus',
+                  'paymentDate', 'lastPaymentUpdate', 'updatedAt'
+                ]))
+            )
+          )
+        );
       allow delete: if isAdmin();
     }
 
-    // --- CHATS ---
+    function validUserOwnedData(data) {
+      return data.userId is string && data.userId.size() > 0;
+    }
+
+    function validPublicCoachProfile(data, coachId) {
+      return data.keys().hasOnly(['uid', 'displayName', 'photoURL', 'bio', 'role', 'updatedAt'])
+        && data.uid == coachId && data.role in ['coach', 'admin']
+        && data.displayName is string
+        && data.get('photoURL', '') is string
+        && data.get('bio', '') is string
+        && (data.get('updatedAt', '') is string || data.updatedAt is timestamp);
+    }
+
+    match /publicCoachProfiles/{coachId} {
+      // Public reads are safe only while the document contains this exact public schema.
+      allow get, list: if validPublicCoachProfile(resource.data, coachId);
+      allow create, update: if validPublicCoachProfile(request.resource.data, coachId)
+        && request.resource.data.role == get(/databases/$(database)/documents/users/$(coachId)).data.role
+        && (isAdmin() || (request.auth.uid == coachId && isCoach()));
+      allow delete: if isAdmin();
+    }
+
+    // Leitura: dono, admin ou treinador vinculado. Escrita: somente o dono (ou admin),
+    // para que o treinador não forje nem apague dados do aluno.
+    function ownerOrAdmin(uid) {
+      return signedIn() && uid is string && (request.auth.uid == uid || isAdmin());
+    }
+
+    match /measurements/{docId} {
+      allow get, list: if canAccessUserData(resource.data.userId);
+      allow create: if validUserOwnedData(request.resource.data)
+        && ownerOrAdmin(request.resource.data.userId);
+      allow update: if validUserOwnedData(request.resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && ownerOrAdmin(resource.data.userId);
+      allow delete: if ownerOrAdmin(resource.data.userId);
+    }
+
+    match /checkIns/{docId} {
+      allow get, list: if canAccessUserData(resource.data.userId);
+      allow create: if validUserOwnedData(request.resource.data)
+        && ownerOrAdmin(request.resource.data.userId);
+      allow update: if validUserOwnedData(request.resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && ownerOrAdmin(resource.data.userId);
+      allow delete: if ownerOrAdmin(resource.data.userId);
+    }
+
+    function isParticipant(data) {
+      return signedIn() && request.auth.uid in data.participants;
+    }
+
+    function isStudentCoachPair(studentId, coachId) {
+      let student = get(/databases/$(database)/documents/users/$(studentId)).data;
+      return student.role == 'user' && student.get('coachId', null) == coachId
+        && isTrainerId(coachId);
+    }
+
+    function validChatParticipants(data) {
+      return data.participants is list && data.participants.size() == 2
+        && data.participants[0] is string && data.participants[1] is string
+        && data.participants[0].size() > 0 && data.participants[1].size() > 0
+        && data.participants[0] != data.participants[1]
+        && isParticipant(data)
+        && (isStudentCoachPair(data.participants[0], data.participants[1])
+          || isStudentCoachPair(data.participants[1], data.participants[0]));
+    }
+
+    function chatParticipant(chatId) {
+      return isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data);
+    }
+
     match /chats/{chatId} {
-      allow get: if request.auth != null && (
-        (resource != null && request.auth.uid in resource.data.participants) ||
-        (resource == null && chatId.matches('.*' + request.auth.uid + '.*'))
-      );
-      allow list: if request.auth != null && request.auth.uid in resource.data.participants;
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
-      allow update: if request.auth != null && request.auth.uid in resource.data.participants;
+      // A guessed ID never authorizes reading a missing or someone else's chat.
+      allow get, list: if isParticipant(resource.data);
+      allow create: if validChatParticipants(request.resource.data)
+        && request.resource.data.keys().hasOnly([
+          'participants', 'participantData', 'createdAt', 'updatedAt', 'lastMessage'
+        ])
+        && request.resource.data.participantData is map
+        && request.resource.data.participantData.keys().hasOnly(request.resource.data.participants)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.lastMessage == '';
+      allow update: if isParticipant(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'updatedAt'])
+        && request.resource.data.lastMessage is string
+        && request.resource.data.lastMessage.size() <= 10000
+        && request.resource.data.updatedAt == request.time;
+      // Deleting a parent would leave messages behind. No client chat deletion.
+      allow delete: if false;
 
       match /messages/{msgId} {
-        allow read, write: if request.auth != null;
+        allow get, list: if chatParticipant(chatId);
+        allow create: if chatParticipant(chatId)
+          && request.resource.data.keys().hasOnly(['text', 'senderId', 'createdAt', 'senderName'])
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 10000
+          && request.resource.data.get('senderName', '') is string
+          && request.resource.data.createdAt == request.time;
+        allow update: if chatParticipant(chatId)
+          && resource.data.senderId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 10000;
+        allow delete: if chatParticipant(chatId) && resource.data.senderId == request.auth.uid;
       }
     }
 
-    // --- DADOS GERAIS ---
-    match /measurements/{docId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /checkIns/{docId} {
-      allow read, write: if request.auth != null;
+    function validTraining(data) {
+      return data.name is string && data.name.size() > 0 && data.exercises is list
+        && (data.get('coachId', null) == null || data.coachId is string)
+        && (data.get('createdBy', null) == null || data.createdBy is string)
+        && data.get('isAIGenerated', false) is bool;
     }
 
-    // --- EXERCÍCIOS E TREINOS ---
+    // coachId is authoritative; createdBy is the fallback for older creator-owned fichas.
+    function ownsCoachTraining(data) {
+      return isCoach() && (
+        data.get('coachId', null) == request.auth.uid
+        || (data.get('coachId', null) == null && data.get('createdBy', null) == request.auth.uid)
+      );
+    }
+
+    function ownsAITraining(data) {
+      return signedIn() && data.get('createdBy', null) == request.auth.uid
+        && data.get('isAIGenerated', false) == true && data.get('coachId', null) == null;
+    }
+
+    match /trainings/{trainingId} {
+      // Current UI treats fichas as a shared catalog; do not store private data here.
+      allow get, list: if signedIn();
+      allow create: if validTraining(request.resource.data) && (
+        isAdmin() || (
+          ownsCoachTraining(request.resource.data)
+          && request.resource.data.get('createdBy', request.auth.uid) == request.auth.uid
+        ) || (hasRole('user') && ownsAITraining(request.resource.data))
+      );
+      allow update: if validTraining(request.resource.data)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coachId', 'createdBy', 'isAIGenerated'])
+        && (isAdmin() || ownsCoachTraining(resource.data) || ownsAITraining(resource.data));
+      allow delete: if isAdmin() || ownsCoachTraining(resource.data) || ownsAITraining(resource.data);
+    }
+
+    // Shared libraries retain the current coach/admin editorial model.
     match /exercises/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isCoach();
+      allow get, list: if signedIn();
+      allow create, update, delete: if isCoach() || isAdmin();
     }
 
-    match /trainings/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isCoach();
-    }
-
-    // --- PACOTES DE TREINO ---
     match /trainingPackages/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isCoach();
+      allow get, list: if signedIn();
+      allow create, update, delete: if isCoach() || isAdmin();
     }
+
+    // All unmatched paths, including legacy users/{uid}/checkIns, stay denied.
   }
 }

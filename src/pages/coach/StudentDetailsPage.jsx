@@ -4,6 +4,10 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from '
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { ArrowLeft, MessageSquare, Clock, Scale } from 'lucide-react';
+import { formatDate, formatTonnage } from '../../utils/format';
+import { SkeletonList } from '../../components/common/Skeleton';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 
 // Componente simples de Gráfico de Barras (Volume)
 const VolumeChart = ({ data }) => {
@@ -17,7 +21,7 @@ const VolumeChart = ({ data }) => {
                 <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
                     {/* Tooltip */}
                     <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 bg-black text-white text-[10px] px-2 py-1 rounded whitespace-nowrap transition-opacity pointer-events-none z-10">
-                        {new Date(d.date).toLocaleDateString()} - {(d.totalVolume/1000).toFixed(1)}t
+                        {formatDate(d.date)} - {formatTonnage(d.totalVolume)}
                     </div>
                     
                     <div 
@@ -39,9 +43,12 @@ export default function StudentDetailsPage() {
     const [history, setHistory] = useState([]);
     const [stats, setStats] = useState({ totalWorkouts: 0, lastWorkout: null, avgVolume: 0 });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
         const fetchDetails = async () => {
+            setError(false);
             try {
                 // 1. Dados do Aluno
                 const userDoc = await getDoc(doc(db, 'users', studentId));
@@ -76,15 +83,18 @@ export default function StudentDetailsPage() {
 
             } catch (error) {
                 console.error(error);
+                setError(true);
                 toast.error("Erro ao carregar detalhes.");
             } finally {
                 setLoading(false);
             }
         };
         fetchDetails();
-    }, [studentId, navigate]);
+    }, [studentId, navigate, reloadKey]);
 
-    if (loading) return <div className="h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+    if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><SkeletonList count={4} itemClassName="h-24 w-full" /></div>;
+
+    if (error) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><ErrorState onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
@@ -107,7 +117,7 @@ export default function StudentDetailsPage() {
                     <div className="hidden md:block">
                         <button 
                             onClick={() => navigate('/coach/chat', { state: { targetUser: { uid: student.id, displayName: student.displayName, photoURL: student.photoURL } } })}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+                            className="bg-brand hover:bg-brand-dark text-black px-6 py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2"
                         >
                             <MessageSquare className="w-4 h-4 text-white" /> Mensagem
                         </button>
@@ -122,7 +132,7 @@ export default function StudentDetailsPage() {
                     </div>
                     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-400 uppercase">Volume Médio</p>
-                        <h3 className="text-2xl font-black text-gray-800 dark:text-white mt-1">{(stats.avgVolume / 1000).toFixed(1)}t</h3>
+                        <h3 className="text-2xl font-black text-gray-800 dark:text-white mt-1">{formatTonnage(stats.avgVolume)}</h3>
                     </div>
                     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-400 uppercase">Peso Atual</p>
@@ -131,7 +141,7 @@ export default function StudentDetailsPage() {
                     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-400 uppercase">Último Treino</p>
                         <h3 className="text-xl font-black text-gray-800 dark:text-white mt-1 truncate">
-                            {stats.lastWorkout ? new Date(stats.lastWorkout).toLocaleDateString() : 'Nunca'}
+                            {formatDate(stats.lastWorkout, undefined, 'Nunca')}
                         </h3>
                     </div>
                 </div>
@@ -149,7 +159,7 @@ export default function StudentDetailsPage() {
                         <h3 className="font-bold text-gray-800 dark:text-white mb-4">Histórico Recente</h3>
                         
                         {history.length === 0 ? (
-                            <p className="text-gray-400 text-sm text-center py-10">Nenhum treino registrado.</p>
+                            <EmptyState title="Nenhum treino registrado." />
                         ) : (
                             <div className="space-y-4">
                                 {history.map(item => (
@@ -160,11 +170,11 @@ export default function StudentDetailsPage() {
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start">
                                                 <h4 className="font-bold text-sm text-gray-800 dark:text-white">{item.trainingName}</h4>
-                                                <span className="text-[10px] text-gray-400">{new Date(item.date).toLocaleDateString()}</span>
+                                                <span className="text-[10px] text-gray-400">{formatDate(item.date)}</span>
                                             </div>
                                             <div className="flex gap-3 mt-1 text-xs text-gray-500 font-mono items-center">
                                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-gray-400" /> {Math.floor(item.duration / 60)}min</span>
-                                                <span className="flex items-center gap-1"><Scale className="w-3 h-3 text-gray-400" /> {(item.totalVolume / 1000).toFixed(1)}t</span>
+                                                <span className="flex items-center gap-1"><Scale className="w-3 h-3 text-gray-400" /> {formatTonnage(item.totalVolume)}</span>
                                             </div>
                                         </div>
                                     </div>

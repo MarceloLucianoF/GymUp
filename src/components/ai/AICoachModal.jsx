@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Send, Dumbbell, Utensils, MessageSquare, Flame, Trophy, CheckCircle2, ChevronRight, RefreshCw, Zap } from 'lucide-react';
+import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { aiService } from '../../services/aiService';
 import { db } from '../../firebase/config';
 import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore';
@@ -14,7 +14,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     {
       id: 'welcome',
       sender: 'ai',
-      text: `Olá! Sou seu **Coach de IA do AcademyUp** 🤖💪. Analiso seu histórico real de treinos, cargas e exercícios para te dar feedbacks científicos e recomendações de nutrição. Como posso te ajudar hoje?`
+      text: `Olá! Sou seu **Coach de IA no AcademyUp**. Analiso seu histórico real de treinos e métricas corporais para oferecer orientações científicas e personalizadas. Como posso te ajudar hoje?`
     }
   ]);
   const [inputPrompt, setInputPrompt] = useState('');
@@ -73,6 +73,17 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
 
   if (!isOpen) return null;
 
+  const handleClearHistory = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        sender: 'ai',
+        text: `Olá! Sou seu **Coach de IA no AcademyUp**. Analiso seu histórico real de treinos e métricas corporais para oferecer orientações científicas e personalizadas. Como posso te ajudar hoje?`
+      }
+    ]);
+    toast.success('Conversa reiniciada.');
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputPrompt.trim() || isTyping) return;
@@ -88,7 +99,12 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         prompt: userText,
         userProfile,
         historyDocs,
-        conversationHistory: messages
+        conversationHistory: messages,
+        customExercises,
+        onWorkout: (workout) => {
+          setGeneratedWorkout(workout);
+          toast.success('Treino gerado! Veja na aba Treino.');
+        }
       });
       const aiMsg = { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText };
       setMessages(prev => [...prev, aiMsg]);
@@ -100,19 +116,23 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     }
   };
 
-  const handleGenerateWorkout = () => {
+  const handleGenerateWorkout = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      const workout = aiService.generateAIWorkout({
+    try {
+      const workout = await aiService.generateAIWorkout({
         goal: selectedGoal,
         muscleFocus: selectedFocus,
         durationMinutes: selectedDuration,
         customExercises
       });
       setGeneratedWorkout(workout);
+      toast.success('Treino com IA gerado com sucesso!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Não foi possível gerar o treino agora.');
+    } finally {
       setIsGenerating(false);
-      toast.success('Treino com IA gerado com sucesso! ✨');
-    }, 600);
+    }
   };
 
   const handleSaveWorkoutToFirestore = async () => {
@@ -133,7 +153,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
       };
 
       await addDoc(collection(db, 'trainings'), workoutPayload);
-      toast.success('Treino IA salvo em "Meus Treinos"! 🚀', { id: toastId });
+      toast.success('Treino IA salvo em "Meus Treinos"!', { id: toastId });
       if (onWorkoutSaved) onWorkoutSaved();
       onClose();
     } catch (err) {
@@ -157,14 +177,16 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">Coach IA & Nutrição</h3>
-                <span className="bg-[#FFC107]/10 text-[#FFC107] text-[9px] font-black px-2 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">PRO</span>
+                <span className="bg-[#FFC107]/10 text-[#FFC107] text-[9px] font-black px-2 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">Llama 3.1 70B</span>
               </div>
-              <p className="text-[11px] text-gray-400">Inteligência fitness e nutricional personalizada</p>
+              <p className="text-[11px] text-gray-400">Inteligência fitness com dados do seu perfil</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full bg-gray-100 dark:bg-gray-800 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full bg-gray-100 dark:bg-gray-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* NAVEGAÇÃO DE ABAS */}
@@ -230,15 +252,22 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
               </div>
 
               {/* Dicas de Perguntas Rápidas */}
-              <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-hide">
-                <button onClick={() => setInputPrompt('Pelos treinos feitos, estou seguindo uma boa dinâmica e cargas ideais?')} className="text-[10px] font-bold bg-[#FFC107]/10 text-[#FFC107] border border-[#FFC107]/30 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-[#FFC107]/20">
-                  📊 Analise Meus Treinos & Cargas Reais
+              <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-hide items-center">
+                <button 
+                  onClick={handleClearHistory} 
+                  className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-red-400 border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 rounded-full flex items-center gap-1 shrink-0 transition-colors"
+                  title="Limpar conversa"
+                >
+                  <Trash2 className="w-3 h-3" /> Limpar
                 </button>
-                <button onClick={() => setInputPrompt('Quanto de proteína e calorias devo comer por dia?')} className="text-[10px] font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 whitespace-nowrap hover:border-[#FFC107]">
-                  🥗 Proteínas Diárias
+                <button onClick={() => setInputPrompt('Pelos meus treinos registrados, como está minha evolução e cargas?')} className="text-[10px] font-bold bg-[#FFC107]/10 text-[#FFC107] border border-[#FFC107]/30 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-[#FFC107]/20 shrink-0">
+                  Análise de Treinos e Cargas
                 </button>
-                <button onClick={() => setInputPrompt('Como tomar creatina corretamente?')} className="text-[10px] font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 whitespace-nowrap hover:border-[#FFC107]">
-                  ⚡ Guia da Creatina
+                <button onClick={() => setInputPrompt('Quanto de proteína e calorias devo consumir diariamente?')} className="text-[10px] font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 whitespace-nowrap hover:border-[#FFC107] shrink-0">
+                  Proteínas & Macros Diários
+                </button>
+                <button onClick={() => setInputPrompt('Qual a melhor estratégia para tomar creatina e whey?')} className="text-[10px] font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 whitespace-nowrap hover:border-[#FFC107] shrink-0">
+                  Guia de Suplementos
                 </button>
               </div>
 

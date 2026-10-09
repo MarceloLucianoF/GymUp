@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useConfirm } from '../../hooks/useConfirm';
+import Modal from '../../components/common/Modal';
 
 // --- 1. MODAL DE SELEÇÃO DE EXERCÍCIOS ---
 const ExerciseSelector = ({ isOpen, onClose, onSelect }) => {
@@ -40,11 +42,11 @@ const ExerciseSelector = ({ isOpen, onClose, onSelect }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+        <Modal onClose={onClose} label="Adicionar exercício" className="w-full max-w-lg">
             <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                     <h3 className="font-bold text-lg dark:text-white">Adicionar Exercício</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+                    <button aria-label="Fechar" onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
                 
                 <div className="p-4">
@@ -83,7 +85,7 @@ const ExerciseSelector = ({ isOpen, onClose, onSelect }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 
@@ -256,6 +258,7 @@ const TrainingEditor = ({ training, onSave, onCancel }) => {
 // --- 3. PÁGINA PRINCIPAL DO COACH ---
 
 export default function CoachTrainingsPage() {
+    const { confirm, dialog } = useConfirm();
     const { user } = useAuthContext();
     const navigate = useNavigate();
 
@@ -264,7 +267,7 @@ export default function CoachTrainingsPage() {
     const [editingTraining, setEditingTraining] = useState(null); // null=lista, {}=novo, {...}=editar
 
     // Fetch Inicial
-    const fetchTrainings = async () => {
+    const fetchTrainings = useCallback(async () => {
         try {
             // Filtra apenas treinos deste Coach
             const q = query(
@@ -281,11 +284,11 @@ export default function CoachTrainingsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         if(user) fetchTrainings();
-    }, [user]);
+    }, [user, fetchTrainings]);
 
     const handleSave = async (trainingData) => {
         if(!trainingData.name) return toast.error("Dê um nome para a ficha.");
@@ -329,7 +332,7 @@ export default function CoachTrainingsPage() {
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (window.confirm("Tem certeza? Alunos usando esta ficha perderão o acesso.")) {
+        if (await confirm({ title: "Excluir ficha", message: "Tem certeza? Alunos usando esta ficha perderão o acesso.", confirmLabel: "Excluir", danger: true })) {
             try {
                 await deleteDoc(doc(db, 'trainings', id));
                 setTrainings(prev => prev.filter(t => t.firestoreId !== id));
@@ -340,10 +343,11 @@ export default function CoachTrainingsPage() {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand"></div></div>;
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32">
+        {dialog}
             <div className="max-w-5xl mx-auto space-y-6">
                 
                 {/* Header (Só aparece se não estiver editando, para limpar a tela) */}
@@ -356,7 +360,7 @@ export default function CoachTrainingsPage() {
                         </div>
                         <button 
                             onClick={() => setEditingTraining({})}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-2"
+                            className="bg-brand hover:bg-brand-dark text-black px-6 py-3 rounded-xl font-bold shadow-lg shadow-brand/20 active:scale-95 transition-all flex items-center gap-2"
                         >
                             <span>+</span> Nova Ficha
                         </button>

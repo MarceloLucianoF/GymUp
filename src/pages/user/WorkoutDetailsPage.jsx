@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Clock, Scale, CheckCircle2, Dumbbell, FileText, XCircle, ArrowLeft } from 'lucide-react';
+import { formatDate, formatTonnage } from '../../utils/format';
 
 export default function WorkoutDetailsPage() {
   const { checkInId } = useParams();
@@ -31,7 +32,7 @@ export default function WorkoutDetailsPage() {
     fetchDetails();
   }, [checkInId]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
 
   if (!workout) return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center text-gray-500">
@@ -41,7 +42,7 @@ export default function WorkoutDetailsPage() {
   );
 
   // Formatação
-  const date = new Date(workout.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const date = formatDate(workout.date, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const durationMinutes = Math.floor(workout.duration / 60);
 
   return (
@@ -69,7 +70,7 @@ export default function WorkoutDetailsPage() {
             <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
                 <Scale className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
                 <p className="text-[10px] uppercase font-bold text-gray-400">Volume</p>
-                <p className="font-black text-gray-800 dark:text-white text-lg">{(workout.totalVolume / 1000).toFixed(1)} ton</p>
+                <p className="font-black text-gray-800 dark:text-white text-lg">{formatTonnage(workout.totalVolume, ' ton')}</p>
             </div>
             <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
                 <CheckCircle2 className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />

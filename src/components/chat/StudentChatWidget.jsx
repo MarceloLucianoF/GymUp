@@ -4,6 +4,7 @@ import { useChat } from '../../hooks/useChat';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { MessageSquare, X, Send } from 'lucide-react';
+import { formatTime } from '../../utils/format';
 
 export default function StudentChatWidget() {
     const { user } = useAuthContext();
@@ -16,14 +17,15 @@ export default function StudentChatWidget() {
 
     // 1. Buscar Coach e Inicializar Conversa
     useEffect(() => {
+        let isMounted = true;
         const init = async () => {
-            if (!user) return;
+            if (!user?.uid) return;
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().coachId) {
                     const coachId = userDoc.data().coachId;
                     const coachDoc = await getDoc(doc(db, 'users', coachId));
-                    if (coachDoc.exists()) {
+                    if (coachDoc.exists() && isMounted) {
                         const coachData = { uid: coachDoc.id, ...coachDoc.data() };
                         setCoach(coachData);
                         openChatWithUser(coachData);
@@ -34,7 +36,8 @@ export default function StudentChatWidget() {
             }
         };
         init();
-    }, [user, openChatWithUser]);
+        return () => { isMounted = false; };
+    }, [user?.uid, openChatWithUser]);
 
     // Scroll automático
     useEffect(() => {
@@ -59,7 +62,7 @@ export default function StudentChatWidget() {
             {!isOpen && (
                 <button 
                     onClick={() => setIsOpen(true)}
-                    className="hidden md:flex fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-[#FFC107] to-[#FF9800] hover:from-[#FFB300] hover:to-[#FF8F00] text-black rounded-full shadow-2xl shadow-[#FFC107]/25 items-center justify-center transition-all hover:scale-110 active:scale-95 z-40 border-2 border-white dark:border-gray-900"
+                    className="hidden md:flex fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-brand to-[#FF9800] hover:from-brand-dark hover:to-[#FF8F00] text-black rounded-full shadow-2xl shadow-brand/25 items-center justify-center transition-all hover:scale-110 active:scale-95 z-40 border-2 border-white dark:border-gray-900"
                     title="Abrir Chat com Treinador"
                 >
                     <MessageSquare className="w-6 h-6 text-black fill-current" />
@@ -73,16 +76,16 @@ export default function StudentChatWidget() {
                     {/* Header */}
                     <div className="p-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white flex justify-between items-center shadow-md shrink-0 border-b border-gray-700">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#FFC107]/20 flex items-center justify-center overflow-hidden border border-[#FFC107]/40">
+                            <div className="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center overflow-hidden border border-brand/40">
                                 {coach.photoURL ? (
                                     <img src={coach.photoURL} alt={coach.displayName || 'Treinador'} className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="font-bold text-[#FFC107]">{coach.displayName?.[0]}</span>
+                                    <span className="font-bold text-brand">{coach.displayName?.[0]}</span>
                                 )}
                             </div>
                             <div>
                                 <h3 className="font-bold text-sm text-white">{coach.displayName}</h3>
-                                <p className="text-[10px] text-[#FFC107] flex items-center gap-1 font-bold">
+                                <p className="text-[10px] text-brand flex items-center gap-1 font-bold">
                                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Treinador
                                 </p>
                             </div>
@@ -96,7 +99,7 @@ export default function StudentChatWidget() {
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/60">
                         {messages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 text-xs text-center p-6">
-                                <MessageSquare className="w-8 h-8 text-[#FFC107] mb-2 opacity-60" />
+                                <MessageSquare className="w-8 h-8 text-brand mb-2 opacity-60" />
                                 <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Converse com seu Treinador</p>
                                 <p className="text-gray-400">Tire suas dúvidas sobre execução ou peça ajustes nas cargas.</p>
                             </div>
@@ -107,12 +110,12 @@ export default function StudentChatWidget() {
                                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`max-w-[85%] p-3 rounded-2xl text-xs sm:text-sm relative ${
                                             isMe 
-                                            ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black font-medium rounded-tr-none shadow-sm' 
+                                            ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black font-medium rounded-tr-none shadow-sm' 
                                             : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700'
                                         }`}>
                                             <p>{msg.text}</p>
                                             <p className={`text-[9px] mt-1 text-right font-bold ${isMe ? 'text-black/60' : 'text-gray-400'}`}>
-                                                {msg.createdAt?.seconds ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}
+                                                {formatTime(msg.createdAt, '...')}
                                             </p>
                                         </div>
                                     </div>
@@ -130,9 +133,9 @@ export default function StudentChatWidget() {
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
                                 placeholder="Digite sua mensagem..."
-                                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2.5 rounded-2xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#FFC107]"
+                                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2.5 rounded-2xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-brand"
                             />
-                            <button 
+                            <button aria-label="Enviar mensagem" 
                                 type="submit" 
                                 disabled={!inputText.trim()}
                                 className="w-10 h-10 btn-primary-gradient rounded-xl flex items-center justify-center shadow-sm disabled:opacity-50 transition-all active:scale-95 shrink-0"
