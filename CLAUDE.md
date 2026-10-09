@@ -21,6 +21,10 @@ Prefixe comandos verbosos com `rtk` (git, npm, lint, testes). Falhou? `rtk recal
 - Delegue buscas amplas a `explorador-economico`, verificações a `executor-compacto` e revisão de diff a `revisor-diff` (`.claude/agents/`).
 - Leia trechos, não arquivos inteiros. Nunca leia `package-lock.json`, `build/`, `.firebase/`, `node_modules/`.
 
+## MCP do projeto
+
+`.mcp.json` registra o servidor `academyup` (`mcp/`, ver `docs/MCP.md`) para gerenciar fichas, alunos e atribuições no Firestore. Use-o para ajustes que o import não resolve. Ele ignora as regras do Firestore: sempre rode a prévia (`apply:false`), mostre-a ao usuário e só então use `apply:true`; apagar exige `confirm:true`.
+
 ## Segurança (inegociável)
 
 - Nunca ler, imprimir ou commitar `.env*`, `serviceAccountKey.json` ou chaves de API. Segredo de IA fica só no backend (`functions/`), nunca no bundle React.
