@@ -416,7 +416,7 @@ export default function AdminPanel() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="truncate font-display text-lg font-black text-gray-900 dark:text-white">{tr.name}</h3>
-                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-bold text-brand">{tr.difficulty || 'Ficha'}</span>
+                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-brand">{tr.difficulty || 'Ficha'}</span>
                     </div>
                     <div className="flex gap-2">
                       <button type="button" aria-label={`Editar ${tr.name}`} onClick={() => { handleEditTraining(tr); document.getElementById('admin-form')?.scrollIntoView({ behavior: 'smooth' }); }} className={iconBtn}><Edit3 className="h-4 w-4" /></button>

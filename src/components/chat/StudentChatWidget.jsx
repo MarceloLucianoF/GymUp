@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useChat } from '../../hooks/useChat';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { MessageSquare, X, Send } from 'lucide-react';
-import { formatTime } from '../../utils/format';
+import { MessageSquare, X } from 'lucide-react';
+import ChatMessages from './ChatMessages';
+import ChatComposer from './ChatComposer';
 import { getPublicCoach } from '../../services/coachProfile';
 
 export default function StudentChatWidget() {
@@ -12,9 +13,7 @@ export default function StudentChatWidget() {
     const { messages, sendMessage, openChatWithUser } = useChat(user);
     
     const [isOpen, setIsOpen] = useState(false);
-    const [inputText, setInputText] = useState('');
     const [coach, setCoach] = useState(null);
-    const messagesEndRef = useRef(null);
 
     // 1. Buscar Coach e Inicializar Conversa
     useEffect(() => {
@@ -39,112 +38,59 @@ export default function StudentChatWidget() {
         return () => { isMounted = false; };
     }, [user?.uid, openChatWithUser]);
 
-    // Scroll automático
-    useEffect(() => {
-        if (isOpen) {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }
-    }, [messages, isOpen]);
-
-    const handleSend = (e) => {
-        e.preventDefault();
-        if (!inputText.trim()) return;
-        sendMessage(inputText);
-        setInputText('');
-    };
-
     // Se não tiver coach vinculado, não renderiza o widget flutuante
     if (!coach) return null;
 
     return (
         <>
-            {/* BOTÃO FLUTUANTE DESKTOP (FAB - No mobile o chat é acessado pela Navbar) */}
+            {/* FAB desktop (no mobile o chat é acessado pela Navbar) */}
             {!isOpen && (
-                <button 
+                <button
                     onClick={() => setIsOpen(true)}
-                    className="hidden md:flex fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-brand to-[#FF9800] hover:from-brand-dark hover:to-[#FF8F00] text-black rounded-full shadow-2xl shadow-brand/25 items-center justify-center transition-all hover:scale-110 active:scale-95 z-40 border-2 border-white dark:border-gray-900"
-                    title="Abrir Chat com Treinador"
+                    aria-label="Abrir chat com o treinador"
+                    className="pressable hidden md:flex fixed bottom-6 right-6 w-14 h-14 btn-primary-gradient rounded-full shadow-2xl shadow-brand/25 items-center justify-center z-40 hover:scale-105 transition-transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
                 >
-                    <MessageSquare className="w-6 h-6 text-black fill-current" />
+                    <MessageSquare className="w-6 h-6" aria-hidden="true" />
                 </button>
             )}
 
-            {/* JANELA DO CHAT */}
             {isOpen && (
-                <div className="fixed bottom-20 right-2 left-2 md:left-auto md:bottom-6 md:right-6 w-auto md:w-96 h-[calc(100dvh-7rem)] md:h-[520px] bg-white dark:bg-[#1F2937] rounded-3xl shadow-2xl flex flex-col z-50 overflow-hidden border border-gray-200 dark:border-gray-700 animate-slide-up">
-                    
-                    {/* Header */}
-                    <div className="p-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white flex justify-between items-center shadow-md shrink-0 border-b border-gray-700">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center overflow-hidden border border-brand/40">
+                <section
+                    role="dialog"
+                    aria-label={`Chat com ${coach.displayName || 'treinador'}`}
+                    className="surface fixed bottom-20 right-2 left-2 md:left-auto md:bottom-6 md:right-6 md:w-96 h-[calc(100dvh-7rem)] md:h-[520px] flex flex-col z-50 overflow-hidden !rounded-3xl shadow-2xl animate-slide-up"
+                >
+                    <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 p-3 dark:border-white/10">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brand/30 bg-brand/15">
                                 {coach.photoURL ? (
-                                    <img src={coach.photoURL} alt={coach.displayName || 'Treinador'} className="w-full h-full object-cover" />
+                                    <img src={coach.photoURL} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <span className="font-bold text-brand">{coach.displayName?.[0]}</span>
                                 )}
                             </div>
-                            <div>
-                                <h3 className="font-bold text-sm text-white">{coach.displayName}</h3>
-                                <p className="text-[10px] text-brand flex items-center gap-1 font-bold">
-                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Treinador
-                                </p>
+                            <div className="min-w-0">
+                                <h3 className="truncate text-sm font-bold text-gray-900 dark:text-white">{coach.displayName}</h3>
+                                <p className="text-xs font-semibold text-brand">Seu treinador</p>
                             </div>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center">
-                            <X className="w-4 h-4 text-gray-300" />
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            aria-label="Fechar chat"
+                            className="pressable flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        >
+                            <X className="h-5 w-5" aria-hidden="true" />
                         </button>
-                    </div>
+                    </header>
 
-                    {/* Area de Mensagens */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/60">
-                        {messages.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-400 text-xs text-center p-6">
-                                <MessageSquare className="w-8 h-8 text-brand mb-2 opacity-60" />
-                                <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Converse com seu Treinador</p>
-                                <p className="text-gray-400">Tire suas dúvidas sobre execução ou peça ajustes nas cargas.</p>
-                            </div>
-                        ) : (
-                            messages.map((msg) => {
-                                const isMe = msg.senderId === user.uid;
-                                return (
-                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[85%] p-3 rounded-2xl text-xs sm:text-sm relative ${
-                                            isMe 
-                                            ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black font-medium rounded-tr-none shadow-sm' 
-                                            : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700'
-                                        }`}>
-                                            <p>{msg.text}</p>
-                                            <p className={`text-[9px] mt-1 text-right font-bold ${isMe ? 'text-black/60' : 'text-gray-400'}`}>
-                                                {formatTime(msg.createdAt, '...')}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        )}
-                        <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Input Area */}
-                    <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 shrink-0">
-                        <form onSubmit={handleSend} className="flex gap-2 items-center">
-                            <input 
-                                type="text"
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                placeholder="Digite sua mensagem..."
-                                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2.5 rounded-2xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-brand"
-                            />
-                            <button aria-label="Enviar mensagem" 
-                                type="submit" 
-                                disabled={!inputText.trim()}
-                                className="w-10 h-10 btn-primary-gradient rounded-xl flex items-center justify-center shadow-sm disabled:opacity-50 transition-all active:scale-95 shrink-0"
-                            >
-                                <Send className="w-4 h-4 text-black" />
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                    <ChatMessages
+                        messages={messages}
+                        userId={user.uid}
+                        emptyTitle="Converse com seu treinador"
+                        emptyText="Tire dúvidas sobre execução ou peça ajustes nas cargas."
+                    />
+                    <ChatComposer onSend={sendMessage} />
+                </section>
             )}
         </>
     );

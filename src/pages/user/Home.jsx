@@ -1,202 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { useAuthContext } from '../../hooks/AuthContext';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, addDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import WeeklyChart from '../../components/dashboard/WeeklyChart';
-import { useRole } from '../../hooks/useRole';
 import toast from 'react-hot-toast';
+import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell, RefreshCw } from 'lucide-react';
+import { useAuthContext } from '../../hooks/AuthContext';
+import { useRole } from '../../hooks/useRole';
+import { useStudentHome, useWeeklyGoal } from '../../hooks/useStudentHome';
+import WeeklyChart from '../../components/dashboard/WeeklyChart';
 import StudentChatWidget from '../../components/chat/StudentChatWidget';
-import { activeWorkoutService } from '../../services/activeWorkoutService';
 import AICoachModal from '../../components/ai/AICoachModal';
-import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell } from 'lucide-react';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import ActiveWorkoutBanner from '../../components/dashboard/ActiveWorkoutBanner';
 import LinkCoachModal from '../../components/dashboard/LinkCoachModal';
 import RecommendedWorkoutCard from '../../components/dashboard/RecommendedWorkoutCard';
+import WeeklyGoalCard from '../../components/dashboard/WeeklyGoalCard';
+import VolumeTrend from '../../components/dashboard/VolumeTrend';
+import AchievementBadges from '../../components/dashboard/AchievementBadges';
+import { getWeekDays } from '../../components/dashboard/WeekStrip';
 import { formatDate, formatTonnage } from '../../utils/format';
-import ProgressRing from '../../components/ui/ProgressRing';
 import StatCard from '../../components/ui/StatCard';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import Reveal from '../../components/ui/Reveal';
 import Skeleton from '../../components/common/Skeleton';
 import EmptyState from '../../components/common/EmptyState';
-import WeekStrip, { getWeekDays } from '../../components/dashboard/WeekStrip';
 
-const WEEKLY_GOAL = 4;
+const formatVolume = (kg) => (kg > 1000 ? formatTonnage(kg) : `${kg}kg`);
 
-const HomeSkeleton = () => (
-  <div className="min-h-screen bg-gray-50 p-4 pb-32 dark:bg-[#0B0F19] md:p-8" role="status" aria-label="Carregando">
-    <div className="mx-auto max-w-6xl space-y-5">
-      <Skeleton className="h-44 w-full !rounded-3xl" />
-      <Skeleton className="h-48 w-full !rounded-3xl" />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32 !rounded-3xl" />)}
-      </div>
-      <Skeleton className="h-40 w-full !rounded-3xl" />
-    </div>
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  return hour < 5 ? 'Boa madrugada' : hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+};
+
+const BlockError = ({ label, onRetry }) => (
+  <div role="alert" className="surface flex items-center justify-between gap-3 p-4 text-sm text-gray-600 dark:text-gray-300">
+    <span>Não foi possível carregar {label}.</span>
+    <button type="button" onClick={onRetry} className="pressable min-h-[44px] rounded-xl px-3 text-xs font-bold text-amber-700 dark:text-brand">Tentar de novo</button>
   </div>
 );
 
-// --- COMPONENTE PRINCIPAL ---
-
 export default function Home() {
-  const { user } = useAuthContext();
+  const { user, userProfile: ctxProfile } = useAuthContext();
   const navigate = useNavigate();
-  const { isCoach } = useRole(); 
-  
-  const [history, setHistory] = useState([]);
-  const [trainings, setTrainings] = useState([]);
-  const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showLinkCoach, setShowLinkCoach] = useState(false); 
-  const [refreshTrigger, setRefreshTrigger] = useState(0); 
+  const { isCoach } = useRole();
+  const { data, loading, error, refresh } = useStudentHome(user, ctxProfile);
+  const { profile: userProfile, history, trainings, activeSession, stats, achievements, refreshing, errors, discardActiveSession } = data;
+  const [goal, setGoal] = useWeeklyGoal(user?.uid);
 
-  // Sessão Ativa de Treino (Persistência)
-  const [activeSession, setActiveSession] = useState(null);
+  const [showLinkCoach, setShowLinkCoach] = useState(false);
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  
-  const [stats, setStats] = useState({ 
-    totalTreinos: 0, 
-    maxGlobalLoad: 0, 
-    streak: 0,
-    level: 'Iniciante',
-    nextLevelTreinos: 10,
-    progress: 0
-  });
-
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      try {
-        if (!user) return;
-
-        // 0. Sincroniza check-ins offline pendentes (se houver)
-        const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, addDoc, collection);
-        if (synced > 0) {
-          toast.success(`✓ ${synced} treino(s) pendente(s) sincronizado(s)!`);
-        }
-
-        // 0.1. Verifica treino em andamento
-        const savedSession = activeWorkoutService.getActiveSession(user.uid);
-        setActiveSession(savedSession);
-
-        // 1. Perfil
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-            setUserProfile(userDoc.data());
-        }
-
-        // 2. Histórico
-        const qHistory = query(collection(db, 'checkIns'), where('userId', '==', user.uid), orderBy('date', 'desc'));
-        const historySnap = await getDocs(qHistory);
-        const historyData = historySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setHistory(historyData);
-        calculateGamification(historyData);
-
-        // 3. Treinos
-        const qTrainings = query(collection(db, 'trainings'), orderBy('name', 'asc')); 
-        const trainingSnap = await getDocs(qTrainings);
-        const trainingList = trainingSnap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
-        setTrainings(trainingList);
-
-      } catch (error) {
-        console.error("Erro Home:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHomeData();
-
-    const handleWorkoutUpdate = () => {
-      if (user) {
-        setActiveSession(activeWorkoutService.getActiveSession(user.uid));
-      }
-    };
-
-    const handleOnline = async () => {
-      if (user) {
-        const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, addDoc, collection);
-        if (synced > 0) {
-          toast.success(`✓ ${synced} treino(s) pendente(s) sincronizado(s)!`);
-          setRefreshTrigger(prev => prev + 1);
-        }
-      }
-    };
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('active-workout-updated', handleWorkoutUpdate);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('active-workout-updated', handleWorkoutUpdate);
-    };
-  }, [user, refreshTrigger]); 
 
   const handleDiscardActiveWorkout = () => {
-    if (!user) return;
-    activeWorkoutService.clearActiveSession(user.uid);
-    setActiveSession(null);
+    discardActiveSession();
     setShowConfirmDiscard(false);
-    toast.success("Treino em andamento descartado.");
-  }; 
-
-  const calculateGamification = (data) => {
-    const totalTreinos = data.length;
-    let maxGlobalLoad = 0;
-    data.forEach(treino => {
-        if (treino.exercises) {
-            treino.exercises.forEach(ex => {
-                if (ex.sets) ex.sets.forEach(s => {
-                    const weight = Number(s.weight) || 0;
-                    if (weight > maxGlobalLoad) maxGlobalLoad = weight;
-                });
-            });
-        }
-    });
-    let level = 'Iniciante';
-    let nextLevel = 10;
-    if (totalTreinos >= 100) { level = 'Lenda'; nextLevel = 1000; }
-    else if (totalTreinos >= 50) { level = 'Monstro'; nextLevel = 100; }
-    else if (totalTreinos >= 25) { level = 'Atleta'; nextLevel = 50; }
-    else if (totalTreinos >= 10) { level = 'Focado'; nextLevel = 25; }
-    let base = 0;
-    if (totalTreinos >= 10) base = 10;
-    if (totalTreinos >= 25) base = 25;
-    if (totalTreinos >= 50) base = 50;
-    const progress = Math.min(100, Math.max(0, ((totalTreinos - base) / (nextLevel - base)) * 100));
-    
-    // Streak
-    const uniqueDates = [...new Set(data.map(d => new Date(d.date).toISOString().split('T')[0]))].sort().reverse();
-    let streak = 0;
-    if (uniqueDates.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-        if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
-            streak = 1;
-            for (let i = 0; i < uniqueDates.length - 1; i++) {
-                const curr = new Date(uniqueDates[i]);
-                const prev = new Date(uniqueDates[i+1]);
-                if (Math.ceil(Math.abs(curr - prev) / 86400000) === 1) streak++; else break;
-            }
-        }
-    }
-    setStats({ totalTreinos, maxGlobalLoad, level, nextLevelTreinos: nextLevel, progress, streak });
+    toast.success('Treino em andamento descartado.');
   };
-
-  const formatVolume = (kg) => kg > 1000 ? formatTonnage(kg) : `${kg}kg`;
-
-  if (loading) return <HomeSkeleton />;
 
   const firstName = (userProfile?.displayName || user?.displayName || 'Atleta').split(' ')[0];
   const photoURL = userProfile?.photoURL || user?.photoURL;
   const lastWorkoutId = history.length > 0 ? history[0].trainingId : null;
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const greeting = getGreeting();
 
   const weekDays = getWeekDays(history);
   const weekCount = weekDays.filter((d) => d.trained).length;
-  const weekPct = Math.min(100, Math.round((weekCount / WEEKLY_GOAL) * 100));
+  const trainedToday = weekDays.some((d) => d.isToday && d.trained);
 
   const now = new Date();
   const monthItems = history.filter((h) => {
@@ -211,10 +77,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-32 transition-colors duration-300 dark:bg-[#0B0F19] md:p-8">
-      <div className="mx-auto max-w-6xl space-y-5 md:space-y-6">
+      <div className="mx-auto max-w-6xl space-y-5 md:space-y-6" aria-busy={loading}>
 
-        {/* HERO */}
-        <section className="surface aurora-bg relative overflow-hidden p-5 sm:p-7 animate-fade-up" aria-label="Resumo da semana">
+        {/* CABEÇALHO */}
+        <section className="surface aurora-bg relative overflow-hidden p-5 sm:p-7 animate-fade-up" aria-label="Resumo">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <button
@@ -236,7 +102,7 @@ export default function Home() {
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-brand">{stats.level}</span>
-                  {!userProfile?.coachId && (
+                  {!loading && !userProfile?.coachId && (
                     <button
                       type="button"
                       onClick={() => setShowLinkCoach(true)}
@@ -248,58 +114,98 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="flex shrink-0 flex-col items-center rounded-2xl bg-orange-500/10 px-3 py-2" aria-label={`Sequência de ${stats.streak} dias`}>
-              <Flame className={`h-6 w-6 fill-orange-500 text-orange-500 ${stats.streak > 0 ? 'animate-float' : 'opacity-50'}`} aria-hidden="true" />
-              <p className="font-display text-lg font-black leading-none text-gray-900 dark:text-white"><AnimatedNumber value={stats.streak} /></p>
-              <p className="text-[9px] font-bold uppercase text-gray-500 dark:text-gray-400">dias</p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex items-center gap-5">
-            <ProgressRing value={weekPct} size={96} stroke={9}>
-              <div className="text-center leading-none">
-                <p className="font-display text-xl font-black text-gray-900 dark:text-white">{weekCount}<span className="text-xs font-bold text-gray-500">/{WEEKLY_GOAL}</span></p>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={refresh}
+                disabled={refreshing || loading}
+                aria-label="Atualizar dados"
+                className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-white/60 text-gray-700 hover:bg-white disabled:opacity-60 dark:bg-white/10 dark:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                <RefreshCw className={`h-5 w-5 ${refreshing ? 'motion-safe:animate-spin' : ''}`} aria-hidden="true" />
+              </button>
+              <div className="flex flex-col items-center rounded-2xl bg-orange-500/10 px-3 py-2" aria-label={`Sequência de ${stats.streak} dias`}>
+                <Flame className={`h-6 w-6 fill-orange-500 text-orange-500 ${stats.streak > 0 ? 'motion-safe:animate-float' : 'opacity-50'}`} aria-hidden="true" />
+                <p className="font-display text-lg font-black leading-none text-gray-900 dark:text-white"><AnimatedNumber value={stats.streak} /></p>
+                <p className="text-[9px] font-bold uppercase text-gray-500 dark:text-gray-400">dias</p>
               </div>
-            </ProgressRing>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-lg font-black text-gray-900 dark:text-white">Meta semanal</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {weekCount >= WEEKLY_GOAL ? 'Meta batida! Você é imparável.' : `Faltam ${WEEKLY_GOAL - weekCount} treino(s) para fechar a semana.`}
-              </p>
             </div>
           </div>
-          <div className="mt-5"><WeekStrip days={weekDays} /></div>
+          {error?.profile && <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Perfil indisponível no momento.</p>}
         </section>
 
         {/* TREINO DE HOJE */}
-        <Reveal>
-          {activeSession ? (
-            <ActiveWorkoutBanner
-              activeSession={activeSession}
-              onContinue={() => navigate(`/execution/${activeSession.trainingId}`)}
-              onDiscard={() => setShowConfirmDiscard(true)}
-            />
-          ) : (
-            <RecommendedWorkoutCard
-              lastWorkoutId={lastWorkoutId}
-              trainings={trainings}
-              assignedTrainingId={userProfile?.currentTrainingId}
-              onStart={(id) => navigate(`/training/${id}`)}
-            />
-          )}
-        </Reveal>
+        {loading ? (
+          <Skeleton className="h-52 w-full !rounded-3xl" />
+        ) : (
+          <Reveal>
+            {activeSession ? (
+              <ActiveWorkoutBanner
+                activeSession={activeSession}
+                onContinue={() => navigate(`/execution/${activeSession.trainingId}`)}
+                onDiscard={() => setShowConfirmDiscard(true)}
+              />
+            ) : errors.trainings ? (
+              <BlockError label="seus treinos" onRetry={refresh} />
+            ) : trainings.length === 0 ? (
+              <div className="surface">
+                <EmptyState
+                  icon={Dumbbell}
+                  title="Nenhum treino disponível"
+                  description="Explore as fichas ou vincule-se a um treinador para receber a sua."
+                  action={<button type="button" onClick={() => navigate('/trainings')} className="btn-primary-gradient min-h-[44px] px-5 text-sm">Ver fichas de treino</button>}
+                />
+              </div>
+            ) : (
+              <RecommendedWorkoutCard
+                lastWorkoutId={lastWorkoutId}
+                trainings={trainings}
+                assignedTrainingId={userProfile?.currentTrainingId}
+                weekCount={weekCount}
+                weekGoal={goal}
+                trainedToday={trainedToday}
+                onStart={(id) => navigate(`/training/${id}`)}
+                onBrowse={() => navigate('/trainings')}
+              />
+            )}
+          </Reveal>
+        )}
+
+        {/* META SEMANAL */}
+        {loading ? <Skeleton className="h-44 w-full !rounded-3xl" /> : errors.history ? (
+          <BlockError label="seu histórico" onRetry={refresh} />
+        ) : (
+          <Reveal><WeeklyGoalCard days={weekDays} count={weekCount} goal={goal} onGoalChange={setGoal} /></Reveal>
+        )}
 
         {/* MÉTRICAS */}
-        <section aria-label="Métricas do mês" className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-          <Reveal delay={0}><StatCard icon={CalendarCheck} label="Treinos no mês" value={monthItems.length} className="h-full" /></Reveal>
-          <Reveal delay={80}>
-            <StatCard icon={Weight} accent="green" label="Volume no mês" value={Math.round(monthVolume / 100) / 10} decimals={1} suffix=" t" spark={volumeSpark} className="h-full" />
-          </Reveal>
-          <Reveal delay={160}><StatCard icon={Timer} accent="blue" label="Minutos treinados" value={monthMinutes} suffix=" min" className="h-full" /></Reveal>
-          <Reveal delay={240}><StatCard icon={Trophy} label="Maior carga (PR)" value={stats.maxGlobalLoad} suffix=" kg" className="h-full" /></Reveal>
-        </section>
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32 !rounded-3xl" />)}</div>
+        ) : !errors.history && (
+          <section aria-label="Métricas do mês" className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+            <Reveal delay={0}><StatCard icon={CalendarCheck} label="Treinos no mês" value={monthItems.length} className="h-full" /></Reveal>
+            <Reveal delay={80}>
+              <StatCard icon={Weight} accent="green" label="Volume no mês" value={Math.round(monthVolume / 100) / 10} decimals={1} suffix=" t" spark={volumeSpark} className="h-full" />
+            </Reveal>
+            <Reveal delay={160}><StatCard icon={Timer} accent="blue" label="Minutos treinados" value={monthMinutes} suffix=" min" className="h-full" /></Reveal>
+            <Reveal delay={240}><StatCard icon={Trophy} label="Maior carga (PR)" value={stats.maxGlobalLoad} suffix=" kg" className="h-full" /></Reveal>
+          </section>
+        )}
 
-        {/* PRÓXIMA META + PESO */}
+        {/* VOLUME + CONQUISTAS */}
+        {loading ? (
+          <div className="grid gap-3 md:grid-cols-2"><Skeleton className="h-36 !rounded-3xl" /><Skeleton className="h-36 !rounded-3xl" /></div>
+        ) : !errors.history && (
+          <Reveal>
+            <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+              <VolumeTrend history={history} />
+              <AchievementBadges achievements={achievements} />
+            </div>
+          </Reveal>
+        )}
+
+        {/* PRÓXIMO NÍVEL + PESO */}
+        {!loading && (
         <Reveal>
           <div className="grid gap-3 md:grid-cols-2 md:gap-4">
             <div className="surface p-5">
@@ -322,9 +228,10 @@ export default function Home() {
             </button>
           </div>
         </Reveal>
+        )}
 
         {/* CARROSSEL DE TREINOS */}
-        {carousel.length > 0 && (
+        {!loading && carousel.length > 0 && (
           <section aria-label="Treinos disponíveis">
             <div className="mb-3 flex items-end justify-between px-1">
               <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Treinos para você</h2>
@@ -348,6 +255,9 @@ export default function Home() {
         )}
 
         {/* FREQUÊNCIA + ATIVIDADE RECENTE */}
+        {loading ? (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3"><Skeleton className="h-56 !rounded-3xl lg:col-span-2" /><Skeleton className="h-56 !rounded-3xl" /></div>
+        ) : errors.history ? null : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
             <div className="mb-3 flex items-center justify-between px-1">
@@ -396,9 +306,10 @@ export default function Home() {
             </div>
           </Reveal>
         </div>
+        )}
 
         {/* CARD DO TREINADOR (COACH) */}
-        {isCoach && (
+        {!loading && isCoach && (
           <Reveal>
             <div className="surface flex flex-col items-center justify-between gap-4 p-5 sm:flex-row">
               <div className="text-center sm:text-left">
@@ -428,7 +339,7 @@ export default function Home() {
           isOpen={showLinkCoach}
           onClose={() => setShowLinkCoach(false)}
           currentUserId={user.uid}
-          onSuccess={() => setRefreshTrigger(prev => prev + 1)}
+          onSuccess={refresh}
         />
 
         <AICoachModal
@@ -437,7 +348,7 @@ export default function Home() {
           userProfile={userProfile}
           user={user}
           customExercises={[]}
-          onWorkoutSaved={() => setRefreshTrigger(prev => prev + 1)}
+          onWorkoutSaved={refresh}
         />
 
         {/* WIDGET DE CHAT (desktop; só aparece se tiver coach) */}

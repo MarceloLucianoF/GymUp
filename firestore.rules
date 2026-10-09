@@ -250,6 +250,25 @@ service cloud.firestore {
     }
 
     // Shared libraries retain the current coach/admin editorial model.
+    // Notas privadas do treinador sobre um aluno: ID = coachId_studentId; o aluno nunca lê.
+    match /coachNotes/{noteId} {
+      function validNote(data) {
+        return data.keys().hasOnly(['coachId', 'studentId', 'text', 'updatedAt'])
+          && data.coachId is string && data.studentId is string
+          && noteId == data.coachId + '_' + data.studentId
+          && data.text is string && data.text.size() <= 5000
+          && data.updatedAt is string;
+      }
+
+      // O prefixo do ID prova a autoria mesmo quando o documento ainda não existe.
+      allow get: if signedIn() && (isAdmin() || noteId.matches(request.auth.uid + '_.*'));
+      allow create, update: if signedIn() && isCoach() && validNote(request.resource.data)
+        && request.resource.data.coachId == request.auth.uid
+        && linkedStudent(get(/databases/$(database)/documents/users/$(request.resource.data.studentId)).data);
+      allow delete: if signedIn() && (isAdmin() || noteId.matches(request.auth.uid + '_.*'));
+      allow list: if false;
+    }
+
     match /exercises/{docId} {
       allow get, list: if signedIn();
       allow create, update, delete: if isCoach() || isAdmin();

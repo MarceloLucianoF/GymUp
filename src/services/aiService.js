@@ -43,7 +43,7 @@ const withModelFallback = async (run) => {
   throw lastError || new Error('Nenhum modelo de IA disponível.');
 };
 
-const calcNutrition = ({ weight = 70, height = 175, age = 25, goal = 'Hipertrofia' }) => {
+export const calcNutrition = ({ weight = 70, height = 175, age = 25, goal = 'Hipertrofia' }) => {
   const w = parseFloat(weight) || 70;
   const h = parseFloat(height) || 175;
   const a = parseInt(age, 10) || 25;
