@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useCoachDashboard } from '../../hooks/useCoachDashboard';
 import toast from 'react-hot-toast';
 import { X, Megaphone, ClipboardList, BookOpen, Zap, Users, DollarSign, Target, AlertTriangle, AlertCircle, MessageSquare, User, Settings, Flame, Smile, ArrowRight } from 'lucide-react';
+import { formatTonnage } from '../../utils/format';
+import Modal from '../../components/common/Modal';
+import { formatTime } from '../../utils/format';
 
 // --- COMPONENTE: MODAL DE CONVITE ---
 const InviteModal = ({ isOpen, onClose, coachCode }) => {
@@ -21,9 +24,9 @@ const InviteModal = ({ isOpen, onClose, coachCode }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+        <Modal onClose={onClose} label="Vincular aluno" className="w-full max-w-md">
             <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative border border-gray-100 dark:border-gray-700">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-450 hover:text-gray-650 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-center">
+                <button aria-label="Fechar" onClick={onClose} className="absolute top-4 right-4 text-gray-450 hover:text-gray-650 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-center">
                     <X className="w-4 h-4" />
                 </button>
                 
@@ -53,13 +56,13 @@ const InviteModal = ({ isOpen, onClose, coachCode }) => {
 
                     <button 
                         onClick={handleCopyLink}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition-transform active:scale-95 flex items-center justify-center gap-2"
+                        className="w-full bg-brand hover:bg-brand-dark text-black font-bold py-3 rounded-xl shadow-lg shadow-brand/20 transition-transform active:scale-95 flex items-center justify-center gap-2"
                     >
                         <Megaphone className="w-4 h-4 text-white" /> Copiar Link de Cadastro
                     </button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 
@@ -113,7 +116,7 @@ export default function CoachHome() {
       });
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
@@ -141,7 +144,7 @@ export default function CoachHome() {
                 {/* BOTÃO FICHAS (Meus Treinos) */}
                 <button 
                     onClick={() => navigate('/admin/trainings')}
-                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-blue-600/20 text-xs flex items-center justify-center gap-2 whitespace-nowrap"
+                    className="flex-1 md:flex-none bg-brand hover:bg-brand-dark text-black px-4 py-2 rounded-xl font-bold shadow-lg shadow-brand/20 text-xs flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                     <ClipboardList className="w-3.5 h-3.5" /> Fichas
                 </button>
@@ -303,7 +306,7 @@ export default function CoachHome() {
                                                 {checkIn.userEmail}
                                             </h4>
                                             <span className="text-[10px] text-gray-400 font-mono">
-                                                {new Date(checkIn.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                {formatTime(checkIn.date)}
                                             </span>
                                         </div>
                                         <p className="text-xs text-gray-500 mt-0.5">
@@ -311,7 +314,7 @@ export default function CoachHome() {
                                         </p>
                                     </div>
                                     <div className="text-right pl-2 border-l border-gray-100 dark:border-gray-700">
-                                        <span className="block text-xs font-black text-gray-800 dark:text-white">{checkIn.totalVolume > 0 ? `${(checkIn.totalVolume/1000).toFixed(1)}t` : '-'}</span>
+                                        <span className="block text-xs font-black text-gray-800 dark:text-white">{checkIn.totalVolume > 0 ? formatTonnage(checkIn.totalVolume) : '-'}</span>
                                         <span className="text-[9px] text-gray-400 uppercase font-bold">Vol</span>
                                     </div>
                                 </div>

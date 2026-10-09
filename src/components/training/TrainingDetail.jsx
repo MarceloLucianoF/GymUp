@@ -1,5 +1,5 @@
-// src/components/TrainingDetail.jsx
-import React, { useState} from 'react';
+import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import ExerciseCard from './ExerciseCard'; // Componente para cada exercício
 
 function TrainingDetail({ training, allExercises, onBack, onCheckIn }) {
@@ -29,7 +29,7 @@ function TrainingDetail({ training, allExercises, onBack, onCheckIn }) {
       }));
     } catch (error) {
       console.error('Erro ao registrar check-in:', error);
-      alert('Erro ao registrar check-in. Tente novamente.');
+      toast.error('Erro ao registrar check-in. Tente novamente.');
     }
   };
 

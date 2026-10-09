@@ -4,6 +4,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { ArrowLeft, BarChart2, Calendar, Trophy, TrendingDown } from 'lucide-react';
+import { formatDate } from '../../utils/format';
 
 // --- GRÁFICO PRO (Layout Espaçoso) ---
 const ProgressChart = ({ data }) => {
@@ -216,7 +217,7 @@ export default function ExerciseAnalytics() {
                     if (Number(bestSet.weight) > 0) {
                         logs.push({
                             date: data.date,
-                            dateStr: new Date(data.date).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}),
+                            dateStr: formatDate(data.date, {day:'2-digit', month:'2-digit'}),
                             weight: Number(bestSet.weight),
                             reps: totalRepsToday
                         });
@@ -241,7 +242,7 @@ export default function ExerciseAnalytics() {
     fetchData();
   }, [user, cleanName]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 pb-32 transition-colors duration-300">
@@ -275,7 +276,7 @@ export default function ExerciseAnalytics() {
             <>
                 {/* Cards de Stats */}
                 <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-gradient-to-br from-[#FFC107] to-[#FF9800] text-black p-4 rounded-2xl shadow-lg shadow-[#FFC107]/20">
+                    <div className="bg-gradient-to-br from-brand to-[#FF9800] text-black p-4 rounded-2xl shadow-lg shadow-brand/20">
                         <p className="text-[10px] font-black opacity-80 uppercase">Recorde (PR)</p>
                         <h3 className="text-2xl font-black">{stats.pr}kg</h3>
                     </div>
@@ -289,7 +290,7 @@ export default function ExerciseAnalytics() {
                     </div>
                 </div>
 
-                {/* Gráfico (Novo) */}
+                {/* Gráfico */}
                 <div>
                     <ProgressChart data={history} />
                 </div>
@@ -301,10 +302,10 @@ export default function ExerciseAnalytics() {
                     </h3>
                     <div className="space-y-3">
                         {[...history].reverse().map((log, i) => (
-                            <div key={i} className="card-premium-glass p-4 flex justify-between items-center hover:border-[#FFC107]/30 transition-colors">
+                            <div key={i} className="card-premium-glass p-4 flex justify-between items-center hover:border-brand/30 transition-colors">
                                 <div>
                                     <p className="text-sm font-bold text-gray-800 dark:text-white capitalize">
-                                        {new Date(log.date).toLocaleDateString('pt-BR', {weekday: 'long', day:'numeric', month:'long'})}
+                                        {formatDate(log.date, {weekday: 'long', day:'numeric', month:'long'})}
                                     </p>
                                     <p className="text-xs text-gray-400">{log.reps} repetições totais</p>
                                 </div>

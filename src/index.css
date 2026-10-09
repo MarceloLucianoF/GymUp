@@ -27,7 +27,7 @@
   }
   .hover-glow-brand:hover {
     box-shadow: 0 0 25px rgba(255, 193, 7, 0.3);
-    @apply border-[#FFC107]/30;
+    @apply border-brand/30;
   }
   
   /* Efeito vidro premium escuro */
@@ -62,21 +62,21 @@
 
   /* Estilos de Botão Modernos (Squircle substancial, sem formato pílula fina) */
   .btn-primary-gradient {
-    @apply bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black font-black rounded-2xl shadow-lg shadow-[#FFC107]/20 hover:from-[#FFC107] hover:to-[#FFB300] hover:shadow-[0_0_25px_rgba(255,193,7,0.35)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
+    @apply bg-gradient-to-r from-brand to-[#FF9800] text-black font-black rounded-2xl shadow-lg shadow-brand/20 hover:from-brand hover:to-brand-dark hover:shadow-[0_0_25px_rgba(255,193,7,0.35)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
   }
 
   .btn-secondary-dark {
-    @apply bg-[#1F2937]/90 hover:bg-[#1F2937] text-white font-bold rounded-2xl border border-white/10 hover:border-[#FFC107]/40 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
+    @apply bg-[#1F2937]/90 hover:bg-[#1F2937] text-white font-bold rounded-2xl border border-white/10 hover:border-brand/40 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
   }
 
   /* Cards Premium Glassmorphism */
   .card-premium-glass {
-    @apply bg-white dark:bg-[#1F2937]/60 dark:backdrop-blur-md border border-gray-200 dark:border-[#FFC107]/15 rounded-2xl shadow-sm hover:border-[#FFC107]/35 dark:hover:border-[#FFC107]/35 transition-all duration-300;
+    @apply bg-white dark:bg-[#1F2937]/60 dark:backdrop-blur-md border border-gray-200 dark:border-brand/15 rounded-2xl shadow-sm hover:border-brand/35 dark:hover:border-brand/35 transition-all duration-300;
   }
 
   /* Inputs de Marca Padronizados */
   .input-brand-dark {
-    @apply bg-white dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl p-3.5 outline-none focus:ring-2 focus:ring-[#FFC107] focus:border-transparent transition-all shadow-sm;
+    @apply bg-white dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl p-3.5 outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all shadow-sm;
   }
 
   /* Padding inferior seguro para evitar colisão com a navbar mobile */

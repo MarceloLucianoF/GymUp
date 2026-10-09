@@ -46,13 +46,13 @@ export default function Login() {
         
         <div className="relative z-10 p-12 text-white max-w-lg">
           <h1 className="text-5xl font-black mb-6 leading-tight tracking-tight">
-            ACADEMY<span className="text-[#FFC107]">UP</span>
+            ACADEMY<span className="text-brand">UP</span>
           </h1>
           <p className="text-2xl font-light text-gray-200 mb-8 leading-relaxed">
             "A única repetição ruim é aquela que você não fez."
           </p>
           <div className="flex gap-2">
-             <div className="h-1 w-12 bg-[#FFC107] rounded-full"></div>
+             <div className="h-1 w-12 bg-brand rounded-full"></div>
              <div className="h-1 w-4 bg-gray-600 rounded-full"></div>
              <div className="h-1 w-4 bg-gray-600 rounded-full"></div>
           </div>
@@ -64,7 +64,7 @@ export default function Login() {
         <div className="w-full max-w-md space-y-8 animate-fade-in-up">
           
           <div className="text-center lg:text-left">
-            <h2 className="lg:hidden text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-[#FFC107]">UP</span></h2>
+            <h2 className="lg:hidden text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-brand">UP</span></h2>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Bem-vindo de volta!</h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Digite suas credenciais para acessar sua ficha.</p>
           </div>
@@ -81,7 +81,7 @@ export default function Login() {
                   autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#FFC107] outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all"
                   placeholder="seu@email.com"
                 />
               </div>
@@ -90,7 +90,7 @@ export default function Login() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
-                    <Link to="/forgot-password" className="text-xs font-bold text-[#FFC107] hover:text-[#FFB300] transition-colors">
+                    <Link to="/forgot-password" className="text-xs font-bold text-brand hover:text-brand-dark transition-colors">
                         Esqueceu a senha?
                     </Link>
                 </div>
@@ -100,7 +100,7 @@ export default function Login() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#FFC107] outline-none transition-all pr-12"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all pr-12"
                       placeholder="••••••••"
                     />
                     <button 
@@ -121,7 +121,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={localLoading}
-              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-[#FFC107]/20 text-sm font-black text-black bg-gradient-to-r from-[#FFC107] to-[#FF9800] hover:from-[#FFC107] hover:to-[#FFB300] transition-all transform active:scale-[0.98] hover:shadow-[0_0_20px_rgba(255,193,7,0.35)] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-brand/20 text-sm font-black text-black bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark transition-all transform active:scale-[0.98] hover:shadow-[0_0_20px_rgba(255,193,7,0.35)] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {localLoading ? (
                   <span className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export default function Login() {
           <div className="text-center pt-2">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Não tem uma conta?{' '}
-              <Link to="/register" className="font-bold text-[#FFC107] hover:text-[#FFB300] transition-colors">
+              <Link to="/register" className="font-bold text-brand hover:text-brand-dark transition-colors">
                 Criar conta grátis
               </Link>
             </p>

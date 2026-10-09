@@ -4,8 +4,9 @@ import { useChat } from '../../hooks/useChat';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { ArrowLeft, Send, ShieldAlert, Sparkles, Bot } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Bot } from 'lucide-react';
 import AICoachModal from '../../components/ai/AICoachModal';
+import { formatTime } from '../../utils/format';
 
 export default function UserChatPage() {
   const { user, userProfile } = useAuthContext();
@@ -19,27 +20,30 @@ export default function UserChatPage() {
 
   // 1. Identificar o Coach do aluno e abrir o chat
   useEffect(() => {
+      let isMounted = true;
       const initChat = async () => {
-          if (!user) return;
+          if (!user?.uid) return;
 
-          // Busca perfil para ver quem é o coach
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-              const userData = userDoc.data();
-              if (userData.coachId) {
-                  // Busca dados do Coach
-                  const coachDoc = await getDoc(doc(db, 'users', userData.coachId));
-                  if (coachDoc.exists()) {
-                      const coachData = { uid: coachDoc.id, ...coachDoc.data() };
-                      setCoach(coachData);
-                      // Abre ou Cria o chat com o coach
-                      openChatWithUser(coachData); 
+          try {
+              const userDoc = await getDoc(doc(db, 'users', user.uid));
+              if (userDoc.exists()) {
+                  const userData = userDoc.data();
+                  if (userData.coachId) {
+                      const coachDoc = await getDoc(doc(db, 'users', userData.coachId));
+                      if (coachDoc.exists() && isMounted) {
+                          const coachData = { uid: coachDoc.id, ...coachDoc.data() };
+                          setCoach(coachData);
+                          openChatWithUser(coachData); 
+                      }
                   }
               }
+          } catch (err) {
+              console.error("Erro UserChatPage init:", err);
           }
       };
       initChat();
-  }, [user, openChatWithUser]);
+      return () => { isMounted = false; };
+  }, [user?.uid, openChatWithUser]);
 
   // Scroll automático
   useEffect(() => {
@@ -52,18 +56,13 @@ export default function UserChatPage() {
       setInputText('');
   };
 
-  const formatTime = (timestamp) => {
-      if (!timestamp) return '';
-      return new Date(timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
 
   // Se não tem coach vinculado
   if (!coach && !loading) {
       return (
           <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-[#0B0F19] p-6 text-center">
-              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-[#FFC107] to-[#FF9800] flex items-center justify-center text-black font-black mb-4 shadow-xl shadow-[#FFC107]/20">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-brand to-[#FF9800] flex items-center justify-center text-black font-black mb-4 shadow-xl shadow-brand/20">
                   <Bot className="w-8 h-8" />
               </div>
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Treine com o Coach IA ✨</h2>
@@ -93,10 +92,10 @@ export default function UserChatPage() {
         {/* Header */}
         <div className="p-4 bg-white dark:bg-[#1F2937]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-3">
-                <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-[#FFC107] pr-2 flex items-center justify-center transition-colors">
+                <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-brand pr-2 flex items-center justify-center transition-colors">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-[#FFC107]/10 flex items-center justify-center text-lg font-bold text-[#FFC107] border border-[#FFC107]/20">
+                <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-lg font-bold text-brand border border-brand/20">
                     {coach?.displayName?.[0] || 'C'}
                 </div>
                 <div>
@@ -109,7 +108,7 @@ export default function UserChatPage() {
 
             <button
               onClick={() => setIsAIModalOpen(true)}
-              className="bg-[#FFC107]/10 hover:bg-[#FFC107]/20 text-[#FFC107] border border-[#FFC107]/30 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all"
+              className="bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current" /> Coach IA
             </button>
@@ -129,7 +128,7 @@ export default function UserChatPage() {
                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] p-3.5 rounded-2xl text-sm shadow-sm relative group ${
                             isMe 
-                            ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black font-medium rounded-tr-none' 
+                            ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black font-medium rounded-tr-none' 
                             : 'card-premium-glass text-gray-800 dark:text-gray-100 rounded-tl-none p-3.5'
                         }`}>
                             <p className="leading-relaxed">{msg.text}</p>
@@ -153,7 +152,7 @@ export default function UserChatPage() {
                     placeholder="Digite sua mensagem..."
                     className="flex-1 input-brand-dark text-sm"
                 />
-                <button 
+                <button aria-label="Enviar mensagem" 
                     type="submit" 
                     disabled={!inputText.trim()}
                     className="btn-primary-gradient px-4 py-3 rounded-xl touch-target text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import WeeklyChart from '../../components/dashboard/WeeklyChart';
@@ -9,258 +9,13 @@ import toast from 'react-hot-toast';
 import StudentChatWidget from '../../components/chat/StudentChatWidget';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
 import AICoachModal from '../../components/ai/AICoachModal';
-import { Flame, Trophy, Target, Scale, Link2, Wrench, Clock, ClipboardList, Sparkles, Smile, Play, Trash2, RotateCcw } from 'lucide-react';
-
-// --- MODAL DE CONFIRMAÇÃO DE DESCARTE ---
-const ConfirmDiscardModal = ({ isOpen, onClose, onConfirm }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white dark:bg-[#1F2937] w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-800">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Descartar treino em andamento?</h3>
-                <p className="text-xs text-gray-400 mb-6">As séries registradas neste rascunho serão perdidas. Deseja realmente descartar?</p>
-                <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-3 text-gray-500 font-bold text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors">Cancelar</button>
-                    <button 
-                        onClick={onConfirm}
-                        className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-red-600/20 transition-all flex items-center justify-center gap-1.5"
-                    >
-                        <Trash2 className="w-3.5 h-3.5" /> Descartar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- CARD DE TREINO EM ANDAMENTO (RECUPERAÇÃO AUTOMÁTICA) ---
-const ActiveWorkoutBanner = ({ activeSession, onContinue, onDiscard }) => {
-    if (!activeSession) return null;
-    
-    // Contar séries concluídas
-    const completedSetsCount = activeSession.sessionData 
-      ? Object.values(activeSession.sessionData).filter(s => s?.completed).length 
-      : 0;
-
-    return (
-        <div className="bg-gradient-to-r from-orange-600 via-[#FF9800] to-[#FFC107] p-0.5 rounded-3xl shadow-xl animate-fade-in-up mb-8">
-            <div className="bg-gray-900/90 backdrop-blur-xl p-5 sm:p-6 rounded-[22px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-orange-500/20">
-                <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center shrink-0 mt-1">
-                        <Flame className="w-6 h-6 text-orange-400 animate-pulse fill-orange-400" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                            </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-orange-400">Treino em Andamento</span>
-                        </div>
-                        <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">{activeSession.trainingName}</h3>
-                        <p className="text-xs text-gray-300 mt-1">
-                            <span className="font-bold text-white">{completedSetsCount}</span> séries concluídas • Clique para retornar de onde parou
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex gap-2.5 w-full sm:w-auto shrink-0 pt-2 sm:pt-0">
-                    <button 
-                        onClick={onDiscard} 
-                        className="px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-                    >
-                        <Trash2 className="w-3.5 h-3.5" /> Descartar
-                    </button>
-                    <button 
-                        onClick={onContinue}
-                        className="flex-1 sm:flex-initial btn-primary-gradient text-xs px-6 py-3"
-                    >
-                        <RotateCcw className="w-4 h-4" /> CONTINUAR TREINO
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- MODAL PARA VINCULAR TREINADOR ---
-const LinkCoachModal = ({ isOpen, onClose, currentUserId, onSuccess }) => {
-    const [code, setCode] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleLink = async () => {
-        const cleanCode = code.trim();
-        if (!cleanCode) return toast.error("Digite o código do treinador.");
-        
-        setLoading(true);
-        try {
-            // 1. Verifica se o coach existe
-            const coachRef = doc(db, 'users', cleanCode);
-            const coachSnap = await getDoc(coachRef);
-
-            if (!coachSnap.exists()) {
-                throw new Error("Treinador não encontrado.");
-            }
-
-            const coachData = coachSnap.data();
-            if (coachData.role !== 'coach' && coachData.role !== 'admin') {
-                throw new Error("Este código não pertence a um treinador.");
-            }
-
-            // 2. Atualiza o perfil do aluno
-            await updateDoc(doc(db, 'users', currentUserId), {
-                coachId: cleanCode
-            });
-
-            toast.success(`Vinculado a ${coachData.displayName}!`);
-            onSuccess(); // Recarrega a home
-            onClose();
-
-        } catch (error) {
-            console.error(error);
-            toast.error(error.message || "Erro ao vincular.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Vincular Treinador</h3>
-                <p className="text-sm text-gray-500 mb-4">Peça o "Código de Convite" (UID) para seu coach e digite abaixo.</p>
-                
-                <input 
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="Cole o código aqui..."
-                    className="w-full bg-gray-100 dark:bg-gray-700 p-3 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center tracking-widest text-sm"
-                />
-
-                <div className="flex gap-2">
-                    <button onClick={onClose} className="flex-1 py-2 text-gray-500 font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancelar</button>
-                    <button 
-                        onClick={handleLink} 
-                        disabled={loading}
-                        className="flex-1 py-2 bg-[#FFC107] hover:bg-[#FFB300] text-black font-bold text-sm rounded-xl shadow-lg shadow-[#FFC107]/10 disabled:opacity-50"
-                    >
-                        {loading ? 'Vinculando...' : 'Confirmar'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- CARD DE TREINO RECOMENDADO ---
-const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTrainingId }) => {
-  let nextTraining = null;
-  let isAssigned = false;
-
-  if (assignedTrainingId) {
-      nextTraining = trainings.find(t => t.firestoreId === assignedTrainingId);
-      if (nextTraining) isAssigned = true;
-  }
-
-  if (!nextTraining && trainings.length > 0) {
-      if (lastWorkoutId) {
-          const lastIndex = trainings.findIndex(t => t.firestoreId === lastWorkoutId);
-          if (lastIndex !== -1 && lastIndex < trainings.length - 1) {
-              nextTraining = trainings[lastIndex + 1];
-          } else {
-              nextTraining = trainings[0];
-          }
-      } else {
-          nextTraining = trainings[0];
-      }
-  }
-
-  if (!nextTraining) return (
-      <div className="p-8 bg-gray-100 dark:bg-gray-800 rounded-3xl text-center border-2 border-dashed border-gray-300 dark:border-gray-700 mb-8">
-          <p className="text-gray-500 font-medium">Nenhum treino disponível.</p>
-          <p className="text-xs text-gray-400 mt-1">Aguarde seu treinador criar uma ficha ou vincule-se a um coach.</p>
-      </div>
-  );
-
-  return (
-    <div className={`rounded-3xl p-6 shadow-xl relative overflow-hidden mb-8 group transition-all transform hover:scale-[1.01] hover:-translate-y-0.5 duration-350 border ${
-        isAssigned 
-        ? 'bg-gradient-to-br from-[#FFC107] to-[#FF9800] text-black shadow-[#FFC107]/10 border-[#FFC107]/20 hover:shadow-[0_0_30px_rgba(255,193,7,0.2)]' 
-        : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-800 dark:text-white shadow-black/5 dark:shadow-black/25 border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/30 hover:shadow-[0_0_25px_rgba(255,193,7,0.06)]'
-    }`}>
-        <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-4 pointer-events-none group-hover:rotate-12 transition-transform duration-700">
-            {isAssigned ? <Target className="w-32 h-32 text-black" /> : <Flame className="w-32 h-32 text-white" />}
-        </div>
-        
-        <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1.5 ${isAssigned ? 'bg-black/10 text-black' : 'bg-black/20 text-white/90'}`}>
-                    {isAssigned ? (
-                        <><Sparkles className="w-3 h-3" /> Prescrito pelo Coach</>
-                    ) : (
-                        'Sugestão do Dia'
-                    )}
-                </span>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${isAssigned ? 'bg-black/10 text-black/80' : 'bg-[#FFC107]/10 text-[#FFC107]'}`}>
-                    {nextTraining.difficulty}
-                </span>
-            </div>
-            
-            <h2 className="text-3xl font-black mb-2 leading-tight">{nextTraining.name}</h2>
-            <p className={`text-sm mb-6 max-w-lg line-clamp-2 ${isAssigned ? 'text-black/80' : 'text-gray-400 dark:text-gray-300'}`}>
-                {nextTraining.description || "Foco total no progresso e consistência."}
-            </p>
-            
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <button 
-                    onClick={() => onStart(nextTraining.firestoreId)}
-                    className={`px-8 py-3.5 rounded-xl font-black shadow-lg flex items-center justify-center gap-2 btn-premium hover-glow-brand transition-all duration-300 group ${
-                        isAssigned 
-                        ? 'bg-black text-white hover:bg-black/90' 
-                        : 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black hover:from-[#FFC107] hover:to-[#FFB300] hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]'
-                    }`}
-                >
-                    <Play className="w-4 h-4 fill-current transition-transform duration-300 group-hover:scale-110 group-hover:translate-x-0.5" /> INICIAR TREINO
-                </button>
-                <div className={`flex items-center gap-4 text-xs font-bold px-4 py-2 rounded-lg w-fit ${isAssigned ? 'bg-black/10 text-black/90' : 'bg-gray-100 dark:bg-gray-800/80 text-gray-700 dark:text-white/90 border border-gray-200 dark:border-gray-700'}`}>
-                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~45 min</span>
-                    <span className={`w-1 h-1 rounded-full ${isAssigned ? 'bg-black/30' : 'bg-white/50'}`}></span>
-                    <span className="flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {nextTraining.exercises?.length || 0} Exercícios</span>
-                </div>
-            </div>
-        </div>
-    </div>
-  );
-};
-
-// --- CARD DE CONSISTÊNCIA ---
-const ConsistencyCard = ({ history }) => {
-    const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const recentWorkouts = history.filter(h => new Date(h.date) >= twoWeeksAgo).length;
-    let status = "Iniciando";
-    let color = "text-[#FFC107] bg-[#FFC107]/10 border border-[#FFC107]/25";
-    if(recentWorkouts >= 8) { status = "Imparável"; color = "text-orange-500 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900"; }
-    else if(recentWorkouts >= 4) { status = "Constante"; color = "text-green-500 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900"; }
-
-    return (
-        <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 flex flex-col justify-between h-full">
-            <div className="flex justify-between items-start mb-2 gap-2">
-                <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider leading-tight">Frequência (14d)</h3>
-                <span className={`text-[9px] font-bold px-2 py-1 rounded whitespace-nowrap ${color}`}>{status}</span>
-            </div>
-            <div>
-                <div className="flex items-end gap-1">
-                    <span className="text-4xl font-black text-gray-800 dark:text-white">{recentWorkouts}</span>
-                    <span className="text-sm text-gray-400 font-bold mb-1">treinos</span>
-                </div>
-                <p className="text-[10px] text-gray-400 mt-1">Nos últimos 14 dias.</p>
-            </div>
-        </div>
-    );
-};
+import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Smile } from 'lucide-react';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import ActiveWorkoutBanner from '../../components/dashboard/ActiveWorkoutBanner';
+import LinkCoachModal from '../../components/dashboard/LinkCoachModal';
+import RecommendedWorkoutCard from '../../components/dashboard/RecommendedWorkoutCard';
+import ConsistencyCard from '../../components/dashboard/ConsistencyCard';
+import { formatDate, formatTonnage } from '../../utils/format';
 
 // --- COMPONENTE PRINCIPAL ---
 
@@ -377,12 +132,12 @@ export default function Home() {
             });
         }
     });
-    let level = 'Iniciante 🌱';
+    let level = 'Iniciante';
     let nextLevel = 10;
-    if (totalTreinos >= 100) { level = 'Lenda 👑'; nextLevel = 1000; }
-    else if (totalTreinos >= 50) { level = 'Monstro 🦍'; nextLevel = 100; }
-    else if (totalTreinos >= 25) { level = 'Atleta 🏃'; nextLevel = 50; }
-    else if (totalTreinos >= 10) { level = 'Focado 🧠'; nextLevel = 25; }
+    if (totalTreinos >= 100) { level = 'Lenda'; nextLevel = 1000; }
+    else if (totalTreinos >= 50) { level = 'Monstro'; nextLevel = 100; }
+    else if (totalTreinos >= 25) { level = 'Atleta'; nextLevel = 50; }
+    else if (totalTreinos >= 10) { level = 'Focado'; nextLevel = 25; }
     let base = 0;
     if (totalTreinos >= 10) base = 10;
     if (totalTreinos >= 25) base = 25;
@@ -407,9 +162,9 @@ export default function Home() {
     setStats({ totalTreinos, maxGlobalLoad, level, nextLevelTreinos: nextLevel, progress, streak });
   };
 
-  const formatVolume = (kg) => kg > 1000 ? `${(kg / 1000).toFixed(1)}t` : `${kg}kg`;
+  const formatVolume = (kg) => kg > 1000 ? formatTonnage(kg) : `${kg}kg`;
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
 
   const firstName = (userProfile?.displayName || user?.displayName || 'Atleta').split(' ')[0];
   const photoURL = userProfile?.photoURL || user?.photoURL;
@@ -426,7 +181,7 @@ export default function Home() {
                     {photoURL ? (
                         <img src={photoURL} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#FFC107] to-[#FFB300] flex items-center justify-center text-black font-bold text-xl">
+                        <div className="w-full h-full bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-black font-bold text-xl">
                             {firstName[0]}
                         </div>
                     )}
@@ -434,7 +189,7 @@ export default function Home() {
                 <div className="min-w-0">
                     <h1 className="text-xl sm:text-2xl font-black text-gray-800 dark:text-white tracking-tight truncate">Olá, {firstName}!</h1>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span className="bg-[#FFC107]/10 text-[#FFC107] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#FFC107]/20">{stats.level}</span>
+                        <span className="bg-brand/10 text-brand px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-brand/20">{stats.level}</span>
                         
                         {/* BOTÃO VINCULAR (Só aparece se não tiver coach) */}
                         {!userProfile?.coachId && (
@@ -474,15 +229,15 @@ export default function Home() {
         )}
 
         {/* CARD DE ASSISTENTE DE IA: COACH & NUTRIÇÃO */}
-        <div className="card-premium-glass p-5 rounded-3xl border border-[#FFC107]/30 bg-gradient-to-r from-gray-900 via-[#1F2937] to-gray-900 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="card-premium-glass p-5 rounded-3xl border border-brand/30 bg-gradient-to-r from-gray-900 via-[#1F2937] to-gray-900 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FFC107] to-[#FF9800] flex items-center justify-center text-black font-black shadow-lg shadow-[#FFC107]/25 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand to-[#FF9800] flex items-center justify-center text-black font-black shadow-lg shadow-brand/25 shrink-0">
                     <Sparkles className="w-6 h-6 fill-current animate-pulse" />
                 </div>
                 <div>
                     <div className="flex items-center gap-2">
                         <h3 className="text-base font-black text-white">Coach IA & Guia de Nutrição</h3>
-                        <span className="bg-[#FFC107]/10 text-[#FFC107] text-[9px] font-black px-2.5 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">Novo ✨</span>
+                        <span className="bg-brand/10 text-brand text-[9px] font-black px-2.5 py-0.5 rounded-full border border-brand/20 uppercase">Novo</span>
                     </div>
                     <p className="text-xs text-gray-300 mt-0.5">Gere treinos sob medida, consulte macros e tire dúvidas nutricionais.</p>
                 </div>
@@ -497,11 +252,11 @@ export default function Home() {
 
         {/* --- CARD DO TREINADOR (ADMIN/COACH) --- */}
         {isCoach && (
-            <div className="bg-[#1F2937]/50 backdrop-blur-md rounded-3xl p-6 text-white shadow-xl flex flex-col sm:flex-row justify-between items-center relative overflow-hidden group border border-[#FFC107]/20 gap-4 hover:border-[#FFC107]/40 transition-all">
+            <div className="bg-[#1F2937]/50 backdrop-blur-md rounded-3xl p-6 text-white shadow-xl flex flex-col sm:flex-row justify-between items-center relative overflow-hidden group border border-brand/20 gap-4 hover:border-brand/40 transition-all">
                 <div className="absolute right-0 top-0 h-full w-1/2 bg-white/5 skew-x-12 transform translate-x-10"></div>
                 <div className="relative z-10 text-center sm:text-left">
                     <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                        <span className="bg-[#FFC107] text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Modo Coach</span>
+                        <span className="bg-brand text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Modo Coach</span>
                     </div>
                     <h3 className="text-xl font-black tracking-tight">Painel do Treinador</h3>
                     <p className="text-gray-400 text-xs max-w-xs mt-1">Gerencie seus alunos e prescreva treinos com controle total.</p>
@@ -517,26 +272,26 @@ export default function Home() {
 
         {/* METRICAS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 relative overflow-hidden group hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
+            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 relative overflow-hidden group hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
                 <div>
-                    <div className="absolute top-0 left-0 w-1 h-full bg-[#FFC107]"></div>
-                    <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1">Próxima Meta <Target className="w-3 h-3 text-[#FFC107]" /></h3>
+                    <div className="absolute top-0 left-0 w-1 h-full bg-brand"></div>
+                    <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1">Próxima Meta <Target className="w-3 h-3 text-brand" /></h3>
                     <div className="flex justify-between items-end mb-2">
                         <span className="text-3xl font-black text-gray-800 dark:text-white">{stats.nextLevelTreinos}</span>
                         <span className="text-xs font-bold text-gray-400 mb-1">treinos</span>
                     </div>
                     <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-[#FFC107] h-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
+                        <div className="bg-brand h-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
                     </div>
                 </div>
                 <p className="text-[10px] text-gray-400 mt-2 text-right">Faltam {stats.nextLevelTreinos - stats.totalTreinos}</p>
             </div>
 
-            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-0 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
+            <div className="hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
                 <ConsistencyCard history={history} />
             </div>
 
-            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
+            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
                 <div>
                     <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Maior Carga (PR)</h3>
                     <div className="flex items-end gap-1">
@@ -544,20 +299,20 @@ export default function Home() {
                         <span className="text-sm font-bold text-gray-400 mb-1">kg</span>
                     </div>
                 </div>
-                <p className="text-[10px] text-[#FFC107] bg-[#FFC107]/10 px-2 py-1 rounded w-fit mt-2 font-bold flex items-center gap-1">
-                    <Trophy className="w-3 h-3 text-[#FFC107] fill-[#FFC107]" /> Seu recorde pessoal
+                <p className="text-[10px] text-brand bg-brand/10 px-2 py-1 rounded w-fit mt-2 font-bold flex items-center gap-1">
+                    <Trophy className="w-3 h-3 text-brand fill-brand" /> Seu recorde pessoal
                 </p>
             </div>
 
-            <div onClick={() => navigate('/measurements')} className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 cursor-pointer hover:border-[#FFC107]/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 group flex flex-col justify-between h-full hover-glow-brand">
+            <div onClick={() => navigate('/measurements')} className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 cursor-pointer hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 group flex flex-col justify-between h-full hover-glow-brand">
                 <div className="flex justify-between items-start">
                     <div>
                         <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Peso Corporal</h3>
                         <span className="text-3xl font-black text-gray-800 dark:text-white">{userProfile?.weight || '--'}kg</span>
                     </div>
-                    <Scale className="w-6 h-6 text-gray-400 group-hover:text-[#FFC107] group-hover:scale-110 transition-all duration-300" />
+                    <Scale className="w-6 h-6 text-gray-400 group-hover:text-brand group-hover:scale-110 transition-all duration-300" />
                 </div>
-                <p className="text-[10px] text-[#FFC107] mt-2 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Atualizar medidas →</p>
+                <p className="text-[10px] text-brand mt-2 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Atualizar medidas →</p>
             </div>
         </div>
 
@@ -566,12 +321,12 @@ export default function Home() {
             <div className="lg:col-span-2">
                 <div className="mb-4 flex items-center justify-between px-1">
                     <h3 className="font-bold text-gray-700 dark:text-white text-lg">Frequência Semanal</h3>
-                    <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">Mantenha o foco! 🚀</span>
+                    <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">Mantenha o foco!</span>
                 </div>
                 <WeeklyChart history={history} />
             </div>
 
-            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-[#FFC107]/10 flex flex-col h-full hover:border-[#FFC107]/20 transition-all duration-300">
+            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 flex flex-col h-full hover:border-brand/20 transition-all duration-300">
                 <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-6">Última Conquista</h3>
                 {history.length > 0 ? (
                     <div className="flex-1 flex flex-col">
@@ -581,7 +336,7 @@ export default function Home() {
                             </div>
                             <div>
                                 <h4 className="font-bold text-lg text-gray-800 dark:text-white leading-tight line-clamp-1">{history[0].trainingName}</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 capitalize">{new Date(history[0].date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 capitalize">{formatDate(history[0].date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 mb-6">
@@ -600,16 +355,20 @@ export default function Home() {
                     <div className="flex-1 flex flex-col justify-center items-center text-center py-8 text-gray-400">
                         <Smile className="w-10 h-10 text-gray-400 mb-2 opacity-50" />
                         <p className="text-sm font-medium">Nenhum treino ainda.</p>
-                        <button onClick={() => navigate('/trainings')} className="text-[#FFC107] font-bold text-xs mt-2 hover:underline">Começar Jornada</button>
+                        <button onClick={() => navigate('/trainings')} className="text-brand font-bold text-xs mt-2 hover:underline">Começar Jornada</button>
                     </div>
                 )}
             </div>
         </div>
 
         {/* MODAL DE CONFIRMAÇÃO DE DESCARTE DE TREINO */}
-        <ConfirmDiscardModal 
-            isOpen={showConfirmDiscard}
-            onClose={() => setShowConfirmDiscard(false)}
+        <ConfirmDialog
+            open={showConfirmDiscard}
+            title="Descartar treino em andamento?"
+            message="As séries registradas neste rascunho serão perdidas. Deseja realmente descartar?"
+            confirmLabel="Descartar"
+            danger
+            onCancel={() => setShowConfirmDiscard(false)}
             onConfirm={handleDiscardActiveWorkout}
         />
 
@@ -631,7 +390,7 @@ export default function Home() {
             onWorkoutSaved={() => setRefreshTrigger(prev => prev + 1)}
         />
 
-        {/* ✅ WIDGET DE CHAT (Aparece sozinho se tiver coach) */}
+        {/* WIDGET DE CHAT (Aparece sozinho se tiver coach) */}
         <StudentChatWidget />
 
       </div>

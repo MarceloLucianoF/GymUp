@@ -46,9 +46,17 @@ export function AuthProvider({ children }) {
                 age: null,
                 weight: null,
                 height: null,
-                photoURL: null,
-                ...additionalData // ✅ Aqui entra o coachId se vier do registro
+                photoURL: null
             };
+
+            // Somente campos de vínculo conhecidos podem vir do formulário.
+            // Campos de autorização, identidade e auditoria nunca são sobrescritos pelo cliente.
+            if (typeof additionalData.coachId === 'string' && additionalData.coachId.trim()) {
+                initialData.coachId = additionalData.coachId.trim();
+            }
+            if (typeof additionalData.currentTrainingId === 'string' && additionalData.currentTrainingId.trim()) {
+                initialData.currentTrainingId = additionalData.currentTrainingId.trim();
+            }
 
             await setDoc(doc(db, "users", res.user.uid), initialData);
 

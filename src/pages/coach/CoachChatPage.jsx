@@ -3,6 +3,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useChat } from '../../hooks/useChat';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, MessageSquare, Send, Zap } from 'lucide-react';
+import { formatTime } from '../../utils/format';
 
 export default function CoachChatPage() {
   const { user } = useAuthContext();
@@ -26,21 +27,12 @@ export default function CoachChatPage() {
       if (location.state?.targetUser) {
           openChatWithUser(location.state.targetUser);
       }
-  }, [location.state]);
+  }, [location.state, openChatWithUser]);
 
   const handleSend = (e) => {
       e.preventDefault();
       sendMessage(inputText);
       setInputText('');
-  };
-
-  // 3. Formatação segura de data (Suporta Timestamp do Firebase e Date do JS)
-  const formatTime = (timestamp) => {
-      if (!timestamp) return '';
-      if (timestamp.seconds) {
-          return new Date(timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-      return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   // 4. Lógica de Filtro na Sidebar
@@ -57,7 +49,7 @@ export default function CoachChatPage() {
       return chat.participantData?.[otherId] || { name: 'Aluno', photo: null };
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand"></div></div>;
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden transition-colors">
@@ -211,10 +203,10 @@ export default function CoachChatPage() {
                             placeholder="Digite sua mensagem..."
                             className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-5 py-3 rounded-full focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-inner border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-blue-500"
                         />
-                        <button 
+                        <button aria-label="Enviar mensagem" 
                             type="submit" 
                             disabled={!inputText.trim()}
-                            className="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                            className="bg-brand hover:bg-brand-dark text-black w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                         >
                             <Send className="w-5 h-5 text-white" />
                         </button>

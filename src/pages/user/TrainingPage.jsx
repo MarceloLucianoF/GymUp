@@ -5,6 +5,7 @@ import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
 import { Dumbbell, Flame, Scale, ClipboardList } from 'lucide-react';
+import { formatDate, formatTonnage } from '../../utils/format';
 
 export default function TrainingPage() {
   const { trainingId } = useParams();
@@ -179,7 +180,7 @@ export default function TrainingPage() {
           return;
       }
 
-      // ✅ ROTA CORRETA: Envia para /execution/ (TrainingExecutionPage)
+      // Envia para /execution/ (TrainingExecutionPage)
       // Envia a lista customizada (caso o usuário tenha reordenado ou desmarcado algo)
       navigate(`/execution/${training.firestoreId}`, { 
           state: { 
@@ -203,13 +204,13 @@ export default function TrainingPage() {
       return total;
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand"></div></div>;
 
   if (errorDebug) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-6 text-center text-white">
         <div className="text-4xl mb-4">🚧</div>
         <p className="mb-4 text-red-300">{errorDebug}</p>
-        <button onClick={() => navigate('/trainings')} className="bg-blue-600 px-6 py-3 rounded-xl font-bold">Voltar</button>
+        <button onClick={() => navigate('/trainings')} className="bg-brand text-black px-6 py-3 rounded-xl font-bold">Voltar</button>
     </div>
   );
 
@@ -226,7 +227,7 @@ export default function TrainingPage() {
                 {lastWorkoutDate && (
                     <div className="text-right shrink-0 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg border border-green-100 dark:border-green-800/30">
                         <p className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Último</p>
-                        <p className="text-xs font-bold text-gray-700 dark:text-white">{lastWorkoutDate.toLocaleDateString('pt-BR')}</p>
+                        <p className="text-xs font-bold text-gray-700 dark:text-white">{formatDate(lastWorkoutDate)}</p>
                     </div>
                 )}
             </div>
@@ -240,7 +241,7 @@ export default function TrainingPage() {
                     <ClipboardList className="w-3.5 h-3.5 text-gray-500" /> {exerciseList.filter((_,i) => selectedExercises[i]).length} Exercícios
                 </span>
                 <span className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full text-xs font-bold text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800/30">
-                    <Scale className="w-3.5 h-3.5 text-blue-500" /> Vol. Est: {calculateEstimatedVolume() > 0 ? `${(calculateEstimatedVolume() / 1000).toFixed(1)}t` : '--'}
+                    <Scale className="w-3.5 h-3.5 text-blue-500" /> Vol. Est: {calculateEstimatedVolume() > 0 ? formatTonnage(calculateEstimatedVolume()) : '--'}
                 </span>
             </div>
         </div>
@@ -325,7 +326,7 @@ export default function TrainingPage() {
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-[60] pb-8 md:pb-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
             <button 
                 onClick={handleStartTraining}
-                className="w-full bg-gradient-to-r from-[#FFC107] to-[#FF9800] hover:from-[#FFC107] hover:to-[#FFB300] text-black font-black text-lg py-4 rounded-2xl shadow-xl shadow-[#FFC107]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group hover-glow-brand"
+                className="w-full bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark text-black font-black text-lg py-4 rounded-2xl shadow-xl shadow-brand/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group hover-glow-brand"
             >
                 <Flame className="w-5 h-5 text-black fill-current group-hover:scale-110 transition-transform" /> 
                 INICIAR TREINO 

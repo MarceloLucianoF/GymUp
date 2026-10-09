@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDate } from '../../utils/format';
 
 export default function MonthCalendar({ history }) {
   const today = new Date();
@@ -26,10 +27,10 @@ export default function MonthCalendar({ history }) {
   const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
   return (
-    <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#FFC107]/10 mb-6 hover:shadow-[0_0_25px_rgba(255,193,7,0.06)] hover:border-[#FFC107]/20 transition-all duration-300">
+    <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-brand/10 mb-6 hover:shadow-[0_0_25px_rgba(255,193,7,0.06)] hover:border-brand/20 transition-all duration-300">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-gray-800 dark:text-white uppercase text-sm tracking-wider">
-           {today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+           {formatDate(today, { month: 'long', year: 'numeric' })}
         </h3>
         <div className="flex gap-2 items-center text-[10px] text-gray-400">
             <span className="w-3 h-3 rounded-full bg-gray-100 dark:bg-gray-700"></span> Descanso
@@ -62,7 +63,7 @@ export default function MonthCalendar({ history }) {
                             ? 'bg-green-500 text-white shadow-lg shadow-green-500/30 scale-105' 
                             : 'bg-gray-50 dark:bg-gray-700/50 text-gray-450 dark:text-gray-500'
                         }
-                        ${isToday && !isTrained ? 'border-2 border-[#FFC107] text-[#FFC107]' : ''}
+                        ${isToday && !isTrained ? 'border-2 border-brand text-brand' : ''}
                     `}
                 >
                     {isTrained ? '💪' : dayNum}

@@ -69,21 +69,21 @@ export default function LandingPage() {
   }, [user]);
 
   return (
-    <div className="min-h-screen bg-[#0D1117] text-white selection:bg-[#FFC107] selection:text-black transition-colors duration-300 font-sans">
+    <div className="min-h-screen bg-[#0D1117] text-white selection:bg-brand selection:text-black transition-colors duration-300 font-sans">
       
       {/* Top Background Glows */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#FFC107]/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/5 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute top-10 right-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* Navbar */}
       <nav className="relative flex justify-between items-center p-6 max-w-7xl mx-auto z-10">
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate(user ? '/dashboard' : '/')}>
-          <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center border border-[#FFC107]/20 group-hover:border-[#FFC107]/60 group-hover:scale-105 transition-all p-1">
+          <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center border border-brand/20 group-hover:border-brand/60 group-hover:scale-105 transition-all p-1">
             <AcademyUpLogo className="w-full h-full text-white" />
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-black text-white tracking-tighter leading-none">
-              ACADEMY<span className="text-[#FFC107]">UP</span>
+              ACADEMY<span className="text-brand">UP</span>
             </span>
             <span className="text-[9px] text-gray-500 font-bold tracking-[0.2em] mt-0.5">TREINE • EVOLUA • SUPERE</span>
           </div>
@@ -95,7 +95,7 @@ export default function LandingPage() {
               {activeSession ? (
                 <button 
                   onClick={() => navigate(`/execution/${activeSession.trainingId}`)}
-                  className="bg-gradient-to-r from-orange-500 to-[#FFC107] text-black font-black text-xs sm:text-sm px-4 sm:px-6 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 hover:scale-105 transition-all flex items-center gap-2 animate-pulse"
+                  className="bg-gradient-to-r from-orange-500 to-brand text-black font-black text-xs sm:text-sm px-4 sm:px-6 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 hover:scale-105 transition-all flex items-center gap-2 animate-pulse"
                 >
                   <Flame className="w-4 h-4 fill-current text-black" /> Continuar Treino
                 </button>
@@ -111,7 +111,7 @@ export default function LandingPage() {
             <>
               <button 
                 onClick={() => navigate('/login')} 
-                className="text-gray-300 font-bold hover:text-[#FFC107] transition-colors text-sm px-4 py-2"
+                className="text-gray-300 font-bold hover:text-brand transition-colors text-sm px-4 py-2"
               >
                 Entrar
               </button>
@@ -128,14 +128,14 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <header className="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center z-10">
-        <div className="inline-flex items-center gap-2 bg-[#1F2937] border border-gray-800 text-[#FFC107] px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-8">
-          <Zap className="w-3.5 h-3.5 text-[#FFC107] fill-current animate-pulse" />
+        <div className="inline-flex items-center gap-2 bg-[#1F2937] border border-gray-800 text-brand px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-8">
+          <Zap className="w-3.5 h-3.5 text-brand fill-current animate-pulse" />
           Plataforma de Alta Performance para Consultorias
         </div>
         
         <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight">
           Escale seus treinos <br className="hidden sm:inline" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFC107] to-[#FFB300]">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-dark">
             com máxima disciplina.
           </span>
         </h1>
@@ -150,7 +150,7 @@ export default function LandingPage() {
               <>
                 <button 
                   onClick={() => navigate(`/execution/${activeSession.trainingId}`)}
-                  className="btn-primary-gradient text-lg px-8 py-4.5 bg-gradient-to-r from-orange-500 to-[#FFC107]"
+                  className="btn-primary-gradient text-lg px-8 py-4.5 bg-gradient-to-r from-orange-500 to-brand"
                 >
                   <Flame className="w-5 h-5 fill-current" /> Continuar Treino Ativo
                 </button>
@@ -211,7 +211,7 @@ export default function LandingPage() {
       {/* Pilares da Marca */}
       <section className="max-w-6xl mx-auto px-6 py-24 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-xs font-black tracking-[0.2em] text-[#FFC107] uppercase mb-3">Nossos Fundamentos</h2>
+          <h2 className="text-xs font-black tracking-[0.2em] text-brand uppercase mb-3">Nossos Fundamentos</h2>
           <p className="text-3xl md:text-4xl font-black text-white">Os Pilares da Marca AcademyUp</p>
           <p className="text-gray-400 mt-3 max-w-xl mx-auto text-sm">Desenvolvemos nossa metodologia em torno de quatro valores inabaláveis para garantir a sua melhor versão.</p>
         </div>
@@ -265,7 +265,7 @@ export default function LandingPage() {
 
       {/* CTA Final */}
       <section className="relative text-center py-24 max-w-4xl mx-auto px-6 z-10">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#FFC107]/5 rounded-full blur-[80px] pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-brand/5 rounded-full blur-[80px] pointer-events-none"></div>
         <h2 className="text-4xl md:text-5xl font-black mb-6">Pronto para o próximo nível?</h2>
         <p className="text-gray-400 mb-10 text-lg max-w-xl mx-auto">Cadastre-se hoje mesmo e comece a treinar com disciplina e inteligência.</p>
         {user ? (
@@ -303,14 +303,14 @@ export default function LandingPage() {
 
 const AttributeBadge = ({ icon, text }) => (
   <div className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white transition-colors">
-    <span className="text-[#FFC107]">{icon}</span>
+    <span className="text-brand">{icon}</span>
     <span>{text}</span>
   </div>
 );
 
 const PillarCard = ({ icon, title, desc }) => (
-  <div className="bg-[#1F2937]/50 backdrop-blur-md border border-[#FFC107]/10 p-8 rounded-3xl hover:border-[#FFC107]/40 hover:shadow-[0_0_30px_rgba(255,193,7,0.1)] transition-all duration-300 group hover:-translate-y-1">
-    <div className="w-13 h-13 bg-gradient-to-br from-[#FFC107] to-[#FF9800] rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-[#FFC107]/20 group-hover:scale-110 transition-transform">
+  <div className="bg-[#1F2937]/50 backdrop-blur-md border border-brand/10 p-8 rounded-3xl hover:border-brand/40 hover:shadow-[0_0_30px_rgba(255,193,7,0.1)] transition-all duration-300 group hover:-translate-y-1">
+    <div className="w-13 h-13 bg-gradient-to-br from-brand to-[#FF9800] rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-brand/20 group-hover:scale-110 transition-transform">
       {icon}
     </div>
     <h3 className="text-xl font-black text-white mb-3 tracking-tight">{title}</h3>

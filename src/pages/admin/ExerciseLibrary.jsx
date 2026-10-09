@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, addDoc, deleteDoc, doc, serverTimestamp, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
+import { useConfirm } from '../../hooks/useConfirm';
 import { useNavigate } from 'react-router-dom';
+import Modal from '../../components/common/Modal';
+import { SkeletonList } from '../../components/common/Skeleton';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 
 export default function ExerciseLibrary() {
+  const { confirm, dialog } = useConfirm();
   const { user } = useAuthContext();
   const navigate = useNavigate();
   
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
 
@@ -25,6 +33,7 @@ export default function ExerciseLibrary() {
   // Carregar Exercícios
   useEffect(() => {
     const fetchExercises = async () => {
+      setError(false);
       try {
         // Busca exercícios globais (do sistema) ou criados pelo coach
         // Para MVP, vamos puxar tudo, mas idealmente seria filtrado
@@ -34,13 +43,14 @@ export default function ExerciseLibrary() {
         setExercises(list);
       } catch (error) {
         console.error(error);
+        setError(true);
         toast.error("Erro ao carregar biblioteca.");
       } finally {
         setLoading(false);
       }
     };
     fetchExercises();
-  }, [user]);
+  }, [user, reloadKey]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -67,7 +77,7 @@ export default function ExerciseLibrary() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Tem certeza? Isso pode quebrar treinos existentes.")) return;
+    if (!(await confirm({ title: "Excluir exercício", message: "Tem certeza? Isso pode quebrar treinos existentes.", confirmLabel: "Excluir", danger: true }))) return;
     try {
         await deleteDoc(doc(db, 'exercises', id));
         setExercises(prev => prev.filter(ex => ex.id !== id));
@@ -83,10 +93,13 @@ export default function ExerciseLibrary() {
     ex.muscleGroup.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><SkeletonList count={4} itemClassName="h-24 w-full" /></div>;
+
+  if (error) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><ErrorState onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8">
+    {dialog}
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Header */}
@@ -98,7 +111,7 @@ export default function ExerciseLibrary() {
             </div>
             <button 
                 onClick={() => setShowModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 transition-transform active:scale-95"
+                className="bg-brand hover:bg-brand-dark text-black px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 transition-transform active:scale-95"
             >
                 <span>+</span> Novo Exercício
             </button>
@@ -145,15 +158,12 @@ export default function ExerciseLibrary() {
         </div>
 
         {filtered.length === 0 && (
-            <div className="text-center py-20 text-gray-400">
-                <p className="text-4xl mb-2">🤷‍♂️</p>
-                <p>Nenhum exercício encontrado.</p>
-            </div>
+            <EmptyState title="Nenhum exercício encontrado." description={searchTerm ? 'Tente outro termo de busca.' : 'Cadastre o primeiro exercício da biblioteca.'} />
         )}
 
         {/* MODAL DE CRIAÇÃO */}
         {showModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <Modal onClose={() => setShowModal(false)} label="Novo exercício" className="w-full max-w-lg">
                 <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl p-8 shadow-2xl relative">
                     <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600">✕</button>
                     
@@ -208,13 +218,13 @@ export default function ExerciseLibrary() {
 
                         <button 
                             type="submit" 
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg mt-4 transition-transform active:scale-95"
+                            className="w-full bg-brand hover:bg-brand-dark text-black font-bold py-4 rounded-xl shadow-lg mt-4 transition-transform active:scale-95"
                         >
                             Salvar Exercício
                         </button>
                     </form>
                 </div>
-            </div>
+            </Modal>
         )}
 
       </div>

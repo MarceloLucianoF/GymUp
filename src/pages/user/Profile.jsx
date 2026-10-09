@@ -4,17 +4,19 @@ import { useTheme } from '../../hooks/ThemeContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
+import { useConfirm } from '../../hooks/useConfirm';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
 
 export default function Profile() {
+  const { confirm, dialog } = useConfirm();
   const { user, logout } = useAuthContext();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
   const [originalData, setOriginalData] = useState({}); 
-  const [coachData, setCoachData] = useState(null); // ✅ Dados do Coach
+  const [coachData, setCoachData] = useState(null); // Dados do Coach
   const [formData, setFormData] = useState({
     displayName: '',
     goal: 'Hipertrofia',
@@ -47,7 +49,7 @@ export default function Profile() {
           setFormData(initialData);
           setOriginalData(initialData);
 
-          // ✅ Busca dados do Coach se existir vínculo
+          // Busca dados do Coach se existir vínculo
           if (data.coachId) {
               const coachRef = doc(db, 'users', data.coachId);
               const coachSnap = await getDoc(coachRef);
@@ -135,8 +137,8 @@ export default function Profile() {
   };
 
   const handleLogout = async () => {
-    if (isDirty && !window.confirm("Você tem alterações não salvas. Sair mesmo assim?")) return;
-    if (window.confirm("Deseja realmente sair?")) {
+    if (isDirty && !(await confirm({ title: "Alterações não salvas", message: "Você tem alterações não salvas. Sair mesmo assim?", confirmLabel: "Sair", danger: true }))) return;
+    if (await confirm({ title: "Sair", message: "Deseja realmente sair?", confirmLabel: "Sair" })) {
       await logout();
       navigate('/login');
     }
@@ -162,10 +164,11 @@ export default function Profile() {
 
   const imcData = calculateIMC();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#FFC107]"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 transition-colors duration-300 pb-24">
+    {dialog}
       <div className="max-w-2xl mx-auto">
         
         {/* Header */}
@@ -187,7 +190,7 @@ export default function Profile() {
             )}
 
             {/* Capa / Avatar */}
-            <div className="h-32 bg-gradient-to-r from-[#FFC107] to-[#FFB300] relative">
+            <div className="h-32 bg-gradient-to-r from-brand to-brand-dark relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                     <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl relative group">
                         <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-400">
@@ -221,7 +224,7 @@ export default function Profile() {
                                 value={formData.displayName} 
                                 onChange={handleChange}
                                 placeholder="Seu nome"
-                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-bold"
+                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-bold"
                             />
                         </div>
 
@@ -231,7 +234,7 @@ export default function Profile() {
                                 name="goal"
                                 value={formData.goal} 
                                 onChange={handleChange}
-                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white cursor-pointer font-bold"
+                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white cursor-pointer font-bold"
                             >
                                 <option value="Hipertrofia">Hipertrofia</option>
                                 <option value="Emagrecimento">Emagrecimento</option>
@@ -243,11 +246,11 @@ export default function Profile() {
 
                     {/* --- CARD DO TREINADOR --- */}
                     {coachData && (
-                        <div className="bg-[#FFC107]/10 border border-[#FFC107]/20 rounded-2xl p-4 flex items-center justify-between">
+                        <div className="bg-brand/10 border border-brand/20 rounded-2xl p-4 flex items-center justify-between">
                             <div>
-                                <p className="text-[10px] font-bold text-[#FFC107] dark:text-[#FFC107] uppercase mb-1">Seu Treinador</p>
+                                <p className="text-[10px] font-bold text-brand dark:text-brand uppercase mb-1">Seu Treinador</p>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-[#FFC107]/20 dark:bg-[#FFC107]/10 flex items-center justify-center text-[#FFC107] dark:text-[#FFB300] font-bold text-sm">
+                                    <div className="w-10 h-10 rounded-full bg-brand/20 dark:bg-brand/10 flex items-center justify-center text-brand dark:text-brand-dark font-bold text-sm">
                                         {coachData.displayName?.charAt(0)}
                                     </div>
                                     <div>
@@ -259,7 +262,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/chat')}
-                                className="bg-white dark:bg-gray-800 text-[#FFC107] px-3 py-2 rounded-xl shadow-sm font-bold text-xs hover:bg-[#FFC107]/10 transition-colors border border-[#FFC107]/25 dark:border-gray-700 flex items-center gap-1"
+                                className="bg-white dark:bg-gray-800 text-brand px-3 py-2 rounded-xl shadow-sm font-bold text-xs hover:bg-brand/10 transition-colors border border-brand/25 dark:border-gray-700 flex items-center gap-1"
                             >
                                 <MessageSquare className="w-3.5 h-3.5" /> Chat
                             </button>
@@ -290,7 +293,7 @@ export default function Profile() {
                                     placeholder="00.0"
                                     value={formData.weight} 
                                     onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
                                 />
                             </div>
                             <div>
@@ -302,7 +305,7 @@ export default function Profile() {
                                     placeholder="000"
                                     value={formData.height} 
                                     onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
                                 />
                             </div>
                             <div>
@@ -314,7 +317,7 @@ export default function Profile() {
                                     placeholder="00"
                                     value={formData.age} 
                                     onChange={handleIntegerChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#FFC107] dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
                                 />
                             </div>
                         </div>
@@ -323,7 +326,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/measurements')}
-                                className="text-xs text-[#FFC107] font-bold hover:underline"
+                                className="text-xs text-brand font-bold hover:underline"
                             >
                                 Ver histórico de evolução →
                             </button>
@@ -331,9 +334,9 @@ export default function Profile() {
                     </div>
 
                     {/* PREFERÊNCIAS DE APARÊNCIA */}
-                    <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl border border-gray-200 dark:border-[#FFC107]/10 shadow-sm transition-colors">
+                    <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl border border-gray-200 dark:border-brand/10 shadow-sm transition-colors">
                         <h2 className="text-base font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-                            {theme === 'dark' ? <Moon className="w-5 h-5 text-[#FFC107]" /> : <Sun className="w-5 h-5 text-amber-500" />}
+                            {theme === 'dark' ? <Moon className="w-5 h-5 text-brand" /> : <Sun className="w-5 h-5 text-amber-500" />}
                             Aparência da Aplicação
                         </h2>
                         <div className="flex items-center justify-between">
@@ -345,11 +348,11 @@ export default function Profile() {
                                     {theme === 'dark' ? 'Identidade principal para uso no celular' : 'Visual claro alternativo'}
                                 </p>
                             </div>
-                            <button
+                            <button aria-label="Alternar tema"
                                 type="button"
                                 onClick={toggleTheme}
                                 className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                    theme === 'dark' ? 'bg-[#FFC107]' : 'bg-gray-300'
+                                    theme === 'dark' ? 'bg-brand' : 'bg-gray-300'
                                 }`}
                                 title="Alternar entre modo escuro e claro"
                             >
@@ -358,7 +361,7 @@ export default function Profile() {
                                         theme === 'dark' ? 'translate-x-5' : 'translate-x-0'
                                     }`}
                                 >
-                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-[#FFC107]" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
+                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-brand" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
                                 </span>
                             </button>
                         </div>
@@ -370,7 +373,7 @@ export default function Profile() {
                             disabled={!isDirty}
                             className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
                                 isDirty 
-                                ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] hover:from-[#FFC107] hover:to-[#FFB300] text-black shadow-lg shadow-[#FFC107]/20 hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]' 
+                                ? 'bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark text-black shadow-lg shadow-brand/20 hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]' 
                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed shadow-none'
                             }`}
                         >

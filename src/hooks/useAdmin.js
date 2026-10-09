@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthContext } from './AuthContext';
 import { db } from '../firebase/config';
 import { 
   collection, 
   getDocs, 
-  addDoc, 
-  deleteDoc, 
   doc, 
   getDoc,
   query,
@@ -16,8 +14,10 @@ export function useAdmin() {
   const { user } = useAuthContext();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [trainings, setTrainings] = useState([]); // Adicionado para suportar a página de Treinos
+  const [error] = useState(null);
+  const [trainings, setTrainings] = useState([]);
+  const [trainingsLoading, setTrainingsLoading] = useState(true);
+  const [trainingsError, setTrainingsError] = useState(null);
 
   // 1. VERIFICAÇÃO DE SEGURANÇA (O Crachá)
   useEffect(() => {
@@ -49,30 +49,33 @@ export function useAdmin() {
     checkAdminStatus();
   }, [user]);
 
-  // 2. FUNÇÃO AUXILIAR PARA BUSCAR TREINOS (Para a TrainingsPage)
-  // Isso evita que a página de treinos quebre, pois ela usa 'const { trainings } = useAdmin()'
-  useEffect(() => {
-    const fetchTrainings = async () => {
-        try {
-            const q = query(collection(db, 'trainings'), orderBy('createdAt', 'desc')); // ou orderBy('name')
-            const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
-            setTrainings(data);
-        } catch (err) {
-            console.error("Erro ao buscar treinos no hook:", err);
-            // Não seta erro global para não bloquear a UI se for só falha de rede temporária
-        }
-    };
-    
-    // Busca treinos independente de ser admin ou não (para exibir na galeria)
-    fetchTrainings();
+  // 2. Busca de treinos (usada pela TrainingsPage); independe de ser admin.
+  const refreshData = useCallback(async () => {
+    setTrainingsLoading(true);
+    setTrainingsError(null);
+    try {
+      const q = query(collection(db, 'trainings'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      setTrainings(snapshot.docs.map(d => ({ firestoreId: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Erro ao buscar treinos no hook:", err);
+      setTrainingsError('Não foi possível carregar os treinos.');
+    } finally {
+      setTrainingsLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   return { 
     isAdmin, 
     loading, 
     trainings, // Exporta a lista de treinos
-    error 
+    trainingsLoading,
+    trainingsError,
+    refreshData,
+    error
   };
 }

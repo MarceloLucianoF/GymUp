@@ -16,25 +16,37 @@ export const useCoachDashboard = (user) => {
             if (!user) return;
 
             try {
-                // 1. Check-ins Recentes
-                const qCheckIns = query(collection(db, 'checkIns'), orderBy('date', 'desc'), limit(50));
-                const checkInsSnap = await getDocs(qCheckIns);
-                
-                // CORREÇÃO AQUI: Mapear incluindo o ID do documento
-                const rawCheckIns = checkInsSnap.docs.map(d => ({ 
-                    id: d.id, // ✅ Importante para navegação
-                    ...d.data() 
-                }));
+                // 1. Alunos vinculados ao treinador
+                const qStudents = query(
+                    collection(db, 'users'),
+                    where('role', '==', 'user'),
+                    where('coachId', '==', user.uid)
+                );
+                const studentsSnap = await getDocs(qStudents);
+                const allStudents = studentsSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+                // 2. Check-ins recentes: as regras só permitem ler por userId dos alunos
+                // vinculados, então consultamos em lotes (limite de 30 valores em "in").
+                const studentIds = allStudents.map(s => s.uid);
+                const batches = [];
+                for (let i = 0; i < studentIds.length; i += 30) {
+                    batches.push(studentIds.slice(i, i + 30));
+                }
+                const snaps = await Promise.all(batches.map(ids => getDocs(query(
+                    collection(db, 'checkIns'),
+                    where('userId', 'in', ids),
+                    orderBy('date', 'desc'),
+                    limit(50)
+                ))));
+                const rawCheckIns = snaps
+                    .flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 50);
 
                 // Filtra Check-ins de HOJE
                 const today = new Date();
                 today.setHours(0,0,0,0);
                 const todayCheckIns = rawCheckIns.filter(c => new Date(c.date) >= today);
-
-                // 2. Buscar Alunos
-                const qStudents = query(collection(db, 'users'), where('role', '!=', 'admin'));
-                const studentsSnap = await getDocs(qStudents);
-                const allStudents = studentsSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
 
                 // 3. Risco / Churn
                 const oneWeekAgo = new Date();
