@@ -1,17 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { Eye, EyeOff, KeyRound, Check } from 'lucide-react';
+import { KeyRound, Check } from 'lucide-react';
+import AuthField from './AuthField';
 
 export default function Register() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const refs = {
+    displayName: useRef(null),
+    email: useRef(null),
+    password: useRef(null),
+    confirmPassword: useRef(null),
+    coachCode: useRef(null),
+  };
   
   // Lógica do Convite
   const [coachCode, setCoachCode] = useState('');
@@ -63,15 +71,25 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) return toast.error("As senhas não conferem!");
-    if (password.length < 6) return toast.error("Senha muito curta (mínimo 6).");
+    if (localLoading) return; // evita duplo envio
+
+    const nextErrors = {};
+    if (!displayName.trim()) nextErrors.displayName = 'Informe seu nome.';
+    if (!email.trim()) nextErrors.email = 'Informe seu email.';
+    if (password.length < 6) nextErrors.password = 'Senha muito curta (mínimo 6).';
+    if (password !== confirmPassword) nextErrors.confirmPassword = 'As senhas não conferem!';
 
     let verifiedCoachId = null;
     if (coachCode.trim()) {
-        if (!coachName) {
-             return toast.error("Verifique o código do treinador antes de continuar.");
-        }
-        verifiedCoachId = coachCode.trim();
+        if (!coachName) nextErrors.coachCode = 'Verifique o código do treinador antes de continuar.';
+        else verifiedCoachId = coachCode.trim();
+    }
+
+    setErrors(nextErrors);
+    const firstInvalid = ['displayName', 'email', 'password', 'confirmPassword', 'coachCode'].find((k) => nextErrors[k]);
+    if (firstInvalid) {
+        refs[firstInvalid].current?.focus();
+        return toast.error(nextErrors[firstInvalid]);
     }
 
     setLocalLoading(true);
@@ -137,59 +155,24 @@ export default function Register() {
             <p className="mt-2 text-gray-600 dark:text-gray-400">Comece hoje mesmo.</p>
           </div>
 
-          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-            <div>
-              <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Nome Completo</label>
-              <input type="text" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all" placeholder="Ex: João Silva" />
-            </div>
+          <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
+            <AuthField ref={refs.displayName} label="Nome Completo" type="text" required autoFocus autoComplete="name"
+              value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ex: João Silva" error={errors.displayName} />
 
-            <div>
-              <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Email</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all" placeholder="seu@email.com" />
-            </div>
+            <AuthField ref={refs.email} label="Email" type="email" inputMode="email" required autoComplete="email"
+              autoCapitalize="none" spellCheck={false}
+              value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" error={errors.email} />
 
-            {/* Grid de Senhas */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Senha</label>
-                    <div className="relative">
-                        <input 
-                            type={showPassword ? "text" : "password"} 
-                            required 
-                            value={password} 
-                            onChange={(e) => setPassword(e.target.value)} 
-                            className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all pr-10" 
-                            placeholder="••••••" 
-                        />
-                        <button 
-                            type="button" 
-                            onClick={() => setShowPassword(!showPassword)} 
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors flex items-center justify-center"
-                        >
-                            {showPassword ? (
-                                <EyeOff className="w-5 h-5" />
-                            ) : (
-                                <Eye className="w-5 h-5" />
-                            )}
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Confirmar</label>
-                    <input 
-                        type={showPassword ? "text" : "password"} 
-                        required 
-                        value={confirmPassword} 
-                        onChange={(e) => setConfirmPassword(e.target.value)} 
-                        className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all" 
-                        placeholder="••••••" 
-                    />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AuthField ref={refs.password} label="Senha" passwordToggle required autoComplete="new-password" minLength={6}
+                value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6" error={errors.password} />
+              <AuthField ref={refs.confirmPassword} label="Confirmar" passwordToggle required autoComplete="new-password"
+                value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita a senha" error={errors.confirmPassword} />
             </div>
 
             {/* CAMPO DE CÓDIGO DO TREINADOR */}
             <div className="pt-2">
-                <label className="text-xs font-bold text-brand uppercase ml-1 flex justify-between cursor-pointer group">
+                <label htmlFor="register-coach-code" className="text-xs font-bold text-brand uppercase ml-1 flex justify-between cursor-pointer group">
                     <span>Código do Treinador (Opcional)</span>
                     <span className="text-[10px] opacity-70 group-hover:opacity-100 transition-opacity">Peça ao seu coach</span>
                 </label>
@@ -198,15 +181,25 @@ export default function Register() {
                         <KeyRound className="w-5 h-5" />
                     </div>
                     <input 
+                        id="register-coach-code"
+                        ref={refs.coachCode}
                         type="text" 
+                        autoComplete="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        aria-invalid={errors.coachCode ? 'true' : undefined}
+                        aria-describedby="register-coach-error"
                         onBlur={handleBlurCoachCode}
                         onChange={(e) => { setCoachCode(e.target.value); setCoachName(null); }} 
                         value={coachCode}
                         className={`w-full bg-amber-50/10 dark:bg-[#1F2937]/50 border p-3 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-brand dark:text-white transition-all font-mono tracking-wider text-sm ${coachName ? 'border-green-500' : 'border-gray-200 dark:border-gray-800'}`}
                         placeholder="Ex: CÓDIGO-DO-COACH"
                     />
-                    {isCheckingCode && <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-brand rounded-full border-t-transparent"></div>}
+                    {isCheckingCode && <div role="status" aria-label="Verificando código" className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-brand rounded-full border-t-transparent"></div>}
                 </div>
+                <p id="register-coach-error" role="alert" aria-live="assertive" className={errors.coachCode ? 'mt-1.5 text-sm font-medium text-red-500' : 'sr-only'}>
+                    {errors.coachCode || ''}
+                </p>
                 {/* Feedback Visual do Nome do Coach */}
                 {coachName && (
                     <div className="mt-2 flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg text-xs font-bold animate-fade-in border border-green-200 dark:border-green-950">
@@ -219,11 +212,12 @@ export default function Register() {
             <button
               type="submit"
               disabled={localLoading || isCheckingCode}
+              aria-busy={localLoading}
               className="w-full flex items-center justify-center min-h-[56px] px-4 rounded-2xl shadow-lg shadow-brand/25 text-base font-black text-black bg-gradient-to-r from-brand to-[#FF9800] hover:shadow-[0_0_24px_rgba(255,193,7,0.4)] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {localLoading ? (
                   <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
                     Processando...
                   </span>
               ) : 'Cadastrar Gratuitamente'}

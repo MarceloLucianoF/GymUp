@@ -16,7 +16,7 @@ export const pickNextTraining = (trainings, lastWorkoutId, assignedTrainingId) =
 };
 
 // --- CARD "TREINO DE HOJE" ---
-const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTrainingId }) => {
+const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTrainingId, weekCount = 0, weekGoal = 0, trainedToday = false, onBrowse }) => {
   const { training: nextTraining, isAssigned } = pickNextTraining(trainings, lastWorkoutId, assignedTrainingId);
 
   if (!nextTraining) {
@@ -25,6 +25,7 @@ const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTra
         <Dumbbell className="mb-3 h-10 w-10 text-brand/60" aria-hidden="true" />
         <p className="font-bold text-gray-800 dark:text-gray-100">Nenhum treino disponível</p>
         <p className="mt-1 max-w-xs text-xs text-gray-500 dark:text-gray-400">Aguarde seu treinador criar uma ficha ou vincule-se a um coach.</p>
+        {onBrowse && <button type="button" onClick={onBrowse} className="btn-primary-gradient mt-4 min-h-[44px] px-5 text-sm">Ver fichas</button>}
       </div>
     );
   }
@@ -49,9 +50,21 @@ const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTra
         </p>
 
         <div className="mt-4 flex items-center gap-4 text-xs font-bold text-black/80">
-          <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" aria-hidden="true" /> ~45 min</span>
+          <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" aria-hidden="true" /> ~{(nextTraining.exercises?.length || 0) * 5 + 10} min</span>
           <span className="flex items-center gap-1.5"><ClipboardList className="h-3.5 w-3.5" aria-hidden="true" /> {nextTraining.exercises?.length || 0} exercícios</span>
         </div>
+
+        {weekGoal > 0 && (
+          <div className="mt-4">
+            <div className="mb-1 flex justify-between text-[11px] font-bold text-black/75">
+              <span>{trainedToday ? 'Treino de hoje concluído' : 'Progresso da semana'}</span>
+              <span>{weekCount}/{weekGoal}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-black/15" role="progressbar" aria-valuenow={Math.min(weekCount, weekGoal)} aria-valuemin={0} aria-valuemax={weekGoal} aria-label="Progresso da meta semanal">
+              <div className="h-full rounded-full bg-black/70 transition-all duration-700" style={{ width: `${Math.min(100, (weekCount / weekGoal) * 100)}%` }} />
+            </div>
+          </div>
+        )}
 
         <button
           type="button"

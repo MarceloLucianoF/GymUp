@@ -5,11 +5,12 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles } from 'lucide-react';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search } from 'lucide-react';
 import AICoachModal from '../../components/ai/AICoachModal';
 import { formatDate } from '../../utils/format';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
+import ChipRow from '../../components/dashboard/ChipRow';
 
 // --- COMPONENTES VISUAIS ---
 
@@ -31,21 +32,6 @@ const TrainingSkeleton = () => (
   </div>
 );
 
-const FilterChip = ({ label, active, onClick }) => (
-  <button 
-    type="button"
-    onClick={onClick}
-    aria-pressed={active}
-    className={`pressable min-h-[44px] shrink-0 px-5 rounded-2xl text-xs font-black transition-all duration-300 border ${
-      active 
-      ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black border-transparent shadow-lg shadow-brand/20 scale-105' 
-      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-brand/10 hover:border-brand/40 hover:text-gray-900 dark:hover:text-white'
-    }`}
-  >
-    {label}
-  </button>
-);
-
 export default function TrainingsPage() {
   const { trainings, trainingsLoading, trainingsError, refreshData } = useAdmin();
   const { user, userProfile } = useAuthContext();
@@ -53,6 +39,7 @@ export default function TrainingsPage() {
   const [historyMap, setHistoryMap] = useState({});
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [filter, setFilter] = useState('Todos');
+  const [searchTerm, setSearchTerm] = useState('');
   const [packages, setPackages] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [packagesError, setPackagesError] = useState(false);
@@ -148,9 +135,13 @@ export default function TrainingsPage() {
   // 4. Processamento
   const isLoading = trainingsLoading || loadingHistory || loadingPackages;
 
+  const term = searchTerm.trim().toLowerCase();
   const filteredTrainings = trainings.filter(t => {
-      if (filter === 'Todos') return true;
-      return t.difficulty?.toLowerCase() === filter.toLowerCase();
+      if (filter !== 'Todos' && t.difficulty?.toLowerCase() !== filter.toLowerCase()) return false;
+      if (!term) return true;
+      return (t.name || '').toLowerCase().includes(term) ||
+        (t.description || '').toLowerCase().includes(term) ||
+        (t.exercises || []).some(ex => (ex.name || '').toLowerCase().includes(term));
   });
 
   // Agrupar por packageId
@@ -281,12 +272,24 @@ export default function TrainingsPage() {
               }
             />
 
-            {/* Filtros */}
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                {['Todos', 'Iniciante', 'Intermediário', 'Avançado'].map(f => (
-                    <FilterChip key={f} label={f} active={filter === f} onClick={() => setFilter(f)} />
-                ))}
+            {/* Busca + Filtros */}
+            <div className="relative mb-3">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
+                <input
+                    type="search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar ficha ou exercício..."
+                    aria-label="Buscar ficha ou exercício"
+                    className="w-full input-brand-dark pl-10 pr-4 text-sm"
+                />
             </div>
+            <ChipRow
+                label="Filtrar por dificuldade"
+                value={filter}
+                onChange={setFilter}
+                options={['Todos', 'Iniciante', 'Intermediário', 'Avançado'].map(f => ({ value: f, label: f }))}
+            />
         </div>
         
         {isLoading ? (

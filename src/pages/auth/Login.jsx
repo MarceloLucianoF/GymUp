@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff } from 'lucide-react';
+import AuthField from './AuthField';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState('');
+  const emailRef = useRef(null);
   
   const { login, authLoading, user } = useAuthContext();
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (localLoading) return; // evita duplo envio
+    setFormError('');
     setLocalLoading(true);
     const toastId = toast.loading('Autenticando...');
 
@@ -29,8 +32,11 @@ export default function Login() {
       // O useEffect redireciona
     } catch (err) {
       console.error(err);
-      toast.error(err.message || "Erro ao entrar.", { id: toastId });
+      const message = err.message || "Erro ao entrar.";
+      toast.error(message, { id: toastId });
+      setFormError(message);
       setLocalLoading(false);
+      emailRef.current?.focus();
     }
   };
 
@@ -72,65 +78,47 @@ export default function Login() {
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-5">
               
-              {/* Email */}
-              <div>
-                <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Email</label>
-                <input
-                  type="email"
-                  required
-                  autoFocus
-                  autoComplete="email"
-                  aria-label="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all"
-                  placeholder="seu@email.com"
-                />
-              </div>
+              <AuthField
+                ref={emailRef}
+                label="Email"
+                type="email"
+                inputMode="email"
+                required
+                autoFocus
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                error={formError}
+              />
 
-              {/* Senha */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Senha</label>
-                    <Link to="/forgot-password" className="text-xs font-bold text-brand hover:text-brand-dark transition-colors">
-                        Esqueceu a senha?
-                    </Link>
-                </div>
-                <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      autoComplete="current-password"
-                      aria-label="Senha"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all pr-12"
-                      placeholder="••••••••"
-                    />
-                    <button 
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                    >
-                        {showPassword ? (
-                            <EyeOff className="w-5 h-5" />
-                        ) : (
-                            <Eye className="w-5 h-5" />
-                        )}
-                    </button>
-                </div>
-              </div>
+              <AuthField
+                label="Senha"
+                passwordToggle
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                labelAside={(
+                  <Link to="/forgot-password" className="text-xs font-bold text-brand hover:text-brand-dark transition-colors min-h-[44px] inline-flex items-center">
+                    Esqueceu a senha?
+                  </Link>
+                )}
+              />
             </div>
 
             <button
               type="submit"
               disabled={localLoading}
+              aria-busy={localLoading}
               className="w-full flex items-center justify-center min-h-[56px] px-4 rounded-2xl shadow-lg shadow-brand/25 text-base font-black text-black bg-gradient-to-r from-brand to-[#FF9800] hover:shadow-[0_0_24px_rgba(255,193,7,0.4)] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {localLoading ? (
                   <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
                     Entrando...
                   </span>
               ) : 'Acessar Conta'}

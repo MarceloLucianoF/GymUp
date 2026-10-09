@@ -16,7 +16,7 @@ export const formatTonnage = (kg, unit = 't') => `${((Number(kg) || 0) / 1000).t
 // Hora HH:mm. Aceita Date, ms/ISO ou Timestamp do Firestore ({ seconds }).
 export const formatTime = (value, fallback = '') => {
   const date = toDate(value?.seconds ? value.seconds * 1000 : value);
-  return date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : fallback;
+  return date ? date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : fallback;
 };
 
 // Segundos -> "mm:ss" (ou "h:mm:ss" a partir de 1h).

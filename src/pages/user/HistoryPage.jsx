@@ -10,7 +10,8 @@ import { Clock, Dumbbell, Flame, Search, Trash2, ArrowUpRight } from 'lucide-rea
 import { SkeletonList } from '../../components/common/Skeleton';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
-import { formatDate as formatLocaleDate } from '../../utils/format';
+import { formatDate as formatLocaleDate, formatTonnage } from '../../utils/format';
+import ChipRow from '../../components/dashboard/ChipRow';
 
 export default function HistoryPage() {
   const { user } = useAuthContext();
@@ -86,6 +87,28 @@ export default function HistoryPage() {
       return filtered;
   }, [history, searchTerm, timeFilter]);
 
+  // Agrupamento por mês com totais
+  const groups = useMemo(() => {
+      const map = new Map();
+      filteredHistory.forEach(item => {
+          const d = new Date(item.date);
+          const valid = !Number.isNaN(d.getTime());
+          const key = valid ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : 'sem-data';
+          if (!map.has(key)) {
+              map.set(key, {
+                  key,
+                  label: valid ? formatLocaleDate(d, { month: 'long', year: 'numeric' }) : 'Sem data',
+                  items: [],
+                  volume: 0
+              });
+          }
+          const g = map.get(key);
+          g.items.push(item);
+          g.volume += Number(item.totalVolume) || 0;
+      });
+      return [...map.values()];
+  }, [filteredHistory]);
+
   // 3. UX DE DELEÇÃO (Toast Custom)
   const handleDeleteRequest = (itemId) => {
     toast((t) => (
@@ -157,7 +180,7 @@ export default function HistoryPage() {
         <MonthCalendar history={history} />
 
         {/* Barra de Filtros */}
-        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <div className="flex flex-col gap-3">
             <div className="flex-1 flex gap-2">
                 <div className="relative flex-1">
                     <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
@@ -166,21 +189,18 @@ export default function HistoryPage() {
                         placeholder="Buscar treino ou exercício..." aria-label="Buscar treino ou exercício" 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full input-brand-dark pl-10 pr-4 text-sm"
+                        className="w-full input-brand-dark !pl-10 pr-4 text-sm"
                     />
                 </div>
-                
-                <select 
-                    value={timeFilter}
-                    onChange={(e) => setTimeFilter(e.target.value)}
-                    aria-label="Filtrar por período" className="input-brand-dark text-sm font-bold px-4 min-h-[48px]"
-                >
-                    <option value="all">Sempre</option>
-                    <option value="month">Este Mês</option>
-                    <option value="last_month">Mês Passado</option>
-                </select>
             </div>
             
+            <ChipRow
+                label="Filtrar por período"
+                value={timeFilter}
+                onChange={setTimeFilter}
+                options={[{ value: 'all', label: 'Sempre' }, { value: 'month', label: 'Este mês' }, { value: 'last_month', label: 'Mês passado' }]}
+            />
+
             {/* Contador de Resultados */}
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">
                 {filteredHistory.length} {filteredHistory.length === 1 ? 'atividade encontrada' : 'atividades encontradas'}
@@ -195,8 +215,16 @@ export default function HistoryPage() {
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredHistory.map((item, idx) => {
+          <div className="space-y-6">
+           {groups.map(group => (
+            <section key={group.key} aria-label={group.label} className="space-y-4">
+              <div className="flex items-baseline justify-between px-1">
+                <h2 className="font-display text-lg font-black first-letter:uppercase text-gray-900 dark:text-white">{group.label}</h2>
+                <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                  {group.items.length} {group.items.length === 1 ? 'treino' : 'treinos'} • {formatTonnage(group.volume, ' t')}
+                </p>
+              </div>
+            {group.items.map((item, idx) => {
                 const dateObj = formatDate(item.date);
                 
                 return (
@@ -220,7 +248,7 @@ export default function HistoryPage() {
                             <h3 className="text-lg font-bold text-gray-800 dark:text-white leading-tight truncate pr-6">
                                 {item.trainingName || 'Treino Sem Nome'}
                             </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 first-letter:uppercase mb-3">
                                 {dateObj.full}
                             </p>
                             
@@ -298,6 +326,8 @@ export default function HistoryPage() {
                   </div>
                 );
             })}
+            </section>
+           ))}
           </div>
         )}
       </div>

@@ -144,3 +144,17 @@ de aceite. As cinco instruções de agentes detalham esses critérios.
 Foram adicionados `AGENTS.md`, este diagnóstico e cinco arquivos em `docs/agents/`.
 As fontes da aplicação e suas alterações preexistentes foram preservadas.
 O build local pode regenerar `build/`, que já é ignorado pelo Git.
+
+## Atualização — 09/10/2026 (fase 3 do frontend)
+
+**Resolvido**
+- Testes automatizados do frontend: 56 testes (utils, componentes comuns/ui, chat, auth, cálculo nutricional) rodando no CI.
+- Notas privadas do treinador movidas do `localStorage` para a coleção `coachNotes` (regras validadas em produção: aluno não lê, treinador só escreve para aluno vinculado).
+- Home do aluno: dados em `useStudentHome`, meta semanal configurável, conquistas, tendência de volume; histórico agrupado por mês e comparação com o treino anterior.
+- Formulários de autenticação acessíveis (`AuthField`), chat redesenhado.
+- CTA do modo Foco preso no meio da tela (ancestral com `transform`): corrigido com portal.
+
+**Pendente**
+- Rotacionar a chave NVIDIA (segue no histórico do git) e ativar o App Check.
+- Leitura de `trainings` aberta a qualquer usuário logado.
+- Pull-to-refresh por gesto; teste do ForgotPassword; testes de integração com emulador (requer Java).

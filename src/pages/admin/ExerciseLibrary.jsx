@@ -141,7 +141,7 @@ export default function ExerciseLibrary() {
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">{cap(ex.muscleGroup)}</span>
+                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:text-brand">{cap(ex.muscleGroup)}</span>
                       {ex.equipment && <span className="text-[11px] text-gray-500">{ex.equipment}</span>}
                     </div>
                   </div>

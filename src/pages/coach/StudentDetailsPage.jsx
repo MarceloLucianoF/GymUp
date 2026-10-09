@@ -4,6 +4,7 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from '
 import toast from 'react-hot-toast';
 import { ArrowLeft, MessageSquare, Clock, Scale, Dumbbell, ClipboardList, StickyNote, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { db } from '../../firebase/config';
+import { getCoachNote, saveCoachNote } from '../../services/coachNotes';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { formatDate, formatTonnage } from '../../utils/format';
 import StatCard from '../../components/ui/StatCard';
@@ -44,9 +45,6 @@ const weeklyFrequency = (checkIns, weeks = 8) => {
   return buckets;
 };
 
-// Notas: sem campo próprio nas regras, ficam apenas neste aparelho.
-const noteKey = (coachId, studentId) => `coachNotes:${coachId}:${studentId}`;
-const readNote = (key) => { try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } };
 
 function Delta({ value, unit = 'kg' }) {
   if (value === null) return <span className="text-gray-400">-</span>;
@@ -94,7 +92,12 @@ export default function StudentDetailsPage() {
         setHistory(historySnap.docs.map((d) => ({ id: d.id, ...d.data() })));
         setMeasurements(measSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
         setTrainings(trainingsSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.name).localeCompare(String(b.name))));
-        setNote(readNote(noteKey(uid, studentId)));
+        try {
+          const savedNote = await getCoachNote(uid, studentId);
+          if (!cancelled) setNote(savedNote);
+        } catch (noteError) {
+          console.warn('Notas indisponíveis:', noteError?.code || noteError);
+        }
       } catch (err) {
         console.error(err);
         if (!cancelled) {
@@ -109,10 +112,10 @@ export default function StudentDetailsPage() {
     return () => { cancelled = true; };
   }, [studentId, uid, navigate, reloadKey]);
 
-  const saveNote = useCallback(() => {
+  const saveNote = useCallback(async () => {
     try {
-      localStorage.setItem(noteKey(uid, studentId), note);
-      toast.success('Nota salva neste aparelho.');
+      await saveCoachNote(uid, studentId, note);
+      toast.success('Nota salva.');
     } catch (e) {
       toast.error('Não foi possível salvar a nota.');
     }
@@ -167,7 +170,7 @@ export default function StudentDetailsPage() {
                 <p className="truncate text-sm text-gray-500">{student.email}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <StatusBadge status={derived.status} />
-                  {student.goal && <span className="rounded-full bg-brand/15 px-2.5 py-1 text-[11px] font-bold text-brand">{student.goal}</span>}
+                  {student.goal && <span className="rounded-full bg-brand/15 px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-brand">{student.goal}</span>}
                 </div>
               </div>
             </div>
@@ -275,7 +278,7 @@ export default function StudentDetailsPage() {
         {tab === 'notes' && (
           <section role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" className="surface space-y-3 p-5">
             <h2 className="flex items-center gap-2 font-display text-base font-black text-gray-900 dark:text-white"><StickyNote className="h-5 w-5 text-brand" /> Notas privadas</h2>
-            <p className="text-xs text-gray-500">As regras atuais do Firestore não têm campo para notas do treinador. Elas ficam salvas somente neste aparelho/navegador.</p>
+            <p className="text-xs text-gray-500">Visíveis apenas para você: o aluno não tem acesso a estas notas.</p>
             <label htmlFor="coach-note" className={labelCls}>Observações sobre {student.displayName || 'o aluno'}</label>
             <textarea id="coach-note" rows={6} value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} py-3`} placeholder="Lesões, preferências, combinados..." />
             <button type="button" onClick={saveNote} className={btnPrimary}>Salvar nota</button>
