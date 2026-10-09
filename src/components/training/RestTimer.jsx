@@ -9,7 +9,7 @@ const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
     const { user } = useAuthContext();
     const { prefs, notify } = useNotifications(user?.uid);
 
-    // Ao terminar: notificação local se a aba estiver oculta (vibração/bipe já tocam no hook).
+    // Ao terminar: notificação local se a aba estiver oculta (vibração e bipe respeitam as preferências do perfil, aplicadas no hook).
     const handleFinish = useCallback(() => {
         if (prefs.restDone && typeof document !== 'undefined' && document.hidden) {
             notify('Descanso concluído', 'Próxima série!', { tag: 'rest-done' });
@@ -17,7 +17,7 @@ const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
         onFinish();
     }, [prefs.restDone, notify, onFinish]);
 
-    const { remaining, isPaused, togglePause } = useRestTimer({ endTime, onFinish: handleFinish, onAdjust });
+    const { remaining, isPaused, togglePause } = useRestTimer({ endTime, onFinish: handleFinish, onAdjust, vibrate: prefs.vibrate, sound: prefs.sound });
 
     const totalDuration = duration || 60;
 

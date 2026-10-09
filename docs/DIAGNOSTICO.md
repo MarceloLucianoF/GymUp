@@ -162,6 +162,6 @@ O build local pode regenerar `build/`, que já é ignorado pelo Git.
 ## Atualização — fase 4 (PWA, onboarding, evolução, notificações)
 
 - **PWA:** manifest com atalhos, service worker versionado (shell + stale-while-revalidate; Firestore/Auth/googleapis nunca em cache), banner de atualização, convite de instalação (Android/iOS) e faixa offline.
-- **Notificações:** apenas locais (descanso concluído com aba oculta, lembrete ao abrir o app). **Não há push em background** (exigiria servidor/Blaze). Vibração/som do fim do descanso ignoram ainda as preferências.
+- **Notificações:** apenas locais (descanso concluído com aba oculta, lembrete ao abrir o app). **Não há push em background** (exigiria servidor/Blaze)..
 - **Onboarding:** `/onboarding` em 5 passos para alunos novos (sem `goal` e sem `onboardedAt`); regras validam `experience`, `weeklyGoal` (2–7) e `onboardedAt`.
 - **Evolução por exercício:** `/analytics` (lista) e `/analytics/:exercicio` com carga, 1RM (Epley), volume, recordes, tendência e próxima carga sugerida (progressão dupla 8–12).
