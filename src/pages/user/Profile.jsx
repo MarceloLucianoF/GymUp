@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import { ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
 import { getPublicCoach } from '../../services/coachProfile';
+import NotificationSettings from '../../components/pwa/NotificationSettings';
 
 export default function Profile() {
   const { confirm, dialog } = useConfirm();
@@ -393,6 +394,8 @@ export default function Profile() {
                 </form>
             </div>
         </div>
+
+        <NotificationSettings uid={user.uid} />
 
         {/* Rodapé Informativo */}
         <div className="text-center mt-8 text-gray-500 dark:text-gray-400 text-xs">

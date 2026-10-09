@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Timer, SkipForward, Pause, Play } from 'lucide-react';
 import { useRestTimer } from '../../hooks/useRestTimer';
+import { useAuthContext } from '../../hooks/AuthContext';
+import { useNotifications } from '../../hooks/useNotifications';
 
 // Overlay de descanso (tela cheia). Não fecha por clique fora para evitar pulos acidentais.
 const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
-    const { remaining, isPaused, togglePause } = useRestTimer({ endTime, onFinish, onAdjust });
+    const { user } = useAuthContext();
+    const { prefs, notify } = useNotifications(user?.uid);
+
+    // Ao terminar: notificação local se a aba estiver oculta (vibração/bipe já tocam no hook).
+    const handleFinish = useCallback(() => {
+        if (prefs.restDone && typeof document !== 'undefined' && document.hidden) {
+            notify('Descanso concluído', 'Próxima série!', { tag: 'rest-done' });
+        }
+        onFinish();
+    }, [prefs.restDone, notify, onFinish]);
+
+    const { remaining, isPaused, togglePause } = useRestTimer({ endTime, onFinish: handleFinish, onAdjust });
 
     const totalDuration = duration || 60;
 

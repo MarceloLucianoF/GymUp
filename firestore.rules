@@ -49,12 +49,21 @@ service cloud.firestore {
         && validCoachLink(data, uid);
     }
 
+    // Campos do onboarding: valores restritos a conjuntos conhecidos.
+    function validProfileExtras(data) {
+      return data.get('experience', 'iniciante') in ['iniciante', 'intermediario', 'avancado']
+        && data.get('weeklyGoal', 4) is int
+        && data.get('weeklyGoal', 4) >= 2 && data.get('weeklyGoal', 4) <= 7
+        && data.get('onboardedAt', '') is string;
+    }
+
     function ownProfileChanges() {
       let fields = request.resource.data.diff(resource.data).affectedKeys();
-      return fields.hasOnly([
+      return (fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
-        'updatedAt', 'lastWorkoutDate', 'coachId'
-      ]) || (isCoach() && fields.hasOnly([
+        'updatedAt', 'lastWorkoutDate', 'coachId',
+        'experience', 'weeklyGoal', 'onboardedAt'
+      ]) && validProfileExtras(request.resource.data)) || (isCoach() && fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
         'updatedAt', 'lastWorkoutDate', 'bio', 'phone', 'pixKey', 'defaultMonthlyFee'
       ]));
