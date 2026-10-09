@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "../firebase/config"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import { syncPublicCoachProfile } from "../services/coachProfile";
 
 const AuthContext = createContext();
 
@@ -98,6 +99,7 @@ export function AuthProvider({ children }) {
                     const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
                     if (docSnap.exists()) {
                         setUserProfile(docSnap.data());
+                        syncPublicCoachProfile(firebaseUser.uid, docSnap.data()).catch(() => {});
                     }
                 } catch (error) {
                     console.error("Erro ao buscar perfil:", error);

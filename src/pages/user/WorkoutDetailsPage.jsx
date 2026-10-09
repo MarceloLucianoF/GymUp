@@ -32,12 +32,12 @@ export default function WorkoutDetailsPage() {
     fetchDetails();
   }, [checkInId]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8" role="status" aria-label="Carregando"><div className="max-w-3xl mx-auto space-y-4"><div className="skeleton-shimmer h-14 rounded-2xl"></div><div className="grid grid-cols-3 gap-3">{[0,1,2].map(i => <div key={i} className="skeleton-shimmer h-24 rounded-3xl"></div>)}</div><div className="skeleton-shimmer h-56 rounded-3xl"></div></div></div>;
 
   if (!workout) return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center text-gray-500">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] flex flex-col items-center justify-center text-gray-500">
         <p className="text-xl">Treino não encontrado.</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-blue-500 hover:underline">Voltar</button>
+        <button onClick={() => navigate(-1)} className="mt-4 min-h-[44px] px-5 rounded-2xl btn-primary-gradient text-sm">Voltar</button>
     </div>
   );
 
@@ -46,34 +46,34 @@ export default function WorkoutDetailsPage() {
   const durationMinutes = Math.floor(workout.duration / 60);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 pb-32 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 pb-32 transition-colors">
       <div className="max-w-3xl mx-auto space-y-6">
         
         {/* Header com Botão Voltar */}
-        <div className="flex items-center gap-4">
-            <button onClick={() => navigate(-1)} className="bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-white transition-colors flex items-center justify-center">
-                <ArrowLeft className="w-5 h-5" />
+        <div className="flex items-center gap-4 animate-fade-up">
+            <button onClick={() => navigate(-1)} aria-label="Voltar" className="pressable surface !rounded-full w-11 h-11 shrink-0 text-gray-700 dark:text-white flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </button>
             <div>
-                <h1 className="text-2xl font-black text-gray-800 dark:text-white leading-tight">{workout.trainingName}</h1>
-                <p className="text-sm text-gray-500 capitalize">{date}</p>
+                <h1 className="font-display text-2xl font-black text-gray-900 dark:text-white leading-tight">{workout.trainingName}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{date}</p>
             </div>
         </div>
 
         {/* Resumo Geral (Stats) */}
         <div className="grid grid-cols-3 gap-3">
-            <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
-                <Clock className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
+            <div className="surface p-4 text-center flex flex-col items-center justify-center animate-scale-in">
+                <Clock className="w-6 h-6 text-brand mb-1" />
                 <p className="text-[10px] uppercase font-bold text-gray-400">Duração</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{durationMinutes} min</p>
             </div>
-            <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
-                <Scale className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
+            <div className="surface p-4 text-center flex flex-col items-center justify-center animate-scale-in">
+                <Scale className="w-6 h-6 text-brand mb-1" />
                 <p className="text-[10px] uppercase font-bold text-gray-400">Volume</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{formatTonnage(workout.totalVolume, ' ton')}</p>
             </div>
-            <div className="card-premium-glass p-4 text-center flex flex-col items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
+            <div className="surface p-4 text-center flex flex-col items-center justify-center animate-scale-in">
+                <CheckCircle2 className="w-6 h-6 text-brand mb-1" />
                 <p className="text-[10px] uppercase font-bold text-gray-400">Exercícios</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{workout.exercises?.length || 0}</p>
             </div>
@@ -84,11 +84,11 @@ export default function WorkoutDetailsPage() {
             <h3 className="font-bold text-gray-700 dark:text-gray-300 ml-1 text-sm uppercase tracking-wider">Detalhes da Sessão</h3>
             
             {workout.exercises?.map((ex, i) => (
-                <div key={i} className="card-premium-glass p-5">
-                    <div className="flex items-center gap-4 mb-4 border-b border-gray-50 dark:border-gray-700/50 pb-3">
+                <div key={i} style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }} className="surface animate-fade-up p-4 sm:p-5">
+                    <div className="flex items-center gap-4 mb-4 border-b border-gray-100 dark:border-white/10 pb-3">
                         <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden flex items-center justify-center">
                              {ex.machineImage ? (
-                                <img src={ex.machineImage} className="w-full h-full object-cover" alt="" />
+                                <img src={ex.machineImage} className="w-full h-full object-cover" alt="" loading="lazy" />
                              ) : (
                                 <Dumbbell className="w-6 h-6 text-gray-400 dark:text-gray-500" />
                              )}
@@ -108,7 +108,7 @@ export default function WorkoutDetailsPage() {
 
                     <div className="space-y-2">
                         {ex.sets?.map((set, j) => (
-                            <div key={j} className="grid grid-cols-4 gap-2 text-center items-center py-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg text-sm">
+                            <div key={j} className="grid grid-cols-4 gap-2 text-center items-center min-h-[40px] py-2 bg-gray-50 dark:bg-white/5 rounded-xl text-sm">
                                 <span className="font-mono text-gray-400 text-xs">{j + 1}</span>
                                 <span className="font-black text-gray-800 dark:text-white">{set.weight || '-'}</span>
                                 <span className="font-bold text-gray-600 dark:text-gray-300">{set.reps || '-'}</span>

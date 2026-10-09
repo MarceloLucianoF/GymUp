@@ -1,190 +1,293 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
-import { ArrowLeft, MessageSquare, Clock, Scale } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Clock, Scale, Dumbbell, ClipboardList, StickyNote, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { db } from '../../firebase/config';
+import { useAuthContext } from '../../hooks/AuthContext';
 import { formatDate, formatTonnage } from '../../utils/format';
-import { SkeletonList } from '../../components/common/Skeleton';
+import StatCard from '../../components/ui/StatCard';
+import Reveal from '../../components/ui/Reveal';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
+import Avatar from '../../components/coach/Avatar';
+import BarChart from '../../components/coach/BarChart';
+import LineChart from '../../components/coach/LineChart';
+import StatusBadge from '../../components/coach/StatusBadge';
+import Tabs from '../../components/coach/Tabs';
+import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
+import PageSkeleton from '../../components/coach/PageSkeleton';
+import { chatState, studentStatus, timeAgo, startOfDay, toDate, DAY_MS } from '../../components/coach/helpers';
+import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
-// Componente simples de Gráfico de Barras (Volume)
-const VolumeChart = ({ data }) => {
-    if (!data || data.length === 0) return <div className="text-center text-gray-400 text-xs py-10">Sem dados suficientes</div>;
-    
-    const maxVol = Math.max(...data.map(d => d.totalVolume));
-    
-    return (
-        <div className="flex items-end justify-between h-32 gap-2 mt-4">
-            {data.slice(0, 14).reverse().map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 bg-black text-white text-[10px] px-2 py-1 rounded whitespace-nowrap transition-opacity pointer-events-none z-10">
-                        {formatDate(d.date)} - {formatTonnage(d.totalVolume)}
-                    </div>
-                    
-                    <div 
-                        className="w-full bg-blue-500 rounded-t-sm hover:bg-blue-400 transition-all"
-                        style={{ height: `${(d.totalVolume / maxVol) * 100}%`, minHeight: '4px' }}
-                    ></div>
-                    <span className="text-[9px] text-gray-400">{new Date(d.date).getDate()}</span>
-                </div>
-            ))}
-        </div>
-    );
+const TABS = [
+  { id: 'summary', label: 'Resumo' },
+  { id: 'workouts', label: 'Treinos' },
+  { id: 'progress', label: 'Evolução' },
+  { id: 'notes', label: 'Notas' }
+];
+
+// Treinos por semana (últimas `weeks` semanas, mais antiga primeiro).
+const weeklyFrequency = (checkIns, weeks = 8) => {
+  const today = startOfDay();
+  const buckets = Array.from({ length: weeks }, (_, i) => {
+    const end = new Date(today.getTime() - (weeks - 1 - i) * 7 * DAY_MS);
+    return { end, label: end.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), value: 0 };
+  });
+  checkIns.forEach((c) => {
+    const d = toDate(c.date);
+    if (!d) return;
+    const weeksAgo = Math.floor((today.getTime() + DAY_MS - 1 - d.getTime()) / (7 * DAY_MS));
+    const idx = weeks - 1 - weeksAgo;
+    if (idx >= 0 && idx < weeks) buckets[idx].value += 1;
+  });
+  return buckets;
 };
 
+// Notas: sem campo próprio nas regras, ficam apenas neste aparelho.
+const noteKey = (coachId, studentId) => `coachNotes:${coachId}:${studentId}`;
+const readNote = (key) => { try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } };
+
+function Delta({ value, unit = 'kg' }) {
+  if (value === null) return <span className="text-gray-400">-</span>;
+  const Icon = value < 0 ? TrendingDown : value > 0 ? TrendingUp : Minus;
+  const color = value === 0 ? 'text-gray-500' : value < 0 ? 'text-emerald-500' : 'text-amber-500';
+  return <span className={`inline-flex items-center gap-1 font-bold ${color}`}><Icon className="h-4 w-4" aria-hidden="true" />{value > 0 ? '+' : ''}{value.toFixed(1)}{unit}</span>;
+}
+
 export default function StudentDetailsPage() {
-    const { studentId } = useParams();
-    const navigate = useNavigate();
-    
-    const [student, setStudent] = useState(null);
-    const [history, setHistory] = useState([]);
-    const [stats, setStats] = useState({ totalWorkouts: 0, lastWorkout: null, avgVolume: 0 });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-    const [reloadKey, setReloadKey] = useState(0);
+  const { studentId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuthContext();
 
-    useEffect(() => {
-        const fetchDetails = async () => {
-            setError(false);
-            try {
-                // 1. Dados do Aluno
-                const userDoc = await getDoc(doc(db, 'users', studentId));
-                if (!userDoc.exists()) {
-                    toast.error("Aluno não encontrado");
-                    navigate('/coach/students');
-                    return;
-                }
-                setStudent({ id: userDoc.id, ...userDoc.data() });
+  const [student, setStudent] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [measurements, setMeasurements] = useState([]);
+  const [trainings, setTrainings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [tab, setTab] = useState('summary');
+  const [assigning, setAssigning] = useState(false);
+  const [note, setNote] = useState('');
 
-                // 2. Histórico de Treinos (Últimos 30)
-                const qHistory = query(
-                    collection(db, 'checkIns'), 
-                    where('userId', '==', studentId),
-                    orderBy('date', 'desc'),
-                    limit(30)
-                );
-                const historySnap = await getDocs(qHistory);
-                const historyList = historySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                
-                setHistory(historyList);
+  const uid = user?.uid;
 
-                // 3. Cálculos Rápidos
-                if (historyList.length > 0) {
-                    const totalVol = historyList.reduce((acc, curr) => acc + (curr.totalVolume || 0), 0);
-                    setStats({
-                        totalWorkouts: historyList.length,
-                        lastWorkout: historyList[0].date,
-                        avgVolume: Math.round(totalVol / historyList.length)
-                    });
-                }
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setError(false);
+      try {
+        const userDoc = await getDoc(doc(db, 'users', studentId));
+        if (!userDoc.exists()) {
+          toast.error('Aluno não encontrado');
+          navigate('/coach/students');
+          return;
+        }
+        const [historySnap, measSnap, trainingsSnap] = await Promise.all([
+          getDocs(query(collection(db, 'checkIns'), where('userId', '==', studentId), orderBy('date', 'desc'), limit(60))),
+          getDocs(query(collection(db, 'measurements'), where('userId', '==', studentId), orderBy('date', 'asc'))),
+          getDocs(query(collection(db, 'trainings'), where('coachId', '==', uid)))
+        ]);
+        if (cancelled) return;
+        setStudent({ id: userDoc.id, ...userDoc.data() });
+        setHistory(historySnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setMeasurements(measSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setTrainings(trainingsSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.name).localeCompare(String(b.name))));
+        setNote(readNote(noteKey(uid, studentId)));
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setError(true);
+          toast.error('Erro ao carregar detalhes.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    if (uid) load();
+    return () => { cancelled = true; };
+  }, [studentId, uid, navigate, reloadKey]);
 
-            } catch (error) {
-                console.error(error);
-                setError(true);
-                toast.error("Erro ao carregar detalhes.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchDetails();
-    }, [studentId, navigate, reloadKey]);
+  const saveNote = useCallback(() => {
+    try {
+      localStorage.setItem(noteKey(uid, studentId), note);
+      toast.success('Nota salva neste aparelho.');
+    } catch (e) {
+      toast.error('Não foi possível salvar a nota.');
+    }
+  }, [uid, studentId, note]);
 
-    if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><SkeletonList count={4} itemClassName="h-24 w-full" /></div>;
+  const derived = useMemo(() => {
+    const now = new Date();
+    const last30 = history.filter((c) => now - new Date(c.date) <= 30 * DAY_MS);
+    const volumes = history.filter((c) => c.totalVolume > 0);
+    const avgVolume = volumes.length ? volumes.reduce((a, c) => a + c.totalVolume, 0) / volumes.length : 0;
+    const lastWorkout = history[0]?.date || student?.lastWorkoutDate || null;
+    const volumeSeries = history.slice(0, 10).reverse().map((c) => ({
+      label: String(toDate(c.date)?.getDate() ?? ''), hint: formatDate(c.date), value: c.totalVolume || 0
+    }));
+    const weights = measurements.filter((m) => Number.isFinite(Number(m.weight)));
+    const first = weights[0];
+    const latest = weights[weights.length - 1];
+    return {
+      workouts30: last30.length,
+      avgVolume,
+      lastWorkout,
+      status: studentStatus(lastWorkout, now),
+      frequency: weeklyFrequency(history),
+      volumeSeries,
+      weightSeries: weights.map((m) => ({ label: formatDate(m.date, { day: '2-digit', month: '2-digit' }), value: Number(m.weight) })),
+      firstWeight: first ? Number(first.weight) : null,
+      latestWeight: latest ? Number(latest.weight) : null,
+      photos: measurements.filter((m) => m.photo).slice(-4).reverse()
+    };
+  }, [history, measurements, student]);
 
-    if (error) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><ErrorState onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
+  if (loading) return <div className={pageCls}><div className="mx-auto max-w-5xl"><PageSkeleton cards={4} /></div></div>;
+  if (error) return <div className={pageCls}><ErrorState onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }} /></div>;
 
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
-            <div className="max-w-5xl mx-auto space-y-6">
-                
-                {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
-                    <button onClick={() => navigate('/coach/students')} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 transition-colors flex items-center justify-center">
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div className="flex items-center gap-4 flex-1">
-                        <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md overflow-hidden">
-                            {student.photoURL ? <img src={student.photoURL} className="w-full h-full object-cover" alt=""/> : student.displayName?.[0]}
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-black text-gray-800 dark:text-white">{student.displayName}</h1>
-                            <p className="text-sm text-gray-500">{student.email}</p>
-                        </div>
-                    </div>
-                    <div className="hidden md:block">
-                        <button 
-                            onClick={() => navigate('/coach/chat', { state: { targetUser: { uid: student.id, displayName: student.displayName, photoURL: student.photoURL } } })}
-                            className="bg-brand hover:bg-brand-dark text-black px-6 py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2"
-                        >
-                            <MessageSquare className="w-4 h-4 text-white" /> Mensagem
-                        </button>
-                    </div>
+  const currentTraining = trainings.find((t) => t.id === student.currentTrainingId);
+  const weightDelta = derived.firstWeight !== null && derived.latestWeight !== null ? derived.latestWeight - derived.firstWeight : null;
+  const currentWeight = derived.latestWeight ?? (Number(student.weight) || null);
+
+  return (
+    <div className={pageCls}>
+      <div className="mx-auto max-w-5xl space-y-5">
+        <button type="button" onClick={() => navigate('/coach/students')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-500 hover:text-brand">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Alunos
+        </button>
+
+        <header className="surface aurora-bg animate-fade-up overflow-hidden p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <Avatar name={student.displayName} src={student.photoURL} size="xl" />
+              <div className="min-w-0">
+                <h1 className="truncate font-display text-2xl font-black text-gray-900 dark:text-white sm:text-3xl">{student.displayName || 'Aluno'}</h1>
+                <p className="truncate text-sm text-gray-500">{student.email}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <StatusBadge status={derived.status} />
+                  {student.goal && <span className="rounded-full bg-brand/15 px-2.5 py-1 text-[11px] font-bold text-brand">{student.goal}</span>}
                 </div>
-
-                {/* Cards de KPIs */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Treinos Realizados</p>
-                        <h3 className="text-2xl font-black text-gray-800 dark:text-white mt-1">{stats.totalWorkouts}</h3>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Volume Médio</p>
-                        <h3 className="text-2xl font-black text-gray-800 dark:text-white mt-1">{formatTonnage(stats.avgVolume)}</h3>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Peso Atual</p>
-                        <h3 className="text-2xl font-black text-gray-800 dark:text-white mt-1">{student.weight || '--'} <span className="text-sm text-gray-400">kg</span></h3>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Último Treino</p>
-                        <h3 className="text-xl font-black text-gray-800 dark:text-white mt-1 truncate">
-                            {formatDate(stats.lastWorkout, undefined, 'Nunca')}
-                        </h3>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    {/* Gráfico de Evolução de Volume */}
-                    <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h3 className="font-bold text-gray-800 dark:text-white mb-4">Evolução de Carga (Volume Total)</h3>
-                        <VolumeChart data={history} />
-                    </div>
-
-                    {/* Histórico Recente (Lista) */}
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 h-full max-h-[500px] overflow-y-auto">
-                        <h3 className="font-bold text-gray-800 dark:text-white mb-4">Histórico Recente</h3>
-                        
-                        {history.length === 0 ? (
-                            <EmptyState title="Nenhum treino registrado." />
-                        ) : (
-                            <div className="space-y-4">
-                                {history.map(item => (
-                                    <div key={item.id} className="flex items-start gap-3 pb-4 border-b border-gray-50 dark:border-gray-700 last:border-0 last:pb-0">
-                                        <div className="mt-1">
-                                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start">
-                                                <h4 className="font-bold text-sm text-gray-800 dark:text-white">{item.trainingName}</h4>
-                                                <span className="text-[10px] text-gray-400">{formatDate(item.date)}</span>
-                                            </div>
-                                            <div className="flex gap-3 mt-1 text-xs text-gray-500 font-mono items-center">
-                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-gray-400" /> {Math.floor(item.duration / 60)}min</span>
-                                                <span className="flex items-center gap-1"><Scale className="w-3 h-3 text-gray-400" /> {formatTonnage(item.totalVolume)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
+              </div>
             </div>
-        </div>
-    );
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <button type="button" onClick={() => navigate('/coach/chat', { state: chatState({ ...student, uid: student.id }) })} className={btnPrimary}><MessageSquare className="h-4 w-4" /> Mensagem</button>
+              <button type="button" onClick={() => setAssigning(true)} className={btnGhost}><ClipboardList className="h-4 w-4" /> Ficha</button>
+            </div>
+          </div>
+        </header>
+
+        <Tabs tabs={TABS} value={tab} onChange={setTab} />
+
+        {tab === 'summary' && (
+          <div role="tabpanel" id="panel-summary" aria-labelledby="tab-summary" className="space-y-5">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard icon={Dumbbell} label="Treinos em 30 dias" value={derived.workouts30} accent="brand" />
+              <StatCard icon={Scale} label="Volume médio (t)" value={derived.avgVolume / 1000} decimals={1} accent="blue" />
+              <StatCard icon={Scale} label="Peso atual (kg)" value={currentWeight ?? '--'} decimals={1} accent="green" />
+              <StatCard icon={Clock} label="Último treino" value={derived.lastWorkout ? timeAgo(derived.lastWorkout) : 'Nunca'} accent="red" />
+            </div>
+            <section className="surface flex items-center gap-3 p-4">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/15 text-brand"><ClipboardList className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Ficha atual</p>
+                <p className="truncate font-bold text-gray-900 dark:text-white">{student.currentTrainingId ? (currentTraining?.name || 'Ficha de outro autor') : 'Sem ficha ativa'}</p>
+              </div>
+              <button type="button" onClick={() => setAssigning(true)} className={btnGhost}>{student.currentTrainingId ? 'Trocar' : 'Atribuir'}</button>
+            </section>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <Reveal>
+                <section className="surface h-full p-5">
+                  <h2 className="mb-4 font-display text-base font-black text-gray-900 dark:text-white">Frequência semanal</h2>
+                  <BarChart data={derived.frequency} ariaLabel="Treinos por semana" />
+                </section>
+              </Reveal>
+              <Reveal delay={80}>
+                <section className="surface h-full p-5">
+                  <h2 className="mb-4 font-display text-base font-black text-gray-900 dark:text-white">Volume por treino</h2>
+                  {derived.volumeSeries.length === 0 ? <EmptyState title="Sem dados de volume" /> : (
+                    <BarChart data={derived.volumeSeries} formatValue={(v) => formatTonnage(v)} ariaLabel="Volume dos últimos treinos" />
+                  )}
+                </section>
+              </Reveal>
+            </div>
+          </div>
+        )}
+
+        {tab === 'workouts' && (
+          <section role="tabpanel" id="panel-workouts" aria-labelledby="tab-workouts" className="surface p-5">
+            <h2 className="mb-4 font-display text-base font-black text-gray-900 dark:text-white">Linha do tempo</h2>
+            {history.length === 0 ? <EmptyState icon={Dumbbell} title="Nenhum treino registrado." /> : (
+              <ol className="relative space-y-1 border-l-2 border-brand/30 pl-5">
+                {history.map((item, i) => (
+                  <li key={item.id} className="relative animate-fade-up pb-4" style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
+                    <span className="absolute -left-[27px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-brand dark:border-gray-900" aria-hidden="true" />
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                      <h3 className="font-bold text-gray-900 dark:text-white">{item.trainingName || 'Treino'}</h3>
+                      <span className="text-xs text-gray-400">{formatDate(item.date)} · {timeAgo(item.date)}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                      <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden="true" />{Math.floor((item.duration || 0) / 60)} min</span>
+                      <span className="inline-flex items-center gap-1"><Scale className="h-3 w-3" aria-hidden="true" />{formatTonnage(item.totalVolume)}</span>
+                      {Array.isArray(item.exercises) && <span className="inline-flex items-center gap-1"><Dumbbell className="h-3 w-3" aria-hidden="true" />{item.exercises.length} exercícios</span>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        )}
+
+        {tab === 'progress' && (
+          <div role="tabpanel" id="panel-progress" aria-labelledby="tab-progress" className="space-y-5">
+            <section className="surface p-5">
+              <h2 className="mb-4 font-display text-base font-black text-gray-900 dark:text-white">Peso corporal</h2>
+              {derived.weightSeries.length === 0 ? (
+                <EmptyState icon={Scale} title="Sem medidas registradas." description="O aluno registra o peso na tela de medidas." />
+              ) : (
+                <>
+                  {derived.weightSeries.length >= 2 && <LineChart data={derived.weightSeries} unit="kg" ariaLabel="Evolução do peso" />}
+                  <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
+                    <div className="rounded-2xl bg-gray-100 p-3 dark:bg-white/5"><dt className="text-[11px] font-bold uppercase text-gray-500">Inicial</dt><dd className="font-display text-lg font-black text-gray-900 dark:text-white">{derived.firstWeight?.toFixed(1)} kg</dd></div>
+                    <div className="rounded-2xl bg-gray-100 p-3 dark:bg-white/5"><dt className="text-[11px] font-bold uppercase text-gray-500">Atual</dt><dd className="font-display text-lg font-black text-gray-900 dark:text-white">{derived.latestWeight?.toFixed(1)} kg</dd></div>
+                    <div className="rounded-2xl bg-gray-100 p-3 dark:bg-white/5"><dt className="text-[11px] font-bold uppercase text-gray-500">Variação</dt><dd className="font-display text-lg"><Delta value={weightDelta} /></dd></div>
+                  </dl>
+                </>
+              )}
+            </section>
+            {derived.photos.length > 0 && (
+              <section className="surface p-5">
+                <h2 className="mb-4 font-display text-base font-black text-gray-900 dark:text-white">Fotos de progresso</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {derived.photos.map((m) => (
+                    <figure key={m.id}>
+                      <img src={m.photo} alt={`Progresso em ${formatDate(m.date)}`} loading="lazy" className="aspect-square w-full rounded-2xl object-cover" />
+                      <figcaption className="mt-1 text-center text-[11px] text-gray-500">{formatDate(m.date)}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
+        {tab === 'notes' && (
+          <section role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" className="surface space-y-3 p-5">
+            <h2 className="flex items-center gap-2 font-display text-base font-black text-gray-900 dark:text-white"><StickyNote className="h-5 w-5 text-brand" /> Notas privadas</h2>
+            <p className="text-xs text-gray-500">As regras atuais do Firestore não têm campo para notas do treinador. Elas ficam salvas somente neste aparelho/navegador.</p>
+            <label htmlFor="coach-note" className={labelCls}>Observações sobre {student.displayName || 'o aluno'}</label>
+            <textarea id="coach-note" rows={6} value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} py-3`} placeholder="Lesões, preferências, combinados..." />
+            <button type="button" onClick={saveNote} className={btnPrimary}>Salvar nota</button>
+          </section>
+        )}
+      </div>
+
+      {assigning && (
+        <AssignTrainingModal student={student} trainings={trainings} onClose={() => setAssigning(false)}
+          onAssigned={(trainingId) => setStudent((s) => ({ ...s, currentTrainingId: trainingId }))}
+          onCreateTraining={() => navigate('/admin/trainings')} />
+      )}
+    </div>
+  );
 }

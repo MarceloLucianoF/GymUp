@@ -1,338 +1,173 @@
 import React, { useState } from 'react';
-import { useAuthContext } from '../../hooks/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Users, Activity, Target, AlertTriangle, Wallet, PiggyBank, MessageSquare, Eye, Plus, UserPlus, DollarSign, Trophy, Flame, ArrowRight, Smile } from 'lucide-react';
+import { useAuthContext } from '../../hooks/AuthContext';
 import { useCoachDashboard } from '../../hooks/useCoachDashboard';
-import toast from 'react-hot-toast';
-import { X, Megaphone, ClipboardList, BookOpen, Zap, Users, DollarSign, Target, AlertTriangle, AlertCircle, MessageSquare, User, Settings, Flame, Smile, ArrowRight } from 'lucide-react';
 import { formatTonnage } from '../../utils/format';
-import Modal from '../../components/common/Modal';
-import { formatTime } from '../../utils/format';
+import PageHeader from '../../components/ui/PageHeader';
+import StatCard from '../../components/ui/StatCard';
+import Reveal from '../../components/ui/Reveal';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
+import Avatar from '../../components/coach/Avatar';
+import BarChart from '../../components/coach/BarChart';
+import InviteModal from '../../components/coach/InviteModal';
+import PageSkeleton from '../../components/coach/PageSkeleton';
+import { chatState, timeAgo } from '../../components/coach/helpers';
+import { btnPrimary, btnGhost, pageCls } from '../../components/coach/styles';
 
-// --- COMPONENTE: MODAL DE CONVITE ---
-const InviteModal = ({ isOpen, onClose, coachCode }) => {
-    if (!isOpen) return null;
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(coachCode);
-        toast.success("Código copiado!");
-    };
-
-    const handleCopyLink = () => {
-        const link = `${window.location.origin}/register?coach=${coachCode}`;
-        navigator.clipboard.writeText(link);
-        toast.success("Link copiado!");
-    };
-
-    return (
-        <Modal onClose={onClose} label="Vincular aluno" className="w-full max-w-md">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative border border-gray-100 dark:border-gray-700">
-                <button aria-label="Fechar" onClick={onClose} className="absolute top-4 right-4 text-gray-450 hover:text-gray-650 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-center">
-                    <X className="w-4 h-4" />
-                </button>
-                
-                <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Megaphone className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h3 className="text-xl font-black text-gray-800 dark:text-white">Convidar Alunos</h3>
-                    <p className="text-sm text-gray-500 mt-1">Envie este código para seu aluno se vincular a você.</p>
-                </div>
-
-                <div className="space-y-4">
-                    <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Seu Código (UID)</p>
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <code className="text-xl font-mono font-bold text-blue-600 dark:text-blue-400 tracking-wider select-all break-all">
-                                {coachCode}
-                            </code>
-                        </div>
-                        <button 
-                            onClick={handleCopy}
-                            className="text-xs font-bold text-gray-500 hover:text-blue-500 flex items-center justify-center gap-1.5 w-full mt-2"
-                        >
-                            <ClipboardList className="w-3.5 h-3.5" /> Tocar para copiar
-                        </button>
-                    </div>
-
-                    <button 
-                        onClick={handleCopyLink}
-                        className="w-full bg-brand hover:bg-brand-dark text-black font-bold py-3 rounded-xl shadow-lg shadow-brand/20 transition-transform active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        <Megaphone className="w-4 h-4 text-white" /> Copiar Link de Cadastro
-                    </button>
-                </div>
-            </div>
-        </Modal>
-    );
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
 };
 
-// --- SUB-COMPONENTES DE UI ---
-
-const StatCard = ({ title, value, subtitle, icon: IconComponent, color, trend }) => (
-  <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:border-blue-200 transition-colors">
-    <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform ${color}`}>
-        {IconComponent && <IconComponent className="w-12 h-12" />}
-    </div>
-    <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{title}</p>
-        <h3 className="text-2xl font-black text-gray-800 dark:text-white mt-1">{value}</h3>
-        {subtitle && <p className={`text-[10px] mt-1 font-bold ${trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-gray-400'}`}>{subtitle}</p>}
-    </div>
+const SectionTitle = ({ icon: Icon, children, action }) => (
+  <div className="mb-4 flex items-center justify-between gap-2">
+    <h2 className="flex items-center gap-2 font-display text-base font-black text-gray-900 dark:text-white">
+      {Icon && <Icon className="h-5 w-5 text-brand" aria-hidden="true" />}{children}
+    </h2>
+    {action}
   </div>
 );
-
-const SectionHeader = ({ title, actionLabel, onAction }) => (
-    <div className="flex justify-between items-center mb-4 px-1">
-        <h3 className="font-bold text-gray-800 dark:text-white text-md flex items-center gap-2">{title}</h3>
-        {actionLabel && (
-            <button onClick={onAction} className="text-[10px] font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 px-2 py-1 rounded-lg transition-colors flex items-center gap-1">
-                {actionLabel} <ArrowRight className="w-3 h-3" />
-            </button>
-        )}
-    </div>
-);
-
-// --- COMPONENTE PRINCIPAL ---
 
 export default function CoachHome() {
   const { user } = useAuthContext();
   const navigate = useNavigate();
-  
-  const { stats, recentActivity, studentsAtRisk, loading } = useCoachDashboard(user);
-  
-  const [focusMode, setFocusMode] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const { stats, weekly, ranking, studentsAtRisk, recentActivity, loading, error, reload } = useCoachDashboard(user);
+  const [showInvite, setShowInvite] = useState(false);
 
-  // Ação: Abrir Chat Interno
-  const handleOpenChat = (student) => {
-      navigate('/coach/chat', { 
-          state: { 
-              targetUser: { 
-                  uid: student.uid, 
-                  displayName: student.displayName || 'Aluno',
-                  photoURL: student.photoURL 
-              } 
-          } 
-      });
-  };
+  const firstName = (user?.displayName || '').split(' ')[0];
+  const activeNow = Math.max(0, stats.active - stats.risk);
+  const weekTotal = weekly.reduce((a, d) => a + d.value, 0);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
+  if (loading) return <div className={pageCls}><div className="mx-auto max-w-7xl"><PageSkeleton cards={6} /></div></div>;
+  if (error) return <div className={pageCls}><ErrorState message="Não foi possível carregar o painel." onRetry={reload} /></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-32 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* HEADER & ACTIONS */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 className="text-2xl font-black text-gray-800 dark:text-white flex items-center gap-2">
-                    Painel do Treinador 
-                    {focusMode && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200 flex items-center gap-1">Modo Foco <Zap className="w-3 h-3 text-yellow-600 fill-yellow-600" /></span>}
-                </h1>
-                <p className="text-gray-500 text-xs mt-1">Gestão inteligente da sua carteira de alunos.</p>
-            </div>
-            
-            <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                {/* BOTÃO CONVIDAR */}
-                <button 
-                    onClick={() => setShowInviteModal(true)}
-                    className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-green-600/20 text-xs flex items-center justify-center gap-2 whitespace-nowrap"
-                >
-                    <Megaphone className="w-3.5 h-3.5" /> Convidar
-                </button>
+    <div className={pageCls}>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="aurora-bg">
+          <PageHeader
+            eyebrow="Painel do treinador"
+            title={<>{greeting()}{firstName ? ', ' : ''}<span className="text-gradient-brand">{firstName}</span></>}
+            subtitle={stats.risk > 0 ? `${stats.risk} aluno${stats.risk > 1 ? 's' : ''} precisa${stats.risk > 1 ? 'm' : ''} de atenção hoje.` : 'Sua carteira está em dia. Bom trabalho!'}
+            actions={(
+              <div className="hidden gap-2 sm:flex">
+                <button type="button" onClick={() => navigate('/admin/trainings')} className={btnPrimary}><Plus className="h-4 w-4" /> Nova ficha</button>
+                <button type="button" onClick={() => setShowInvite(true)} className={btnGhost}><UserPlus className="h-4 w-4" /> Novo aluno</button>
+              </div>
+            )}
+          />
+        </section>
 
-                {/* BOTÃO FICHAS (Meus Treinos) */}
-                <button 
-                    onClick={() => navigate('/admin/trainings')}
-                    className="flex-1 md:flex-none bg-brand hover:bg-brand-dark text-black px-4 py-2 rounded-xl font-bold shadow-lg shadow-brand/20 text-xs flex items-center justify-center gap-2 whitespace-nowrap"
-                >
-                    <ClipboardList className="w-3.5 h-3.5" /> Fichas
-                </button>
+        {/* Atalhos (mobile: rolagem horizontal) */}
+        <nav aria-label="Atalhos" className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto scroll-px-4 px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 scroll-snap-x">
+          {[
+            { label: 'Nova ficha', icon: Plus, onClick: () => navigate('/admin/trainings') },
+            { label: 'Novo aluno', icon: UserPlus, onClick: () => setShowInvite(true) },
+            { label: 'Financeiro', icon: DollarSign, onClick: () => navigate('/coach/financial') },
+            { label: 'Mensagens', icon: MessageSquare, onClick: () => navigate('/coach/chat') }
+          ].map(({ label, icon: Icon, onClick }, i) => (
+            <button key={label} type="button" onClick={onClick} style={{ animationDelay: `${i * 70}ms` }}
+              className="surface surface-hover pressable animate-fade-up flex min-h-[64px] min-w-[140px] shrink-0 items-center gap-3 px-4 text-left sm:min-w-0">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+              <span className="text-sm font-bold text-gray-900 dark:text-white">{label}</span>
+            </button>
+          ))}
+        </nav>
 
-                {/* BOTÃO BIBLIOTECA (Exercícios) */}
-                <button 
-                    onClick={() => navigate('/admin/exercises')}
-                    className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-indigo-600/20 text-xs flex items-center justify-center gap-2 whitespace-nowrap"
-                >
-                    <BookOpen className="w-3.5 h-3.5" /> Biblioteca
-                </button>
-
-                <button 
-                    onClick={() => setFocusMode(!focusMode)}
-                    className={`flex-1 md:flex-none px-4 py-2 rounded-xl font-bold shadow-sm text-xs border transition-all whitespace-nowrap flex items-center justify-center gap-1.5 ${
-                        focusMode 
-                        ? 'bg-yellow-50 border-yellow-200 text-yellow-700' 
-                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
-                    }`}
-                >
-                    <Zap className={`w-3.5 h-3.5 ${focusMode ? 'fill-current' : ''}`} /> {focusMode ? 'Sair Foco' : 'Foco'}
-                </button>
-            </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+          <StatCard icon={Users} label="Alunos ativos" value={activeNow} accent="green" />
+          <StatCard icon={Activity} label="Check-ins hoje" value={stats.checkIns} accent="brand" />
+          <StatCard icon={Target} label="Retenção" value={stats.retention} suffix="%" accent="blue" />
+          <StatCard icon={AlertTriangle} label="Em risco" value={stats.risk} accent="red" />
+          <StatCard icon={Wallet} label="Receita prevista" value={stats.revenue} prefix="R$ " accent="brand" />
+          <StatCard icon={PiggyBank} label="Recebido no mês" value={stats.received} prefix="R$ " accent="green" />
         </div>
 
-        {/* MODO FOCO: Se ativado, esconde métricas */}
-        {!focusMode && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard 
-                    title="Alunos Ativos" 
-                    value={stats.active} 
-                    subtitle="Carteira total" 
-                    icon={Users} color="text-blue-500" 
-                />
-                <StatCard 
-                    title="Receita (Est.)" 
-                    value={`R$ ${stats.revenue}`} 
-                    subtitle="Mensal recorrente" 
-                    icon={DollarSign} color="text-green-500" trend="up"
-                />
-                <StatCard 
-                    title="Retenção" 
-                    value={`${stats.retention}%`} 
-                    subtitle="Meta: > 90%" 
-                    icon={Target} color="text-purple-500" 
-                    trend={stats.retention > 90 ? 'up' : 'down'}
-                />
-                <StatCard 
-                    title="Risco de Churn" 
-                    value={stats.risk} 
-                    subtitle="Alunos em perigo" 
-                    icon={AlertTriangle} color="text-red-500" 
-                    trend={stats.risk > 0 ? 'down' : 'up'}
-                />
-            </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* COLUNA 1: OPERACIONAL */}
-            <div className="space-y-6">
-                
-                {/* Card de Risco */}
-                <div className={`rounded-3xl p-5 shadow-sm border transition-all ${studentsAtRisk.length > 0 ? 'bg-white dark:bg-gray-800 border-red-100 dark:border-red-900/30' : 'bg-white dark:bg-gray-800 border-gray-100'}`}>
-                    <SectionHeader title={
-                        <span className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-red-500" /> Risco de Churn 
-                            <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold">{studentsAtRisk.length}</span>
-                        </span>
-                    } />
-                    
-                    <div className="space-y-3">
-                        {studentsAtRisk.length === 0 ? (
-                            <div className="text-center py-6 text-gray-400 text-xs">
-                                Tudo tranquilo! Nenhum aluno em risco.
-                            </div>
-                        ) : (
-                            studentsAtRisk.map((student, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-800/30">
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-800 dark:text-white">{student.displayName || 'Aluno'}</p>
-                                        <p className="text-[10px] text-red-500 font-medium">
-                                            {typeof student.daysInactive === 'number' ? `${student.daysInactive} dias off` : 'Novo aluno'}
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => handleOpenChat(student)}
-                                            className="bg-white dark:bg-gray-700 p-2 rounded-lg text-green-600 shadow-sm hover:scale-105 transition-transform flex items-center justify-center"
-                                            title="Enviar Mensagem"
-                                        >
-                                            <MessageSquare className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button 
-                                            onClick={() => navigate('/coach/students')}
-                                            className="bg-white dark:bg-gray-700 p-2 rounded-lg text-blue-600 shadow-sm hover:scale-105 transition-transform flex items-center justify-center"
-                                        >
-                                            <User className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                {/* Ações Rápidas (LINKS ATIVADOS) */}
-                <div className="bg-blue-600 rounded-3xl p-5 text-white shadow-lg shadow-blue-600/20">
-                    <h3 className="font-bold text-sm mb-4 opacity-90">Atalhos Operacionais</h3>
-                    <div className="grid grid-cols-2 gap-3 text-white">
-                        <button onClick={() => setShowInviteModal(true)} className="bg-white/10 hover:bg-white/20 p-3 rounded-xl text-left transition-colors flex flex-col">
-                            <Megaphone className="w-5 h-5 text-white/95 mb-1.5" />
-                            <span className="text-[10px] font-bold uppercase">Convidar</span>
-                        </button>
-                        <button onClick={() => navigate('/coach/students')} className="bg-white/10 hover:bg-white/20 p-3 rounded-xl text-left transition-colors flex flex-col">
-                            <Users className="w-5 h-5 text-white/95 mb-1.5" />
-                            <span className="text-[10px] font-bold uppercase">Meus Alunos</span>
-                        </button>
-                        <button onClick={() => navigate('/coach/financial')} className="bg-white/10 hover:bg-white/20 p-3 rounded-xl text-left transition-colors flex flex-col">
-                            <DollarSign className="w-5 h-5 text-white/95 mb-1.5" />
-                            <span className="text-[10px] font-bold uppercase">Financeiro</span>
-                        </button>
-                        <button onClick={() => navigate('/coach/settings')} className="bg-white/10 hover:bg-white/20 p-3 rounded-xl text-left transition-colors flex flex-col">
-                            <Settings className="w-5 h-5 text-white/95 mb-1.5" />
-                            <span className="text-[10px] font-bold uppercase">Configurar</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* COLUNA 2: FEED EM TEMPO REAL */}
-            <div className="lg:col-span-2 space-y-6">
-                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 h-full">
-                    <SectionHeader title={
-                        <span className="flex items-center gap-2">
-                            <Flame className="w-4 h-4 text-orange-500 fill-orange-500" /> Feed de Hoje
-                        </span>
-                    } actionLabel="Ver histórico" onAction={() => {}} />
-                    
-                    {recentActivity.length === 0 ? (
-                        <div className="text-center py-12 text-gray-400 flex flex-col items-center justify-center">
-                            <Smile className="w-10 h-10 text-gray-400 mb-2 opacity-50" />
-                            <p className="text-sm">Nenhum treino registrado hoje.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {recentActivity.map((checkIn, i) => (
-                                <div 
-                                    key={i} 
-                                    onClick={() => navigate(`/history/${checkIn.id}`)}
-                                    className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-2xl transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group cursor-pointer"
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-sm font-bold text-blue-600">
-                                        {checkIn.userEmail?.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-center">
-                                            <h4 className="font-bold text-gray-800 dark:text-white text-xs truncate">
-                                                {checkIn.userEmail}
-                                            </h4>
-                                            <span className="text-[10px] text-gray-400 font-mono">
-                                                {formatTime(checkIn.date)}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-0.5">
-                                            Finalizou <span className="font-bold text-blue-600 dark:text-blue-400">{checkIn.trainingName}</span>
-                                        </p>
-                                    </div>
-                                    <div className="text-right pl-2 border-l border-gray-100 dark:border-gray-700">
-                                        <span className="block text-xs font-black text-gray-800 dark:text-white">{checkIn.totalVolume > 0 ? formatTonnage(checkIn.totalVolume) : '-'}</span>
-                                        <span className="text-[9px] text-gray-400 uppercase font-bold">Vol</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Reveal className="lg:col-span-2">
+            <section className="surface h-full p-5">
+              <SectionTitle icon={Activity} action={<span className="text-xs font-bold text-gray-500">{weekTotal} treinos / 7 dias</span>}>Check-ins da semana</SectionTitle>
+              <BarChart data={weekly} ariaLabel="Check-ins por dia na última semana" />
+            </section>
+          </Reveal>
+          <Reveal delay={80}>
+            <section className="surface h-full p-5">
+              <SectionTitle icon={Trophy}>Mais consistentes</SectionTitle>
+              {ranking.length === 0 ? (
+                <EmptyState icon={Trophy} title="Sem treinos nos últimos 30 dias" />
+              ) : (
+                <ol className="space-y-3">
+                  {ranking.map((s, i) => (
+                    <li key={s.uid} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
+                      <button type="button" onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable flex min-h-[48px] w-full items-center gap-3 rounded-2xl text-left hover:bg-black/5 dark:hover:bg-white/5">
+                        <span className={`w-5 text-center font-display text-lg font-black ${i === 0 ? 'text-brand' : 'text-gray-400'}`}>{i + 1}</span>
+                        <Avatar name={s.displayName} src={s.photoURL} size="sm" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
+                        <span className="text-xs font-bold text-gray-500">{s.workouts30} treinos</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          </Reveal>
         </div>
 
-        {/* MODAL DE CONVITE */}
-        <InviteModal 
-            isOpen={showInviteModal} 
-            onClose={() => setShowInviteModal(false)} 
-            coachCode={user.uid} 
-        />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Reveal>
+            <section className={`surface h-full p-5 ${studentsAtRisk.length ? 'border-rose-500/30' : ''}`}>
+              <SectionTitle icon={AlertTriangle} action={<span className="rounded-full bg-rose-500/15 px-2.5 py-0.5 text-xs font-bold text-rose-500">{stats.risk}</span>}>Alunos em risco</SectionTitle>
+              {studentsAtRisk.length === 0 ? (
+                <EmptyState icon={Smile} title="Tudo tranquilo!" description="Nenhum aluno parado há mais de 7 dias." />
+              ) : (
+                <ul className="space-y-2">
+                  {studentsAtRisk.map((s) => (
+                    <li key={s.uid} className="flex items-center gap-3 rounded-2xl bg-rose-500/5 p-3">
+                      <Avatar name={s.displayName} src={s.photoURL} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p>
+                        <p className="text-xs font-medium text-rose-500">{typeof s.daysInactive === 'number' ? `${s.daysInactive} dias sem treinar` : 'Ainda não treinou'}</p>
+                      </div>
+                      <button type="button" aria-label={`Abrir chat com ${s.displayName || 'aluno'}`} onClick={() => navigate('/coach/chat', { state: chatState(s) })} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600"><MessageSquare className="h-4 w-4" /></button>
+                      <button type="button" aria-label={`Ver ${s.displayName || 'aluno'}`} onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-600"><Eye className="h-4 w-4" /></button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </Reveal>
 
+          <Reveal delay={80}>
+            <section className="surface h-full p-5">
+              <SectionTitle icon={Flame} action={<button type="button" onClick={() => navigate('/coach/students')} className="inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-brand">Ver alunos <ArrowRight className="h-3 w-3" /></button>}>Atividade recente</SectionTitle>
+              {recentActivity.length === 0 ? (
+                <EmptyState icon={Activity} title="Nenhum treino registrado ainda." />
+              ) : (
+                <ul className="space-y-1">
+                  {recentActivity.map((c, i) => (
+                    <li key={c.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
+                      <button type="button" onClick={() => navigate(`/coach/students/${c.userId}`)} className="pressable flex min-h-[56px] w-full items-center gap-3 rounded-2xl p-2 text-left hover:bg-black/5 dark:hover:bg-white/5">
+                        <Avatar name={c.student?.displayName || c.userEmail} src={c.student?.photoURL} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{c.student?.displayName || c.userEmail || 'Aluno'}</p>
+                          <p className="truncate text-xs text-gray-500">Finalizou <span className="font-semibold text-brand">{c.trainingName || 'treino'}</span></p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-gray-900 dark:text-white">{c.totalVolume > 0 ? formatTonnage(c.totalVolume) : '-'}</p>
+                          <p className="text-[11px] text-gray-400">{timeAgo(c.date)}</p>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </Reveal>
+        </div>
       </div>
+      {showInvite && <InviteModal coachCode={user.uid} onClose={() => setShowInvite(false)} />}
     </div>
   );
 }

@@ -204,7 +204,7 @@ export default function TrainingPage() {
       return total;
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4" role="status" aria-label="Carregando"><div className="max-w-3xl mx-auto space-y-3"><div className="skeleton-shimmer h-40 rounded-3xl"></div>{[0,1,2,3].map(i => <div key={i} className="skeleton-shimmer h-20 rounded-2xl"></div>)}</div></div>;
 
   if (errorDebug) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-6 text-center text-white">
@@ -215,15 +215,15 @@ export default function TrainingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-40"> 
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] pb-44"> 
         {/* HEADER */}
-        <div className="bg-white dark:bg-gray-800 p-6 pt-8 pb-6 shadow-sm border-b border-gray-100 dark:border-gray-700">
-            <button onClick={() => navigate('/trainings')} className="mb-4 text-sm font-bold text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center gap-1 transition-colors">
+        <div className="aurora-bg overflow-hidden bg-white/90 dark:bg-white/[0.03] p-5 sm:p-6 pt-6 pb-6 border-b border-gray-200/70 dark:border-white/10 animate-fade-up">
+            <button onClick={() => navigate('/trainings')} className="pressable mb-3 min-h-[44px] -ml-2 px-2 text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl">
                 ← Voltar
             </button>
             
             <div className="flex justify-between items-start gap-4 mb-2">
-                <h1 className="text-3xl font-black text-gray-800 dark:text-white leading-tight">{training.name}</h1>
+                <h1 className="font-display text-2xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight">{training.name}</h1>
                 {lastWorkoutDate && (
                     <div className="text-right shrink-0 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg border border-green-100 dark:border-green-800/30">
                         <p className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Último</p>
@@ -260,22 +260,26 @@ export default function TrainingPage() {
                 return (
                     <div 
                         key={index}
+                        style={{ animationDelay: `${Math.min(index, 10) * 50}ms` }}
                         draggable
                         onDragStart={(e) => dragStart(e, index)}
                         onDragEnter={(e) => dragEnter(e, index)}
                         onDragEnd={drop}
-                        className={`flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border transition-all duration-200 ${
-                            !isSelected 
-                            ? 'opacity-60 border-transparent bg-gray-50 dark:bg-gray-800/50' 
-                            : 'border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800'
+                        className={`surface animate-fade-up flex items-center gap-3 p-3 transition-all duration-200 ${
+                            !isSelected ? 'opacity-60' : 'hover:border-brand/40'
                         }`}
                     >
                         {/* Checkbox */}
                         <div 
+                            role="checkbox"
+                            aria-checked={!!isSelected}
+                            aria-label={`Incluir ${exercise.name}`}
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleSelection(index); } }}
                             onClick={(e) => { e.stopPropagation(); toggleSelection(index); }}
-                            className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all active:scale-90 ${
+                            className={`w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                                 isSelected 
-                                ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30' 
+                                ? 'bg-brand border-brand text-black shadow-md shadow-brand/30' 
                                 : 'border-gray-300 dark:border-gray-600 bg-transparent'
                             }`}
                         >
@@ -323,10 +327,10 @@ export default function TrainingPage() {
         </div>
 
         {/* FOOTER FIXO */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-[60] pb-8 md:pb-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 bg-white/90 dark:bg-[#0B0F19]/90 backdrop-blur-xl border-t border-gray-200 dark:border-white/10 z-[60]" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
             <button 
                 onClick={handleStartTraining}
-                className="w-full bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark text-black font-black text-lg py-4 rounded-2xl shadow-xl shadow-brand/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group hover-glow-brand"
+                className="mx-auto w-full max-w-3xl min-h-[56px] bg-gradient-to-r from-brand to-[#FF9800] text-black font-black text-lg rounded-2xl shadow-xl shadow-brand/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group animate-pulse-ring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
             >
                 <Flame className="w-5 h-5 text-black fill-current group-hover:scale-110 transition-transform" /> 
                 INICIAR TREINO 

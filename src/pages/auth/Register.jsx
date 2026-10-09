@@ -128,37 +128,37 @@ export default function Register() {
       </div>
 
       {/* Lado Direito (Form) */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-[#0D1117]">
-        <div className="w-full max-w-md space-y-8 animate-fade-in-up">
+      <div className="aurora-bg w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 bg-gray-50 dark:bg-[#0B0F19] overflow-hidden">
+        <div className="surface w-full max-w-md space-y-6 p-6 sm:p-8 animate-fade-up">
           
           <div className="text-center lg:text-left">
-            <h2 className="lg:hidden text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-brand">UP</span></h2>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Crie sua conta</h2>
+            <h2 className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-brand">UP</span></h2>
+            <h2 className="font-display text-3xl font-black text-gray-900 dark:text-white">Crie sua conta</h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Comece hoje mesmo.</p>
           </div>
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Nome Completo</label>
-              <input type="text" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all" placeholder="Ex: João Silva" />
+              <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Nome Completo</label>
+              <input type="text" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all" placeholder="Ex: João Silva" />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Email</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all" placeholder="seu@email.com" />
+              <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Email</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all" placeholder="seu@email.com" />
             </div>
 
             {/* Grid de Senhas */}
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Senha</label>
+                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Senha</label>
                     <div className="relative">
                         <input 
                             type={showPassword ? "text" : "password"} 
                             required 
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all pr-10" 
+                            className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all pr-10" 
                             placeholder="••••••" 
                         />
                         <button 
@@ -175,13 +175,13 @@ export default function Register() {
                     </div>
                 </div>
                 <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Confirmar</label>
+                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Confirmar</label>
                     <input 
                         type={showPassword ? "text" : "password"} 
                         required 
                         value={confirmPassword} 
                         onChange={(e) => setConfirmPassword(e.target.value)} 
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all" 
+                        className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all" 
                         placeholder="••••••" 
                     />
                 </div>
@@ -219,7 +219,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={localLoading || isCheckingCode}
-              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-brand/20 text-sm font-black text-black bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark transition-all transform active:scale-[0.98] hover:shadow-[0_0_20px_rgba(255,193,7,0.35)] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center min-h-[56px] px-4 rounded-2xl shadow-lg shadow-brand/25 text-base font-black text-black bg-gradient-to-r from-brand to-[#FF9800] hover:shadow-[0_0_24px_rgba(255,193,7,0.4)] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {localLoading ? (
                   <span className="flex items-center gap-2">

@@ -115,3 +115,61 @@
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
+/* ===== Design system v2: superfícies, aurora, movimento ===== */
+@layer utilities {
+  .surface {
+    @apply bg-white/90 dark:bg-white/[0.04] border border-gray-200/80 dark:border-white/10 rounded-3xl shadow-sm backdrop-blur-xl;
+  }
+  .surface-hover {
+    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:border-brand/40;
+  }
+  .pressable {
+    @apply transition-transform duration-150 active:scale-[0.97];
+  }
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #FFD54F 0%, #FFC107 45%, #FF9800 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(148,163,184,0.12) 25%, rgba(148,163,184,0.28) 50%, rgba(148,163,184,0.12) 75%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+  .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .scroll-snap-x { scroll-snap-type: x mandatory; }
+  .scroll-snap-x > * { scroll-snap-align: start; }
+}
+
+.aurora-bg {
+  position: relative;
+  isolation: isolate;
+}
+.aurora-bg::before,
+.aurora-bg::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.35;
+  animation: aurora 14s ease-in-out infinite;
+  pointer-events: none;
+}
+.aurora-bg::before { top: -4rem; right: -3rem; background: #FFC107; }
+.aurora-bg::after { bottom: -5rem; left: -4rem; background: #FF7043; animation-delay: -7s; opacity: 0.22; }
+
+/* Reveal ao rolar */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1); }
+.reveal.is-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}

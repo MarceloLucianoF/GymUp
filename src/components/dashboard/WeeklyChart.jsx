@@ -11,7 +11,7 @@ export default function WeeklyChart({ history }) {
   });
 
   // 2. Mapeia os dados
-  const chartData = last7Days.map(date => {
+  const chartData = last7Days.map((date, i) => {
     // Formata dia da semana (Seg, Ter...)
     const dayStr = formatDate(date, { weekday: 'short' }, '').replace('.', '').slice(0, 3);
     
@@ -27,25 +27,25 @@ export default function WeeklyChart({ history }) {
     return { 
         day: dayStr.charAt(0).toUpperCase() + dayStr.slice(1), 
         count,
-        isToday: date.getDate() === new Date().getDate()
+        isToday: i === 6
     };
   });
 
   const maxVal = Math.max(...chartData.map(d => d.count), 1); // Escala máxima
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 h-full flex flex-col">
+    <div className="surface p-5 h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Frequência (7 dias)
         </h3>
-        <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">
+        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-1 rounded-full">
             Meta: 4/semana
         </span>
       </div>
 
       {/* Área do Gráfico */}
-      <div className="flex items-end justify-between flex-1 gap-3 min-h-[140px]">
+      <div className="flex items-end justify-between flex-1 gap-2 sm:gap-3 min-h-[140px]" role="img" aria-label={`Treinos nos últimos 7 dias: ${chartData.reduce((a, d) => a + d.count, 0)}`}>
         {chartData.map((item, i) => {
           // Altura: Se tiver treino usa % real, se não usa 10% fixo pra mostrar a barra cinza
           const heightPct = item.count > 0 ? (item.count / maxVal) * 100 : 10; 
@@ -63,11 +63,11 @@ export default function WeeklyChart({ history }) {
 
               {/* A Barra */}
               <div 
-                style={{ height: `${heightPct}%` }}
-                className={`w-full rounded-t-md transition-all duration-700 ease-out relative ${
+                style={{ height: `${heightPct}%`, transformOrigin: 'bottom', animationDelay: `${i * 70}ms` }}
+                className={`w-full rounded-t-xl animate-bar-grow relative ${
                     item.count > 0 
-                    ? 'bg-brand dark:bg-brand-dark group-hover:bg-brand/80'  // Cor quando tem treino
-                    : 'bg-gray-100 dark:bg-gray-700/50' // <--- CORREÇÃO: Cor cinza quando vazio (antes estava transparent)
+                    ? 'bg-gradient-to-t from-[#FF9800] to-brand group-hover:opacity-80'  // Cor quando tem treino
+                    : 'bg-gray-100 dark:bg-white/5' // <--- CORREÇÃO: Cor cinza quando vazio (antes estava transparent)
                 } ${item.isToday ? 'ring-2 ring-brand/20 dark:ring-brand/10' : ''}`}
               >
                  {/* Brilho no topo da barra ativa */}

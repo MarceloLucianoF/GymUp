@@ -34,21 +34,21 @@ const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
                             className="transition-all duration-300 ease-linear"
                         />
                     </svg>
-                    <div className="text-7xl font-black font-mono tracking-tighter">
+                    <div className="text-7xl font-black font-mono tracking-tighter drop-shadow-[0_0_20px_rgba(255,193,7,0.35)]">
                         {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
                     </div>
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 mb-3">
-                    <button onClick={() => onAdjust(-15000)} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors">-15s</button>
-                    <button onClick={() => onAdjust(30000)} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors">+30s</button>
-                    <button onClick={() => onAdjust(60000)} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors">+60s</button>
-                    <button onClick={togglePause} aria-label={isPaused ? 'Retomar descanso' : 'Pausar descanso'} className="py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1">
+                    <button onClick={() => onAdjust(-15000)} className="min-h-[48px] bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-sm transition-all active:scale-95">-15s</button>
+                    <button onClick={() => onAdjust(30000)} className="min-h-[48px] bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-sm transition-all active:scale-95">+30s</button>
+                    <button onClick={() => onAdjust(60000)} className="min-h-[48px] bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-sm transition-all active:scale-95">+60s</button>
+                    <button onClick={togglePause} aria-label={isPaused ? 'Retomar descanso' : 'Pausar descanso'} className="min-h-[48px] bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1">
                         {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                     </button>
                 </div>
 
-                <button onClick={onClose} className="w-full py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-black transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 text-sm active:scale-95">
+                <button onClick={onClose} className="w-full min-h-[56px] bg-red-600 hover:bg-red-500 rounded-2xl font-black transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 text-sm active:scale-95">
                     <SkipForward className="w-4 h-4" /> Pular Descanso
                 </button>
             </div>

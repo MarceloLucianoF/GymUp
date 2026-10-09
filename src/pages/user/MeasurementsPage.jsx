@@ -4,8 +4,8 @@ import { collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, del
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useConfirm } from '../../hooks/useConfirm';
-import { useNavigate } from 'react-router-dom';
-import { Camera, Scale, TrendingDown, X, Plus, ArrowLeft } from 'lucide-react';
+import { Camera, Scale, TrendingDown, X, Plus, Trash2 } from 'lucide-react';
+import PageHeader from '../../components/ui/PageHeader';
 import { formatDate } from '../../utils/format';
 import Modal from '../../components/common/Modal';
 import { SkeletonList } from '../../components/common/Skeleton';
@@ -17,65 +17,68 @@ import EmptyState from '../../components/common/EmptyState';
 // 1. Gráfico de Peso (Custom SVG)
 const WeightChart = ({ data }) => {
   if (!data || data.length < 2) return (
-    <div className="h-48 flex flex-col items-center justify-center text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-        <TrendingDown className="w-8 h-8 text-gray-400 mb-2 opacity-60" />
+    <div className="surface h-48 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 border-dashed">
+        <TrendingDown className="w-8 h-8 mb-2 opacity-60" aria-hidden="true" />
         <p className="text-sm">Registre pelo menos 2 pesagens.</p>
     </div>
   );
 
   const height = 180;
-  const width = 300;
-  const paddingX = 20;
-  const paddingY = 20;
+  const width = 320;
+  const paddingX = 24;
+  const paddingY = 24;
 
-  const weights = data.map(d => d.weight);
-  let minW = Math.min(...weights);
-  let maxW = Math.max(...weights);
-
-  // Ajuste de escala para o gráfico não ficar "colado"
-  if (minW === maxW) {
-      minW -= 5;
-      maxW += 5;
-  } else {
-      const spread = maxW - minW;
-      minW -= spread * 0.1;
-      maxW += spread * 0.1;
-  }
+  const weights = data.map(d => Number(d.weight) || 0);
+  const realMin = Math.min(...weights);
+  const realMax = Math.max(...weights);
+  let minW = realMin;
+  let maxW = realMax;
+  if (minW === maxW) { minW -= 5; maxW += 5; }
+  else { const spread = maxW - minW; minW -= spread * 0.15; maxW += spread * 0.15; }
   const range = maxW - minW;
 
-  const getX = (i) => paddingX + (i / (data.length - 1)) * (width - (paddingX * 2));
-  const getY = (val) => (height - paddingY) - ((val - minW) / range) * (height - (paddingY * 2));
+  const getX = (i) => paddingX + (i / (data.length - 1)) * (width - paddingX * 2);
+  const getY = (val) => (height - paddingY) - ((val - minW) / range) * (height - paddingY * 2);
 
-  const linePoints = data.map((d, i) => `${getX(i)},${getY(d.weight)}`).join(' ');
-  const areaPoints = `${getX(0)},${height} ${linePoints} ${getX(data.length - 1)},${height}`;
+  const pts = weights.map((w, i) => [getX(i), getY(w)]);
+  const linePath = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L${pts[pts.length - 1][0]},${height - paddingY} L${pts[0][0]},${height - paddingY} Z`;
+  const last = pts[pts.length - 1];
+  const diff = weights[weights.length - 1] - weights[0];
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Histórico de Peso</h3>
+    <div className="surface w-full p-4 sm:p-5 overflow-hidden animate-fade-up">
+      <div className="flex justify-between items-center mb-3">
+          <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Histórico de peso</h3>
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${diff <= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'}`}>
+            {diff > 0 ? '+' : ''}{diff.toFixed(1)} kg
+          </span>
       </div>
-      <div className="w-full aspect-[2/1] relative">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+      <div className="w-full relative">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible" role="img" aria-label={`Gráfico de peso: de ${weights[0]} kg para ${weights[weights.length - 1]} kg`}>
             <defs>
                 <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.2" />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#FFC107" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="#FFC107" stopOpacity="0" />
                 </linearGradient>
             </defs>
-            
-            {/* Grid */}
-            <line x1={paddingX} y1={paddingY} x2={width-paddingX} y2={paddingY} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" className="opacity-10" />
-            <line x1={paddingX} y1={height-paddingY} x2={width-paddingX} y2={height-paddingY} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" className="opacity-10" />
+            {[0, 0.5, 1].map((f) => {
+              const y = paddingY + f * (height - paddingY * 2);
+              return <line key={f} x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="currentColor" strokeWidth="1" strokeDasharray="4" className="text-gray-300 dark:text-white/10" />;
+            })}
+            <text x={paddingX} y={paddingY - 8} fontSize="10" className="fill-gray-500 dark:fill-gray-400" fontWeight="700">{realMax}kg</text>
+            <text x={paddingX} y={height - paddingY + 14} fontSize="10" className="fill-gray-500 dark:fill-gray-400" fontWeight="700">{realMin}kg</text>
 
-            <polygon points={areaPoints} fill="url(#weightGradient)" />
-            <polyline fill="none" stroke="#10B981" strokeWidth="3" points={linePoints} strokeLinecap="round" strokeLinejoin="round" />
-
-            {data.map((d, i) => (
-               <circle key={i} cx={getX(i)} cy={getY(d.weight)} r="3" fill="#fff" stroke="#10B981" strokeWidth="2" />
+            <path d={areaPath} fill="url(#weightGradient)" className="animate-fade-in" />
+            <path d={linePath} fill="none" stroke="#FFC107" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+              pathLength="1" strokeDasharray="1" style={{ '--len': 1 }} className="animate-draw" />
+            {pts.map(([x, y], i) => (
+               <circle key={i} cx={x} cy={y} r={i === pts.length - 1 ? 5 : 3} className="fill-white dark:fill-gray-900 animate-scale-in" stroke="#FFC107" strokeWidth="2" style={{ transformOrigin: `${x}px ${y}px`, animationDelay: `${600 + i * 40}ms` }} />
             ))}
+            <circle cx={last[0]} cy={last[1]} r="9" fill="#FFC107" opacity="0.25" className="animate-pulse" />
         </svg>
       </div>
-      <div className="flex justify-between text-[10px] text-gray-400 mt-2 font-mono uppercase">
+      <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mt-2 font-mono uppercase">
          <span>{formatDate(data[0].date)}</span>
          <span>{formatDate(data[data.length-1].date)}</span>
       </div>
@@ -172,7 +175,6 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
 export default function MeasurementsPage() {
   const { confirm, dialog } = useConfirm();
   const { user } = useAuthContext();
-  const navigate = useNavigate();
   
   const [measurements, setMeasurements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -284,60 +286,63 @@ export default function MeasurementsPage() {
   // Filtra apenas medidas com fotos para a galeria
   const galleryPhotos = measurements.filter(m => m.photo).reverse();
 
-  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4"><SkeletonList count={4} itemClassName="h-24 w-full" /></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4"><SkeletonList count={4} itemClassName="h-24 w-full" /></div>;
 
-  if (error) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4"><ErrorState onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
+  if (error) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4"><ErrorState onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} /></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 transition-colors duration-300 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 transition-colors duration-300 pb-32">
     {dialog}
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Header */}
-        <div className="flex justify-between items-center">
-            <button onClick={() => navigate('/home')} className="text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-                <ArrowLeft className="w-4 h-4" /> Voltar
-            </button>
-            <button 
+        <PageHeader
+          eyebrow="Evolução"
+          title="Peso e medidas"
+          subtitle="Acompanhe seu corpo ao longo do tempo."
+          actions={
+            <button
+                type="button"
                 onClick={() => setShowModal(true)}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-xs flex items-center gap-1.5 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                className="btn-primary-gradient pressable min-h-[44px] px-4 text-xs"
             >
-                <Plus className="w-3.5 h-3.5" /> Nova Medida
+                <Plus className="w-4 h-4" aria-hidden="true" /> Nova medida
             </button>
-        </div>
+          }
+        />
 
         {measurements.length === 0 ? (
             <EmptyState
                 icon={Scale}
                 title="Comece sua jornada"
                 description="Registre seu peso hoje para acompanhar sua evolução."
-                action={<button onClick={() => setShowModal(true)} className="text-brand hover:text-brand-dark font-bold underline transition-colors">Registrar agora</button>}
+                action={<button type="button" onClick={() => setShowModal(true)} className="btn-primary-gradient min-h-[44px] px-5 text-sm">Registrar agora</button>}
             />
         ) : (
             <>
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="card-premium-glass p-5">
-                        <p className="text-xs font-bold text-gray-400 uppercase">Peso Atual</p>
-                        <h3 className="text-3xl font-black text-gray-800 dark:text-white mt-1">{stats.current}kg</h3>
+                    <div className="surface p-4 sm:p-5 animate-fade-up">
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Peso atual</p>
+                        <h3 className="font-display text-3xl font-black text-gray-900 dark:text-white mt-1">{stats.current}kg</h3>
                     </div>
-                    <div className="card-premium-glass p-5">
-                        <p className="text-xs font-bold text-gray-400 uppercase">Variação Total</p>
-                        <h3 className={`text-3xl font-black mt-1 ${Number(stats.diff) <= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    <div className="surface p-4 sm:p-5 animate-fade-up" style={{ animationDelay: '70ms' }}>
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Variação total</p>
+                        <h3 className={`font-display text-3xl font-black mt-1 ${Number(stats.diff) <= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                             {stats.diffSign}{stats.diff}kg
                         </h3>
                     </div>
-                    <div className="card-premium-glass p-5">
-                        <p className="text-xs font-bold text-gray-400 uppercase">IMC Estimado</p>
+                    <div className="surface p-4 sm:p-5 animate-fade-up" style={{ animationDelay: '140ms' }}>
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">IMC estimado</p>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <h3 className="text-3xl font-black text-gray-800 dark:text-white">{stats.imc || '--'}</h3>
+                            <h3 className="font-display text-3xl font-black text-gray-900 dark:text-white">{stats.imc || '--'}</h3>
                             <span className={`text-xs font-bold ${stats.imcColor}`}>{stats.imcLabel}</span>
                         </div>
                     </div>
-                    <div className="card-premium-glass p-5 flex flex-col justify-center items-center cursor-pointer hover:border-brand/50 transition-colors" onClick={() => setShowModal(true)}>
-                        <span className="text-2xl mb-1">➕</span>
-                        <span className="text-xs font-bold text-brand transition-colors">Adicionar</span>
-                    </div>
+                    <button type="button" className="surface surface-hover pressable p-4 sm:p-5 flex flex-col justify-center items-center min-h-[88px] animate-fade-up focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" style={{ animationDelay: '210ms' }} onClick={() => setShowModal(true)}>
+                        <Plus className="w-6 h-6 mb-1 text-brand" aria-hidden="true" />
+                        <span className="text-xs font-bold text-amber-700 dark:text-brand">Adicionar</span>
+                    </button>
                 </div>
 
                 {/* Gráfico */}
@@ -346,14 +351,14 @@ export default function MeasurementsPage() {
                 {/* Galeria de Fotos (Timeline) */}
                 {galleryPhotos.length > 0 && (
                     <div>
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                            <span>📸</span> Galeria do Shape
+                        <h3 className="font-display text-lg font-black text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                            <Camera className="w-5 h-5 text-brand" aria-hidden="true" /> Galeria do shape
                         </h3>
-                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-snap-x scroll-px-4 -mx-4 px-4 sm:mx-0 sm:px-0">
                             {galleryPhotos.map((item) => (
                                 <div key={item.id} className="snap-center shrink-0 w-40 relative group">
                                     <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-md bg-gray-200">
-                                        <img src={item.photo} alt="Shape" className="w-full h-full object-cover" />
+                                        <img src={item.photo} alt={`Foto do shape em ${formatDate(item.date)}`} loading="lazy" className="w-full h-full object-cover" />
                                     </div>
                                     <div className="mt-2 text-center">
                                         <p className="text-sm font-bold text-gray-800 dark:text-white">{item.weight}kg</p>
@@ -366,13 +371,13 @@ export default function MeasurementsPage() {
                 )}
 
                 {/* Histórico em Lista */}
-                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                <div className="surface overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03]">
                         <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300">Histórico Completo</h3>
                     </div>
-                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    <div className="divide-y divide-gray-100 dark:divide-white/10">
                         {[...measurements].reverse().map((item, i) => (
-                            <div key={item.id} className="p-4 flex justify-between items-center group">
+                            <div key={item.id} className="p-3 sm:p-4 flex justify-between items-center group animate-fade-up" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                                 <div>
                                     <p className="font-bold text-gray-800 dark:text-white">{item.weight}kg</p>
                                     <p className="text-xs text-gray-400 capitalize">
@@ -391,9 +396,10 @@ export default function MeasurementsPage() {
                                     )}
                                     <button 
                                         onClick={() => handleDelete(item.id)}
-                                        className="text-gray-300 hover:text-red-500 transition-colors p-2"
+                                        aria-label="Apagar medida"
+                                        className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 hover:text-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                                     >
-                                        🗑
+                                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                                     </button>
                                 </div>
                             </div>

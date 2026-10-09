@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import PageHeader from '../../components/ui/PageHeader';
 import { collection, query, where, orderBy, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
@@ -150,10 +151,7 @@ export default function HistoryPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Cabeçalho */}
-        <div>
-            <h1 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">Histórico de Treinos</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Veja tudo o que você já realizou.</p>
-        </div>
+        <PageHeader eyebrow="Diário" title="Histórico de treinos" subtitle="Veja tudo o que você já realizou." />
 
         {/* Calendário Mensal */}
         <MonthCalendar history={history} />
@@ -162,10 +160,10 @@ export default function HistoryPage() {
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
             <div className="flex-1 flex gap-2">
                 <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-4" />
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
                     <input 
                         type="text" 
-                        placeholder="Buscar treino ou exercício..." 
+                        placeholder="Buscar treino ou exercício..." aria-label="Buscar treino ou exercício" 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full input-brand-dark pl-10 pr-4 text-sm"
@@ -175,7 +173,7 @@ export default function HistoryPage() {
                 <select 
                     value={timeFilter}
                     onChange={(e) => setTimeFilter(e.target.value)}
-                    className="input-brand-dark text-sm font-bold px-4"
+                    aria-label="Filtrar por período" className="input-brand-dark text-sm font-bold px-4 min-h-[48px]"
                 >
                     <option value="all">Sempre</option>
                     <option value="month">Este Mês</option>
@@ -191,27 +189,28 @@ export default function HistoryPage() {
 
         {/* Lista de Resultados */}
         {filteredHistory.length === 0 ? (
-          <div className="text-center py-20 card-premium-glass border-dashed flex flex-col items-center justify-center">
+          <div className="text-center py-20 surface border-dashed flex flex-col items-center justify-center">
             <Search className="w-12 h-12 text-gray-400 mb-4 opacity-50" />
             <h3 className="text-lg font-bold text-gray-700 dark:text-white">Nada encontrado</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {filteredHistory.map((item) => {
+          <div className="space-y-4">
+            {filteredHistory.map((item, idx) => {
                 const dateObj = formatDate(item.date);
                 
                 return (
                   <div 
                     key={item.firestoreId} 
                     onClick={() => navigate(`/history/${item.firestoreId}`)}
-                    className="card-premium-glass p-0 overflow-hidden group relative transition-all duration-300 hover:shadow-lg cursor-pointer"
+                    style={{ animationDelay: `${Math.min(idx, 8) * 60}ms` }}
+                    className="surface surface-hover animate-fade-up p-0 overflow-hidden group relative cursor-pointer"
                   >
                     {/* Header do Card */}
-                    <div className="p-5 flex gap-5 border-b border-gray-50 dark:border-gray-700/50">
+                    <div className="p-4 sm:p-5 flex gap-4 sm:gap-5 border-b border-gray-100 dark:border-white/10">
                         
                         {/* Data Box */}
-                        <div className="flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-700/50 rounded-xl min-w-[70px] h-[70px]">
+                        <div className="flex flex-col items-center justify-center bg-brand/10 rounded-2xl min-w-[64px] h-[64px] sm:min-w-[70px] sm:h-[70px]">
                             <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">{dateObj.month}</span>
                             <span className="text-2xl font-black text-gray-800 dark:text-white leading-none">{dateObj.day}</span>
                         </div>
@@ -221,7 +220,7 @@ export default function HistoryPage() {
                             <h3 className="text-lg font-bold text-gray-800 dark:text-white leading-tight truncate pr-6">
                                 {item.trainingName || 'Treino Sem Nome'}
                             </h3>
-                            <p className="text-xs text-gray-400 capitalize mb-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-3">
                                 {dateObj.full}
                             </p>
                             
@@ -249,8 +248,8 @@ export default function HistoryPage() {
                                 e.stopPropagation();
                                 handleDeleteRequest(item.firestoreId);
                             }}
-                            className="absolute top-4 right-4 text-gray-300 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Apagar registro"
+                            className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center text-gray-400 hover:text-red-500 rounded-xl md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            title="Apagar registro" aria-label="Apagar registro"
                         >
                             <Trash2 className="w-4 h-4" />
                         </button>
@@ -258,7 +257,7 @@ export default function HistoryPage() {
 
                     {/* Lista Expansível de Exercícios */}
                     {item.exercises && item.exercises.length > 0 && (
-                        <div className="bg-gray-50 dark:bg-gray-800/50 p-4">
+                        <div className="bg-gray-50/70 dark:bg-white/[0.03] p-3 sm:p-4">
                             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Detalhes</p>
                             <div className="space-y-2">
                                 {item.exercises.map((ex, i) => {
@@ -271,7 +270,7 @@ export default function HistoryPage() {
                                                 e.stopPropagation();
                                                 navigate(`/analytics/${encodeURIComponent(ex.name)}`);
                                             }}
-                                            className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-700/40 rounded-lg hover:bg-brand/10 dark:hover:bg-brand/5 cursor-pointer group transition-all duration-300 border border-transparent hover:border-brand/30 hover:scale-[1.005]"
+                                            className="flex justify-between items-center min-h-[44px] py-2 px-3 bg-white dark:bg-white/5 rounded-xl hover:bg-brand/10 dark:hover:bg-brand/5 cursor-pointer group transition-all duration-300 border border-transparent hover:border-brand/30 hover:scale-[1.005]"
                                         >
                                             <div className="flex items-center gap-2 overflow-hidden">
                                                 <span className="text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-brand-dark transition-colors truncate">
