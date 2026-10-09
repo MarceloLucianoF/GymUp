@@ -120,7 +120,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
     return (
         <Modal onClose={onClose} label="Registrar medidas" className="w-full max-w-sm">
             <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
-                <button aria-label="Fechar" onClick={onClose} className="absolute top-4 right-4 text-gray-450 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <button aria-label="Fechar" onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     <X className="w-4 h-4" />
                 </button>
                 

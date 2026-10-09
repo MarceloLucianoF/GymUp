@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Smartphone, Dumbbell, Flame, CheckCircle, Shield, Award, Users, Target, Zap, Heart, TrendingUp, Play } from 'lucide-react';
+import {
+  Dumbbell, Flame, Sparkles, LineChart, MessageCircle, Timer, Users, Wallet, ClipboardList,
+  ArrowRight, Check, Play, Smartphone, WifiOff, Trophy, Zap
+} from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import Reveal from '../../components/ui/Reveal';
+import ProgressRing from '../../components/ui/ProgressRing';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
 
 // --- LOGO OFICIAL DA MARCA (A + U + Halter + Seta) ---
@@ -57,276 +61,237 @@ const AcademyUpLogo = ({ className = "w-10 h-10" }) => {
   );
 };
 
+const FEATURES = [
+  { icon: Timer, title: 'Treino guiado', text: 'Cronômetro, descanso automático e registro de carga série a série, pensado para usar com uma mão.' },
+  { icon: LineChart, title: 'Evolução real', text: 'Gráficos de carga, volume e medidas mostram o progresso que a balança sozinha não conta.' },
+  { icon: Sparkles, title: 'Coach com IA', text: 'Pergunte, receba macros e peça uma ficha pronta. A IA conhece o seu histórico.' },
+  { icon: MessageCircle, title: 'Chat com o treinador', text: 'Dúvidas e ajustes sem sair do app, com o contexto do treino ao lado.' },
+  { icon: WifiOff, title: 'Funciona offline', text: 'Sem sinal na academia? Seu treino é salvo e sincronizado quando a rede voltar.' },
+  { icon: Trophy, title: 'Metas e recordes', text: 'Sequência de dias, meta semanal e aviso de novos recordes pessoais.' }
+];
+
+const STEPS = [
+  { n: '01', title: 'Crie sua conta', text: 'Em menos de um minuto, sem cartão.' },
+  { n: '02', title: 'Receba sua ficha', text: 'Do treinador ou gerada pela IA.' },
+  { n: '03', title: 'Treine e evolua', text: 'Registre, acompanhe e bata recordes.' }
+];
+
+const COACH_POINTS = [
+  { icon: Users, text: 'Carteira de alunos com status e alertas de risco' },
+  { icon: ClipboardList, text: 'Editor de fichas e biblioteca de exercícios' },
+  { icon: Wallet, text: 'Financeiro com mensalidades e inadimplência' },
+  { icon: MessageCircle, text: 'Chat integrado com cada aluno' }
+];
+
+function PhoneMockup() {
+  return (
+    <div className="relative mx-auto w-[260px] animate-float sm:w-[290px]" aria-hidden="true">
+      <div className="absolute -inset-6 rounded-[3rem] bg-brand/30 blur-3xl" />
+      <div className="relative rounded-[2.4rem] border border-white/10 bg-gray-950 p-2.5 shadow-2xl ring-1 ring-black/40">
+        <div className="rounded-[1.9rem] bg-gradient-to-b from-[#FFF8E1] to-white p-4 dark:from-[#1a1608] dark:to-[#0B0F19]">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Bom dia</p>
+              <p className="font-display text-lg font-black text-gray-900 dark:text-white">Ana</p>
+            </div>
+            <span className="flex items-center gap-1 rounded-full bg-orange-500/15 px-2.5 py-1 text-xs font-black text-orange-500"><Flame className="h-3.5 w-3.5" /> 12</span>
+          </div>
+          <div className="mt-4 flex items-center gap-4 rounded-2xl bg-white/80 p-3 dark:bg-white/5">
+            <ProgressRing value={75} size={64} stroke={7}><span className="text-sm font-black text-gray-900 dark:text-white">3/4</span></ProgressRing>
+            <div>
+              <p className="text-sm font-black text-gray-900 dark:text-white">Meta semanal</p>
+              <p className="text-xs text-gray-500">Falta 1 treino</p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-2xl bg-gradient-to-br from-brand to-[#FF9800] p-4 text-black">
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Treino de hoje</p>
+            <p className="mt-1 font-display text-base font-black leading-tight">Peito e Tríceps</p>
+            <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-black py-2.5 text-xs font-black text-brand"><Play className="h-3.5 w-3.5 fill-current" /> INICIAR</div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-white/80 p-2.5 dark:bg-white/5"><p className="font-display text-lg font-black text-gray-900 dark:text-white">18</p><p className="text-[10px] uppercase text-gray-500">treinos</p></div>
+            <div className="rounded-xl bg-white/80 p-2.5 dark:bg-white/5"><p className="font-display text-lg font-black text-gray-900 dark:text-white">52t</p><p className="text-[10px] uppercase text-gray-500">volume</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const [activeSession, setActiveSession] = useState(null);
 
   useEffect(() => {
-    if (user) {
-      const session = activeWorkoutService.getActiveSession(user.uid);
-      setActiveSession(session);
+    if (user?.uid) {
+      try {
+        setActiveSession(activeWorkoutService.getActiveSession(user.uid));
+      } catch {
+        setActiveSession(null);
+      }
+    } else {
+      setActiveSession(null);
     }
   }, [user]);
 
+  const goPrimary = () => navigate(user ? '/dashboard' : '/register');
+  const continueWorkout = () => navigate(`/execution/${activeSession.trainingId}`);
+
   return (
-    <div className="min-h-screen bg-[#0D1117] text-white selection:bg-brand selection:text-black transition-colors duration-300 font-sans">
-      
-      {/* Top Background Glows */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-[100px] pointer-events-none animate-aurora"></div>
-      <div className="absolute top-10 right-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
-
-      {/* Navbar */}
-      <nav aria-label="Principal" className="relative flex justify-between items-center p-4 sm:p-6 max-w-7xl mx-auto z-10">
-        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate(user ? '/dashboard' : '/')}>
-          <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center border border-brand/20 group-hover:border-brand/60 group-hover:scale-105 transition-all p-1">
-            <AcademyUpLogo className="w-full h-full text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-black text-white tracking-tighter leading-none">
-              ACADEMY<span className="text-brand">UP</span>
-            </span>
-            <span className="text-[9px] text-gray-500 font-bold tracking-[0.2em] mt-0.5">TREINE • EVOLUA • SUPERE</span>
-          </div>
-        </div>
-
-        <div className="flex gap-3 items-center">
-          {user ? (
-            <>
-              {activeSession ? (
-                <button 
-                  onClick={() => navigate(`/execution/${activeSession.trainingId}`)}
-                  className="bg-gradient-to-r from-orange-500 to-brand text-black font-black text-xs sm:text-sm px-4 sm:px-6 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 hover:scale-105 transition-all flex items-center gap-2 animate-pulse"
-                >
-                  <Flame className="w-4 h-4 fill-current text-black" /> Continuar Treino
-                </button>
-              ) : null}
-              <button 
-                onClick={() => navigate('/dashboard')} 
-                className="btn-primary-gradient text-xs sm:text-sm px-4 sm:px-6 py-2.5"
-              >
-                Acessar Meu Painel
-              </button>
-            </>
-          ) : (
-            <>
-              <button 
-                onClick={() => navigate('/login')} 
-                className="text-gray-300 font-bold hover:text-brand transition-colors text-sm px-4 py-2"
-              >
-                Entrar
-              </button>
-              <button 
-                onClick={() => navigate('/register')} 
-                className="btn-primary-gradient text-sm px-6 py-3"
-              >
-                Começar Grátis
-              </button>
-            </>
-          )}
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <header className="aurora-bg relative max-w-5xl mx-auto px-5 sm:px-6 pt-14 sm:pt-20 pb-16 text-center z-10 animate-fade-up">
-        <div className="inline-flex items-center gap-2 bg-[#1F2937] border border-gray-800 text-brand px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-8">
-          <Zap className="w-3.5 h-3.5 text-brand fill-current animate-float" aria-hidden="true" />
-          Plataforma de Alta Performance para Consultorias
-        </div>
-        
-        <h1 className="font-display text-4xl sm:text-5xl md:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight">
-          Escale seus treinos <br className="hidden sm:inline" />
-          <span className="text-gradient-brand">
-            com máxima disciplina.
-          </span>
-        </h1>
-        
-        <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-          Abandone as planilhas estáticas. Tenha seu próprio aplicativo de treino inteligente com cronômetro integrado, análise de evolução, chat com treinador e controle total de metas.
-        </p>
-
-        <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto sm:max-w-none">
-          {user ? (
-            activeSession ? (
+    <div className="min-h-screen overflow-x-clip bg-gray-50 text-gray-900 dark:bg-[#0B0F19] dark:text-white">
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#0B0F19]/80">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
+          <button type="button" onClick={() => navigate('/')} className="flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="AcademyUp início">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm dark:bg-white/10"><AcademyUpLogo className="h-7 w-7" /></span>
+            <span className="font-display text-lg font-black tracking-tight sm:text-xl">ACADEMY<span className="text-brand">UP</span></span>
+          </button>
+          <nav className="flex shrink-0 items-center gap-2" aria-label="Acesso">
+            {user ? (
               <>
-                <button 
-                  onClick={() => navigate(`/execution/${activeSession.trainingId}`)}
-                  className="btn-primary-gradient text-base sm:text-lg px-8 min-h-[56px] bg-gradient-to-r from-orange-500 to-brand"
-                >
-                  <Flame className="w-5 h-5 fill-current" /> Continuar Treino Ativo
-                </button>
-                <button 
-                  onClick={() => navigate('/dashboard')}
-                  className="btn-secondary-dark text-base sm:text-lg px-8 min-h-[56px]"
-                >
-                  Ir para Meu Painel
-                </button>
+                {activeSession && (
+                  <button type="button" onClick={continueWorkout} className="pressable hidden min-h-[44px] items-center gap-1.5 rounded-xl bg-orange-500/15 px-3 text-sm font-bold text-orange-500 sm:flex">
+                    <Flame className="h-4 w-4" /> Continuar treino
+                  </button>
+                )}
+                <button type="button" onClick={() => navigate('/dashboard')} className="pressable min-h-[44px] rounded-xl bg-brand px-4 text-sm font-black text-black shadow-lg shadow-brand/30">Meu painel</button>
               </>
             ) : (
               <>
-                <button 
-                  onClick={() => navigate('/dashboard')}
-                  className="btn-primary-gradient text-base sm:text-lg px-8 min-h-[56px]"
-                >
-                  <Play className="w-5 h-5 fill-current" /> Ir para Meu Painel
-                </button>
-                <button 
-                  onClick={() => navigate('/trainings')}
-                  className="btn-secondary-dark text-base sm:text-lg px-8 min-h-[56px]"
-                >
-                  Explorar Treinos
-                </button>
+                <button type="button" onClick={() => navigate('/login')} className="pressable min-h-[44px] rounded-xl px-3 text-sm font-bold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10">Entrar</button>
+                <button type="button" onClick={() => navigate('/register')} className="pressable min-h-[44px] rounded-xl bg-brand px-4 text-sm font-black text-black shadow-lg shadow-brand/30">Começar</button>
               </>
-            )
-          ) : (
-            <>
-              <button 
-                onClick={() => navigate('/register')}
-                className="btn-primary-gradient text-base sm:text-lg px-8 min-h-[56px]"
-              >
-                <Flame className="w-5 h-5 fill-current" /> Criar Minha Conta
-              </button>
-              <button 
-                onClick={() => navigate('/login')}
-                className="btn-secondary-dark text-base sm:text-lg px-8 min-h-[56px]"
-              >
-                Acessar Meu Painel
-              </button>
-            </>
-          )}
+            )}
+          </nav>
         </div>
       </header>
 
-      {/* Atributos da Marca (Strip Horizontal) */}
-      <section className="relative border-y border-gray-900 bg-[#1F2937]/30 py-8 z-10 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center md:justify-between items-center gap-6 text-center">
-          <AttributeBadge icon={<Target className="w-4 h-4" />} text="Focada em Resultados" />
-          <AttributeBadge icon={<Zap className="w-4 h-4" />} text="Energia e Motivação" />
-          <AttributeBadge icon={<Shield className="w-4 h-4" />} text="Confiança e Segurança" />
-          <AttributeBadge icon={<Award className="w-4 h-4" />} text="Alta Performance" />
-          <AttributeBadge icon={<Heart className="w-4 h-4" />} text="Saúde e Bem-Estar" />
-          <AttributeBadge icon={<Smartphone className="w-4 h-4" />} text="Acessível e Moderna" />
-        </div>
-      </section>
-
-      {/* Pilares da Marca */}
-      <section className="max-w-6xl mx-auto px-6 py-24 relative z-10">
-        <Reveal className="text-center mb-12 sm:mb-16"><div>
-          <h2 className="text-xs font-black tracking-[0.2em] text-brand uppercase mb-3">Nossos Fundamentos</h2>
-          <p className="text-3xl md:text-4xl font-black text-white">Os Pilares da Marca AcademyUp</p>
-          <p className="text-gray-400 mt-3 max-w-xl mx-auto text-sm">Desenvolvemos nossa metodologia em torno de quatro valores inabaláveis para garantir a sua melhor versão.</p>
-        </div></Reveal>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <PillarCard  delay={0}
-            icon={<Dumbbell className="w-6 h-6 text-black" />} 
-            title="Treinos Inteligentes" 
-            desc="Programação de treinos efetiva e totalmente personalizada de acordo com seu biotipo, nível e limitações."
-          />
-          <PillarCard  delay={90}
-            icon={<CheckCircle className="w-6 h-6 text-black" />} 
-            title="Disciplina & Foco" 
-            desc="Constância e construção de mentalidade forte para transformar seus hábitos diários e atingir metas consistentes."
-          />
-          <PillarCard  delay={180}
-            icon={<TrendingUp className="w-6 h-6 text-black" />} 
-            title="Evolução Real" 
-            desc="Acompanhe seu progresso e superação de limites com gráficos de cargas, histórico detalhado e fotos de evolução."
-          />
-          <PillarCard  delay={270}
-            icon={<Users className="w-6 h-6 text-black" />} 
-            title="Comunidade & Apoio" 
-            desc="Juntos somos muito mais fortes. Suporte direto e motivação constante que inspira no chat com seu treinador."
-          />
-        </div>
-      </section>
-
-      {/* Seção Como Funciona */}
-      <section className="bg-[#1F2937]/20 border-t border-gray-900 py-24 relative z-10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <StepCard  delay={0}
-              num="01"
-              title="Crie sua Ficha"
-              desc="Acesse a biblioteca de exercícios com GIFs interativos para montar e ordenar seu roteiro de treinos."
-            />
-            <StepCard  delay={90}
-              num="02"
-              title="Treine no Foco"
-              desc="Inicie a sessão com nosso cronômetro de descanso inteligente e insira suas cargas em tempo real."
-            />
-            <StepCard  delay={180}
-              num="03"
-              title="Acompanhe"
-              desc="Visualize suas métricas financeiras, feedbacks de consultoria e relatórios de recordes pessoais (PRs)."
-            />
+      <main>
+        {/* HERO */}
+        <section className="aurora-bg relative">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:pt-16 lg:grid-cols-2 lg:gap-8 lg:pb-24 lg:pt-24">
+            <div className="text-center lg:text-left">
+              <span className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-brand">
+                <Zap className="h-3.5 w-3.5" /> Treino inteligente para quem leva a sério
+              </span>
+              <h1 className="animate-fade-up mt-5 font-display text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl" style={{ animationDelay: '80ms' }}>
+                Treine com <span className="text-gradient-brand">método.</span><br />Evolua com <span className="text-gradient-brand">dados.</span>
+              </h1>
+              <p className="animate-fade-up mx-auto mt-5 max-w-xl text-base text-gray-600 dark:text-gray-300 sm:text-lg lg:mx-0" style={{ animationDelay: '160ms' }}>
+                Fichas, cronômetro, evolução, chat com o treinador e um coach de IA. Tudo num app feito para usar com uma mão, mesmo sem internet.
+              </p>
+              <div className="animate-fade-up mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start" style={{ animationDelay: '240ms' }}>
+                {activeSession ? (
+                  <button type="button" onClick={continueWorkout} className="pressable animate-pulse-ring flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] px-7 text-base font-black text-black shadow-xl shadow-brand/30">
+                    <Flame className="h-5 w-5" /> Continuar treino ativo
+                  </button>
+                ) : (
+                  <button type="button" onClick={goPrimary} className="pressable flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] px-7 text-base font-black text-black shadow-xl shadow-brand/30">
+                    {user ? 'Ir para meu painel' : 'Criar conta grátis'} <ArrowRight className="h-5 w-5" />
+                  </button>
+                )}
+                <button type="button" onClick={() => navigate(user ? '/trainings' : '/login')} className="pressable flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-gray-300 bg-white/70 px-7 text-base font-bold text-gray-800 backdrop-blur dark:border-white/15 dark:bg-white/5 dark:text-white">
+                  {user ? 'Ver minhas fichas' : 'Já tenho conta'}
+                </button>
+              </div>
+              <dl className="mx-auto mt-10 grid max-w-md grid-cols-3 gap-4 text-center lg:mx-0 lg:text-left">
+                {[['Offline', 'funciona sem rede'], ['Coach IA', 'macros e fichas'], ['Chat', 'com seu treinador']].map(([t, l]) => (
+                  <div key={t}>
+                    <dt className="font-display text-xl font-black text-gray-900 dark:text-white">{t}</dt>
+                    <dd className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{l}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <div className="animate-scale-in" style={{ animationDelay: '200ms' }}><PhoneMockup /></div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Final */}
-      <section className="relative text-center py-24 max-w-4xl mx-auto px-6 z-10">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-brand/5 rounded-full blur-[80px] pointer-events-none"></div>
-        <h2 className="text-4xl md:text-5xl font-black mb-6">Pronto para o próximo nível?</h2>
-        <p className="text-gray-400 mb-10 text-lg max-w-xl mx-auto">Cadastre-se hoje mesmo e comece a treinar com disciplina e inteligência.</p>
-        {user ? (
-          <button 
-            onClick={() => navigate(activeSession ? `/execution/${activeSession.trainingId}` : '/dashboard')}
-            className="btn-primary-gradient text-lg px-10 py-5 mx-auto flex items-center justify-center gap-2"
-          >
-            <Flame className="w-5 h-5 fill-current" />
-            {activeSession ? 'Continuar Treino Ativo 🔥' : 'Acessar Meu Painel'}
-          </button>
-        ) : (
-          <button 
-            onClick={() => navigate('/register')}
-            className="btn-primary-gradient text-lg px-10 py-5 mx-auto"
-          >
-            Iniciar Agora Gratuitamente
-          </button>
-        )}
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-900 py-12 text-center text-gray-500 text-xs relative z-10">
-        <div className="flex justify-center items-center gap-2 mb-4">
-          <div className="w-6 h-6 text-gray-400">
-            <AcademyUpLogo className="w-full h-full text-gray-500" />
+        {/* FEATURES */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20" aria-labelledby="features-title">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand">Tudo em um lugar</p>
+            <h2 id="features-title" className="mt-2 font-display text-3xl font-black sm:text-4xl">Menos planilha, mais resultado</h2>
+            <p className="mt-3 text-gray-600 dark:text-gray-400">Cada detalhe foi pensado para o momento em que você está com o celular na mão entre uma série e outra.</p>
+          </Reveal>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(({ icon: Icon, title, text }, i) => (
+              <Reveal key={title} delay={i * 70}>
+                <article className="surface surface-hover h-full p-6">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Icon className="h-6 w-6" aria-hidden="true" /></span>
+                  <h3 className="mt-4 font-display text-lg font-black">{title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">{text}</p>
+                </article>
+              </Reveal>
+            ))}
           </div>
-          <span className="font-black text-gray-400">ACADEMYUP</span>
-        </div>
-        <p className="mb-2">© 2026 AcademyUp. Todos os direitos reservados.</p>
-        <p className="text-gray-600">TREINE. EVOLUA. SUPERE.</p>
+        </section>
+
+        {/* COMO FUNCIONA */}
+        <section className="border-y border-gray-200/70 bg-white/60 py-16 dark:border-white/10 dark:bg-white/[0.02]" aria-labelledby="steps-title">
+          <div className="mx-auto max-w-6xl px-4">
+            <Reveal className="text-center">
+              <h2 id="steps-title" className="font-display text-3xl font-black sm:text-4xl">Comece em 3 passos</h2>
+            </Reveal>
+            <ol className="mt-10 grid gap-4 md:grid-cols-3">
+              {STEPS.map((step, i) => (
+                <Reveal key={step.n} delay={i * 100} as="li">
+                  <div className="surface h-full p-6">
+                    <span className="font-display text-4xl font-black text-gradient-brand">{step.n}</span>
+                    <h3 className="mt-2 font-display text-lg font-black">{step.title}</h3>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{step.text}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* PARA TREINADORES */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20" aria-labelledby="coach-title">
+          <div className="grid items-center gap-8 lg:grid-cols-2">
+            <Reveal>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand">Para treinadores</p>
+              <h2 id="coach-title" className="mt-2 font-display text-3xl font-black sm:text-4xl">Gerencie sua consultoria sem sair do celular</h2>
+              <p className="mt-3 text-gray-600 dark:text-gray-400">Veja quem treinou hoje, quem está sumindo e quem está com mensalidade em atraso. Ajuste uma ficha e o aluno já recebe.</p>
+              <button type="button" onClick={() => navigate('/register')} className="pressable mt-6 inline-flex min-h-[48px] items-center gap-2 rounded-2xl bg-gray-900 px-6 text-sm font-black text-white dark:bg-white dark:text-black">
+                Quero ser treinador <ArrowRight className="h-4 w-4" />
+              </button>
+            </Reveal>
+            <Reveal delay={120}>
+              <ul className="surface divide-y divide-gray-100 p-2 dark:divide-white/10">
+                {COACH_POINTS.map(({ icon: Icon, text }) => (
+                  <li key={text} className="flex items-center gap-4 p-4">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+                    <span className="text-sm font-semibold sm:text-base">{text}</span>
+                    <Check className="ml-auto h-5 w-5 shrink-0 text-emerald-500" aria-hidden="true" />
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* CTA FINAL */}
+        <section className="px-4 pb-20">
+          <Reveal>
+            <div className="aurora-bg mx-auto max-w-4xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-brand to-[#FF9800] p-8 text-center text-black shadow-2xl shadow-brand/20 sm:p-12">
+              <Dumbbell className="mx-auto h-10 w-10" aria-hidden="true" />
+              <h2 className="mt-3 font-display text-3xl font-black sm:text-4xl">Seu próximo treino começa agora</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm font-medium opacity-80 sm:text-base">Crie sua conta gratuita e monte sua primeira ficha em minutos.</p>
+              <button type="button" onClick={goPrimary} className="pressable mt-6 inline-flex min-h-[56px] items-center gap-2 rounded-2xl bg-black px-8 text-base font-black text-brand shadow-xl">
+                {user ? 'Abrir meu painel' : 'Começar agora'} <ArrowRight className="h-5 w-5" />
+              </button>
+            </div>
+          </Reveal>
+        </section>
+      </main>
+
+      <footer className="border-t border-gray-200/70 py-8 text-center text-xs text-gray-500 dark:border-white/10 dark:text-gray-400">
+        <p className="flex items-center justify-center gap-1.5"><Smartphone className="h-4 w-4" aria-hidden="true" /> Instale na tela inicial do celular para a melhor experiência.</p>
+        <p className="mt-2">© {new Date().getFullYear()} AcademyUp · Treine · Evolua · Supere</p>
       </footer>
     </div>
   );
 }
-
-const AttributeBadge = ({ icon, text }) => (
-  <div className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white transition-colors">
-    <span className="text-brand">{icon}</span>
-    <span>{text}</span>
-  </div>
-);
-
-const PillarCard = ({ icon, title, desc, delay = 0 }) => (
-  <Reveal delay={delay} className="h-full">
-  <div className="bg-[#1F2937]/50 backdrop-blur-md border border-brand/10 p-8 rounded-3xl hover:border-brand/40 hover:shadow-[0_0_30px_rgba(255,193,7,0.1)] transition-all duration-300 group hover:-translate-y-1">
-    <div className="w-13 h-13 bg-gradient-to-br from-brand to-[#FF9800] rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-brand/20 group-hover:scale-110 transition-transform">
-      {icon}
-    </div>
-    <h3 className="text-xl font-black text-white mb-3 tracking-tight">{title}</h3>
-    <p className="text-gray-300 text-sm leading-relaxed">{desc}</p>
-  </div>
-  </Reveal>
-);
-
-const StepCard = ({ num, title, desc, delay = 0 }) => (
-  <Reveal delay={delay}>
-  <div className="relative p-6">
-    <div className="text-6xl font-black text-gradient-brand opacity-60 font-mono mb-4">{num}</div>
-    <h4 className="text-lg font-bold text-white mb-2">{title}</h4>
-    <p className="text-gray-300 text-xs leading-relaxed">{desc}</p>
-  </div>
-  </Reveal>
-);

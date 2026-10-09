@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy } from 'lucide-react';
 import SetRow from './SetRow';
 import { getLastReps, getSmartTip } from '../../utils/training';
@@ -35,12 +36,12 @@ const ExecutionExerciseCard = ({
     return (
         <div className={`surface animate-fade-up overflow-hidden ${isFocusMode ? 'min-h-[50vh] flex flex-col' : ''}`}>
             {/* Card Header */}
-            <div className="p-4 flex gap-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-850 relative">
-                <div className={`${isFocusMode ? 'w-24 h-24' : 'w-16 h-16'} bg-gray-250 dark:bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-800 transition-all cursor-zoom-in group`}>
+            <div className="p-4 flex gap-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-white/[0.03] relative">
+                <div className={`${isFocusMode ? 'w-24 h-24' : 'w-16 h-16'} bg-gray-200 dark:bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-800 transition-all cursor-zoom-in group`}>
                     {ex.machineImage ?
                         <img
                             src={ex.machineImage}
-                            className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-300"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                             alt={exName}
                             loading="lazy"
                             onClick={() => onZoom({
@@ -110,7 +111,7 @@ const ExecutionExerciseCard = ({
             </div>
 
             {/* BARRA DE AÇÃO RÁPIDA 1-TOQUE (ERGONOMIA DE MÃO ÚNICA) */}
-            {isFocusMode && (
+            {isFocusMode && createPortal(
                 <div className="fixed inset-x-0 z-[60] px-4 pointer-events-none" style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))' }}>
                   <div className="pointer-events-auto mx-auto max-w-2xl rounded-3xl bg-white/90 dark:bg-gray-900/90 p-2 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl animate-slide-up">
                     {allDone ? (
@@ -135,7 +136,8 @@ const ExecutionExerciseCard = ({
                         </button>
                     )}
                   </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

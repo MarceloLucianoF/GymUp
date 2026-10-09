@@ -11,7 +11,7 @@ const ExerciseZoomModal = ({ exercise, onClose }) => {
                 <button
                     onClick={onClose}
                     aria-label="Fechar"
-                    className="absolute top-4 right-4 w-9 h-9 bg-gray-150 dark:bg-black/40 hover:bg-gray-200 dark:hover:bg-black/60 rounded-full flex items-center justify-center text-gray-600 dark:text-white/80 hover:text-gray-900 dark:hover:text-white transition-colors z-10"
+                    className="absolute top-4 right-4 w-9 h-9 bg-gray-100 dark:bg-black/40 hover:bg-gray-200 dark:hover:bg-black/60 rounded-full flex items-center justify-center text-gray-600 dark:text-white/80 hover:text-gray-900 dark:hover:text-white transition-colors z-10"
                 >
                     ✕
                 </button>
