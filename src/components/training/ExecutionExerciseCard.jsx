@@ -33,7 +33,7 @@ const ExecutionExerciseCard = ({
     const checkSet = (setIndex) => onCheckSet(exIndex, setIndex, repsPlaceholder, setsCount, restSeconds, exName);
 
     return (
-        <div className={`bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 hover:border-brand/25 transition-all duration-300 overflow-hidden ${isFocusMode ? 'min-h-[60vh] flex flex-col' : ''}`}>
+        <div className={`surface animate-fade-up overflow-hidden ${isFocusMode ? 'min-h-[50vh] flex flex-col' : ''}`}>
             {/* Card Header */}
             <div className="p-4 flex gap-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-850 relative">
                 <div className={`${isFocusMode ? 'w-24 h-24' : 'w-16 h-16'} bg-gray-250 dark:bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-800 transition-all cursor-zoom-in group`}>
@@ -42,6 +42,7 @@ const ExecutionExerciseCard = ({
                             src={ex.machineImage}
                             className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-300"
                             alt={exName}
+                            loading="lazy"
                             onClick={() => onZoom({
                                 image: ex.machineImage,
                                 name: exName,
@@ -110,11 +111,12 @@ const ExecutionExerciseCard = ({
 
             {/* BARRA DE AÇÃO RÁPIDA 1-TOQUE (ERGONOMIA DE MÃO ÚNICA) */}
             {isFocusMode && (
-                <div className="p-4 bg-gray-50/80 dark:bg-gray-900/60 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-2 mt-auto">
+                <div className="fixed inset-x-0 z-[60] px-4 pointer-events-none" style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))' }}>
+                  <div className="pointer-events-auto mx-auto max-w-2xl rounded-3xl bg-white/90 dark:bg-gray-900/90 p-2 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl animate-slide-up">
                     {allDone ? (
                         <button
                             onClick={() => (isLastExercise ? onFinish() : onNextExercise())}
-                            className="w-full btn-primary-gradient py-4 text-sm font-black rounded-2xl touch-target shadow-xl flex items-center justify-center gap-2"
+                            className="w-full btn-primary-gradient pressable min-h-[60px] text-base font-black rounded-2xl shadow-xl"
                         >
                             {!isLastExercise ? (
                                 <>PRÓXIMO EXERCÍCIO <ArrowRight className="w-5 h-5" /></>
@@ -127,11 +129,12 @@ const ExecutionExerciseCard = ({
                             onClick={() => {
                                 if (nextUndoneIndex !== -1) checkSet(nextUndoneIndex);
                             }}
-                            className="w-full bg-brand/20 hover:bg-brand/30 text-brand border border-brand/40 py-4 text-sm font-black rounded-2xl touch-target flex items-center justify-center gap-2 transition-all active:scale-95"
+                            className="w-full bg-gradient-to-r from-brand to-[#FF9800] text-black min-h-[60px] text-base font-black rounded-2xl shadow-lg shadow-brand/30 flex items-center justify-center gap-2 transition-all active:scale-95 animate-pulse-ring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
                         >
                             <Check className="w-5 h-5" /> CONCLUIR SÉRIE #{nextUndoneIndex + 1} & DESCANSAR
                         </button>
                     )}
+                  </div>
                 </div>
             )}
         </div>

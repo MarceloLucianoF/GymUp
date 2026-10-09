@@ -2,20 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { collection, query, where, getDocs, orderBy, doc, getDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import WeeklyChart from '../../components/dashboard/WeeklyChart';
 import { useRole } from '../../hooks/useRole';
 import toast from 'react-hot-toast';
 import StudentChatWidget from '../../components/chat/StudentChatWidget';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
 import AICoachModal from '../../components/ai/AICoachModal';
-import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Smile } from 'lucide-react';
+import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell } from 'lucide-react';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import ActiveWorkoutBanner from '../../components/dashboard/ActiveWorkoutBanner';
 import LinkCoachModal from '../../components/dashboard/LinkCoachModal';
 import RecommendedWorkoutCard from '../../components/dashboard/RecommendedWorkoutCard';
-import ConsistencyCard from '../../components/dashboard/ConsistencyCard';
 import { formatDate, formatTonnage } from '../../utils/format';
+import ProgressRing from '../../components/ui/ProgressRing';
+import StatCard from '../../components/ui/StatCard';
+import AnimatedNumber from '../../components/ui/AnimatedNumber';
+import Reveal from '../../components/ui/Reveal';
+import Skeleton from '../../components/common/Skeleton';
+import EmptyState from '../../components/common/EmptyState';
+import WeekStrip, { getWeekDays } from '../../components/dashboard/WeekStrip';
+
+const WEEKLY_GOAL = 4;
+
+const HomeSkeleton = () => (
+  <div className="min-h-screen bg-gray-50 p-4 pb-32 dark:bg-[#0B0F19] md:p-8" role="status" aria-label="Carregando">
+    <div className="mx-auto max-w-6xl space-y-5">
+      <Skeleton className="h-44 w-full !rounded-3xl" />
+      <Skeleton className="h-48 w-full !rounded-3xl" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32 !rounded-3xl" />)}
+      </div>
+      <Skeleton className="h-40 w-full !rounded-3xl" />
+    </div>
+  </div>
+);
 
 // --- COMPONENTE PRINCIPAL ---
 
@@ -69,7 +90,7 @@ export default function Home() {
         // 2. Histórico
         const qHistory = query(collection(db, 'checkIns'), where('userId', '==', user.uid), orderBy('date', 'desc'));
         const historySnap = await getDocs(qHistory);
-        const historyData = historySnap.docs.map(d => d.data());
+        const historyData = historySnap.docs.map(d => ({ id: d.id, ...d.data() }));
         setHistory(historyData);
         calculateGamification(historyData);
 
@@ -164,235 +185,282 @@ export default function Home() {
 
   const formatVolume = (kg) => kg > 1000 ? formatTonnage(kg) : `${kg}kg`;
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
+  if (loading) return <HomeSkeleton />;
 
   const firstName = (userProfile?.displayName || user?.displayName || 'Atleta').split(' ')[0];
   const photoURL = userProfile?.photoURL || user?.photoURL;
   const lastWorkoutId = history.length > 0 ? history[0].trainingId : null;
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+
+  const weekDays = getWeekDays(history);
+  const weekCount = weekDays.filter((d) => d.trained).length;
+  const weekPct = Math.min(100, Math.round((weekCount / WEEKLY_GOAL) * 100));
+
+  const now = new Date();
+  const monthItems = history.filter((h) => {
+    const d = new Date(h.date);
+    return !Number.isNaN(d.getTime()) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthVolume = monthItems.reduce((acc, h) => acc + (Number(h.totalVolume) || 0), 0);
+  const monthMinutes = Math.round(monthItems.reduce((acc, h) => acc + (Number(h.duration) || 0), 0) / 60);
+  const volumeSpark = history.slice(0, 8).map((h) => Number(h.totalVolume) || 0).reverse();
+  const recent = history.slice(0, 4);
+  const carousel = trainings.slice(0, 10);
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 pb-32 transition-colors duration-300">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="flex flex-row justify-between items-center px-1 sm:px-2 gap-2 sm:gap-4">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                <div onClick={() => navigate('/profile')} className="w-14 h-14 rounded-full overflow-hidden shadow-md border-2 border-white dark:border-gray-850 cursor-pointer hover:opacity-90 transition-opacity shrink-0">
-                    {photoURL ? (
-                        <img src={photoURL} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-black font-bold text-xl">
-                            {firstName[0]}
-                        </div>
-                    )}
-                </div>
-                <div className="min-w-0">
-                    <h1 className="text-xl sm:text-2xl font-black text-gray-800 dark:text-white tracking-tight truncate">Olá, {firstName}!</h1>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span className="bg-brand/10 text-brand px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-brand/20">{stats.level}</span>
-                        
-                        {/* BOTÃO VINCULAR (Só aparece se não tiver coach) */}
-                        {!userProfile?.coachId && (
-                            <button 
-                                onClick={() => setShowLinkCoach(true)} 
-                                className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-                            >
-                                <Link2 className="w-3 h-3" /> Vincular Treinador
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-gray-100 dark:border-gray-750 shadow-sm flex items-center gap-2 sm:gap-3 shrink-0">
-                <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 fill-orange-500" />
-                <div className="text-left">
-                    <p className="text-[9px] sm:text-xs text-gray-400 font-bold uppercase">Racha</p>
-                    <p className="text-sm sm:text-lg font-black text-gray-800 dark:text-gray-200 leading-none">{stats.streak} dias</p>
-                </div>
-            </div>
-        </div>
+    <div className="min-h-screen bg-gray-50 p-4 pb-32 transition-colors duration-300 dark:bg-[#0B0F19] md:p-8">
+      <div className="mx-auto max-w-6xl space-y-5 md:space-y-6">
 
-        {/* CARD PRINCIPAL DE TREINO (EXIBE EM ANDAMENTO OU RECOMENDADO) */}
-        {activeSession ? (
-            <ActiveWorkoutBanner 
-                activeSession={activeSession}
-                onContinue={() => navigate(`/execution/${activeSession.trainingId}`)}
-                onDiscard={() => setShowConfirmDiscard(true)}
-            />
-        ) : (
-            <RecommendedWorkoutCard 
-                lastWorkoutId={lastWorkoutId} 
-                trainings={trainings} 
-                assignedTrainingId={userProfile?.currentTrainingId} 
-                onStart={(id) => navigate(`/training/${id}`)}
-            />
-        )}
-
-        {/* CARD DE ASSISTENTE DE IA: COACH & NUTRIÇÃO */}
-        <div className="card-premium-glass p-5 rounded-3xl border border-brand/30 bg-gradient-to-r from-gray-900 via-[#1F2937] to-gray-900 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand to-[#FF9800] flex items-center justify-center text-black font-black shadow-lg shadow-brand/25 shrink-0">
-                    <Sparkles className="w-6 h-6 fill-current animate-pulse" />
-                </div>
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-base font-black text-white">Coach IA & Guia de Nutrição</h3>
-                        <span className="bg-brand/10 text-brand text-[9px] font-black px-2.5 py-0.5 rounded-full border border-brand/20 uppercase">Novo</span>
-                    </div>
-                    <p className="text-xs text-gray-300 mt-0.5">Gere treinos sob medida, consulte macros e tire dúvidas nutricionais.</p>
-                </div>
-            </div>
-            <button
-                onClick={() => setIsAIModalOpen(true)}
-                className="w-full sm:w-auto btn-primary-gradient px-5 py-3 rounded-2xl touch-target text-xs font-black shrink-0 flex items-center justify-center gap-2"
-            >
-                Acessar Coach IA →
-            </button>
-        </div>
-
-        {/* --- CARD DO TREINADOR (ADMIN/COACH) --- */}
-        {isCoach && (
-            <div className="bg-[#1F2937]/50 backdrop-blur-md rounded-3xl p-6 text-white shadow-xl flex flex-col sm:flex-row justify-between items-center relative overflow-hidden group border border-brand/20 gap-4 hover:border-brand/40 transition-all">
-                <div className="absolute right-0 top-0 h-full w-1/2 bg-white/5 skew-x-12 transform translate-x-10"></div>
-                <div className="relative z-10 text-center sm:text-left">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                        <span className="bg-brand text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Modo Coach</span>
-                    </div>
-                    <h3 className="text-xl font-black tracking-tight">Painel do Treinador</h3>
-                    <p className="text-gray-400 text-xs max-w-xs mt-1">Gerencie seus alunos e prescreva treinos com controle total.</p>
-                </div>
-                <button 
-                    onClick={() => navigate('/coach/dashboard')}
-                    className="relative z-10 btn-primary-gradient px-6 py-3 text-sm w-full sm:w-auto justify-center"
-                >
-                    <Wrench className="w-4 h-4 text-black" /> Acessar Painel
-                </button>
-            </div>
-        )}
-
-        {/* METRICAS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 relative overflow-hidden group hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
-                <div>
-                    <div className="absolute top-0 left-0 w-1 h-full bg-brand"></div>
-                    <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1">Próxima Meta <Target className="w-3 h-3 text-brand" /></h3>
-                    <div className="flex justify-between items-end mb-2">
-                        <span className="text-3xl font-black text-gray-800 dark:text-white">{stats.nextLevelTreinos}</span>
-                        <span className="text-xs font-bold text-gray-400 mb-1">treinos</span>
-                    </div>
-                    <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-brand h-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
-                    </div>
-                </div>
-                <p className="text-[10px] text-gray-400 mt-2 text-right">Faltam {stats.nextLevelTreinos - stats.totalTreinos}</p>
-            </div>
-
-            <div className="hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
-                <ConsistencyCard history={history} />
-            </div>
-
-            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 flex flex-col justify-between h-full hover-glow-brand">
-                <div>
-                    <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Maior Carga (PR)</h3>
-                    <div className="flex items-end gap-1">
-                        <span className="text-3xl font-black text-gray-800 dark:text-white">{stats.maxGlobalLoad}</span>
-                        <span className="text-sm font-bold text-gray-400 mb-1">kg</span>
-                    </div>
-                </div>
-                <p className="text-[10px] text-brand bg-brand/10 px-2 py-1 rounded w-fit mt-2 font-bold flex items-center gap-1">
-                    <Trophy className="w-3 h-3 text-brand fill-brand" /> Seu recorde pessoal
-                </p>
-            </div>
-
-            <div onClick={() => navigate('/measurements')} className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 cursor-pointer hover:border-brand/45 transition-all hover:-translate-y-1 hover:scale-[1.01] duration-300 group flex flex-col justify-between h-full hover-glow-brand">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Peso Corporal</h3>
-                        <span className="text-3xl font-black text-gray-800 dark:text-white">{userProfile?.weight || '--'}kg</span>
-                    </div>
-                    <Scale className="w-6 h-6 text-gray-400 group-hover:text-brand group-hover:scale-110 transition-all duration-300" />
-                </div>
-                <p className="text-[10px] text-brand mt-2 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Atualizar medidas →</p>
-            </div>
-        </div>
-
-        {/* GRAFICO E HISTÓRICO */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-                <div className="mb-4 flex items-center justify-between px-1">
-                    <h3 className="font-bold text-gray-700 dark:text-white text-lg">Frequência Semanal</h3>
-                    <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">Mantenha o foco!</span>
-                </div>
-                <WeeklyChart history={history} />
-            </div>
-
-            <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-brand/10 flex flex-col h-full hover:border-brand/20 transition-all duration-300">
-                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-6">Última Conquista</h3>
-                {history.length > 0 ? (
-                    <div className="flex-1 flex flex-col">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-14 h-14 bg-yellow-100 dark:bg-yellow-900/30 rounded-2xl flex items-center justify-center shadow-sm">
-                                <Trophy className="w-7 h-7 text-yellow-500 fill-yellow-500 animate-bounce" />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-lg text-gray-800 dark:text-white leading-tight line-clamp-1">{history[0].trainingName}</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 capitalize">{formatDate(history[0].date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 mb-6">
-                            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-600">
-                                <p className="text-[9px] text-gray-400 uppercase font-bold">Tempo</p>
-                                <p className="font-mono font-bold text-gray-800 dark:text-white text-lg">{Math.floor(history[0].duration / 60)}<span className="text-xs ml-0.5">min</span></p>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-600">
-                                <p className="text-[9px] text-gray-400 uppercase font-bold">Volume</p>
-                                <p className="font-mono font-bold text-gray-800 dark:text-white text-lg">{formatVolume(history[0].totalVolume)}</p>
-                            </div>
-                        </div>
-                        <button onClick={() => navigate('/history')} className="w-full mt-auto py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-xs uppercase tracking-wide">Ver Histórico Completo</button>
-                    </div>
+        {/* HERO */}
+        <section className="surface aurora-bg relative overflow-hidden p-5 sm:p-7 animate-fade-up" aria-label="Resumo da semana">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                aria-label="Abrir perfil"
+                className="pressable h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-brand shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              >
+                {photoURL ? (
+                  <img src={photoURL} alt="" loading="lazy" className="h-full w-full object-cover" />
                 ) : (
-                    <div className="flex-1 flex flex-col justify-center items-center text-center py-8 text-gray-400">
-                        <Smile className="w-10 h-10 text-gray-400 mb-2 opacity-50" />
-                        <p className="text-sm font-medium">Nenhum treino ainda.</p>
-                        <button onClick={() => navigate('/trainings')} className="text-brand font-bold text-xs mt-2 hover:underline">Começar Jornada</button>
-                    </div>
+                  <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand to-brand-dark text-xl font-bold text-black">{firstName[0]}</span>
                 )}
+              </button>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{greeting},</p>
+                <h1 className="truncate font-display text-2xl font-black text-gray-900 dark:text-white sm:text-3xl">
+                  <span className="text-gradient-brand">{firstName}</span>
+                </h1>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-brand">{stats.level}</span>
+                  {!userProfile?.coachId && (
+                    <button
+                      type="button"
+                      onClick={() => setShowLinkCoach(true)}
+                      className="pressable flex min-h-[28px] items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:border-white/15 dark:bg-white/5 dark:text-gray-300"
+                    >
+                      <Link2 className="h-3 w-3" aria-hidden="true" /> Vincular Treinador
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+            <div className="flex shrink-0 flex-col items-center rounded-2xl bg-orange-500/10 px-3 py-2" aria-label={`Sequência de ${stats.streak} dias`}>
+              <Flame className={`h-6 w-6 fill-orange-500 text-orange-500 ${stats.streak > 0 ? 'animate-float' : 'opacity-50'}`} aria-hidden="true" />
+              <p className="font-display text-lg font-black leading-none text-gray-900 dark:text-white"><AnimatedNumber value={stats.streak} /></p>
+              <p className="text-[9px] font-bold uppercase text-gray-500 dark:text-gray-400">dias</p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-center gap-5">
+            <ProgressRing value={weekPct} size={96} stroke={9}>
+              <div className="text-center leading-none">
+                <p className="font-display text-xl font-black text-gray-900 dark:text-white">{weekCount}<span className="text-xs font-bold text-gray-500">/{WEEKLY_GOAL}</span></p>
+              </div>
+            </ProgressRing>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-lg font-black text-gray-900 dark:text-white">Meta semanal</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {weekCount >= WEEKLY_GOAL ? 'Meta batida! Você é imparável.' : `Faltam ${WEEKLY_GOAL - weekCount} treino(s) para fechar a semana.`}
+              </p>
+            </div>
+          </div>
+          <div className="mt-5"><WeekStrip days={weekDays} /></div>
+        </section>
+
+        {/* TREINO DE HOJE */}
+        <Reveal>
+          {activeSession ? (
+            <ActiveWorkoutBanner
+              activeSession={activeSession}
+              onContinue={() => navigate(`/execution/${activeSession.trainingId}`)}
+              onDiscard={() => setShowConfirmDiscard(true)}
+            />
+          ) : (
+            <RecommendedWorkoutCard
+              lastWorkoutId={lastWorkoutId}
+              trainings={trainings}
+              assignedTrainingId={userProfile?.currentTrainingId}
+              onStart={(id) => navigate(`/training/${id}`)}
+            />
+          )}
+        </Reveal>
+
+        {/* MÉTRICAS */}
+        <section aria-label="Métricas do mês" className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+          <Reveal delay={0}><StatCard icon={CalendarCheck} label="Treinos no mês" value={monthItems.length} className="h-full" /></Reveal>
+          <Reveal delay={80}>
+            <StatCard icon={Weight} accent="green" label="Volume no mês" value={Math.round(monthVolume / 100) / 10} decimals={1} suffix=" t" spark={volumeSpark} className="h-full" />
+          </Reveal>
+          <Reveal delay={160}><StatCard icon={Timer} accent="blue" label="Minutos treinados" value={monthMinutes} suffix=" min" className="h-full" /></Reveal>
+          <Reveal delay={240}><StatCard icon={Trophy} label="Maior carga (PR)" value={stats.maxGlobalLoad} suffix=" kg" className="h-full" /></Reveal>
+        </section>
+
+        {/* PRÓXIMA META + PESO */}
+        <Reveal>
+          <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+            <div className="surface p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"><Target className="h-4 w-4 text-brand" aria-hidden="true" /> Próximo nível</h2>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{stats.totalTreinos}/{stats.nextLevelTreinos}</span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10" role="progressbar" aria-valuenow={Math.round(stats.progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso para o próximo nível">
+                <div className="h-full rounded-full bg-gradient-to-r from-brand to-[#FF9800] transition-all duration-1000" style={{ width: `${stats.progress}%` }} />
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Faltam {Math.max(0, stats.nextLevelTreinos - stats.totalTreinos)} treinos.</p>
+            </div>
+            <button type="button" onClick={() => navigate('/measurements')} className="surface surface-hover pressable group flex min-h-[44px] items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Peso corporal</h2>
+                <p className="font-display text-3xl font-black text-gray-900 dark:text-white">{userProfile?.weight || '--'}<span className="ml-0.5 text-base text-gray-500">kg</span></p>
+                <p className="mt-1 text-xs font-bold text-amber-700 dark:text-brand">Atualizar medidas →</p>
+              </div>
+              <Scale className="h-8 w-8 text-gray-400 transition-all group-hover:scale-110 group-hover:text-brand" aria-hidden="true" />
+            </button>
+          </div>
+        </Reveal>
+
+        {/* CARROSSEL DE TREINOS */}
+        {carousel.length > 0 && (
+          <section aria-label="Treinos disponíveis">
+            <div className="mb-3 flex items-end justify-between px-1">
+              <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Treinos para você</h2>
+              <Link to="/trainings" className="flex min-h-[44px] items-center text-xs font-bold text-amber-700 dark:text-brand">Ver todos <ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>
+            </div>
+            <div className="no-scrollbar scroll-snap-x scroll-px-4 -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+              {carousel.map((t, i) => (
+                <Link
+                  key={t.firestoreId}
+                  to={`/training/${t.firestoreId}`}
+                  className="surface surface-hover pressable animate-fade-up w-60 shrink-0 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-64"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Dumbbell className="h-5 w-5" aria-hidden="true" /></span>
+                  <h3 className="mt-3 line-clamp-1 font-display text-base font-black text-gray-900 dark:text-white">{t.name}</h3>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t.exercises?.length || 0} exercícios{t.difficulty ? ` • ${t.difficulty}` : ''}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* FREQUÊNCIA + ATIVIDADE RECENTE */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <Reveal className="lg:col-span-2">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Frequência semanal</h2>
+              <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Mantenha o foco!</span>
+            </div>
+            <WeeklyChart history={history} />
+          </Reveal>
+
+          <Reveal delay={100}>
+            <div className="surface flex h-full flex-col p-5">
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Atividade recente</h2>
+              {recent.length > 0 ? (
+                <ul className="flex-1 space-y-2">
+                  {recent.map((h, i) => (
+                    <li key={h.id || i} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
+                      <Link
+                        to={h.id ? `/history/${h.id}` : '/history'}
+                        className="pressable flex min-h-[56px] items-center gap-3 rounded-2xl bg-gray-50 p-3 dark:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/15"><Trophy className="h-5 w-5 text-brand" aria-hidden="true" /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-gray-900 dark:text-white">{h.trainingName}</span>
+                          <span className="block text-xs capitalize text-gray-500 dark:text-gray-400">
+                            {formatDate(h.date, { weekday: 'short', day: 'numeric', month: 'short' })} • {Math.floor((h.duration || 0) / 60)} min • {formatVolume(h.totalVolume || 0)}
+                          </span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyState
+                  icon={Dumbbell}
+                  title="Nenhum treino ainda"
+                  description="Inicie seu primeiro treino e acompanhe sua jornada aqui."
+                  action={<button type="button" onClick={() => navigate('/trainings')} className="btn-primary-gradient min-h-[44px] px-5 text-sm">Começar jornada</button>}
+                />
+              )}
+              {recent.length > 0 && (
+                <button type="button" onClick={() => navigate('/history')} className="pressable mt-3 min-h-[44px] w-full rounded-2xl border border-gray-200 text-xs font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50 dark:border-white/15 dark:text-gray-200 dark:hover:bg-white/5">
+                  Ver histórico completo
+                </button>
+              )}
+            </div>
+          </Reveal>
         </div>
+
+        {/* CARD DO TREINADOR (COACH) */}
+        {isCoach && (
+          <Reveal>
+            <div className="surface flex flex-col items-center justify-between gap-4 p-5 sm:flex-row">
+              <div className="text-center sm:text-left">
+                <span className="rounded-full bg-brand px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-black">Modo Coach</span>
+                <h2 className="mt-2 font-display text-xl font-black text-gray-900 dark:text-white">Painel do Treinador</h2>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Gerencie seus alunos e prescreva treinos.</p>
+              </div>
+              <button type="button" onClick={() => navigate('/coach/dashboard')} className="btn-primary-gradient min-h-[48px] w-full px-6 text-sm sm:w-auto">
+                <Wrench className="h-4 w-4" aria-hidden="true" /> Acessar painel
+              </button>
+            </div>
+          </Reveal>
+        )}
 
         {/* MODAL DE CONFIRMAÇÃO DE DESCARTE DE TREINO */}
         <ConfirmDialog
-            open={showConfirmDiscard}
-            title="Descartar treino em andamento?"
-            message="As séries registradas neste rascunho serão perdidas. Deseja realmente descartar?"
-            confirmLabel="Descartar"
-            danger
-            onCancel={() => setShowConfirmDiscard(false)}
-            onConfirm={handleDiscardActiveWorkout}
+          open={showConfirmDiscard}
+          title="Descartar treino em andamento?"
+          message="As séries registradas neste rascunho serão perdidas. Deseja realmente descartar?"
+          confirmLabel="Descartar"
+          danger
+          onCancel={() => setShowConfirmDiscard(false)}
+          onConfirm={handleDiscardActiveWorkout}
         />
 
-        {/* MODAL DE VINCULAR */}
-        <LinkCoachModal 
-            isOpen={showLinkCoach} 
-            onClose={() => setShowLinkCoach(false)} 
-            currentUserId={user.uid}
-            onSuccess={() => setRefreshTrigger(prev => prev + 1)} 
+        <LinkCoachModal
+          isOpen={showLinkCoach}
+          onClose={() => setShowLinkCoach(false)}
+          currentUserId={user.uid}
+          onSuccess={() => setRefreshTrigger(prev => prev + 1)}
         />
 
-        {/* MODAL DO COACH IA & NUTRIÇÃO */}
-        <AICoachModal 
-            isOpen={isAIModalOpen} 
-            onClose={() => setIsAIModalOpen(false)} 
-            userProfile={userProfile}
-            user={user}
-            customExercises={[]}
-            onWorkoutSaved={() => setRefreshTrigger(prev => prev + 1)}
+        <AICoachModal
+          isOpen={isAIModalOpen}
+          onClose={() => setIsAIModalOpen(false)}
+          userProfile={userProfile}
+          user={user}
+          customExercises={[]}
+          onWorkoutSaved={() => setRefreshTrigger(prev => prev + 1)}
         />
 
-        {/* WIDGET DE CHAT (Aparece sozinho se tiver coach) */}
+        {/* WIDGET DE CHAT (desktop; só aparece se tiver coach) */}
         <StudentChatWidget />
 
+        {/* ATALHOS FLUTUANTES (mobile): Chat e Coach IA */}
+        <div
+          className="fixed right-4 z-40 flex flex-col items-end gap-3 md:bottom-24"
+          style={{ bottom: `calc(${activeSession ? '8.5rem' : '5.5rem'} + env(safe-area-inset-bottom, 0px))` }}
+        >
+          <Link to="/chat" aria-label="Abrir chat com o treinador" className="pressable flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-800 shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:text-white md:hidden">
+            <MessageSquare className="h-5 w-5" aria-hidden="true" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsAIModalOpen(true)}
+            aria-label="Abrir Coach IA"
+            className="pressable animate-float flex h-14 items-center gap-2 rounded-full bg-gradient-to-br from-brand to-[#FF9800] px-5 font-black text-black shadow-xl shadow-brand/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
+          >
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
+            <span className="text-sm">Coach IA</span>
+          </button>
+        </div>
       </div>
     </div>
   );

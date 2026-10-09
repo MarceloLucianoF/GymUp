@@ -5,7 +5,7 @@ import { Trophy } from 'lucide-react';
 const CelebrationModal = ({ stats, onFinish }) => {
     return (
         <div role="dialog" aria-modal="true" aria-label="Treino concluído" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
-            <div className="bg-white dark:bg-[#1F2937] border border-brand/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden animate-fade-in-up">
+            <div className="bg-white dark:bg-[#1F2937] border border-brand/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden animate-scale-in">
                 <div className="w-20 h-20 bg-gradient-to-br from-brand to-[#FF9800] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand/20">
                     <Trophy className="w-10 h-10 text-black fill-current animate-bounce" />
                 </div>

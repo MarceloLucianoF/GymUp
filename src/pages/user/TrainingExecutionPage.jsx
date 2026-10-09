@@ -352,7 +352,7 @@ export default function TrainingExecutionPage() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-40 transition-colors">
+        <div className={`min-h-screen bg-gray-50 dark:bg-[#0B0F19] transition-colors ${viewMode === 'focus' ? 'pb-64' : 'pb-40'}`}>
             {dialog}
 
             <ExecutionHeader
@@ -367,7 +367,7 @@ export default function TrainingExecutionPage() {
             />
 
             {/* ÁREA DE CONTEÚDO */}
-            <div className="pt-28 sm:pt-24 px-4 max-w-2xl mx-auto space-y-6">
+            <div className="pt-28 sm:pt-24 md:pt-44 px-4 max-w-2xl mx-auto space-y-6">
                 
                 {viewMode === 'list' ? (
                     // MODO LISTA: Renderiza todos
@@ -379,17 +379,17 @@ export default function TrainingExecutionPage() {
                             <button 
                                 onClick={() => setActiveExerciseIndex(i => Math.max(0, i - 1))}
                                 disabled={activeExerciseIndex === 0}
-                                className="text-sm font-bold text-gray-450 disabled:opacity-30 hover:text-brand flex items-center gap-1 transition-colors"
+                                className="min-h-[44px] px-2 text-sm font-bold text-gray-600 dark:text-gray-300 disabled:opacity-30 hover:text-brand flex items-center gap-1 transition-colors"
                             >
                                 <ChevronLeft className="w-4 h-4" /> Anterior
                             </button>
-                            <span className="text-xs font-bold text-gray-300">
+                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
                                 {activeExerciseIndex + 1} / {training.exercises.length}
                             </span>
                             <button 
                                 onClick={() => setActiveExerciseIndex(i => Math.min(training.exercises.length - 1, i + 1))}
                                 disabled={activeExerciseIndex === training.exercises.length - 1}
-                                className="text-sm font-bold text-gray-450 disabled:opacity-30 hover:text-brand flex items-center gap-1 transition-colors"
+                                className="min-h-[44px] px-2 text-sm font-bold text-gray-600 dark:text-gray-300 disabled:opacity-30 hover:text-brand flex items-center gap-1 transition-colors"
                             >
                                 Próximo <ChevronRight className="w-4 h-4" />
                             </button>
@@ -402,10 +402,10 @@ export default function TrainingExecutionPage() {
             </div>
 
             {/* BOTÃO FINALIZAR */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 pb-10 md:pb-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-[60] shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.1)]">
+            <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-xl border-t border-gray-200 dark:border-white/10 z-[60]" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                 <button 
                     onClick={finishWorkout}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+                    className={`mx-auto flex min-h-[48px] w-full max-w-2xl items-center justify-center gap-2 rounded-2xl font-black active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/40 ${viewMode === 'focus' ? 'border-2 border-emerald-500/60 text-emerald-600 dark:text-emerald-400 text-sm' : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white text-lg py-4 shadow-lg shadow-emerald-600/20'}`}
                 >
                     <Award className="w-5 h-5 text-white" /> FINALIZAR TREINO
                 </button>

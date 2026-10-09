@@ -7,6 +7,7 @@ import { db } from '../../firebase/config';
 import { ArrowLeft, Send, Sparkles, Bot } from 'lucide-react';
 import AICoachModal from '../../components/ai/AICoachModal';
 import { formatTime } from '../../utils/format';
+import { getPublicCoach } from '../../services/coachProfile';
 
 export default function UserChatPage() {
   const { user, userProfile } = useAuthContext();
@@ -29,9 +30,8 @@ export default function UserChatPage() {
               if (userDoc.exists()) {
                   const userData = userDoc.data();
                   if (userData.coachId) {
-                      const coachDoc = await getDoc(doc(db, 'users', userData.coachId));
-                      if (coachDoc.exists() && isMounted) {
-                          const coachData = { uid: coachDoc.id, ...coachDoc.data() };
+                      const coachData = await getPublicCoach(userData.coachId);
+                      if (coachData && isMounted) {
                           setCoach(coachData);
                           openChatWithUser(coachData); 
                       }
@@ -87,13 +87,13 @@ export default function UserChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0B0F19] transition-colors pb-safe-nav">
+    <div className="flex flex-col h-[100dvh] md:h-[calc(100dvh-5rem)] bg-gray-50 dark:bg-[#0B0F19] transition-colors pb-safe-nav md:pb-0">
         
         {/* Header */}
-        <div className="p-4 bg-white dark:bg-[#1F2937]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-sm z-10 sticky top-0">
+        <div className="p-3 sm:p-4 bg-white/85 dark:bg-[#0B0F19]/85 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 flex items-center justify-between z-10 sticky top-0">
             <div className="flex items-center gap-3">
-                <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-brand pr-2 flex items-center justify-center transition-colors">
-                    <ArrowLeft className="w-5 h-5" />
+                <button onClick={() => navigate('/home')} aria-label="Voltar" className="pressable text-gray-600 dark:text-gray-300 hover:text-brand w-11 h-11 -ml-2 flex items-center justify-center transition-colors rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+                    <ArrowLeft className="w-5 h-5" aria-hidden="true" />
                 </button>
                 <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-lg font-bold text-brand border border-brand/20">
                     {coach?.displayName?.[0] || 'C'}
@@ -108,7 +108,7 @@ export default function UserChatPage() {
 
             <button
               onClick={() => setIsAIModalOpen(true)}
-              className="bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all"
+              className="pressable min-h-[44px] bg-brand/10 hover:bg-brand/20 text-amber-700 dark:text-brand border border-brand/30 px-4 rounded-2xl text-xs font-black flex items-center gap-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current" /> Coach IA
             </button>
@@ -125,14 +125,14 @@ export default function UserChatPage() {
             {messages.map((msg) => {
                 const isMe = msg.senderId === user.uid;
                 return (
-                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} className={`flex animate-fade-up ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] p-3.5 rounded-2xl text-sm shadow-sm relative group ${
                             isMe 
                             ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black font-medium rounded-tr-none' 
-                            : 'card-premium-glass text-gray-800 dark:text-gray-100 rounded-tl-none p-3.5'
+                            : 'surface !rounded-2xl !rounded-tl-none text-gray-800 dark:text-gray-100 p-3.5'
                         }`}>
                             <p className="leading-relaxed">{msg.text}</p>
-                            <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-black/85 font-bold' : 'text-gray-400'}`}>
+                            <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-black/70 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
                                 {formatTime(msg.createdAt)}
                             </p>
                         </div>
@@ -143,19 +143,20 @@ export default function UserChatPage() {
         </div>
 
         {/* Input */}
-        <div className="p-3 bg-white dark:bg-[#1F2937]/90 border-t border-gray-200 dark:border-gray-800">
+        <div className="p-3 bg-white/85 dark:bg-[#0B0F19]/85 backdrop-blur-xl border-t border-gray-200 dark:border-white/10">
             <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto items-center">
                 <input 
                     type="text" 
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 input-brand-dark text-sm"
+                    aria-label="Mensagem"
+                    className="flex-1 input-brand-dark text-base min-h-[48px]"
                 />
                 <button aria-label="Enviar mensagem" 
                     type="submit" 
                     disabled={!inputText.trim()}
-                    className="btn-primary-gradient px-4 py-3 rounded-xl touch-target text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-primary-gradient pressable w-12 h-12 shrink-0 rounded-2xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Send className="w-4 h-4" />
                 </button>

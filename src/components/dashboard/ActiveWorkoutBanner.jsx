@@ -3,52 +3,54 @@ import { Flame, Trash2, RotateCcw } from 'lucide-react';
 
 // --- CARD DE TREINO EM ANDAMENTO (RECUPERAÇÃO AUTOMÁTICA) ---
 const ActiveWorkoutBanner = ({ activeSession, onContinue, onDiscard }) => {
-    if (!activeSession) return null;
-    
-    // Contar séries concluídas
-    const completedSetsCount = activeSession.sessionData 
-      ? Object.values(activeSession.sessionData).filter(s => s?.completed).length 
-      : 0;
+  if (!activeSession) return null;
 
-    return (
-        <div className="bg-gradient-to-r from-orange-600 via-[#FF9800] to-brand p-0.5 rounded-3xl shadow-xl animate-fade-in-up mb-8">
-            <div className="bg-gray-900/90 backdrop-blur-xl p-5 sm:p-6 rounded-[22px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-orange-500/20">
-                <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center shrink-0 mt-1">
-                        <Flame className="w-6 h-6 text-orange-400 animate-pulse fill-orange-400" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                            </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-orange-400">Treino em Andamento</span>
-                        </div>
-                        <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">{activeSession.trainingName}</h3>
-                        <p className="text-xs text-gray-300 mt-1">
-                            <span className="font-bold text-white">{completedSetsCount}</span> séries concluídas • Clique para retornar de onde parou
-                        </p>
-                    </div>
-                </div>
+  const completedSetsCount = activeSession.sessionData
+    ? Object.values(activeSession.sessionData).filter((s) => s?.completed).length
+    : 0;
 
-                <div className="flex gap-2.5 w-full sm:w-auto shrink-0 pt-2 sm:pt-0">
-                    <button 
-                        onClick={onDiscard} 
-                        className="px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-                    >
-                        <Trash2 className="w-3.5 h-3.5" /> Descartar
-                    </button>
-                    <button 
-                        onClick={onContinue}
-                        className="flex-1 sm:flex-initial btn-primary-gradient text-xs px-6 py-3"
-                    >
-                        <RotateCcw className="w-4 h-4" /> CONTINUAR TREINO
-                    </button>
-                </div>
+  return (
+    <div className="rounded-3xl bg-gradient-to-r from-orange-600 via-[#FF9800] to-brand p-0.5 shadow-xl shadow-orange-500/20 animate-scale-in">
+      <div className="flex flex-col gap-4 rounded-[22px] bg-gray-900/95 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex items-start gap-4">
+          <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-500/30 bg-orange-500/20">
+            <Flame className="h-6 w-6 animate-pulse fill-orange-400 text-orange-400" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-orange-400">Treino em andamento</span>
             </div>
+            <h3 className="font-display text-xl font-black tracking-tight text-white sm:text-2xl">{activeSession.trainingName}</h3>
+            <p className="mt-1 text-xs text-gray-300">
+              <span className="font-bold text-white">{completedSetsCount}</span> séries concluídas • retome de onde parou
+            </p>
+          </div>
         </div>
-    );
+
+        <div className="flex w-full shrink-0 gap-2.5 sm:w-auto">
+          <button
+            type="button"
+            onClick={onDiscard}
+            aria-label="Descartar treino em andamento"
+            className="pressable flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl bg-gray-800 px-4 text-xs font-bold text-gray-200 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" /> Descartar
+          </button>
+          <button
+            type="button"
+            onClick={onContinue}
+            className="btn-primary-gradient animate-pulse-ring pressable min-h-[48px] flex-1 px-6 text-sm sm:flex-initial"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" /> CONTINUAR
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ActiveWorkoutBanner;

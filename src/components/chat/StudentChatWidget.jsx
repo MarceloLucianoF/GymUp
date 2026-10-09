@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { formatTime } from '../../utils/format';
+import { getPublicCoach } from '../../services/coachProfile';
 
 export default function StudentChatWidget() {
     const { user } = useAuthContext();
@@ -24,9 +25,8 @@ export default function StudentChatWidget() {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().coachId) {
                     const coachId = userDoc.data().coachId;
-                    const coachDoc = await getDoc(doc(db, 'users', coachId));
-                    if (coachDoc.exists() && isMounted) {
-                        const coachData = { uid: coachDoc.id, ...coachDoc.data() };
+                    const coachData = await getPublicCoach(coachId);
+                    if (coachData && isMounted) {
                         setCoach(coachData);
                         openChatWithUser(coachData);
                     }

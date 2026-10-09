@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import PageHeader from '../../components/ui/PageHeader';
 import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -13,7 +14,7 @@ import EmptyState from '../../components/common/EmptyState';
 // --- COMPONENTES VISUAIS ---
 
 const TrainingSkeleton = () => (
-  <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-3xl p-6 h-48 border border-gray-100 dark:border-brand/10 animate-pulse flex flex-col justify-between">
+  <div className="surface skeleton-shimmer p-6 h-48 flex flex-col justify-between">
     <div className="flex justify-between">
       <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
       <div className="w-20 h-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
@@ -32,11 +33,13 @@ const TrainingSkeleton = () => (
 
 const FilterChip = ({ label, active, onClick }) => (
   <button 
+    type="button"
     onClick={onClick}
-    className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all duration-300 border ${
+    aria-pressed={active}
+    className={`pressable min-h-[44px] shrink-0 px-5 rounded-2xl text-xs font-black transition-all duration-300 border ${
       active 
       ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black border-transparent shadow-lg shadow-brand/20 scale-105' 
-      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-brand/10 hover:border-brand/40 hover:text-white'
+      : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-brand/10 hover:border-brand/40 hover:text-gray-900 dark:hover:text-white'
     }`}
   >
     {label}
@@ -176,7 +179,7 @@ export default function TrainingsPage() {
   });
 
   // Renderizar card de treino individual
-  const renderTrainingCard = (training) => {
+  const renderTrainingCard = (training, index = 0) => {
     const validId = training._validId;
     const lastDate = historyMap[validId];
     const lastDoneText = formatLastDone(lastDate);
@@ -187,7 +190,8 @@ export default function TrainingsPage() {
       <Link 
         to={`/training/${validId}`} 
         key={validId} 
-        className="group relative overflow-hidden bg-white dark:bg-[#1F2937]/45 dark:backdrop-blur-md rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border border-gray-100 dark:border-brand/10 hover:border-brand/45 hover-glow-brand"
+        style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+        className="surface surface-hover pressable animate-fade-up group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {/* Badge Recomendado */}
         {(!lastDate || (new Date() - lastDate) / (1000 * 60 * 60 * 24) > 7) && (
@@ -230,7 +234,7 @@ export default function TrainingsPage() {
                   </div>
               </div>
               
-              <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-brand/10 flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-black transition-all duration-300 group-hover:scale-110 active:scale-95 shadow-sm">
+              <div className="w-11 h-11 rounded-full bg-amber-50 dark:bg-brand/10 flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-black transition-all duration-300 group-hover:scale-110 active:scale-95 shadow-sm">
                   <ChevronRight className="w-4 h-4" />
               </div>
           </div>
@@ -241,7 +245,7 @@ export default function TrainingsPage() {
 
   if (trainingsError || packagesError) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-6">
         <ErrorState
           message={trainingsError || 'Não foi possível carregar os pacotes de treino.'}
           onRetry={() => {
@@ -255,31 +259,30 @@ export default function TrainingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 pb-24 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 sm:p-6 pb-32 transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
         
         {/* Header */}
-        <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-                <div>
-                    <h1 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">
-                        Fichas de Treino
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
-                        Escolha sua missão ou gere uma ficha inteligente por IA.
-                    </p>
-                </div>
+        <div className="mb-6">
+            <PageHeader
+              eyebrow="Biblioteca"
+              title="Fichas de treino"
+              subtitle="Escolha sua missão ou gere uma ficha inteligente por IA."
+              actions={
                 <button
+                    type="button"
                     onClick={() => setIsAIModalOpen(true)}
-                    className="btn-primary-gradient px-4 py-3 rounded-2xl touch-target text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-brand/20 shrink-0"
+                    aria-label="Gerar treino com IA"
+                    className="btn-primary-gradient pressable min-h-[44px] px-4 text-xs font-black shadow-lg shadow-brand/20 shrink-0"
                 >
-                    <Sparkles className="w-4 h-4 fill-current" />
-                    Gerar Treino com IA ✨
+                    <Sparkles className="w-4 h-4 fill-current" aria-hidden="true" />
+                    Gerar com IA
                 </button>
-            </div>
+              }
+            />
 
             {/* Filtros */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-4">
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
                 {['Todos', 'Iniciante', 'Intermediário', 'Avançado'].map(f => (
                     <FilterChip key={f} label={f} active={filter === f} onClick={() => setFilter(f)} />
                 ))}
@@ -305,7 +308,8 @@ export default function TrainingsPage() {
                   {/* Package Header */}
                   <button
                     onClick={() => togglePackageCollapse(pkg.id)}
-                    className="w-full bg-[#1F2937] dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-lg hover:border-brand/45 transition-all text-left group hover-glow-brand hover:scale-[1.005] duration-300"
+                    aria-expanded={!isCollapsed}
+                    className="pressable w-full min-h-[64px] bg-gradient-to-r from-gray-900 to-[#1F2937] border border-white/10 rounded-3xl p-4 sm:p-5 shadow-lg hover:border-brand/45 transition-all text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -336,8 +340,8 @@ export default function TrainingsPage() {
                   
                   {/* Training Cards Grid (collapsible) */}
                   {!isCollapsed && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in pl-2">
-                      {pkgTrainings.map(training => renderTrainingCard(training))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in ">
+                      {pkgTrainings.map((training, i) => renderTrainingCard(training, i))}
                     </div>
                   )}
                 </div>
@@ -355,7 +359,7 @@ export default function TrainingsPage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {looseTrainings.map(training => renderTrainingCard(training))}
+                  {looseTrainings.map((training, i) => renderTrainingCard(training, i))}
                 </div>
               </div>
             )}

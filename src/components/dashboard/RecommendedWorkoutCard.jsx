@@ -1,83 +1,66 @@
 import React from 'react';
-import { Target, Flame, Sparkles, Play, Clock, ClipboardList } from 'lucide-react';
+import { Target, Sparkles, Play, Clock, ClipboardList, Dumbbell } from 'lucide-react';
 
-// --- CARD DE TREINO RECOMENDADO ---
-const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTrainingId }) => {
-  let nextTraining = null;
-  let isAssigned = false;
-
+// Escolhe o treino do dia: prescrito pelo coach ou próximo da sequência.
+export const pickNextTraining = (trainings, lastWorkoutId, assignedTrainingId) => {
   if (assignedTrainingId) {
-      nextTraining = trainings.find(t => t.firestoreId === assignedTrainingId);
-      if (nextTraining) isAssigned = true;
+    const assigned = trainings.find((t) => t.firestoreId === assignedTrainingId);
+    if (assigned) return { training: assigned, isAssigned: true };
   }
-
-  if (!nextTraining && trainings.length > 0) {
-      if (lastWorkoutId) {
-          const lastIndex = trainings.findIndex(t => t.firestoreId === lastWorkoutId);
-          if (lastIndex !== -1 && lastIndex < trainings.length - 1) {
-              nextTraining = trainings[lastIndex + 1];
-          } else {
-              nextTraining = trainings[0];
-          }
-      } else {
-          nextTraining = trainings[0];
-      }
+  if (trainings.length === 0) return { training: null, isAssigned: false };
+  if (lastWorkoutId) {
+    const lastIndex = trainings.findIndex((t) => t.firestoreId === lastWorkoutId);
+    if (lastIndex !== -1 && lastIndex < trainings.length - 1) return { training: trainings[lastIndex + 1], isAssigned: false };
   }
+  return { training: trainings[0], isAssigned: false };
+};
 
-  if (!nextTraining) return (
-      <div className="p-8 bg-gray-100 dark:bg-gray-800 rounded-3xl text-center border-2 border-dashed border-gray-300 dark:border-gray-700 mb-8">
-          <p className="text-gray-500 font-medium">Nenhum treino disponível.</p>
-          <p className="text-xs text-gray-400 mt-1">Aguarde seu treinador criar uma ficha ou vincule-se a um coach.</p>
+// --- CARD "TREINO DE HOJE" ---
+const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTrainingId }) => {
+  const { training: nextTraining, isAssigned } = pickNextTraining(trainings, lastWorkoutId, assignedTrainingId);
+
+  if (!nextTraining) {
+    return (
+      <div className="surface flex flex-col items-center p-8 text-center">
+        <Dumbbell className="mb-3 h-10 w-10 text-brand/60" aria-hidden="true" />
+        <p className="font-bold text-gray-800 dark:text-gray-100">Nenhum treino disponível</p>
+        <p className="mt-1 max-w-xs text-xs text-gray-500 dark:text-gray-400">Aguarde seu treinador criar uma ficha ou vincule-se a um coach.</p>
       </div>
-  );
+    );
+  }
 
   return (
-    <div className={`rounded-3xl p-6 shadow-xl relative overflow-hidden mb-8 group transition-all transform hover:scale-[1.01] hover:-translate-y-0.5 duration-350 border ${
-        isAssigned 
-        ? 'bg-gradient-to-br from-brand to-[#FF9800] text-black shadow-brand/10 border-brand/20 hover:shadow-[0_0_30px_rgba(255,193,7,0.2)]' 
-        : 'bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md text-gray-800 dark:text-white shadow-black/5 dark:shadow-black/25 border-gray-100 dark:border-brand/10 hover:border-brand/30 hover:shadow-[0_0_25px_rgba(255,193,7,0.06)]'
-    }`}>
-        <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-4 pointer-events-none group-hover:rotate-12 transition-transform duration-700">
-            {isAssigned ? <Target className="w-32 h-32 text-black" /> : <Flame className="w-32 h-32 text-white" />}
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-[#FFB300] to-[#FF9800] p-5 text-black shadow-xl shadow-brand/20 sm:p-7">
+      <Target className="pointer-events-none absolute -right-6 -top-6 h-40 w-40 text-black/10" aria-hidden="true" />
+      <div className="relative z-10">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 rounded-full bg-black/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider">
+            <Sparkles className="h-3 w-3" aria-hidden="true" />
+            {isAssigned ? 'Prescrito pelo Coach' : 'Treino de hoje'}
+          </span>
+          {nextTraining.difficulty && (
+            <span className="rounded-full bg-black/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">{nextTraining.difficulty}</span>
+          )}
         </div>
-        
-        <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1.5 ${isAssigned ? 'bg-black/10 text-black' : 'bg-black/20 text-white/90'}`}>
-                    {isAssigned ? (
-                        <><Sparkles className="w-3 h-3" /> Prescrito pelo Coach</>
-                    ) : (
-                        'Sugestão do Dia'
-                    )}
-                </span>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${isAssigned ? 'bg-black/10 text-black/80' : 'bg-brand/10 text-brand'}`}>
-                    {nextTraining.difficulty}
-                </span>
-            </div>
-            
-            <h2 className="text-3xl font-black mb-2 leading-tight">{nextTraining.name}</h2>
-            <p className={`text-sm mb-6 max-w-lg line-clamp-2 ${isAssigned ? 'text-black/80' : 'text-gray-400 dark:text-gray-300'}`}>
-                {nextTraining.description || "Foco total no progresso e consistência."}
-            </p>
-            
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <button 
-                    onClick={() => onStart(nextTraining.firestoreId)}
-                    className={`px-8 py-3.5 rounded-xl font-black shadow-lg flex items-center justify-center gap-2 btn-premium hover-glow-brand transition-all duration-300 group ${
-                        isAssigned 
-                        ? 'bg-black text-white hover:bg-black/90' 
-                        : 'bg-gradient-to-r from-brand to-[#FF9800] text-black hover:from-brand hover:to-brand-dark hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]'
-                    }`}
-                >
-                    <Play className="w-4 h-4 fill-current transition-transform duration-300 group-hover:scale-110 group-hover:translate-x-0.5" /> INICIAR TREINO
-                </button>
-                <div className={`flex items-center gap-4 text-xs font-bold px-4 py-2 rounded-lg w-fit ${isAssigned ? 'bg-black/10 text-black/90' : 'bg-gray-100 dark:bg-gray-800/80 text-gray-700 dark:text-white/90 border border-gray-200 dark:border-gray-700'}`}>
-                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~45 min</span>
-                    <span className={`w-1 h-1 rounded-full ${isAssigned ? 'bg-black/30' : 'bg-white/50'}`}></span>
-                    <span className="flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {nextTraining.exercises?.length || 0} Exercícios</span>
-                </div>
-            </div>
+
+        <h2 className="font-display text-2xl font-black leading-tight sm:text-4xl">{nextTraining.name}</h2>
+        <p className="mt-1.5 line-clamp-2 max-w-lg text-sm text-black/75">
+          {nextTraining.description || 'Foco total no progresso e consistência.'}
+        </p>
+
+        <div className="mt-4 flex items-center gap-4 text-xs font-bold text-black/80">
+          <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" aria-hidden="true" /> ~45 min</span>
+          <span className="flex items-center gap-1.5"><ClipboardList className="h-3.5 w-3.5" aria-hidden="true" /> {nextTraining.exercises?.length || 0} exercícios</span>
         </div>
+
+        <button
+          type="button"
+          onClick={() => onStart(nextTraining.firestoreId)}
+          className="pressable animate-pulse-ring mt-5 flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-black px-8 text-base font-black text-brand shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/40 sm:w-auto"
+        >
+          <Play className="h-5 w-5 fill-current" aria-hidden="true" /> INICIAR TREINO
+        </button>
+      </div>
     </div>
   );
 };

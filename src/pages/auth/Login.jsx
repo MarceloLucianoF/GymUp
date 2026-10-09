@@ -37,11 +37,11 @@ export default function Login() {
   if (authLoading) return null; // Evita flash
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-[#0D1117] transition-colors">
+    <div className="min-h-[100dvh] flex bg-white dark:bg-[#0B0F19] transition-colors">
       
       {/* Lado Esquerdo (Visual - Igual ao Registro) */}
       <div className="hidden lg:flex w-1/2 bg-gray-950 items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center opacity-40"></div>
+        <div className="absolute inset-0 animate-fade-in bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center opacity-40"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
         
         <div className="relative z-10 p-12 text-white max-w-lg">
@@ -60,12 +60,12 @@ export default function Login() {
       </div>
 
       {/* Lado Direito (Formulário) */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-[#0D1117]">
-        <div className="w-full max-w-md space-y-8 animate-fade-in-up">
+      <div className="aurora-bg w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 bg-gray-50 dark:bg-[#0B0F19] overflow-hidden">
+        <div className="surface w-full max-w-md space-y-6 p-6 sm:p-8 animate-fade-up">
           
           <div className="text-center lg:text-left">
-            <h2 className="lg:hidden text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-brand">UP</span></h2>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Bem-vindo de volta!</h2>
+            <h2 className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-brand">UP</span></h2>
+            <h2 className="font-display text-3xl font-black text-gray-900 dark:text-white">Bem-vindo de volta!</h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Digite suas credenciais para acessar sua ficha.</p>
           </div>
 
@@ -74,14 +74,16 @@ export default function Login() {
               
               {/* Email */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Email</label>
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Email</label>
                 <input
                   type="email"
                   required
                   autoFocus
+                  autoComplete="email"
+                  aria-label="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all"
+                  className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all"
                   placeholder="seu@email.com"
                 />
               </div>
@@ -89,7 +91,7 @@ export default function Login() {
               {/* Senha */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
+                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Senha</label>
                     <Link to="/forgot-password" className="text-xs font-bold text-brand hover:text-brand-dark transition-colors">
                         Esqueceu a senha?
                     </Link>
@@ -98,15 +100,18 @@ export default function Login() {
                     <input
                       type={showPassword ? "text" : "password"}
                       required
+                      autoComplete="current-password"
+                      aria-label="Senha"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand outline-none transition-all pr-12"
+                      className="w-full px-4 min-h-[52px] rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all pr-12"
                       placeholder="••••••••"
                     />
                     <button 
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors flex items-center justify-center"
+                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
                         {showPassword ? (
                             <EyeOff className="w-5 h-5" />
@@ -121,7 +126,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={localLoading}
-              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-brand/20 text-sm font-black text-black bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark transition-all transform active:scale-[0.98] hover:shadow-[0_0_20px_rgba(255,193,7,0.35)] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center min-h-[56px] px-4 rounded-2xl shadow-lg shadow-brand/25 text-base font-black text-black bg-gradient-to-r from-brand to-[#FF9800] hover:shadow-[0_0_24px_rgba(255,193,7,0.4)] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {localLoading ? (
                   <span className="flex items-center gap-2">

@@ -6,7 +6,9 @@ import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../../components/ui/PageHeader';
 import { ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
+import { getPublicCoach } from '../../services/coachProfile';
 
 export default function Profile() {
   const { confirm, dialog } = useConfirm();
@@ -51,11 +53,8 @@ export default function Profile() {
 
           // Busca dados do Coach se existir vínculo
           if (data.coachId) {
-              const coachRef = doc(db, 'users', data.coachId);
-              const coachSnap = await getDoc(coachRef);
-              if (coachSnap.exists()) {
-                  setCoachData({ uid: coachSnap.id, ...coachSnap.data() });
-              }
+              const coach = await getPublicCoach(data.coachId);
+              if (coach) setCoachData(coach);
           }
         }
       } catch (error) {
@@ -164,23 +163,23 @@ export default function Profile() {
 
   const imcData = calculateIMC();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8" role="status" aria-label="Carregando"><div className="max-w-2xl mx-auto space-y-4"><div className="skeleton-shimmer h-12 rounded-2xl"></div><div className="skeleton-shimmer h-[28rem] rounded-3xl"></div></div></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 transition-colors duration-300 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 transition-colors duration-300 pb-32">
     {dialog}
       <div className="max-w-2xl mx-auto">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-            <button onClick={() => navigate('/home')} className="text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white font-bold flex items-center gap-1.5 p-2 hover:bg-gray-150 rounded-xl transition-colors">
-                <ArrowLeft className="w-4 h-4" /> Voltar
+        <PageHeader eyebrow="Conta" title="Meu perfil" subtitle="Dados, medidas e preferências."
+          actions={
+            <button type="button" onClick={() => navigate('/home')} className="pressable min-h-[44px] px-3 text-sm font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+                <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Voltar
             </button>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Meu Perfil</h1>
-            <div className="w-8"></div>
-        </div>
+          }
+        />
 
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+        <div className="surface overflow-hidden relative animate-fade-up">
             
             {/* Aviso Alteração */}
             {isDirty && (
@@ -190,23 +189,24 @@ export default function Profile() {
             )}
 
             {/* Capa / Avatar */}
-            <div className="h-32 bg-gradient-to-r from-brand to-brand-dark relative">
+            <div className="aurora-bg h-32 bg-gradient-to-r from-brand to-[#FF9800] relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                     <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl relative group">
                         <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-400">
                             {formData.photoURL ? (
-                                <img src={formData.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                                <img src={formData.photoURL} alt="Foto de perfil" loading="lazy" className="w-full h-full object-cover" />
                             ) : (
                                 <span className="text-lg text-gray-500 dark:text-gray-400 flex items-center justify-center">
                                   {formData.displayName?.charAt(0).toUpperCase() || <User className="w-10 h-10" />}
                                 </span>
                             )}
                         </div>
-                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 cursor-pointer transition-opacity">
                             <Camera className="w-5 h-5 mb-0.5" />
                             <span className="text-[10px] font-bold">Alterar</span>
-                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                            <input type="file" accept="image/*" aria-label="Alterar foto de perfil" onChange={handleImageUpload} className="sr-only" />
                         </label>
+                        <span className="pointer-events-none absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-black shadow-md ring-2 ring-white dark:ring-gray-900 group-hover:opacity-0" aria-hidden="true"><Camera className="w-4 h-4" /></span>
                     </div>
                 </div>
             </div>
@@ -217,24 +217,24 @@ export default function Profile() {
                     {/* Dados Básicos */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="col-span-1 md:col-span-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Nome de Exibição</label>
+                            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Nome de Exibição</label>
                             <input 
                                 type="text" 
                                 name="displayName"
                                 value={formData.displayName} 
                                 onChange={handleChange}
                                 placeholder="Seu nome"
-                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-bold"
+                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-bold"
                             />
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Meta Principal</label>
+                            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Meta Principal</label>
                             <select 
                                 name="goal"
                                 value={formData.goal} 
                                 onChange={handleChange}
-                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white cursor-pointer font-bold"
+                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white cursor-pointer font-bold"
                             >
                                 <option value="Hipertrofia">Hipertrofia</option>
                                 <option value="Emagrecimento">Emagrecimento</option>
@@ -262,7 +262,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/chat')}
-                                className="bg-white dark:bg-gray-800 text-brand px-3 py-2 rounded-xl shadow-sm font-bold text-xs hover:bg-brand/10 transition-colors border border-brand/25 dark:border-gray-700 flex items-center gap-1"
+                                className="pressable min-h-[44px] bg-white dark:bg-white/10 text-amber-700 dark:text-brand px-4 rounded-2xl shadow-sm font-bold text-xs border border-brand/25 flex items-center gap-1.5"
                             >
                                 <MessageSquare className="w-3.5 h-3.5" /> Chat
                             </button>
@@ -285,7 +285,7 @@ export default function Profile() {
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Peso (kg)</label>
+                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Peso (kg)</label>
                                 <input 
                                     type="text" 
                                     inputMode="decimal"
@@ -293,11 +293,11 @@ export default function Profile() {
                                     placeholder="00.0"
                                     value={formData.weight} 
                                     onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Altura (cm)</label>
+                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Altura (cm)</label>
                                 <input 
                                     type="text" 
                                     inputMode="decimal"
@@ -305,11 +305,11 @@ export default function Profile() {
                                     placeholder="000"
                                     value={formData.height} 
                                     onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Idade</label>
+                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Idade</label>
                                 <input 
                                     type="text" 
                                     inputMode="numeric"
@@ -317,7 +317,7 @@ export default function Profile() {
                                     placeholder="00"
                                     value={formData.age} 
                                     onChange={handleIntegerChange}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
+                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
                                 />
                             </div>
                         </div>
@@ -326,7 +326,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/measurements')}
-                                className="text-xs text-brand font-bold hover:underline"
+                                className="min-h-[44px] text-xs text-amber-700 dark:text-brand font-bold hover:underline"
                             >
                                 Ver histórico de evolução →
                             </button>
@@ -334,7 +334,7 @@ export default function Profile() {
                     </div>
 
                     {/* PREFERÊNCIAS DE APARÊNCIA */}
-                    <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md p-6 rounded-2xl border border-gray-200 dark:border-brand/10 shadow-sm transition-colors">
+                    <div className="rounded-3xl bg-gray-50 dark:bg-white/5 p-5 transition-colors">
                         <h2 className="text-base font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
                             {theme === 'dark' ? <Moon className="w-5 h-5 text-brand" /> : <Sun className="w-5 h-5 text-amber-500" />}
                             Aparência da Aplicação
@@ -351,14 +351,15 @@ export default function Profile() {
                             <button aria-label="Alternar tema"
                                 type="button"
                                 onClick={toggleTheme}
-                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                role="switch" aria-checked={theme === 'dark'}
+                                className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                                     theme === 'dark' ? 'bg-brand' : 'bg-gray-300'
                                 }`}
                                 title="Alternar entre modo escuro e claro"
                             >
                                 <span
                                     className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-black dark:bg-white shadow-lg ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
-                                        theme === 'dark' ? 'translate-x-5' : 'translate-x-0'
+                                        theme === 'dark' ? 'translate-x-6' : 'translate-x-0'
                                     }`}
                                 >
                                     {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-brand" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
@@ -371,20 +372,20 @@ export default function Profile() {
                         <button 
                             type="submit" 
                             disabled={!isDirty}
-                            className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                            className={`w-full min-h-[56px] font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
                                 isDirty 
                                 ? 'bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark text-black shadow-lg shadow-brand/20 hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]' 
                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed shadow-none'
                             }`}
                         >
                             {isDirty ? (
-                                <><Save className="w-5 h-5 text-white" /> Salvar Alterações</>
+                                <><Save className="w-5 h-5 text-black" /> Salvar Alterações</>
                             ) : (
                                 <><CheckCircle className="w-5 h-5 text-gray-400" /> Tudo atualizado</>
                             )}
                         </button>
                         
-                        <button type="button" onClick={handleLogout} className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold py-4 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                        <button type="button" onClick={handleLogout} className="w-full min-h-[52px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
                             <LogOut className="w-4 h-4" /> Sair da Conta
                         </button>
                     </div>
@@ -394,7 +395,7 @@ export default function Profile() {
         </div>
 
         {/* Rodapé Informativo */}
-        <div className="text-center mt-8 text-gray-400 text-xs">
+        <div className="text-center mt-8 text-gray-500 dark:text-gray-400 text-xs">
             <p>AcademyUp v2.0</p>
             <p className="mt-1 font-mono opacity-50">UID: {user.uid.slice(0, 8)}...</p>
             <p className="mt-1">{user.email}</p>

@@ -21,20 +21,23 @@ export default function MonthCalendar({ history }) {
   }
 
   // 2. Mapear dias treinados
-  const trainedDays = history.map(h => new Date(h.date).getDate());
+  const trainedDays = [...new Set(history
+    .map(h => new Date(h.date))
+    .filter(d => !Number.isNaN(d.getTime()) && d.getMonth() === currentMonth && d.getFullYear() === currentYear)
+    .map(d => d.getDate()))];
 
   // Nomes dos dias
   const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
   return (
-    <div className="bg-white dark:bg-[#1F2937]/50 dark:backdrop-blur-md rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-brand/10 mb-6 hover:shadow-[0_0_25px_rgba(255,193,7,0.06)] hover:border-brand/20 transition-all duration-300">
+    <div className="surface p-4 sm:p-6 mb-6 animate-fade-up">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-gray-800 dark:text-white uppercase text-sm tracking-wider">
            {formatDate(today, { month: 'long', year: 'numeric' })}
         </h3>
-        <div className="flex gap-2 items-center text-[10px] text-gray-400">
+        <div className="flex gap-2 items-center text-[10px] text-gray-500 dark:text-gray-400">
             <span className="w-3 h-3 rounded-full bg-gray-100 dark:bg-gray-700"></span> Descanso
-            <span className="w-3 h-3 rounded-full bg-green-500"></span> Treino
+            <span className="w-3 h-3 rounded-full bg-brand"></span> Treino
         </div>
       </div>
 
@@ -58,10 +61,10 @@ export default function MonthCalendar({ history }) {
                 <div 
                     key={i}
                     className={`
-                        aspect-square flex items-center justify-center rounded-lg text-xs font-bold transition-all
+                        aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all
                         ${isTrained 
-                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/30 scale-105' 
-                            : 'bg-gray-50 dark:bg-gray-700/50 text-gray-450 dark:text-gray-500'
+                            ? 'bg-gradient-to-br from-brand to-[#FF9800] text-black shadow-md shadow-brand/30 scale-105' 
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400'
                         }
                         ${isToday && !isTrained ? 'border-2 border-brand text-brand' : ''}
                     `}

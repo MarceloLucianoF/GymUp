@@ -1,229 +1,147 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Search, MessageSquare, Send, Eye } from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useChat } from '../../hooks/useChat';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Search, MessageSquare, Send, Zap } from 'lucide-react';
 import { formatTime } from '../../utils/format';
+import Avatar from '../../components/coach/Avatar';
+import EmptyState from '../../components/common/EmptyState';
+import { timeAgo, toDate } from '../../components/coach/helpers';
+import { inputCls } from '../../components/coach/styles';
+
+const otherOf = (chat, uid) => {
+  const otherId = chat?.participants?.find((id) => id !== uid);
+  return { id: otherId, ...(chat?.participantData?.[otherId] || {}) };
+};
 
 export default function CoachChatPage() {
   const { user } = useAuthContext();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Hook de Chat
   const { chats, messages, activeChat, setActiveChat, sendMessage, openChatWithUser, loading } = useChat(user);
-  
+
   const [inputText, setInputText] = useState('');
-  const [searchTerm, setSearchTerm] = useState(''); // Filtro da sidebar
+  const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef(null);
 
-  // 1. Auto-scroll para o fim quando chega mensagem nova
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // 2. Integração com Dashboard: Se clicar em "Chat" no card do aluno, abre direto aqui
+  // Vindo do painel/alunos: abre direto a conversa com o aluno
   useEffect(() => {
-      if (location.state?.targetUser) {
-          openChatWithUser(location.state.targetUser);
-      }
+    if (location.state?.targetUser) openChatWithUser(location.state.targetUser);
   }, [location.state, openChatWithUser]);
 
+  const filteredChats = useMemo(() => chats.filter((chat) => (otherOf(chat, user.uid).name || 'Aluno').toLowerCase().includes(searchTerm.toLowerCase())), [chats, searchTerm, user.uid]);
+
   const handleSend = (e) => {
-      e.preventDefault();
-      sendMessage(inputText);
-      setInputText('');
+    e.preventDefault();
+    if (!inputText.trim()) return;
+    sendMessage(inputText);
+    setInputText('');
   };
 
-  // 4. Lógica de Filtro na Sidebar
-  const filteredChats = chats.filter(chat => {
-      const otherId = chat.participants.find(id => id !== user.uid);
-      const studentName = chat.participantData?.[otherId]?.name || 'Aluno';
-      return studentName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  if (loading) {
+    return (
+      <div role="status" aria-label="Carregando" className="flex h-[calc(100dvh-5rem)] bg-gray-50 dark:bg-gray-900">
+        <div className="w-full space-y-3 p-4 md:w-80">{Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton-shimmer h-16 rounded-2xl" />)}</div>
+        <div className="skeleton-shimmer hidden flex-1 md:block" />
+      </div>
+    );
+  }
 
-  // 5. Helper para pegar dados do aluno no chat atual
-  const getStudentData = (chat) => {
-      if (!chat) return { name: 'Aluno', photo: null };
-      const otherId = chat.participants.find(id => id !== user.uid);
-      return chat.participantData?.[otherId] || { name: 'Aluno', photo: null };
-  };
-
-  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand"></div></div>;
+  const active = activeChat ? otherOf(activeChat, user.uid) : null;
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden transition-colors">
-      
-      {/* --- SIDEBAR (LISTA DE ALUNOS) --- */}
-      {/* Esconde no mobile se tiver chat aberto */}
-      <div className={`w-full md:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
-        
-        {/* Header Sidebar */}
-        <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-black text-gray-800 dark:text-white">Mensagens</h2>
-                <button 
-                    onClick={() => navigate('/coach/dashboard')} 
-                    className="text-xs font-bold text-gray-500 hover:text-blue-500 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                >
-                    <ArrowLeft className="w-3 h-3" /> Voltar
+    <div className="flex h-[calc(100dvh-5rem)] overflow-hidden bg-gray-50 transition-colors dark:bg-gray-900">
+      {/* Lista de conversas */}
+      <aside className={`w-full flex-col border-r border-gray-200 bg-white/80 dark:border-white/10 dark:bg-white/[0.03] md:flex md:w-80 lg:w-96 ${activeChat ? 'hidden' : 'flex'}`}>
+        <div className="space-y-3 p-4">
+          <div className="flex items-center justify-between">
+            <h1 className="font-display text-2xl font-black text-gray-900 dark:text-white">Mensagens</h1>
+            <button type="button" onClick={() => navigate('/coach/students')} className="pressable min-h-[44px] rounded-2xl bg-gray-100 px-3 text-xs font-bold text-gray-600 dark:bg-white/5 dark:text-gray-300">Alunos</button>
+          </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <input type="search" aria-label="Buscar conversa" placeholder="Buscar aluno..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputCls} pl-11`} />
+          </div>
+        </div>
+        <ul className="flex-1 overflow-y-auto px-2 pb-4">
+          {filteredChats.length === 0 ? (
+            <li><EmptyState icon={MessageSquare} title="Nenhuma conversa" description="Abra o chat a partir da lista de alunos." /></li>
+          ) : filteredChats.map((chat, i) => {
+            const student = otherOf(chat, user.uid);
+            const isActive = activeChat?.id === chat.id;
+            return (
+              <li key={chat.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                <button type="button" aria-current={isActive ? 'true' : undefined} onClick={() => setActiveChat(chat)}
+                  className={`pressable flex min-h-[68px] w-full items-center gap-3 rounded-2xl p-3 text-left transition ${isActive ? 'bg-brand/15' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                  <Avatar name={student.name || 'Aluno'} src={student.photo} size="lg" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{student.name || 'Aluno'}</span>
+                      <span className="shrink-0 text-[11px] text-gray-400">{chat.updatedAt ? timeAgo(chat.updatedAt) : ''}</span>
+                    </span>
+                    <span className="block truncate text-xs text-gray-500">{chat.lastMessage || <i className="opacity-60">Nova conversa</i>}</span>
+                  </span>
                 </button>
-            </div>
-            {/* Input de Busca */}
-            <div className="relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input 
-                    type="text" 
-                    placeholder="Buscar aluno..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-700 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all border border-transparent focus:border-blue-500"
-                />
-            </div>
-        </div>
-        
-        {/* Lista de Chats */}
-        <div className="flex-1 overflow-y-auto">
-            {filteredChats.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center justify-center h-full">
-                    <MessageSquare className="w-8 h-8 text-gray-400 opacity-50 mb-2" />
-                    <p>Nenhuma conversa encontrada.</p>
-                </div>
-            ) : (
-                filteredChats.map(chat => {
-                    const student = getStudentData(chat);
-                    const isActive = activeChat?.id === chat.id;
-                    
-                    return (
-                        <div 
-                            key={chat.id}
-                            onClick={() => setActiveChat(chat)}
-                            className={`p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 dark:border-gray-700/50 relative ${isActive ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                        >
-                            {/* Indicador Ativo */}
-                            {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>}
+              </li>
+            );
+          })}
+        </ul>
+      </aside>
 
-                            {/* Avatar */}
-                            <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-white font-bold shrink-0 shadow-sm overflow-hidden">
-                                {student.photo ? (
-                                    <img src={student.photo} className="w-full h-full object-cover" alt="" />
-                                ) : (
-                                    <span className="text-gray-500 dark:text-gray-400 text-lg">{student.name[0]?.toUpperCase()}</span>
-                                )}
-                            </div>
-
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-baseline mb-1">
-                                    <h3 className={`text-sm truncate ${isActive ? 'font-black text-blue-600 dark:text-blue-400' : 'font-bold text-gray-800 dark:text-white'}`}>
-                                        {student.name}
-                                    </h3>
-                                    <span className="text-[10px] text-gray-400 font-mono">{formatTime(chat.updatedAt)}</span>
-                                </div>
-                                <p className={`text-xs truncate ${isActive ? 'text-blue-500/80' : 'text-gray-500 dark:text-gray-400 font-medium'}`}>
-                                    {chat.lastMessage || <span className="italic opacity-50">Nova conversa</span>}
-                                </p>
-                            </div>
-                        </div>
-                    );
-                })
-            )}
-        </div>
-      </div>
-
-      {/* --- ÁREA DO CHAT PRINCIPAL --- */}
-      {/* Esconde no mobile se não tiver chat aberto */}
-      <div className={`flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
+      {/* Conversa */}
+      <section className={`min-w-0 flex-1 flex-col ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
-            <>
-                {/* Header Chat */}
-                <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 shadow-sm z-10">
-                    <button onClick={() => setActiveChat(null)} className="md:hidden text-gray-500 hover:bg-gray-150 p-2 rounded-full transition-colors flex items-center justify-center">
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    
-                    {(() => {
-                        const student = getStudentData(activeChat);
-                        return (
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg overflow-hidden font-bold text-gray-500 border border-gray-100 dark:border-gray-600">
-                                    {student.photo ? <img src={student.photo} className="w-full h-full object-cover" alt=""/> : student.name[0]}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-800 dark:text-white">{student.name}</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="flex h-2 w-2 relative">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                        </span>
-                                        <p className="text-xs text-gray-500 font-medium">Online agora</p>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
+          <>
+            <header className="flex items-center gap-3 border-b border-gray-200 bg-white/80 px-3 py-2 backdrop-blur dark:border-white/10 dark:bg-white/[0.03]">
+              <button type="button" aria-label="Voltar às conversas" onClick={() => setActiveChat(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 md:hidden"><ArrowLeft className="h-5 w-5" /></button>
+              <Avatar name={active.name || 'Aluno'} src={active.photo} />
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate font-display font-black text-gray-900 dark:text-white">{active.name || 'Aluno'}</h2>
+                <p className="text-xs text-gray-500">Conversa com seu aluno</p>
+              </div>
+              {active.id && <button type="button" aria-label="Ver perfil do aluno" onClick={() => navigate(`/coach/students/${active.id}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"><Eye className="h-5 w-5" /></button>}
+            </header>
 
-                {/* Lista de Mensagens */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
-                    {messages.length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
-                            <MessageSquare className="w-12 h-12 text-gray-400 opacity-50 mb-4" />
-                            <p className="text-sm">Inicie o atendimento com este aluno.</p>
-                        </div>
+            <div className="flex-1 space-y-2 overflow-y-auto p-4" role="log" aria-live="polite" aria-label="Mensagens">
+              {messages.length === 0 && (
+                <div className="flex h-full items-center justify-center"><EmptyState icon={MessageSquare} title="Inicie o atendimento" description="Envie a primeira mensagem para este aluno." /></div>
+              )}
+              {messages.map((msg, i) => {
+                const isMe = msg.senderId === user.uid;
+                const day = toDate(msg.createdAt)?.toDateString();
+                const prevDay = i > 0 ? toDate(messages[i - 1].createdAt)?.toDateString() : null;
+                return (
+                  <React.Fragment key={msg.id}>
+                    {day && day !== prevDay && (
+                      <p className="py-2 text-center text-[11px] font-bold uppercase tracking-wide text-gray-400">{toDate(msg.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</p>
                     )}
-                    
-                    {messages.map((msg) => {
-                        const isMe = msg.senderId === user.uid;
-                        return (
-                            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[70%] p-3 rounded-2xl text-sm shadow-sm relative group ${
-                                    isMe 
-                                    ? 'bg-blue-600 text-white rounded-tr-none' 
-                                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-gray-700'
-                                }`}>
-                                    <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                                    <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-blue-100' : 'text-gray-400'}`}>
-                                        {formatTime(msg.createdAt)}
-                                    </p>
-                                </div>
-                            </div>
-                        );
-                    })}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* Área de Input */}
-                <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                    <form onSubmit={handleSend} className="flex gap-3 max-w-4xl mx-auto items-center">
-                        <input 
-                            type="text" 
-                            value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            placeholder="Digite sua mensagem..."
-                            className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-5 py-3 rounded-full focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-inner border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-blue-500"
-                        />
-                        <button aria-label="Enviar mensagem" 
-                            type="submit" 
-                            disabled={!inputText.trim()}
-                            className="bg-brand hover:bg-brand-dark text-black w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        >
-                            <Send className="w-5 h-5 text-white" />
-                        </button>
-                    </form>
-                </div>
-            </>
-        ) : (
-            // Estado Vazio (Nenhum chat selecionado)
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-300 dark:text-gray-600 bg-gray-50 dark:bg-gray-900">
-                <div className="w-24 h-24 bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                    <Zap className="w-12 h-12 text-gray-400 opacity-30" />
-                </div>
-                <h3 className="text-xl font-black text-gray-400 dark:text-gray-500">Central de Alunos</h3>
-                <p className="text-sm mt-2 text-gray-400 max-w-xs text-center">Selecione uma conversa na lista lateral para iniciar o atendimento.</p>
+                    <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`animate-scale-in max-w-[82%] rounded-3xl px-4 py-2.5 text-sm shadow-sm md:max-w-[65%] ${isMe ? 'rounded-br-lg bg-brand text-black' : 'rounded-bl-lg border border-gray-200 bg-white text-gray-800 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100'}`}>
+                        <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
+                        <p className={`mt-1 text-right text-[10px] ${isMe ? 'text-black/60' : 'text-gray-400'}`}>{formatTime(msg.createdAt)}</p>
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+              <div ref={messagesEndRef} />
             </div>
+
+            <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-gray-200 bg-white/80 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+              <input type="text" aria-label="Mensagem" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Digite sua mensagem..." maxLength={2000} className={`${inputCls} flex-1 rounded-full px-5`} />
+              <button type="submit" aria-label="Enviar mensagem" disabled={!inputText.trim()} className="pressable inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-black shadow-lg shadow-brand/30 disabled:opacity-40"><Send className="h-5 w-5" /></button>
+            </form>
+          </>
+        ) : (
+          <div className="flex flex-1 items-center justify-center">
+            <EmptyState icon={MessageSquare} title="Central de alunos" description="Selecione uma conversa na lista para iniciar o atendimento." />
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

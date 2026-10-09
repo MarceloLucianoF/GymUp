@@ -1,105 +1,63 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { useMemo } from 'react';
+import { useCoachRoster, lastWorkoutMap, DEFAULT_FEE } from './useCoachRoster';
+import { countByDay, daysSince, studentStatus, startOfDay, DAY_MS } from '../components/coach/helpers';
 
+// Métricas do painel do treinador, derivadas de useCoachRoster (consulta por alunos vinculados).
 export const useCoachDashboard = (user) => {
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState({
-        stats: { active: 0, revenue: 0, checkIns: 0, risk: 0, retention: 0 },
-        recentActivity: [],
-        studentsAtRisk: [],
-        financials: []
-    });
+    const { students, trainings, checkIns, loading, error, reload } = useCoachRoster(user);
 
-    useEffect(() => {
-        const fetchDashboard = async () => {
-            if (!user) return;
+    const data = useMemo(() => {
+        const now = new Date();
+        const today = startOfDay(now);
+        const last = lastWorkoutMap(students, checkIns);
+        const nameOf = Object.fromEntries(students.map(s => [s.uid, s]));
 
-            try {
-                // 1. Alunos vinculados ao treinador
-                const qStudents = query(
-                    collection(db, 'users'),
-                    where('role', '==', 'user'),
-                    where('coachId', '==', user.uid)
-                );
-                const studentsSnap = await getDocs(qStudents);
-                const allStudents = studentsSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        const withStatus = students.map(s => ({
+            ...s,
+            lastWorkout: last[s.uid] || null,
+            status: studentStatus(last[s.uid], now),
+            daysInactive: last[s.uid] ? daysSince(last[s.uid], now) : 'Novo'
+        }));
+        const studentsAtRisk = withStatus
+            .filter(s => s.status !== 'active')
+            .sort((a, b) => (b.lastWorkout ? now - b.lastWorkout : Infinity) - (a.lastWorkout ? now - a.lastWorkout : Infinity));
+        const activeCount = withStatus.length - studentsAtRisk.length;
 
-                // 2. Check-ins recentes: as regras só permitem ler por userId dos alunos
-                // vinculados, então consultamos em lotes (limite de 30 valores em "in").
-                const studentIds = allStudents.map(s => s.uid);
-                const batches = [];
-                for (let i = 0; i < studentIds.length; i += 30) {
-                    batches.push(studentIds.slice(i, i + 30));
-                }
-                const snaps = await Promise.all(batches.map(ids => getDocs(query(
-                    collection(db, 'checkIns'),
-                    where('userId', 'in', ids),
-                    orderBy('date', 'desc'),
-                    limit(50)
-                ))));
-                const rawCheckIns = snaps
-                    .flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
-                    .sort((a, b) => new Date(b.date) - new Date(a.date))
-                    .slice(0, 50);
+        const todayCheckIns = checkIns.filter(c => new Date(c.date) >= today);
+        const monthAgo = now.getTime() - 30 * DAY_MS;
+        const perStudent = {};
+        checkIns.forEach(c => {
+            if (new Date(c.date).getTime() >= monthAgo) perStudent[c.userId] = (perStudent[c.userId] || 0) + 1;
+        });
+        const ranking = withStatus
+            .map(s => ({ ...s, workouts30: perStudent[s.uid] || 0 }))
+            .filter(s => s.workouts30 > 0)
+            .sort((a, b) => b.workouts30 - a.workouts30)
+            .slice(0, 5);
 
-                // Filtra Check-ins de HOJE
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                const todayCheckIns = rawCheckIns.filter(c => new Date(c.date) >= today);
+        const fee = (s) => Number(s.monthlyFee) || DEFAULT_FEE;
+        const expected = students.reduce((acc, s) => acc + fee(s), 0);
+        const received = students.filter(s => s.paymentStatus === 'paid').reduce((acc, s) => acc + fee(s), 0);
 
-                // 3. Risco / Churn
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-                const studentLastWorkout = {};
-                rawCheckIns.forEach(c => {
-                    if (!studentLastWorkout[c.userId]) studentLastWorkout[c.userId] = new Date(c.date);
-                });
-
-                const atRisk = [];
-                let activeCount = 0;
-
-                allStudents.forEach(student => {
-                    const lastDate = studentLastWorkout[student.uid];
-                    if (!lastDate || lastDate < oneWeekAgo) {
-                        atRisk.push({
-                            ...student,
-                            daysInactive: lastDate ? Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24)) : 'Novo',
-                            lastWorkoutDate: lastDate
-                        });
-                    } else {
-                        activeCount++;
-                    }
-                });
-
-                // 4. Stats
-                const totalStudents = allStudents.length || 1;
-                const retentionRate = Math.round((activeCount / totalStudents) * 100);
-                const estimatedRevenue = allStudents.length * 120;
-
-                setData({
-                    stats: {
-                        active: allStudents.length,
-                        revenue: estimatedRevenue,
-                        checkIns: todayCheckIns.length,
-                        risk: atRisk.length,
-                        retention: retentionRate
-                    },
-                    recentActivity: todayCheckIns,
-                    studentsAtRisk: atRisk.slice(0, 5),
-                    financials: [40, 60, 45, 70, 85, 60, 75]
-                });
-
-            } catch (error) {
-                console.error("Erro useCoachDashboard:", error);
-            } finally {
-                setLoading(false);
-            }
+        return {
+            stats: {
+                active: students.length,
+                revenue: expected,
+                received,
+                checkIns: todayCheckIns.length,
+                risk: studentsAtRisk.length,
+                retention: students.length ? Math.round((activeCount / students.length) * 100) : 0,
+                noTraining: students.filter(s => !s.currentTrainingId).length
+            },
+            weekly: countByDay(checkIns, 7, now),
+            ranking,
+            studentsAtRisk: studentsAtRisk.slice(0, 5),
+            recentActivity: checkIns.slice(0, 8).map(c => ({ ...c, student: nameOf[c.userId] || null })),
+            todayCheckIns,
+            students: withStatus,
+            trainings
         };
+    }, [students, trainings, checkIns]);
 
-        fetchDashboard();
-    }, [user]);
-
-    return { ...data, loading };
+    return { ...data, loading, error, reload };
 };

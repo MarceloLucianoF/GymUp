@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Smartphone, Dumbbell, Flame, CheckCircle, Shield, Award, Users, Target, Zap, Heart, TrendingUp, Play } from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
+import Reveal from '../../components/ui/Reveal';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
 
 // --- LOGO OFICIAL DA MARCA (A + U + Halter + Seta) ---
@@ -72,11 +73,11 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#0D1117] text-white selection:bg-brand selection:text-black transition-colors duration-300 font-sans">
       
       {/* Top Background Glows */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-[100px] pointer-events-none animate-aurora"></div>
       <div className="absolute top-10 right-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* Navbar */}
-      <nav className="relative flex justify-between items-center p-6 max-w-7xl mx-auto z-10">
+      <nav aria-label="Principal" className="relative flex justify-between items-center p-4 sm:p-6 max-w-7xl mx-auto z-10">
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate(user ? '/dashboard' : '/')}>
           <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center border border-brand/20 group-hover:border-brand/60 group-hover:scale-105 transition-all p-1">
             <AcademyUpLogo className="w-full h-full text-white" />
@@ -127,20 +128,20 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <header className="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center z-10">
+      <header className="aurora-bg relative max-w-5xl mx-auto px-5 sm:px-6 pt-14 sm:pt-20 pb-16 text-center z-10 animate-fade-up">
         <div className="inline-flex items-center gap-2 bg-[#1F2937] border border-gray-800 text-brand px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-8">
-          <Zap className="w-3.5 h-3.5 text-brand fill-current animate-pulse" />
+          <Zap className="w-3.5 h-3.5 text-brand fill-current animate-float" aria-hidden="true" />
           Plataforma de Alta Performance para Consultorias
         </div>
         
-        <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight">
+        <h1 className="font-display text-4xl sm:text-5xl md:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight">
           Escale seus treinos <br className="hidden sm:inline" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-dark">
+          <span className="text-gradient-brand">
             com máxima disciplina.
           </span>
         </h1>
         
-        <p className="text-lg md:text-xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
           Abandone as planilhas estáticas. Tenha seu próprio aplicativo de treino inteligente com cronômetro integrado, análise de evolução, chat com treinador e controle total de metas.
         </p>
 
@@ -150,13 +151,13 @@ export default function LandingPage() {
               <>
                 <button 
                   onClick={() => navigate(`/execution/${activeSession.trainingId}`)}
-                  className="btn-primary-gradient text-lg px-8 py-4.5 bg-gradient-to-r from-orange-500 to-brand"
+                  className="btn-primary-gradient text-base sm:text-lg px-8 min-h-[56px] bg-gradient-to-r from-orange-500 to-brand"
                 >
                   <Flame className="w-5 h-5 fill-current" /> Continuar Treino Ativo
                 </button>
                 <button 
                   onClick={() => navigate('/dashboard')}
-                  className="btn-secondary-dark text-lg px-8 py-4.5"
+                  className="btn-secondary-dark text-base sm:text-lg px-8 min-h-[56px]"
                 >
                   Ir para Meu Painel
                 </button>
@@ -165,13 +166,13 @@ export default function LandingPage() {
               <>
                 <button 
                   onClick={() => navigate('/dashboard')}
-                  className="btn-primary-gradient text-lg px-8 py-4.5"
+                  className="btn-primary-gradient text-base sm:text-lg px-8 min-h-[56px]"
                 >
                   <Play className="w-5 h-5 fill-current" /> Ir para Meu Painel
                 </button>
                 <button 
                   onClick={() => navigate('/trainings')}
-                  className="btn-secondary-dark text-lg px-8 py-4.5"
+                  className="btn-secondary-dark text-base sm:text-lg px-8 min-h-[56px]"
                 >
                   Explorar Treinos
                 </button>
@@ -181,13 +182,13 @@ export default function LandingPage() {
             <>
               <button 
                 onClick={() => navigate('/register')}
-                className="btn-primary-gradient text-lg px-8 py-4.5"
+                className="btn-primary-gradient text-base sm:text-lg px-8 min-h-[56px]"
               >
                 <Flame className="w-5 h-5 fill-current" /> Criar Minha Conta
               </button>
               <button 
                 onClick={() => navigate('/login')}
-                className="btn-secondary-dark text-lg px-8 py-4.5"
+                className="btn-secondary-dark text-base sm:text-lg px-8 min-h-[56px]"
               >
                 Acessar Meu Painel
               </button>
@@ -210,29 +211,29 @@ export default function LandingPage() {
 
       {/* Pilares da Marca */}
       <section className="max-w-6xl mx-auto px-6 py-24 relative z-10">
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-12 sm:mb-16"><div>
           <h2 className="text-xs font-black tracking-[0.2em] text-brand uppercase mb-3">Nossos Fundamentos</h2>
           <p className="text-3xl md:text-4xl font-black text-white">Os Pilares da Marca AcademyUp</p>
           <p className="text-gray-400 mt-3 max-w-xl mx-auto text-sm">Desenvolvemos nossa metodologia em torno de quatro valores inabaláveis para garantir a sua melhor versão.</p>
-        </div>
+        </div></Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <PillarCard 
+          <PillarCard  delay={0}
             icon={<Dumbbell className="w-6 h-6 text-black" />} 
             title="Treinos Inteligentes" 
             desc="Programação de treinos efetiva e totalmente personalizada de acordo com seu biotipo, nível e limitações."
           />
-          <PillarCard 
+          <PillarCard  delay={90}
             icon={<CheckCircle className="w-6 h-6 text-black" />} 
             title="Disciplina & Foco" 
             desc="Constância e construção de mentalidade forte para transformar seus hábitos diários e atingir metas consistentes."
           />
-          <PillarCard 
+          <PillarCard  delay={180}
             icon={<TrendingUp className="w-6 h-6 text-black" />} 
             title="Evolução Real" 
             desc="Acompanhe seu progresso e superação de limites com gráficos de cargas, histórico detalhado e fotos de evolução."
           />
-          <PillarCard 
+          <PillarCard  delay={270}
             icon={<Users className="w-6 h-6 text-black" />} 
             title="Comunidade & Apoio" 
             desc="Juntos somos muito mais fortes. Suporte direto e motivação constante que inspira no chat com seu treinador."
@@ -244,17 +245,17 @@ export default function LandingPage() {
       <section className="bg-[#1F2937]/20 border-t border-gray-900 py-24 relative z-10">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <StepCard 
+            <StepCard  delay={0}
               num="01"
               title="Crie sua Ficha"
               desc="Acesse a biblioteca de exercícios com GIFs interativos para montar e ordenar seu roteiro de treinos."
             />
-            <StepCard 
+            <StepCard  delay={90}
               num="02"
               title="Treine no Foco"
               desc="Inicie a sessão com nosso cronômetro de descanso inteligente e insira suas cargas em tempo real."
             />
-            <StepCard 
+            <StepCard  delay={180}
               num="03"
               title="Acompanhe"
               desc="Visualize suas métricas financeiras, feedbacks de consultoria e relatórios de recordes pessoais (PRs)."
@@ -308,20 +309,24 @@ const AttributeBadge = ({ icon, text }) => (
   </div>
 );
 
-const PillarCard = ({ icon, title, desc }) => (
+const PillarCard = ({ icon, title, desc, delay = 0 }) => (
+  <Reveal delay={delay} className="h-full">
   <div className="bg-[#1F2937]/50 backdrop-blur-md border border-brand/10 p-8 rounded-3xl hover:border-brand/40 hover:shadow-[0_0_30px_rgba(255,193,7,0.1)] transition-all duration-300 group hover:-translate-y-1">
     <div className="w-13 h-13 bg-gradient-to-br from-brand to-[#FF9800] rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-brand/20 group-hover:scale-110 transition-transform">
       {icon}
     </div>
     <h3 className="text-xl font-black text-white mb-3 tracking-tight">{title}</h3>
-    <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
+    <p className="text-gray-300 text-sm leading-relaxed">{desc}</p>
   </div>
+  </Reveal>
 );
 
-const StepCard = ({ num, title, desc }) => (
+const StepCard = ({ num, title, desc, delay = 0 }) => (
+  <Reveal delay={delay}>
   <div className="relative p-6">
-    <div className="text-6xl font-black text-gray-800/40 font-mono mb-4">{num}</div>
+    <div className="text-6xl font-black text-gradient-brand opacity-60 font-mono mb-4">{num}</div>
     <h4 className="text-lg font-bold text-white mb-2">{title}</h4>
-    <p className="text-gray-400 text-xs leading-relaxed">{desc}</p>
+    <p className="text-gray-300 text-xs leading-relaxed">{desc}</p>
   </div>
+  </Reveal>
 );
