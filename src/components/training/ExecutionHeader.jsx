@@ -36,18 +36,18 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
             </div>
 
             {/* Toggle de Modo */}
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-transparent dark:border-gray-750">
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-transparent dark:border-gray-700">
                 <button
                     onClick={() => onChangeViewMode('list')}
                     aria-pressed={viewMode === 'list'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-750 shadow-sm text-brand' : 'text-gray-400'}`}
+                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-400'}`}
                 >
                     <List className="w-3.5 h-3.5" /> Lista
                 </button>
                 <button
                     onClick={() => onChangeViewMode('focus')}
                     aria-pressed={viewMode === 'focus'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-750 shadow-sm text-brand' : 'text-gray-400'}`}
+                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-400'}`}
                 >
                     <Search className="w-3.5 h-3.5" /> Foco
                 </button>
