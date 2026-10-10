@@ -1,0 +1,106 @@
+import { deleteUserData, purgeLocalData, chunk, providerOf, friendlyDeletionError, DELETION_STEPS } from './accountDeletion';
+
+// Firestore falso: registra a ordem das operações.
+const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = [], failOn = null } = {}) => {
+  const log = [];
+  const docsOf = (list, prefix) => list.map((d) => ({ id: d.id, ref: { path: `${prefix}/${d.id}` }, data: () => d.data || {} }));
+  const deps = {
+    db: {},
+    where: (field, op, value) => ({ field, op, value }),
+    collection: (db, ...path) => ({ path: path.join('/') }),
+    query: (col, ...constraints) => ({ col, constraints }),
+    getDocs: async (q) => {
+      const path = q.path || q.col.path;
+      if (failOn === path) throw Object.assign(new Error('x'), { code: 'permission-denied' });
+      if (path === 'checkIns') return { docs: docsOf(checkIns, 'checkIns') };
+      if (path === 'measurements') return { docs: docsOf(measurements, 'measurements') };
+      if (path === 'trainings') return { docs: docsOf(trainings, 'trainings') };
+      if (path === 'chats') return { docs: docsOf(chats, 'chats') };
+      const match = path.match(/^chats\/(.+)\/messages$/);
+      if (match) return { docs: docsOf((chats.find((c) => c.id === match[1]) || {}).messages || [], path) };
+      return { docs: [] };
+    },
+    writeBatch: () => {
+      const refs = [];
+      return { delete: (ref) => refs.push(ref.path), commit: async () => { log.push(['batch', refs.length, refs[0]]); } };
+    },
+    doc: (db, col, id) => ({ path: `${col}/${id}` }),
+    deleteDoc: async (ref) => { log.push(['delete', ref.path || ref.ref?.path]); }
+  };
+  return { deps, log };
+};
+
+describe('chunk', () => {
+  test('divide em lotes de até o tamanho pedido', () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([], 400)).toEqual([]);
+  });
+});
+
+describe('deleteUserData', () => {
+  test('apaga na ordem certa e o perfil por último; mensagens antes do chat', async () => {
+    const { deps, log } = makeDeps({
+      checkIns: [{ id: 'c1' }, { id: 'c2' }],
+      measurements: [{ id: 'm1' }],
+      chats: [{ id: 'chatA', messages: [{ id: 'x' }, { id: 'y' }] }],
+      trainings: [{ id: 't1', data: { isAIGenerated: true } }, { id: 't2', data: { isAIGenerated: false } }, { id: 't3', data: { isAIGenerated: true, coachId: 'coach' } }]
+    });
+    const steps = [];
+    const counts = await deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) });
+    expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, profile: 1 });
+    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:users/u1']);
+    expect(steps.slice(0, 2)).toEqual(['checkIns:running', 'checkIns:done']);
+    expect(steps[steps.length - 1]).toBe('profile:done');
+  });
+
+  test('mais de 400 documentos viram vários lotes', async () => {
+    const { deps, log } = makeDeps({ checkIns: Array.from({ length: 450 }, (_, i) => ({ id: `c${i}` })) });
+    await deleteUserData('u1', { deps });
+    expect(log.filter((entry) => entry[0] === 'batch').map((entry) => entry[1])).toEqual([400, 50]);
+  });
+
+  test('erro numa etapa para o fluxo e preserva o perfil (nada depois é apagado)', async () => {
+    const { deps, log } = makeDeps({ checkIns: [{ id: 'c1' }], failOn: 'measurements' });
+    const steps = [];
+    await expect(deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) })).rejects.toMatchObject({ step: 'measurements' });
+    expect(steps).toContain('measurements:error');
+    expect(log.some((entry) => entry[1] === 'users/u1')).toBe(false);
+  });
+
+  test('sem uid lança erro', async () => {
+    await expect(deleteUserData('')).rejects.toThrow();
+  });
+});
+
+describe('purgeLocalData', () => {
+  test('remove chaves do usuário e do app, preserva as de terceiros', () => {
+    localStorage.clear();
+    localStorage.setItem('academyup:weeklyGoal:u1', '4');
+    localStorage.setItem('academyup_pending_checkins_u1', '[]');
+    localStorage.setItem('bt_terms_accepted_at', 'x');
+    localStorage.setItem('chave-do-u1', 'x');
+    localStorage.setItem('outro-site', 'ok');
+    expect(purgeLocalData('u1')).toBe(4);
+    expect(localStorage.getItem('outro-site')).toBe('ok');
+    expect(localStorage.length).toBe(1);
+  });
+});
+
+describe('providerOf e mensagens', () => {
+  test('detecta o método de login', () => {
+    expect(providerOf({ providerData: [{ providerId: 'password' }] })).toBe('password');
+    expect(providerOf({ providerData: [{ providerId: 'google.com' }] })).toBe('google');
+    expect(providerOf({ providerData: [] })).toBe('unknown');
+    expect(providerOf(null)).toBe('unknown');
+  });
+
+  test('mensagens amigáveis para erros comuns', () => {
+    expect(friendlyDeletionError({ code: 'auth/invalid-credential' })).toBe('Senha incorreta.');
+    expect(friendlyDeletionError({ cause: { code: 'permission-denied' } })).toMatch(/permissão/);
+    expect(friendlyDeletionError({ message: 'outro' })).toBe('outro');
+  });
+
+  test('as etapas exibidas cobrem o fluxo inteiro', () => {
+    expect(DELETION_STEPS.map((s) => s.id)).toEqual(['reauth', 'checkIns', 'measurements', 'chats', 'trainings', 'profile', 'login']);
+  });
+});
