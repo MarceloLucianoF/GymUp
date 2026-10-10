@@ -1,6 +1,12 @@
 import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
-import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'firebase/ai';
+
+// O SDK `firebase/ai` é pesado: carregado sob demanda, só quando o Coach IA é usado.
+let aiSdkPromise = null;
+const loadAiSdk = () => {
+  if (!aiSdkPromise) aiSdkPromise = import('firebase/ai');
+  return aiSdkPromise;
+};
 
 // Remove credenciais que versões anteriores armazenavam no navegador.
 if (typeof window !== 'undefined') {
@@ -23,13 +29,18 @@ const MAX_PROMPT_LENGTH = 2000;
 const NVIDIA_MODEL = 'auto';
 
 let aiInstance = null;
-const getAIInstance = () => {
-  if (!aiInstance) aiInstance = getAI(app, { backend: new GoogleAIBackend() });
+const getAIInstance = async () => {
+  if (!aiInstance) {
+    const { getAI, GoogleAIBackend } = await loadAiSdk();
+    aiInstance = getAI(app, { backend: new GoogleAIBackend() });
+  }
   return aiInstance;
 };
 
-const buildModel = (modelName, extra = {}) =>
-  getGenerativeModel(getAIInstance(), { model: modelName, ...extra });
+const buildModel = async (modelName, extra = {}) => {
+  const { getGenerativeModel } = await loadAiSdk();
+  return getGenerativeModel(await getAIInstance(), { model: modelName, ...extra });
+};
 
 // Tenta cada modelo candidato; modelos descontinuados (404) passam para o próximo.
 const withModelFallback = async (run) => {
@@ -120,7 +131,7 @@ const FOCUS_OPTIONS = ['Peito e Tríceps', 'Costas e Bíceps', 'Pernas Completo'
 const GOAL_OPTIONS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência'];
 
 // Declaração das funções que o Coach IA pode executar (function calling).
-const COACH_TOOLS = [{
+const buildCoachTools = (Schema) => [{
   functionDeclarations: [
     {
       name: 'calcular_macros',
@@ -287,9 +298,10 @@ export const aiService = {
 
     try {
       const reply = await withModelFallback(async (modelName) => {
-        const model = buildModel(modelName, {
+        const { Schema } = await loadAiSdk();
+        const model = await buildModel(modelName, {
           systemInstruction: systemText,
-          tools: COACH_TOOLS,
+          tools: buildCoachTools(Schema),
           generationConfig: { temperature: 0.6, maxOutputTokens: 4096 }
         });
 
@@ -346,7 +358,8 @@ export const aiService = {
 
     try {
       const plan = await withModelFallback(async (modelName) => {
-        const model = buildModel(modelName, {
+        const { Schema } = await loadAiSdk();
+        const model = await buildModel(modelName, {
           generationConfig: {
             temperature: 0.5,
             maxOutputTokens: 4096,

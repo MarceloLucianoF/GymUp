@@ -7,6 +7,7 @@ import { formatTime } from '../../utils/format';
 import Avatar from '../../components/coach/Avatar';
 import EmptyState from '../../components/common/EmptyState';
 import { timeAgo, toDate } from '../../components/coach/helpers';
+import QuickReplies from '../../components/coach/QuickReplies';
 import { inputCls } from '../../components/coach/styles';
 
 const otherOf = (chat, uid) => {
@@ -31,6 +32,7 @@ export default function CoachChatPage() {
   // Vindo do painel/alunos: abre direto a conversa com o aluno
   useEffect(() => {
     if (location.state?.targetUser) openChatWithUser(location.state.targetUser);
+    if (location.state?.draft) setInputText(location.state.draft); // mensagem pronta: o treinador revisa e envia
   }, [location.state, openChatWithUser]);
 
   const filteredChats = useMemo(() => chats.filter((chat) => (otherOf(chat, user.uid).name || 'Aluno').toLowerCase().includes(searchTerm.toLowerCase())), [chats, searchTerm, user.uid]);
@@ -131,6 +133,7 @@ export default function CoachChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
+            <QuickReplies studentName={active.name} onPick={setInputText} />
             <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-gray-200 bg-white/80 p-3 dark:border-white/10 dark:bg-white/[0.03]">
               <input type="text" aria-label="Mensagem" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Digite sua mensagem..." maxLength={2000} className={`${inputCls} flex-1 rounded-full px-5`} />
               <button type="submit" aria-label="Enviar mensagem" disabled={!inputText.trim()} className="pressable inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-black shadow-lg shadow-brand/30 disabled:opacity-40"><Send className="h-5 w-5" /></button>

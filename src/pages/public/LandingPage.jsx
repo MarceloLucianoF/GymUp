@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import usePageMeta, { SITE_URL } from '../../hooks/usePageMeta';
 import {
   Dumbbell, Flame, Sparkles, LineChart, MessageCircle, Timer, Users, Wallet, ClipboardList,
   ArrowRight, Check, Play, Smartphone, WifiOff, Trophy, Zap
@@ -67,7 +68,19 @@ function PhoneMockup() {
   );
 }
 
+const JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'BohTreinar',
+  applicationCategory: 'HealthApplication',
+  operatingSystem: 'Web, Android, iOS (PWA)',
+  url: SITE_URL,
+  description: 'App de treinos com fichas, cronômetro, evolução, chat com o treinador e Coach de IA.',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' }
+};
+
 export default function LandingPage() {
+  usePageMeta('Treine. Evolua. Supere.', 'BohTreinar: fichas, cronômetro, evolução, chat com o treinador e Coach de IA. Funciona offline e é grátis para começar.');
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const [activeSession, setActiveSession] = useState(null);
@@ -116,7 +129,8 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main>
+      <main id="main-content" tabIndex={-1} className="outline-none">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
         {/* HERO */}
         <section className="aurora-bg relative">
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:pt-16 lg:grid-cols-2 lg:gap-8 lg:pb-24 lg:pt-24">
@@ -237,9 +251,13 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-gray-200/70 py-8 text-center text-xs text-gray-500 dark:border-white/10 dark:text-gray-400">
+      <footer className="border-t border-gray-200/70 py-8 text-center text-xs text-gray-600 dark:border-white/10 dark:text-gray-300">
         <p className="flex items-center justify-center gap-1.5"><Smartphone className="h-4 w-4" aria-hidden="true" /> Instale na tela inicial do celular para a melhor experiência.</p>
-        <p className="mt-2">© {new Date().getFullYear()} BohTreinar · Treine · Evolua · Supere</p>
+        <nav aria-label="Documentos legais" className="mt-2 flex justify-center gap-4 font-bold">
+          <Link to="/privacidade" className="inline-flex min-h-[44px] items-center underline hover:text-brand">Privacidade</Link>
+          <Link to="/termos" className="inline-flex min-h-[44px] items-center underline hover:text-brand">Termos de Uso</Link>
+        </nav>
+        <p className="mt-1">© {new Date().getFullYear()} BohTreinar · Treine · Evolua · Supere</p>
       </footer>
     </div>
   );

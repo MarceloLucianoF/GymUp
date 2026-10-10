@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useCoachRoster, lastWorkoutMap, DEFAULT_FEE } from './useCoachRoster';
+import { buildActionQueue } from '../utils/coachInsights';
 import { countByDay, daysSince, studentStatus, startOfDay, DAY_MS } from '../components/coach/helpers';
 
 // Métricas do painel do treinador, derivadas de useCoachRoster (consulta por alunos vinculados).
 export const useCoachDashboard = (user) => {
-    const { students, trainings, checkIns, loading, error, reload } = useCoachRoster(user);
+    const { students, trainings, checkIns, loading, error, reload, setStudents } = useCoachRoster(user);
 
     const data = useMemo(() => {
         const now = new Date();
@@ -55,9 +56,10 @@ export const useCoachDashboard = (user) => {
             recentActivity: checkIns.slice(0, 8).map(c => ({ ...c, student: nameOf[c.userId] || null })),
             todayCheckIns,
             students: withStatus,
-            trainings
+            trainings,
+            actionQueue: buildActionQueue({ students, lastWorkouts: last, checkIns, now })
         };
     }, [students, trainings, checkIns]);
 
-    return { ...data, loading, error, reload };
+    return { ...data, checkIns, loading, error, reload, setStudents };
 };

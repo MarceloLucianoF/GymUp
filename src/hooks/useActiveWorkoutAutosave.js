@@ -3,10 +3,10 @@ import { activeWorkoutService } from '../services/activeWorkoutService';
 
 // Persiste o rascunho do treino em andamento a cada mudança relevante.
 export function useActiveWorkoutAutosave({
-    user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj, startedAtRef
+    enabled = true, user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj, startedAtRef
 }) {
     useEffect(() => {
-        if (!user || !training) return;
+        if (!enabled || !user || !training) return;
         activeWorkoutService.saveActiveSession(user.uid, {
             trainingId: training.id,
             trainingName: training.name,
@@ -19,5 +19,5 @@ export function useActiveWorkoutAutosave({
             restTimerObj,
             currentExerciseName: training.exercises[activeExerciseIndex]?.name || ''
         });
-    }, [user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj, startedAtRef]);
+    }, [enabled, user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj, startedAtRef]);
 }

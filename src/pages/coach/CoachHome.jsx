@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Activity, Target, AlertTriangle, Wallet, PiggyBank, MessageSquare, Eye, Plus, UserPlus, DollarSign, Trophy, Flame, ArrowRight, Smile } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import toast from 'react-hot-toast';
+import { db } from '../../firebase/config';
+import { Users, Activity, Target, AlertTriangle, Wallet, PiggyBank, MessageSquare, Eye, Plus, UserPlus, DollarSign, Trophy, Flame, ArrowRight, Smile, ListChecks } from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useCoachDashboard } from '../../hooks/useCoachDashboard';
 import { formatTonnage } from '../../utils/format';
@@ -10,6 +13,9 @@ import Reveal from '../../components/ui/Reveal';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import Avatar from '../../components/coach/Avatar';
+import ActionQueue from '../../components/coach/ActionQueue';
+import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
+import { loadTemplates, draftForAction } from '../../utils/coachTemplates';
 import BarChart from '../../components/coach/BarChart';
 import InviteModal from '../../components/coach/InviteModal';
 import PageSkeleton from '../../components/coach/PageSkeleton';
@@ -33,8 +39,29 @@ const SectionTitle = ({ icon: Icon, children, action }) => (
 export default function CoachHome() {
   const { user } = useAuthContext();
   const navigate = useNavigate();
-  const { stats, weekly, ranking, studentsAtRisk, recentActivity, loading, error, reload } = useCoachDashboard(user);
+  const { stats, weekly, ranking, studentsAtRisk, recentActivity, actionQueue, trainings, setStudents, loading, error, reload } = useCoachDashboard(user);
   const [showInvite, setShowInvite] = useState(false);
+  const [assigning, setAssigning] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const messageStudent = (item) => navigate('/coach/chat', { state: { ...chatState(item.student), draft: draftForAction(item, loadTemplates()) } });
+
+  // Campos permitidos pelas regras ao treinador vinculado: paymentStatus, paymentDate, lastPaymentUpdate.
+  const markPaid = async (student) => {
+    const now = new Date().toISOString();
+    const update = { paymentStatus: 'paid', paymentDate: now, lastPaymentUpdate: now, updatedAt: now };
+    setBusyId(student.uid);
+    try {
+      await updateDoc(doc(db, 'users', student.uid), update);
+      setStudents((prev) => prev.map((x) => (x.uid === student.uid ? { ...x, ...update } : x)));
+      toast.success('Pagamento confirmado!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Não foi possível marcar como pago.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const firstName = (user?.displayName || '').split(' ')[0];
   const activeNow = Math.max(0, stats.active - stats.risk);
@@ -84,6 +111,14 @@ export default function CoachHome() {
           <StatCard icon={Wallet} label="Receita prevista" value={stats.revenue} prefix="R$ " accent="brand" />
           <StatCard icon={PiggyBank} label="Recebido no mês" value={stats.received} prefix="R$ " accent="green" />
         </div>
+
+        <Reveal>
+          <section className="surface p-5" aria-label="Fila de ação do dia">
+            <SectionTitle icon={ListChecks} action={<span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:text-brand">{actionQueue.length}</span>}>Fila de ação do dia</SectionTitle>
+            <ActionQueue items={actionQueue} busyId={busyId} onMessage={messageStudent} onMarkPaid={markPaid}
+              onView={(st) => navigate(`/coach/students/${st.uid}`)} onAssign={setAssigning} />
+          </section>
+        </Reveal>
 
         <div className="grid gap-6 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
@@ -167,6 +202,11 @@ export default function CoachHome() {
           </Reveal>
         </div>
       </div>
+      {assigning && (
+        <AssignTrainingModal student={{ ...assigning, id: assigning.uid }} trainings={trainings} onClose={() => setAssigning(null)}
+          onAssigned={(trainingId) => setStudents((prev) => prev.map((x) => (x.uid === assigning.uid ? { ...x, currentTrainingId: trainingId } : x)))}
+          onCreateTraining={() => navigate('/admin/trainings')} />
+      )}
       {showInvite && <InviteModal coachCode={user.uid} onClose={() => setShowInvite(false)} />}
     </div>
   );

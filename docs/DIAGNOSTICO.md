@@ -168,3 +168,10 @@ O build local pode regenerar `build/`, que já é ignorado pelo Git.
 
 ## Rebrand — AcademyUp → BohTreinar
 Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Brand.jsx` (monograma B + seta e wordmark). Ícones do PWA regenerados. **Mantidos de propósito** (renomear apagaria dados locais/infra): chaves `academyup:*` de localStorage, ID do projeto Firebase e contas demo `@academyup.com`.
+
+## Atualização — fase 5 (utilidade e plataforma)
+- **Aluno:** execução com ±carga/±reps, copiar última sessão, notas por exercício, RPE, selo de recorde, tela sempre acesa (wake lock), compartilhar resumo; `/ferramentas` (1RM, anilhas, kg/lb, timer, IMC/hidratação).
+- **Treinador:** fila de ação do dia, aderência (heatmap), atribuição em lote, CSV de alunos/financeiro, cobrança por WhatsApp/cópia, respostas rápidas no chat, editor de fichas com predefinições e reordenação por teclado.
+- **Plataforma:** ErrorBoundary global/por rota, 404, recarga de chunk, `/privacidade` e `/termos` (modelo, revisar com advogado), aceite no cadastro (só local), exportar dados (JSON), SEO (OG/Twitter/JSON-LD/robots/sitemap), SDK de IA carregado sob demanda, skip link e foco por rota.
+- **Coach IA:** NVIDIA com prompt próprio (sem funções simuladas), pedidos de ficha vão ao Gemini, Markdown seguro.
+- **Pendente:** exclusão real de conta (exige regras), `phone` do aluno para WhatsApp direto, revisão jurídica, domínio próprio (atualizar sitemap/canonical), duplicação de check-ins na sincronização offline após falha parcial.

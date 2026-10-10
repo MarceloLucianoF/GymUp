@@ -5,9 +5,11 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useConfirm } from '../../hooks/useConfirm';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import usePageMeta from '../../hooks/usePageMeta';
+import { exportMyData, deletionMailto } from '../../utils/exportData';
 import PageHeader from '../../components/ui/PageHeader';
-import { ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
+import { Download, Trash2, ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
 import { getPublicCoach } from '../../services/coachProfile';
 import NotificationSettings from '../../components/pwa/NotificationSettings';
 
@@ -16,6 +18,22 @@ export default function Profile() {
   const { user, logout } = useAuthContext();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  usePageMeta('Meu perfil', 'Dados, medidas e preferências.', { noindex: true });
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (exporting || !user) return;
+    setExporting(true);
+    try {
+      await exportMyData(user);
+      toast.success('Arquivo gerado. Verifique seus downloads.');
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      toast.error('Não foi possível exportar agora. Tente novamente.');
+    } finally {
+      setExporting(false);
+    }
+  };
   
   const [loading, setLoading] = useState(true);
   const [originalData, setOriginalData] = useState({}); 
@@ -256,7 +274,7 @@ export default function Profile() {
                                     </div>
                                     <div>
                                         <p className="font-bold text-gray-800 dark:text-white text-sm">{coachData.displayName}</p>
-                                        <p className="text-xs text-gray-500">Acompanhando sua evolução</p>
+                                        <p className="text-xs text-gray-600 dark:text-gray-300">Acompanhando sua evolução</p>
                                     </div>
                                 </div>
                             </div>
@@ -278,7 +296,7 @@ export default function Profile() {
                             <h3 className="text-lg font-bold text-gray-800 dark:text-white">Medidas</h3>
                             {imcData && (
                                 <div className="text-right">
-                                    <span className="text-[10px] text-gray-400 uppercase font-bold block">IMC Estimado</span>
+                                    <span className="text-[10px] text-gray-600 dark:text-gray-300 uppercase font-bold block">IMC Estimado</span>
                                     <span className={`text-sm font-bold ${imcData.color}`}>{imcData.value} ({imcData.label})</span>
                                 </div>
                             )}
@@ -396,6 +414,26 @@ export default function Profile() {
         </div>
 
         <NotificationSettings uid={user.uid} />
+
+        {/* SEUS DADOS (LGPD) */}
+        <section aria-labelledby="seus-dados-title" className="mt-6 rounded-3xl bg-white dark:bg-white/5 p-5 shadow-sm">
+          <h2 id="seus-dados-title" className="text-base font-bold text-gray-800 dark:text-white">Seus dados</h2>
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+            Baixe uma cópia do seu perfil, treinos concluídos e medidas, ou peça a exclusão da conta. Veja a{' '}
+            <Link to="/privacidade" className="font-bold underline">Política de Privacidade</Link>.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <button type="button" onClick={handleExport} disabled={exporting} aria-busy={exporting}
+              className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-bold text-white disabled:opacity-60 dark:bg-white dark:text-black">
+              <Download className="h-4 w-4" aria-hidden="true" /> {exporting ? 'Gerando...' : 'Exportar meus dados (JSON)'}
+            </button>
+            <a href={deletionMailto(user)}
+              className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl border border-red-300 px-4 text-sm font-bold text-red-700 dark:border-red-400/40 dark:text-red-300">
+              <Trash2 className="h-4 w-4" aria-hidden="true" /> Solicitar exclusão
+            </a>
+          </div>
+          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">A exclusão é feita manualmente após o pedido por e-mail; nada é apagado automaticamente.</p>
+        </section>
 
         {/* Rodapé Informativo */}
         <div className="text-center mt-8 text-gray-500 dark:text-gray-400 text-xs">

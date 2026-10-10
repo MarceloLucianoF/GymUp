@@ -135,10 +135,16 @@ export const summarizeSession = (exercises, sessionData) => {
                 const w = parseFloat(data.weight) || 0;
                 const r = parseFloat(data.reps) || 0;
                 totalVolume += w * r;
-                exSets.push({ weight: w, reps: r, completed: true });
+                const set = { weight: w, reps: r, completed: true };
+                const rpe = normalizeRpe(data.rpe);
+                if (rpe) set.rpe = rpe;
+                exSets.push(set);
             }
         }
-        return { name: ex.name, muscleGroup: ex.muscleGroup, sets: exSets };
+        const entry = { name: ex.name, muscleGroup: ex.muscleGroup, sets: exSets };
+        const note = normalizeNote(sessionData[noteKey(exIndex)]?.note);
+        if (note) entry.note = note;
+        return entry;
     });
 
     return {
@@ -167,4 +173,80 @@ export const detectNewPRs = (exercises, sessionData, historyMap) => {
         }
     });
     return newPRs;
+};
+
+// ---- Utilidades de execução (carga rápida, cópia da última sessão, RPE, notas, compartilhamento) ----
+
+export const NOTE_MAX = 300;
+export const noteKey = (exIndex) => `note-${exIndex}`;
+
+const roundStep = (n) => Math.round(n * 100) / 100;
+
+// Soma delta a um valor de input (string/numero). Nunca fica abaixo de 0. Vazio parte de `base`.
+export const adjustValue = (current, delta, base = 0) => {
+    const parsed = parseFloat(String(current ?? '').replace(',', '.'));
+    const start = Number.isFinite(parsed) ? parsed : (Number(base) || 0);
+    const next = Math.max(0, roundStep(start + delta));
+    return next === 0 ? '' : String(next);
+};
+
+// Séries (peso/reps) do treino mais recente em que o exercício apareceu.
+export const getLastSessionSets = (historyDocs, exName) => {
+    for (const d of historyDocs || []) {
+        const found = d?.exercises?.find(e => e.name === exName);
+        if (found?.sets?.length > 0) {
+            return found.sets.map(s => ({ weight: Number(s.weight) || 0, reps: Number(s.reps) || 0 }));
+        }
+    }
+    return [];
+};
+
+// Última nota registrada para o exercício (histórico mais recente primeiro).
+export const getLastNote = (historyDocs, exName) => {
+    for (const d of historyDocs || []) {
+        const found = d?.exercises?.find(e => e.name === exName);
+        if (found && typeof found.note === 'string' && found.note.trim()) return found.note.trim();
+    }
+    return '';
+};
+
+// Valores para preencher cada série com a última sessão; séries além das anteriores repetem a última.
+export const buildCopyFromLast = (lastSets, setsCount) => {
+    if (!lastSets || lastSets.length === 0) return [];
+    return Array.from({ length: setsCount }, (_, i) => {
+        const s = lastSets[Math.min(i, lastSets.length - 1)];
+        return {
+            weight: s.weight > 0 ? String(s.weight) : '',
+            reps: s.reps > 0 ? String(s.reps) : ''
+        };
+    });
+};
+
+// Série é recorde quando a carga supera o melhor anterior (precisa existir histórico).
+export const isPRSet = (weight, prevMax) => {
+    const w = parseFloat(weight) || 0;
+    return w > 0 && Number(prevMax) > 0 && w > Number(prevMax);
+};
+
+export const normalizeRpe = (v) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n >= 1 && n <= 10 ? n : null;
+};
+
+export const normalizeNote = (v) => (typeof v === 'string' ? v.trim().slice(0, NOTE_MAX) : '');
+
+// Texto para Web Share / área de transferência.
+export const buildShareText = ({ trainingName, timeStr, volumeKg, completedSetsCount, newPRs = [] }) => {
+    const lines = [
+        `Treino concluído: ${trainingName || 'Treino'} 💪`,
+        `⏱ ${timeStr} | 🏋️ ${Math.round(volumeKg || 0)} kg de volume | ✅ ${completedSetsCount || 0} séries`
+    ];
+    if (newPRs.length > 0) lines.push(`🏆 Recordes: ${newPRs.join(', ')}`);
+    lines.push('Feito com BohTreinar');
+    return lines.join('\n');
+};
+
+export const formatDuration = (seconds) => {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
 };

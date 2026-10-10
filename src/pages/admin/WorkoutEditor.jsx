@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, collection, getDocs, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Save, Plus, ChevronUp, ChevronDown, Trash2, Search, Dumbbell, Layers, Repeat, Timer, X } from 'lucide-react';
+import { ArrowLeft, Save, Plus, ChevronUp, ChevronDown, GripVertical, Trash2, Search, Dumbbell, Layers, Repeat, Timer, X } from 'lucide-react';
 import { db } from '../../firebase/config';
 import Modal from '../../components/common/Modal';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -11,6 +11,7 @@ import EmptyState from '../../components/common/EmptyState';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import { estimateWorkout } from '../../components/coach/helpers';
+import { WORKOUT_PRESETS, getPreset, applyPreset, reorder, formatMinutes } from '../../utils/coachWorkout';
 import { btnPrimary, btnGhost, iconBtn, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
 const LEVELS = ['Iniciante', 'Intermediário', 'Avançado', 'Elite'];
@@ -65,7 +66,8 @@ function AddExerciseModal({ library, onAdd, onClose, onGoLibrary }) {
           </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-            <input type="search" autoFocus aria-label="Buscar exercício" placeholder="Buscar (ex: supino)" value={term} onChange={(e) => setTerm(e.target.value)} className={`${inputCls} pl-11`} />
+            <input type="search" autoFocus aria-label="Buscar exercício" placeholder="Buscar (ex: supino) e Enter para adicionar o primeiro" value={term} onChange={(e) => setTerm(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && list[0]) { e.preventDefault(); onAdd(list[0]); } }} className={`${inputCls} pl-11`} />
           </div>
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1" role="group" aria-label="Grupo muscular">
             {[['all', 'Todos'], ...groups].map(([k, label]) => (
@@ -110,6 +112,11 @@ export default function WorkoutEditor() {
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [dirty, setDirty] = useState(false);
+  const [presetId, setPresetId] = useState('');
+  const [dragIndex, setDragIndex] = useState(null);
+  const [announce, setAnnounce] = useState('');
+  const handleRefs = useRef({});
+  const focusKey = useRef(null);
   const [saving, setSaving] = useState(false);
   const { confirm, dialog } = useConfirm();
 
@@ -161,15 +168,33 @@ export default function WorkoutEditor() {
   const update = useCallback((patch) => { setTraining((prev) => ({ ...prev, ...patch })); setDirty(true); }, []);
   const updateExercise = (index, field, value) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)) });
   const removeExercise = (index) => update({ exercises: training.exercises.filter((_, i) => i !== index) });
-  const move = (index, dir) => {
-    const target = index + dir;
-    if (target < 0 || target >= training.exercises.length) return;
-    const next = [...training.exercises];
-    [next[index], next[target]] = [next[target], next[index]];
-    update({ exercises: next });
+  const moveTo = (index, target) => {
+    if (target < 0 || target >= training.exercises.length || target === index) return;
+    const item = training.exercises[index];
+    focusKey.current = item._key;
+    update({ exercises: reorder(training.exercises, index, target) });
+    setAnnounce(`${item.name} movido para a posição ${target + 1} de ${training.exercises.length}`);
+  };
+  const move = (index, dir) => moveTo(index, index + dir);
+  // Devolve o foco ao botão de arrastar depois de reordenar pelo teclado.
+  useEffect(() => {
+    if (focusKey.current) { handleRefs.current[focusKey.current]?.focus(); focusKey.current = null; }
+  });
+  const onHandleKey = (e, i) => {
+    if (e.key === 'ArrowUp') { e.preventDefault(); move(i, -1); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); move(i, 1); }
+    else if (e.key === 'Home') { e.preventDefault(); moveTo(i, 0); }
+    else if (e.key === 'End') { e.preventDefault(); moveTo(i, training.exercises.length - 1); }
+  };
+  const applyPresetToAll = async () => {
+    const preset = getPreset(presetId);
+    if (!preset || training.exercises.length === 0) return;
+    if (!(await confirm({ title: `Aplicar ${preset.label}?`, message: `Todos os exercícios ficarão com ${preset.sets} séries, ${preset.reps} reps e ${preset.rest}s de descanso.`, confirmLabel: 'Aplicar' }))) return;
+    update({ exercises: training.exercises.map((ex) => applyPreset(ex, preset)) });
+    toast.success(`Predefinição ${preset.label} aplicada`);
   };
   const addExercise = (lib) => {
-    update({ exercises: [...training.exercises, fromLibrary(lib)] });
+    update({ exercises: [...training.exercises, applyPreset(fromLibrary(lib), getPreset(presetId))] });
     toast.success(`${lib.name} adicionado`);
   };
 
@@ -250,12 +275,13 @@ export default function WorkoutEditor() {
               { icon: Dumbbell, label: 'Exercícios', value: training.exercises.length },
               { icon: Layers, label: 'Séries', value: summary.sets },
               { icon: Repeat, label: 'Repetições', value: summary.reps },
-              { icon: Timer, label: 'Minutos (aprox.)', value: summary.minutes }
-            ].map(({ icon: Icon, label, value }) => (
+              { icon: Timer, label: 'Minutos (aprox.)', value: summary.minutes, hint: formatMinutes(summary.minutes) }
+            ].map(({ icon: Icon, label, value, hint }) => (
               <div key={label} className="rounded-2xl bg-gray-100 p-3 dark:bg-white/5">
                 <Icon className="mb-1 h-4 w-4 text-brand" aria-hidden="true" />
                 <p className="font-display text-2xl font-black text-gray-900 dark:text-white"><AnimatedNumber value={value} duration={600} /></p>
                 <p className="text-[11px] font-medium uppercase text-gray-500">{label}</p>
+                {hint && <p className="sr-only">Duração estimada: {hint}</p>}
               </div>
             ))}
           </div>
@@ -270,7 +296,8 @@ export default function WorkoutEditor() {
               ))}
             </div>
           )}
-          <p className="mt-3 text-[11px] text-gray-400">Estimativa por séries x repetições e descanso; a carga real é registrada pelo aluno.</p>
+          <p className="mt-3 text-sm font-bold text-gray-700 dark:text-gray-200">Tempo estimado do treino: <span className="text-brand">{formatMinutes(summary.minutes)}</span></p>
+          <p className="mt-1 text-[11px] text-gray-400">Estimativa por séries x repetições e descanso; a carga real é registrada pelo aluno.</p>
         </section>
 
         <section aria-label="Exercícios da ficha" className="space-y-3">
@@ -279,16 +306,35 @@ export default function WorkoutEditor() {
             <button type="button" onClick={() => setShowAdd(true)} className={btnGhost}><Plus className="h-4 w-4" /> Adicionar</button>
           </div>
 
+          <div className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label htmlFor="we-preset" className={labelCls}>Predefinição por objetivo</label>
+              <select id="we-preset" value={presetId} onChange={(e) => setPresetId(e.target.value)} className={`${inputCls} cursor-pointer`}>
+                <option value="">Nenhuma (padrão da biblioteca)</option>
+                {WORKOUT_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label}: {p.sets}x{p.reps}, {p.rest}s</option>)}
+              </select>
+            </div>
+            <button type="button" onClick={applyPresetToAll} disabled={!presetId || training.exercises.length === 0} className={btnGhost}>Aplicar a todos</button>
+            <p className="text-[11px] text-gray-400 sm:w-48">Novos exercícios já entram com a predefinição escolhida.</p>
+          </div>
+          <p className="sr-only" role="status" aria-live="polite">{announce}</p>
+
           {training.exercises.length === 0 ? (
             <div className="surface"><EmptyState icon={Dumbbell} title="A ficha está vazia." description="Adicione exercícios da biblioteca." action={<button type="button" onClick={() => setShowAdd(true)} className={btnPrimary}>Adicionar exercício</button>} /></div>
           ) : (
             <ol className="space-y-3">
               {training.exercises.map((ex, i) => (
-                <li key={ex._key} className="surface animate-scale-in p-3 sm:p-4">
+                <li key={ex._key} className={`surface animate-scale-in p-3 sm:p-4 ${dragIndex === i ? 'opacity-50' : ''}`}
+                  onDragOver={(e) => { if (dragIndex !== null) e.preventDefault(); }}
+                  onDrop={(e) => { e.preventDefault(); if (dragIndex !== null) moveTo(dragIndex, i); setDragIndex(null); }}>
                   <div className="flex items-center gap-3">
                     <div className="flex flex-col items-center gap-1">
                       <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Subir ${ex.name}`} className={`${iconBtn} !h-11 !w-11`}><ChevronUp className="h-5 w-5" /></button>
-                      <span className="text-xs font-black text-gray-400" aria-hidden="true">{i + 1}</span>
+                      <button type="button" ref={(el) => { handleRefs.current[ex._key] = el; }} draggable
+                        onDragStart={(e) => { setDragIndex(i); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); }}
+                        onDragEnd={() => setDragIndex(null)} onKeyDown={(e) => onHandleKey(e, i)}
+                        aria-label={`Reordenar ${ex.name}, posição ${i + 1} de ${training.exercises.length}. Use as setas para cima e para baixo.`}
+                        className="inline-flex h-8 w-11 cursor-grab items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-white/10"><GripVertical className="h-4 w-4" aria-hidden="true" /><span className="text-xs font-black">{i + 1}</span></button>
                       <button type="button" onClick={() => move(i, 1)} disabled={i === training.exercises.length - 1} aria-label={`Descer ${ex.name}`} className={`${iconBtn} !h-11 !w-11`}><ChevronDown className="h-5 w-5" /></button>
                     </div>
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 dark:bg-white/5">

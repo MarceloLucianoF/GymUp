@@ -1,10 +1,12 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuthContext } from './hooks/AuthContext';
 import { ThemeProvider } from './hooks/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/layout/Navbar';
 import PwaLayer from './components/pwa/PwaLayer';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import usePageMeta from './hooks/usePageMeta';
 
 // --- PÁGINAS: AUTH ---
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -24,6 +26,7 @@ const ExerciseProgressList = lazy(() => import('./pages/user/ExerciseProgressLis
 const Onboarding = lazy(() => import('./pages/user/Onboarding'));
 const UserChatPage = lazy(() => import('./pages/user/UserChatPage'));
 const WorkoutDetailsPage = lazy(() => import('./pages/user/WorkoutDetailsPage'));
+const Tools = lazy(() => import('./pages/user/Tools'));
 
 
 // --- PÁGINAS: ADMIN (TREINADOR) ---
@@ -42,6 +45,75 @@ const CoachSettings = lazy(() => import('./pages/coach/CoachSettings'));
 
 // --- COMPONENTES ---
 const LandingPage = lazy(() => import('./pages/public/LandingPage'));
+const Privacidade = lazy(() => import('./pages/public/Privacidade'));
+const Termos = lazy(() => import('./pages/public/Termos'));
+const NotFound = lazy(() => import('./pages/public/NotFound'));
+
+// Título/descrição por rota. Privacidade, Termos e 404 definem os próprios metadados.
+const ROUTE_META = [
+  ['/login', 'Entrar', 'Acesse sua conta BohTreinar.', false],
+  ['/register', 'Criar conta', 'Crie sua conta gratuita no BohTreinar.', false],
+  ['/forgot-password', 'Recuperar senha', 'Recupere o acesso à sua conta.', false],
+  ['/dashboard', 'Painel', 'Seu painel de treinos.', true],
+  ['/trainings', 'Meus treinos', 'Suas fichas de treino.', true],
+  ['/training', 'Treino', 'Detalhes do treino.', true],
+  ['/execution', 'Treino em andamento', 'Execução do treino.', true],
+  ['/history', 'Histórico', 'Histórico de treinos.', true],
+  ['/analytics', 'Evolução por exercício', 'Evolução de carga por exercício.', true],
+  ['/measurements', 'Medidas', 'Evolução das suas medidas.', true],
+  ['/profile', 'Meu perfil', 'Dados, medidas e preferências.', true],
+  ['/chat', 'Chat', 'Conversa com seu treinador.', true],
+  ['/ferramentas', 'Ferramentas', 'Calculadoras e ferramentas de treino.', true],
+  ['/onboarding', 'Bem-vindo', 'Configure seu perfil.', true],
+  ['/coach', 'Painel do treinador', 'Gestão de alunos e fichas.', true],
+  ['/admin', 'Administração', 'Área administrativa.', true]
+];
+const SELF_META = ['/privacidade', '/termos'];
+
+export const metaForPath = (pathname) => {
+  if (pathname === '/') return null; // Landing usa o título do index.html
+  if (SELF_META.includes(pathname)) return null;
+  const hit = ROUTE_META.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  if (hit) return { title: hit[1], description: hit[2], noindex: hit[3] };
+  return null;
+};
+function RouteMeta() {
+  const { pathname } = useLocation();
+  const meta = metaForPath(pathname);
+  usePageMeta(meta?.title, meta?.description, { noindex: !!meta?.noindex });
+  return null;
+}
+
+// Ao trocar de rota, move o foco para o conteúdo principal (leitores de tela e teclado).
+function RouteFocus() {
+  const { pathname } = useLocation();
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const id = window.requestAnimationFrame(() => {
+      const target = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('h1');
+      if (target) {
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: false });
+      }
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [pathname]);
+  return null;
+}
+
+const SkipLink = () => (
+  <a
+    href="#main-content"
+    onClick={(e) => {
+      const el = document.getElementById('main-content');
+      if (el) { e.preventDefault(); el.focus(); el.scrollIntoView?.(); }
+    }}
+    className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-xl focus:bg-brand focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-black"
+  >
+    Pular para o conteúdo
+  </a>
+);
 
 const VALID_ROLES = ['user', 'coach', 'admin'];
 
@@ -97,7 +169,7 @@ const ProtectedRoute = ({ children, allowedRoles = VALID_ROLES }) => {
   return (
     <>
       <Navbar />
-      {children}
+      <main id="main-content" tabIndex={-1} className="outline-none">{children}</main>
     </>
   );
 };
@@ -116,7 +188,7 @@ const PublicOnlyRoute = ({ children }) => {
   const { user, userProfile, authLoading } = useAuthContext();
 
   if (authLoading) return <LoadingScreen />;
-  if (!user) return children;
+  if (!user) return <main id="main-content" tabIndex={-1} className="outline-none">{children}</main>;
 
   const destination = getRoleHome(userProfile?.role);
   return destination ? <Navigate to={destination} replace /> : <ProfileAccessError />;
@@ -134,8 +206,13 @@ const RoleRedirect = () => {
 
 // --- DEFINIÇÃO DAS ROTAS ---
 function AppRoutes() {
+  const { pathname } = useLocation();
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+        <SkipLink />
+        <RouteMeta />
+        <RouteFocus />
+        <ErrorBoundary resetKey={pathname}>
         <Suspense fallback={<LoadingScreen />}>
         <Routes>
           {/* --- ROTAS PÚBLICAS --- */}
@@ -144,6 +221,8 @@ function AppRoutes() {
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           
           <Route path="/" element={<LandingPage />} />
+          <Route path="/privacidade" element={<Privacidade />} />
+          <Route path="/termos" element={<Termos />} />
           <Route path="/home" element={<RoleRedirect />} />
           
           {/* --- ROTAS PROTEGIDAS (ALUNO) --- */}
@@ -153,6 +232,7 @@ function AppRoutes() {
           {/* Dashboard & Perfil */}
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['user']}><Home /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/ferramentas" element={<ProtectedRoute allowedRoles={['user']}><Tools /></ProtectedRoute>} />
           <Route path="/measurements" element={<ProtectedRoute allowedRoles={['user']}><MeasurementsPage /></ProtectedRoute>} /> {/* 🔥 Dashboard Evolução */}
 
           
@@ -182,10 +262,11 @@ function AppRoutes() {
           <Route path="/coach/students/:studentId" element={<ProtectedRoute allowedRoles={['coach', 'admin']}><StudentDetailsPage /></ProtectedRoute>} />
           <Route path="/coach/settings" element={<ProtectedRoute allowedRoles={['coach', 'admin']}><CoachSettings /></ProtectedRoute>} />
 
-          {/* Rota 404/Fallback */}
-          <Route path="*" element={<RoleRedirect />} />
+          {/* 404 de verdade para rotas desconhecidas */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
     </div>
   );
 }
@@ -193,6 +274,7 @@ function AppRoutes() {
 // --- APP PRINCIPAL (PROVIDERS) ---
 export default function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <AuthProvider>
         <ThemeProvider>
@@ -222,5 +304,6 @@ export default function App() {
         </ThemeProvider>
       </AuthProvider>
     </Router>
+    </ErrorBoundary>
   );
 }

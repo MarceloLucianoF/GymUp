@@ -5,21 +5,25 @@ import toast from 'react-hot-toast';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { KeyRound, Check } from 'lucide-react';
+import usePageMeta from '../../hooks/usePageMeta';
 import AuthField from './AuthField';
 import { BrandWordmark } from '../../components/brand/Brand';
 
 export default function Register() {
+  usePageMeta('Criar conta', 'Crie sua conta gratuita no BohTreinar.');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [accepted, setAccepted] = useState(false);
   const refs = {
     displayName: useRef(null),
     email: useRef(null),
     password: useRef(null),
     confirmPassword: useRef(null),
     coachCode: useRef(null),
+    terms: useRef(null),
   };
   
   // Lógica do Convite
@@ -86,8 +90,10 @@ export default function Register() {
         else verifiedCoachId = coachCode.trim();
     }
 
+    if (!accepted) nextErrors.terms = 'Aceite os Termos e a Política de Privacidade para continuar.';
+
     setErrors(nextErrors);
-    const firstInvalid = ['displayName', 'email', 'password', 'confirmPassword', 'coachCode'].find((k) => nextErrors[k]);
+    const firstInvalid = ['displayName', 'email', 'password', 'confirmPassword', 'coachCode', 'terms'].find((k) => nextErrors[k]);
     if (firstInvalid) {
         refs[firstInvalid].current?.focus();
         return toast.error(nextErrors[firstInvalid]);
@@ -101,6 +107,8 @@ export default function Register() {
           coachId: verifiedCoachId,
           currentTrainingId: null 
       });
+      // Registro apenas local (as regras de criação não aceitam campo novo no perfil).
+      try { localStorage.setItem('bt_terms_accepted_at', new Date().toISOString()); } catch { /* sem storage */ }
       toast.success(`Bem-vindo!`, { id: loadingToast });
       navigate('/home');
     } catch (err) {
@@ -208,6 +216,27 @@ export default function Register() {
                         Treinador: {coachName}
                     </div>
                 )}
+            </div>
+
+            <div>
+              <label htmlFor="register-terms" className="flex min-h-[44px] cursor-pointer items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  id="register-terms"
+                  ref={refs.terms}
+                  type="checkbox"
+                  checked={accepted}
+                  onChange={(e) => setAccepted(e.target.checked)}
+                  aria-invalid={errors.terms ? 'true' : undefined}
+                  aria-describedby="register-terms-error"
+                  className="mt-1 h-5 w-5 shrink-0 accent-[#FFC107]"
+                />
+                <span>
+                  Li e aceito os <Link to="/termos" target="_blank" className="font-bold text-amber-700 underline dark:text-brand">Termos de Uso</Link> e a{' '}
+                  <Link to="/privacidade" target="_blank" className="font-bold text-amber-700 underline dark:text-brand">Política de Privacidade</Link>,
+                  inclusive o tratamento dos meus dados de saúde para acompanhar meus treinos.
+                </span>
+              </label>
+              <p id="register-terms-error" role="alert" className={errors.terms ? 'mt-1 text-sm font-medium text-red-500' : 'sr-only'}>{errors.terms || ''}</p>
             </div>
 
             <button

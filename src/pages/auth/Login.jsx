@@ -133,6 +133,11 @@ export default function Login() {
                 Criar conta grátis
               </Link>
             </p>
+            <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">
+              <Link to="/termos" className="underline hover:text-brand">Termos de Uso</Link>
+              {' · '}
+              <Link to="/privacidade" className="underline hover:text-brand">Política de Privacidade</Link>
+            </p>
           </div>
         </div>
       </div>
