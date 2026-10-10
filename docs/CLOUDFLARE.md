@@ -28,3 +28,8 @@ Verifica o ID token do Firebase (RS256, JWKS do Google, `aud`/`iss`/`exp`), acei
 ## Testes
 `cd worker && npm test` (11 testes: verificação de token com RSA real, validações, limite, roteamento).
 O runtime local (`wrangler dev`) não roda em Ubuntu 20.04 (glibc antiga): use Ubuntu 22.04+ ou teste após o deploy.
+
+## Modelos da NVIDIA
+O catálogo muda: o `meta/llama-3.1-70b-instruct` (antigo padrão) foi aposentado e causava 502. O padrão agora é `nvidia/llama-3.1-nemotron-70b-instruct`.
+Para conferir se os modelos permitidos ainda existem: `node scripts/check-nvidia-models.mjs` (sem chave; falha com exit 1 se algum sumiu).
+Quando a NVIDIA recusa, a resposta 502 do Worker inclui `upstreamStatus` (só o código HTTP) e `npx wrangler tail --config ../wrangler.jsonc` mostra o log.
