@@ -1,10 +1,10 @@
 /* eslint-disable no-restricted-globals */
 // Incremente VERSION a cada mudança de estratégia/shell. Os bundles do CRA têm hash no nome,
 // então são buscados na rede e guardados em runtime (stale-while-revalidate).
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL_CACHE = `bohtreinar-shell-${VERSION}`;
 const RUNTIME_CACHE = `bohtreinar-runtime-${VERSION}`;
-const SHELL_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+const SHELL_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.ico', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 // Nunca cacheia: Firebase/Google (Firestore, Auth, Storage, APIs).
 const BYPASS_HOSTS = /(googleapis\.com|gstatic\.com|firebaseio\.com|firebaseapp\.com|google\.com|cloudfunctions\.net)$/;

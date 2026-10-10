@@ -93,7 +93,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#0B0F19]/80">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
           <button type="button" onClick={() => navigate('/')} className="flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="BohTreinar início">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm dark:bg-white/10"><BrandMark className="h-7 w-7" /></span>
+            <BrandMark className="h-10 w-10 shrink-0 rounded-xl shadow-sm" />
             <span className="font-display text-lg font-black tracking-tight sm:text-xl"><BrandWordmark /></span>
           </button>
           <nav className="flex shrink-0 items-center gap-2" aria-label="Acesso">
