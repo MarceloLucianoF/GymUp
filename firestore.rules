@@ -294,7 +294,11 @@ service cloud.firestore {
       allow create, update: if signedIn() && isCoach() && validNote(request.resource.data)
         && request.resource.data.coachId == request.auth.uid
         && linkedStudent(get(/databases/$(database)/documents/users/$(request.resource.data.studentId)).data);
-      allow delete: if signedIn() && (isAdmin() || noteId.matches(request.auth.uid + '_.*'));
+      // O treinador autor e o admin apagam. O ALUNO sobre quem a nota fala só pode APAGAR (exclusão de conta):
+      // ele continua sem poder ler nem listar o conteúdo (get/list não o permitem).
+      allow delete: if signedIn() && (
+        isAdmin() || noteId.matches(request.auth.uid + '_.*') || resource.data.studentId == request.auth.uid
+      );
       allow list: if false;
     }
 

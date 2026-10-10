@@ -1,5 +1,5 @@
 import {
-  collection, query, where, getDocs, doc, writeBatch, deleteDoc
+  collection, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc
 } from 'firebase/firestore';
 import {
   EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, deleteUser
@@ -15,6 +15,7 @@ export const DELETION_STEPS = [
   { id: 'measurements', label: 'Apagando medidas' },
   { id: 'chats', label: 'Apagando conversas' },
   { id: 'trainings', label: 'Apagando fichas criadas por IA' },
+  { id: 'notes', label: 'Apagando anotações do treinador sobre você' },
   { id: 'profile', label: 'Apagando perfil' },
   { id: 'login', label: 'Encerrando o login' }
 ];
@@ -25,7 +26,7 @@ export const chunk = (items, size = BATCH_SIZE) => {
   return out;
 };
 
-const realDeps = { db, collection, query, where, getDocs, doc, writeBatch, deleteDoc };
+const realDeps = { db, collection, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc };
 
 const deleteRefs = async (refs, deps) => {
   for (const group of chunk(refs)) {
@@ -62,10 +63,13 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
   await run('checkIns', async () => deleteRefs((await refsOf(deps, 'checkIns', deps.where('userId', '==', uid))).map((d) => d.ref), deps));
   await run('measurements', async () => deleteRefs((await refsOf(deps, 'measurements', deps.where('userId', '==', uid))).map((d) => d.ref), deps));
 
+  const knownCoachIds = new Set(); // treinadores que podem ter notas sobre o aluno
+
   await run('chats', async () => {
     const chats = await refsOf(deps, 'chats', deps.where('participants', 'array-contains', uid));
     let total = 0;
     for (const chat of chats) {
+      (chat.data?.().participants || []).forEach((id) => { if (id && id !== uid) knownCoachIds.add(id); });
       // Mensagens primeiro: apagar o pai deixaria a subcoleção órfã.
       const messages = await deps.getDocs(deps.collection(deps.db, 'chats', chat.id, 'messages'));
       total += await deleteRefs(messages.docs.map((d) => d.ref), deps);
@@ -80,6 +84,26 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     // Só fichas geradas por IA do próprio aluno (as regras não permitem apagar as demais).
     const mine = own.filter((d) => d.data().isAIGenerated === true && !d.data().coachId);
     return deleteRefs(mine.map((d) => d.ref), deps);
+  });
+
+  // Notas privadas do treinador (coachNotes/{coachId}_{uid}). O aluno não consegue ler nem listar essas notas,
+  // então apaga pelo ID, para o treinador do perfil e para os das conversas. Doc inexistente nega por regra: é ignorado.
+  await run('notes', async () => {
+    try {
+      const profile = await deps.getDoc(deps.doc(deps.db, 'users', uid));
+      const coachId = profile?.exists?.() ? profile.data()?.coachId : null;
+      if (coachId) knownCoachIds.add(coachId);
+    } catch { /* sem perfil legível: segue só com os treinadores das conversas */ }
+    let removed = 0;
+    for (const coachId of knownCoachIds) {
+      try {
+        await deps.deleteDoc(deps.doc(deps.db, 'coachNotes', `${coachId}_${uid}`));
+        removed += 1;
+      } catch (error) {
+        if (error?.code !== 'permission-denied') throw error;
+      }
+    }
+    return removed;
   });
 
   await run('profile', async () => { await deps.deleteDoc(deps.doc(deps.db, 'users', uid)); return 1; });
