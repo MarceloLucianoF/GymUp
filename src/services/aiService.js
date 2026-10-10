@@ -16,6 +16,8 @@ if (typeof window !== 'undefined') {
 const MODEL_CANDIDATES = [process.env.REACT_APP_GEMINI_MODEL, 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash']
   .filter(Boolean);
 const USE_NVIDIA_PROXY = process.env.REACT_APP_NVIDIA_PROXY === 'true';
+// REACT_APP_AI_PRIMARY=nvidia: conversa do Coach IA tenta primeiro a NVIDIA (via /api/nvidia); funções e fichas seguem no Gemini.
+const NVIDIA_FIRST = USE_NVIDIA_PROXY && process.env.REACT_APP_AI_PRIMARY === 'nvidia';
 const MAX_PROMPT_LENGTH = 2000;
 
 let aiInstance = null;
@@ -234,6 +236,18 @@ export const aiService = {
       return { erro: 'Função desconhecida.' };
     };
 
+    if (NVIDIA_FIRST) {
+      try {
+        return await askNvidiaProxy([
+          { role: 'system', content: systemText },
+          ...conversationHistory.slice(-6).map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text })),
+          { role: 'user', content: safePrompt }
+        ]);
+      } catch (error) {
+        console.error('NVIDIA indisponível, tentando Gemini:', error?.message || error);
+      }
+    }
+
     try {
       const reply = await withModelFallback(async (modelName) => {
         const model = buildModel(modelName, {
@@ -272,7 +286,7 @@ export const aiService = {
       console.error('Gemini indisponível no Coach IA:', error?.message || error);
     }
 
-    if (USE_NVIDIA_PROXY) {
+    if (USE_NVIDIA_PROXY && !NVIDIA_FIRST) {
       try {
         return await askNvidiaProxy([
           { role: 'system', content: systemText },

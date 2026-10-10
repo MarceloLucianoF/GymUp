@@ -26,3 +26,5 @@ jobs:
         working-directory: functions
       - run: node --test test/*.test.js
         working-directory: functions
+      - run: node --test test/*.test.js
+        working-directory: worker
