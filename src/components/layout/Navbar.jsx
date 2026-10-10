@@ -71,9 +71,7 @@ export default function Navbar() {
       <nav aria-label="Navegação principal" className="hidden md:flex sticky top-0 z-50 h-20 border-b border-gray-200/70 dark:border-white/10 bg-white/80 dark:bg-[#0B0F19]/75 backdrop-blur-xl transition-colors">
         <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center gap-6">
           <Link to={isStaff ? '/coach/dashboard' : '/dashboard'} className="flex items-center gap-3 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="BohTreinar - início">
-            <div className="w-10 h-10 bg-gray-100 dark:bg-white/5 rounded-xl flex items-center justify-center border border-gray-200 dark:border-white/10 group-hover:scale-110 transition-transform p-1">
-              <BrandMark className="w-full h-full text-gray-800 dark:text-white" />
-            </div>
+            <BrandMark className="h-10 w-10 shrink-0 rounded-xl shadow-sm transition-transform group-hover:scale-110" />
             <div className="flex flex-col">
               <span className="font-display text-xl font-black text-gray-800 dark:text-white tracking-tighter leading-none">
                 <BrandWordmark />
