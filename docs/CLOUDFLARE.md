@@ -11,7 +11,8 @@ npx wrangler secret put NVIDIA_API_KEY --config ../wrangler.jsonc   # cole a cha
 cd .. && REACT_APP_NVIDIA_PROXY=true REACT_APP_AI_PRIMARY=nvidia npm run build
 cd worker && npx wrangler deploy --config ../wrangler.jsonc
 ```
-O endereço sai no formato `https://bohtreinar.<sua-conta>.workers.dev`.
+Endereço atual: `https://bohtreinar.bohtreinar-app.workers.dev`. Um subdomínio novo leva alguns minutos para ganhar certificado HTTPS (até lá a conexão é recusada).
+Cabeçalhos de segurança e cache vêm de `public/_headers` (arquivos estáticos não passam pelo código do Worker). Para republicar: refaça o build e rode `npx wrangler deploy --config ../wrangler.jsonc`.
 
 ## Depois de publicar
 1. Firebase Console → Authentication → Configurações → **Domínios autorizados**: adicione o domínio do Worker (necessário para login com Google).
