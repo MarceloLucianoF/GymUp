@@ -8,7 +8,7 @@ const fs = require("fs");
 const serviceAccountPath = path.join(__dirname, "../serviceAccountKey.json");
 
 if (!fs.existsSync(serviceAccountPath)) {
-  console.error("❌ ERRO: Arquivo serviceAccountKey.json não encontrado!");
+  console.error(" ERRO: Arquivo serviceAccountKey.json não encontrado!");
   console.error("Por favor, baixe as credenciais do Admin SDK no console do Firebase e salve como: workout-app/serviceAccountKey.json");
   process.exit(1);
 }
@@ -26,7 +26,7 @@ const auth = getAuth();
 const now = new Date().toISOString();
 
 // ==========================================
-// 🎞️ GIFs DE DEMONSTRAÇÃO
+//  GIFs DE DEMONSTRAÇÃO
 // Fonte: hasaneyldrm/exercises-dataset (GitHub)
 // Mídia: © Gym visual — https://gymvisual.com/ (180×180, exige atribuição)
 // Todas as 20 URLs foram verificadas (HTTP 200, image/gif)
@@ -35,7 +35,7 @@ const GIF_BASE = "https://raw.githubusercontent.com/hasaneyldrm/exercises-datase
 const GIF_ATTRIBUTION = "© Gym visual — https://gymvisual.com/";
 
 // ==========================================
-// 🏋️‍♂️ EXERCÍCIOS BASE (Novo Split do Usuário)
+//  EXERCÍCIOS BASE (Novo Split do Usuário)
 // ==========================================
 const exercisesData = [
   // Treino A – Peitoral + Dorsal + CORE
@@ -326,7 +326,7 @@ const exercisesData = [
 ];
 
 // ==========================================
-// 📋 TREINOS BASE (Mapeados pelo novo split)
+//  TREINOS BASE (Mapeados pelo novo split)
 // ==========================================
 const trainingsData = [
   {
@@ -379,7 +379,7 @@ const trainingsData = [
 ];
 
 // ==========================================
-// 👤 USUÁRIOS BASE (Reais + Teste)
+//  USUÁRIOS BASE (Reais + Teste)
 // ==========================================
 const usersData = [
   // --- USUÁRIOS REAIS (já existem no Auth via Google) ---
@@ -423,7 +423,7 @@ const usersData = [
 ];
 
 // ==========================================
-// 🧹 FUNÇÕES DE LIMPEZA
+//  FUNÇÕES DE LIMPEZA
 // ==========================================
 async function deleteCollection(collectionPath, batchSize = 20) {
   const collectionRef = db.collection(collectionPath);
@@ -442,12 +442,12 @@ async function deleteCollection(collectionPath, batchSize = 20) {
 }
 
 // ==========================================
-// 🚀 INICIALIZAÇÃO DO SEED
+//  INICIALIZAÇÃO DO SEED
 // ==========================================
 async function getOrCreateAuthUser(user) {
   try {
     const userRecord = await auth.getUser(user.uid);
-    console.log(`👤 Auth: Usuário ${user.email} já existe. Atualizando senha...`);
+    console.log(` Auth: Usuário ${user.email} já existe. Atualizando senha...`);
     await auth.updateUser(user.uid, {
       password: user.password,
       displayName: user.displayName,
@@ -462,7 +462,7 @@ async function getOrCreateAuthUser(user) {
         displayName: user.displayName,
         emailVerified: true,
       });
-      console.log(`✨ Auth: Criado novo usuário ${user.email}`);
+      console.log(` Auth: Criado novo usuário ${user.email}`);
       return userRecord;
     }
     throw error;
@@ -470,7 +470,7 @@ async function getOrCreateAuthUser(user) {
 }
 
 async function runSeed() {
-  console.log("🧹 Iniciando limpeza do banco de dados...");
+  console.log(" Iniciando limpeza do banco de dados...");
 
   // Limpar coleções principais
   await deleteCollection("exercises");
@@ -481,16 +481,16 @@ async function runSeed() {
   await deleteCollection("measurements");
   await deleteCollection("chats");
 
-  console.log("✅ Limpeza de coleções concluída!");
+  console.log(" Limpeza de coleções concluída!");
 
   // 1. Criar Contas de Usuário no Auth e Firestore
-  console.log("👤 Criando contas de usuários...");
+  console.log(" Criando contas de usuários...");
   for (const user of usersData) {
     // Pula criação no Auth para usuários reais (já têm Google login)
     if (!user.skipAuth) {
       await getOrCreateAuthUser(user);
     } else {
-      console.log(`⏭️  Auth: Pulando ${user.email} (usuário real, já existe)`);
+      console.log(`  Auth: Pulando ${user.email} (usuário real, já existe)`);
     }
 
     // Salvar/Atualizar perfil no Firestore (merge para não perder dados existentes)
@@ -512,10 +512,10 @@ async function runSeed() {
 
     await db.collection("users").doc(user.uid).set(firestoreData, { merge: true });
   }
-  console.log("✅ Contas de usuários criadas!");
+  console.log(" Contas de usuários criadas!");
 
   // 2. Criar Biblioteca de Exercícios no Firestore
-  console.log("🏋️‍♂️ Populando biblioteca de exercícios...");
+  console.log(" Populando biblioteca de exercícios...");
   const exerciseIdMap = {}; // originalId -> firestoreId
 
   for (const ex of exercisesData) {
@@ -532,10 +532,10 @@ async function runSeed() {
     await docRef.set(payload);
     exerciseIdMap[ex.id] = docRef.id;
   }
-  console.log(`✅ ${exercisesData.length} Exercícios criados!`);
+  console.log(` ${exercisesData.length} Exercícios criados!`);
 
   // 3. Criar Pacote de Treino
-  console.log("📦 Criando pacote de treino...");
+  console.log(" Criando pacote de treino...");
   const packageRef = db.collection("trainingPackages").doc();
   const packagePayload = {
     name: "Split ABC — Treino Personalizado",
@@ -549,10 +549,10 @@ async function runSeed() {
   };
   await packageRef.set(packagePayload);
   const packageId = packageRef.id;
-  console.log(`✅ Pacote "${packagePayload.name}" criado (${packageId})!`);
+  console.log(` Pacote "${packagePayload.name}" criado (${packageId})!`);
 
   // 4. Criar Fichas de Treino vinculando aos Exercícios e ao Pacote
-  console.log("📋 Montando treinos e vinculando exercícios...");
+  console.log(" Montando treinos e vinculando exercícios...");
   let firstTrainingId = null;
   for (let i = 0; i < trainingsData.length; i++) {
     const tr = trainingsData[i];
@@ -581,16 +581,16 @@ async function runSeed() {
       firstTrainingId = docRef.id;
     }
   }
-  console.log(`✅ ${trainingsData.length} Fichas de treinos criadas e associadas ao pacote!`);
+  console.log(` ${trainingsData.length} Fichas de treinos criadas e associadas ao pacote!`);
 
   if (firstTrainingId) {
-    console.log(`🔗 Associando Treino A (${firstTrainingId}) ao Aluno Determinado...`);
+    console.log(` Associando Treino A (${firstTrainingId}) ao Aluno Determinado...`);
     await db.collection("users").doc("student_default_id").update({
       currentTrainingId: firstTrainingId
     });
   }
 
-  console.log("🎉 SEED FINALIZADO COM SUCESSO!");
+  console.log(" SEED FINALIZADO COM SUCESSO!");
   console.log("\nCredenciais para login local:");
   console.log("--------------------------------------");
   console.log("Treinador: coach@academyup.com / 123456");
@@ -600,5 +600,5 @@ async function runSeed() {
 }
 
 runSeed().catch(err => {
-  console.error("❌ Erro durante a execução do seed:", err);
+  console.error(" Erro durante a execução do seed:", err);
 });

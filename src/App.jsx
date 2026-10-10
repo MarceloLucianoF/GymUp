@@ -233,7 +233,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['user']}><Home /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/ferramentas" element={<ProtectedRoute allowedRoles={['user']}><Tools /></ProtectedRoute>} />
-          <Route path="/measurements" element={<ProtectedRoute allowedRoles={['user']}><MeasurementsPage /></ProtectedRoute>} /> {/* 🔥 Dashboard Evolução */}
+          <Route path="/measurements" element={<ProtectedRoute allowedRoles={['user']}><MeasurementsPage /></ProtectedRoute>} />
 
           
           {/* Fluxo de Treino */}
@@ -245,7 +245,7 @@ function AppRoutes() {
           <Route path="/history" element={<ProtectedRoute allowedRoles={['user']}><HistoryPage /></ProtectedRoute>} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
           <Route path="/analytics" element={<ProtectedRoute allowedRoles={['user']}><ExerciseProgressList /></ProtectedRoute>} />
-          <Route path="/analytics/:exerciseName" element={<ProtectedRoute allowedRoles={['user']}><ExerciseAnalytics /></ProtectedRoute>} /> {/* 🔥 Performance */}
+          <Route path="/analytics/:exerciseName" element={<ProtectedRoute allowedRoles={['user']}><ExerciseAnalytics /></ProtectedRoute>} />
           
           {/* --- ROTAS PROTEGIDAS (ADMIN) --- */}
           {/* Mantendo compatibilidade com seu AdminPanel antigo e adicionando o novo Gestor */}

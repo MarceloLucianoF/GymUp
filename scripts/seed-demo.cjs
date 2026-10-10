@@ -143,13 +143,13 @@ async function main() {
   writes.push([db.collection('chats').doc(chatId), {
     participants: [COACH_UID, 'demo_student_1'],
     participantData: { [COACH_UID]: { name: 'Treinador', photo: '' }, demo_student_1: { name: 'Ana Beatriz Lima', photo: '' } },
-    lastMessage: 'Perfeito, vamos aumentar a carga na próxima semana! 💪', createdAt: now, updatedAt: now
+    lastMessage: 'Perfeito, vamos aumentar a carga na próxima semana!', createdAt: now, updatedAt: now
   }]);
   const msgs = [
-    ['demo_student_1', 'Oi! Consegui bater 60kg no supino hoje 🎉'],
+    ['demo_student_1', 'Oi! Consegui bater 60kg no supino hoje'],
     [COACH_UID, 'Excelente evolução, Ana! Como foi a recuperação?'],
     ['demo_student_1', 'Ótima, sem dor nenhuma.'],
-    [COACH_UID, 'Perfeito, vamos aumentar a carga na próxima semana! 💪']
+    [COACH_UID, 'Perfeito, vamos aumentar a carga na próxima semana!']
   ];
   msgs.forEach(([senderId, text], i) => writes.push([db.collection('chats').doc(chatId).collection('messages').doc(`demo_msg_${i}`), {
     text, senderId, senderName: senderId === COACH_UID ? 'Treinador' : 'Ana Beatriz Lima', createdAt: Timestamp.fromDate(daysAgo(1, 9 + i))

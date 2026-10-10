@@ -110,11 +110,11 @@ export const getSmartTip = (lastLoad, lastReps, targetRepsNum) => {
     let smartTip = 'Defina sua primeira carga de referência para este exercício.';
     if (lastLoad) {
         if (lastReps && lastReps >= targetRepsNum) {
-            smartTip = `💡 Meta de Hoje: Subir para ${lastLoad + 2}kg (Progresso de Carga)!`;
+            smartTip = `Meta de hoje: Subir para ${lastLoad + 2}kg (Progresso de Carga)!`;
         } else if (lastReps && lastReps < targetRepsNum) {
-            smartTip = `💡 Meta de Hoje: Buscar ${lastReps + 1}-${targetRepsNum} reps com ${lastLoad}kg (Progresso de Repetições)!`;
+            smartTip = `Meta de hoje: Buscar ${lastReps + 1}-${targetRepsNum} reps com ${lastLoad}kg (Progresso de Repetições)!`;
         } else {
-            smartTip = `💡 Última Carga: ${lastLoad}kg. Tente manter a constância hoje!`;
+            smartTip = `Última carga: ${lastLoad}kg. Tente manter a constância hoje!`;
         }
     }
     return smartTip;
@@ -238,10 +238,10 @@ export const normalizeNote = (v) => (typeof v === 'string' ? v.trim().slice(0, N
 // Texto para Web Share / área de transferência.
 export const buildShareText = ({ trainingName, timeStr, volumeKg, completedSetsCount, newPRs = [] }) => {
     const lines = [
-        `Treino concluído: ${trainingName || 'Treino'} 💪`,
-        `⏱ ${timeStr} | 🏋️ ${Math.round(volumeKg || 0)} kg de volume | ✅ ${completedSetsCount || 0} séries`
+        `Treino concluído: ${trainingName || 'Treino'}`,
+        `Tempo ${timeStr} | Volume ${Math.round(volumeKg || 0)} kg | ${completedSetsCount || 0} séries`
     ];
-    if (newPRs.length > 0) lines.push(`🏆 Recordes: ${newPRs.join(', ')}`);
+    if (newPRs.length > 0) lines.push(`Recordes: ${newPRs.join(', ')}`);
     lines.push('Feito com BohTreinar');
     return lines.join('\n');
 };

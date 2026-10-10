@@ -146,7 +146,7 @@ export default function Navbar() {
       </nav>
 
       {/* BARRA GLOBAL DE TREINO ATIVO (MOBILE) */}
-      {user && activeSession && !location.pathname.startsWith('/execution') && (
+      {user && activeSession && !location.pathname.startsWith('/execution') && !location.pathname.endsWith('/chat') && (
         <div
           className="md:hidden fixed left-3 right-3 z-40 animate-slide-up rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] text-black px-4 py-2.5 flex items-center justify-between shadow-xl shadow-brand/20"
           style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}

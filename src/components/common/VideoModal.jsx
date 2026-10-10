@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import Modal from './Modal';
 
 export default function VideoModal({ videoUrl, onClose }) {
@@ -29,7 +30,7 @@ export default function VideoModal({ videoUrl, onClose }) {
           aria-label="Fechar vídeo"
           className="bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
         >
-          ✕
+<X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 

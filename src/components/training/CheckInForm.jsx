@@ -59,7 +59,7 @@ function CheckInForm({ exercise, onSubmit, onCancel }) {
       </div>
 
       <div className="form-actions">
-        <button type="submit" className="btn btn-primary">✓ Confirmar Check-in</button>
+        <button type="submit" className="btn btn-primary">Confirmar Check-in</button>
         <button type="button" onClick={onCancel} className="btn btn-secondary">Cancelar</button>
       </div>
     </form>

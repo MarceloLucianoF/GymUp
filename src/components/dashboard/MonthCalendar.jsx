@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 import { formatDate } from '../../utils/format';
 
 export default function MonthCalendar({ history }) {
@@ -69,14 +70,14 @@ export default function MonthCalendar({ history }) {
                         ${isToday && !isTrained ? 'border-2 border-brand text-brand' : ''}
                     `}
                 >
-                    {isTrained ? '💪' : dayNum}
+                    {isTrained ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Treinou" /> : dayNum}
                 </div>
             );
         })}
       </div>
       
       <p className="text-center text-xs text-gray-400 mt-4">
-          Você treinou <strong>{trainedDays.length} dias</strong> este mês! 🔥
+          Você treinou <strong>{trainedDays.length} dias</strong> este mês!
       </p>
     </div>
   );

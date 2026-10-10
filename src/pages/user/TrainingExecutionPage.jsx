@@ -143,7 +143,7 @@ export default function TrainingExecutionPage() {
                     if (savedSession.hydratedExercises && savedSession.hydratedExercises.length > 0) {
                         loadedTraining.exercises = savedSession.hydratedExercises;
                     }
-                    toast.success("🏋️ Treino em andamento restaurado!", { id: 'restore-session-toast' });
+                    toast.success("Treino em andamento restaurado!", { id: 'restore-session-toast' });
                 } else {
                     startedAtRef.current = Date.now();
                 }

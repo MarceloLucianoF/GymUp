@@ -13,7 +13,7 @@ export function useOfflineSync(user) {
         if (activeWorkoutService.getOfflineCheckIns(user.uid).length === 0) return;
         try {
             const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, setDoc, doc);
-            if (synced > 0) toast.success("✓ Treinos offline sincronizados com sucesso!");
+            if (synced > 0) toast.success("Treinos offline sincronizados com sucesso!");
         } catch (err) {
             console.error("Erro ao sincronizar treinos offline:", err);
         }

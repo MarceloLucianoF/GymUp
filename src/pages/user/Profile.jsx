@@ -12,14 +12,16 @@ import PageHeader from '../../components/ui/PageHeader';
 import { Download, Trash2, ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
 import { getPublicCoach } from '../../services/coachProfile';
 import NotificationSettings from '../../components/pwa/NotificationSettings';
+import DeleteAccountModal from '../../components/account/DeleteAccountModal';
 
 export default function Profile() {
   const { confirm, dialog } = useConfirm();
-  const { user, logout } = useAuthContext();
+  const { user, userProfile, logout } = useAuthContext();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   usePageMeta('Meu perfil', 'Dados, medidas e preferências.', { noindex: true });
   const [exporting, setExporting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   const handleExport = async () => {
     if (exporting || !user) return;
@@ -447,13 +449,33 @@ export default function Profile() {
               className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-bold text-white disabled:opacity-60 dark:bg-white dark:text-black">
               <Download className="h-4 w-4" aria-hidden="true" /> {exporting ? 'Gerando...' : 'Exportar meus dados (JSON)'}
             </button>
-            <a href={deletionMailto(user)}
-              className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl border border-red-300 px-4 text-sm font-bold text-red-700 dark:border-red-400/40 dark:text-red-300">
-              <Trash2 className="h-4 w-4" aria-hidden="true" /> Solicitar exclusão
-            </a>
+            {userProfile?.role === 'user' ? (
+              <button type="button" onClick={() => setShowDelete(true)}
+                className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl border border-red-300 px-4 text-sm font-bold text-red-700 dark:border-red-400/40 dark:text-red-300">
+                <Trash2 className="h-4 w-4" aria-hidden="true" /> Excluir minha conta
+              </button>
+            ) : (
+              <a href={deletionMailto(user)}
+                className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl border border-red-300 px-4 text-sm font-bold text-red-700 dark:border-red-400/40 dark:text-red-300">
+                <Trash2 className="h-4 w-4" aria-hidden="true" /> Solicitar exclusão
+              </a>
+            )}
           </div>
-          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">A exclusão é feita manualmente após o pedido por e-mail; nada é apagado automaticamente.</p>
+          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+            {userProfile?.role === 'user'
+              ? 'A exclusão apaga seus treinos, medidas, conversas, perfil e login de forma definitiva. Baixe uma cópia antes, se quiser.'
+              : 'Contas de treinador e administrador são removidas pelo suporte após o pedido por e-mail.'}
+          </p>
         </section>
+
+        {showDelete && (
+          <DeleteAccountModal
+            user={user}
+            onClose={() => setShowDelete(false)}
+            onExport={handleExport}
+            onDeleted={() => { toast.success('Conta excluída. Sentiremos sua falta!'); navigate('/', { replace: true }); }}
+          />
+        )}
 
         {/* Rodapé Informativo */}
         <div className="text-center mt-8 text-gray-500 dark:text-gray-400 text-xs">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import Modal from '../common/Modal';
 
 // Zoom da imagem do exercício com descrição e instruções de execução.
@@ -13,7 +14,7 @@ const ExerciseZoomModal = ({ exercise, onClose }) => {
                     aria-label="Fechar"
                     className="absolute top-4 right-4 w-9 h-9 bg-gray-100 dark:bg-black/40 hover:bg-gray-200 dark:hover:bg-black/60 rounded-full flex items-center justify-center text-gray-600 dark:text-white/80 hover:text-gray-900 dark:hover:text-white transition-colors z-10"
                 >
-                    ✕
+<X className="h-4 w-4" aria-hidden="true" />
                 </button>
 
                 <h3 className="text-xl font-black mb-1 text-brand pr-8 leading-tight">{exercise.name}</h3>

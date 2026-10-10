@@ -53,7 +53,7 @@ export function OptionGroup({ name, legend, value, options, onChange, columns = 
                 onChange={() => onChange(o.value)}
                 className="sr-only"
               />
-              {o.emoji && <span aria-hidden="true" className="text-2xl">{o.emoji}</span>}
+              {o.icon && <o.icon aria-hidden="true" className="h-6 w-6 text-brand" />}
               <span className="flex-1">
                 <span className="block font-semibold text-gray-900 dark:text-white">{o.label}</span>
                 {o.hint && <span className="block text-sm text-gray-500 dark:text-gray-400">{o.hint}</span>}
