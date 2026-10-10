@@ -4,58 +4,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useAdmin } from '../../hooks/useAdmin';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
 import { Home, Dumbbell, Calendar, User, Shield, MessageSquare, Flame, TrendingUp, Users, LayoutDashboard } from 'lucide-react';
-
-// --- LOGO OFICIAL DA MARCA (A + U + Halter + Seta) ---
-const AcademyUpLogo = ({ className = "w-10 h-10" }) => {
-  return (
-    <svg 
-      viewBox="0 0 100 100" 
-      className={className} 
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* O "A" (Academy) */}
-      <path 
-        d="M 22 80 L 46 22 C 48 17, 52 17, 54 22 L 78 80" 
-        stroke="currentColor" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-        fill="none" 
-      />
-      {/* Barra do halter (travessão do A) */}
-      <line 
-        x1="31" 
-        y1="58" 
-        x2="69" 
-        y2="58" 
-        stroke="currentColor" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-      />
-      {/* Anilhas do halter nas pontas */}
-      <rect x="26" y="49" width="6" height="18" rx="2" fill="#FFC107" />
-      <rect x="68" y="49" width="6" height="18" rx="2" fill="#FFC107" />
-      
-      {/* O "U" (Up / Evolução) que envolve a perna direita */}
-      <path 
-        d="M 50 56 C 50 82, 76 82, 76 56 L 76 34" 
-        stroke="#FFC107" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-        fill="none" 
-      />
-      
-      {/* Seta para cima no topo do U */}
-      <path 
-        d="M 67 42 L 76 32 L 85 42" 
-        stroke="#FFB300" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        fill="none" 
-      />
-    </svg>
-  );
-};
+import { BrandMark, BrandWordmark } from '../brand/Brand';
 
 export default function Navbar() {
   const { user, userProfile } = useAuthContext();
@@ -121,13 +70,13 @@ export default function Navbar() {
       {/* ================= DESKTOP TOPBAR ================= */}
       <nav aria-label="Navegação principal" className="hidden md:flex sticky top-0 z-50 h-20 border-b border-gray-200/70 dark:border-white/10 bg-white/80 dark:bg-[#0B0F19]/75 backdrop-blur-xl transition-colors">
         <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center gap-6">
-          <Link to={isStaff ? '/coach/dashboard' : '/dashboard'} className="flex items-center gap-3 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="AcademyUp - início">
+          <Link to={isStaff ? '/coach/dashboard' : '/dashboard'} className="flex items-center gap-3 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="BohTreinar - início">
             <div className="w-10 h-10 bg-gray-100 dark:bg-white/5 rounded-xl flex items-center justify-center border border-gray-200 dark:border-white/10 group-hover:scale-110 transition-transform p-1">
-              <AcademyUpLogo className="w-full h-full text-gray-800 dark:text-white" />
+              <BrandMark className="w-full h-full text-gray-800 dark:text-white" />
             </div>
             <div className="flex flex-col">
               <span className="font-display text-xl font-black text-gray-800 dark:text-white tracking-tighter leading-none">
-                ACADEMY<span className="text-brand">UP</span>
+                <BrandWordmark />
               </span>
               <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold tracking-[0.2em] mt-0.5">TREINE • EVOLUA</span>
             </div>

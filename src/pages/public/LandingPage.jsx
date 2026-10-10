@@ -8,58 +8,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import Reveal from '../../components/ui/Reveal';
 import ProgressRing from '../../components/ui/ProgressRing';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
-
-// --- LOGO OFICIAL DA MARCA (A + U + Halter + Seta) ---
-const AcademyUpLogo = ({ className = "w-10 h-10" }) => {
-  return (
-    <svg 
-      viewBox="0 0 100 100" 
-      className={className} 
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* O "A" (Academy) */}
-      <path 
-        d="M 22 80 L 46 22 C 48 17, 52 17, 54 22 L 78 80" 
-        stroke="currentColor" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-        fill="none" 
-      />
-      {/* Barra do halter (travessão do A) */}
-      <line 
-        x1="31" 
-        y1="58" 
-        x2="69" 
-        y2="58" 
-        stroke="currentColor" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-      />
-      {/* Anilhas do halter nas pontas */}
-      <rect x="26" y="49" width="6" height="18" rx="2" fill="#FFC107" />
-      <rect x="68" y="49" width="6" height="18" rx="2" fill="#FFC107" />
-      
-      {/* O "U" (Up / Evolução) que envolve a perna direita */}
-      <path 
-        d="M 50 56 C 50 82, 76 82, 76 56 L 76 34" 
-        stroke="#FFC107" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-        fill="none" 
-      />
-      
-      {/* Seta para cima no topo do U */}
-      <path 
-        d="M 67 42 L 76 32 L 85 42" 
-        stroke="#FFB300" 
-        strokeWidth="9" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        fill="none" 
-      />
-    </svg>
-  );
-};
+import { BrandMark, BrandWordmark } from '../../components/brand/Brand';
 
 const FEATURES = [
   { icon: Timer, title: 'Treino guiado', text: 'Cronômetro, descanso automático e registro de carga série a série, pensado para usar com uma mão.' },
@@ -143,9 +92,9 @@ export default function LandingPage() {
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#0B0F19]/80">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
-          <button type="button" onClick={() => navigate('/')} className="flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="AcademyUp início">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm dark:bg-white/10"><AcademyUpLogo className="h-7 w-7" /></span>
-            <span className="font-display text-lg font-black tracking-tight sm:text-xl">ACADEMY<span className="text-brand">UP</span></span>
+          <button type="button" onClick={() => navigate('/')} className="flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="BohTreinar início">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm dark:bg-white/10"><BrandMark className="h-7 w-7" /></span>
+            <span className="font-display text-lg font-black tracking-tight sm:text-xl"><BrandWordmark /></span>
           </button>
           <nav className="flex shrink-0 items-center gap-2" aria-label="Acesso">
             {user ? (
@@ -290,7 +239,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-gray-200/70 py-8 text-center text-xs text-gray-500 dark:border-white/10 dark:text-gray-400">
         <p className="flex items-center justify-center gap-1.5"><Smartphone className="h-4 w-4" aria-hidden="true" /> Instale na tela inicial do celular para a melhor experiência.</p>
-        <p className="mt-2">© {new Date().getFullYear()} AcademyUp · Treine · Evolua · Supere</p>
+        <p className="mt-2">© {new Date().getFullYear()} BohTreinar · Treine · Evolua · Supere</p>
       </footer>
     </div>
   );

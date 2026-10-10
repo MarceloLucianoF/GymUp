@@ -21,7 +21,7 @@ const LEVEL_OPTIONS = [
   { value: 'avancado', label: 'Avançado', hint: 'Mais de 2 anos' },
 ];
 const TITLES = [
-  'Bem-vindo ao AcademyUp',
+  'Bem-vindo ao BohTreinar',
   'Qual é o seu objetivo?',
   'Conte sobre o seu corpo',
   'Experiência e frequência',

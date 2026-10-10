@@ -10,7 +10,7 @@ export default function InstallPrompt() {
     <div role="region" aria-label="Instalar aplicativo" className="fixed bottom-24 inset-x-4 z-[85] mx-auto max-w-md rounded-2xl bg-white dark:bg-[#161b26] border border-gray-200 dark:border-white/10 shadow-xl p-4 flex items-start gap-3">
       <Download className="w-5 h-5 text-brand mt-0.5 shrink-0" aria-hidden="true" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-black text-gray-900 dark:text-white">Instale o AcademyUp</p>
+        <p className="text-sm font-black text-gray-900 dark:text-white">Instale o BohTreinar</p>
         {canInstall ? (
           <>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Acesso rápido e treinos mesmo sem internet.</p>

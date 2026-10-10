@@ -176,3 +176,8 @@
 
 :root { color-scheme: light; }
 .dark { color-scheme: dark; }
+
+/* Contraste do texto em gradiente da marca no tema claro */
+html:not(.dark) .text-gradient-brand {
+  background-image: linear-gradient(135deg, #D97706 0%, #EA580C 100%);
+}

@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { KeyRound, Check } from 'lucide-react';
 import AuthField from './AuthField';
+import { BrandWordmark } from '../../components/brand/Brand';
 
 export default function Register() {
   const [displayName, setDisplayName] = useState('');
@@ -150,7 +151,7 @@ export default function Register() {
         <div className="surface w-full max-w-md space-y-6 p-6 sm:p-8 animate-fade-up">
           
           <div className="text-center lg:text-left">
-            <h2 className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">ACADEMY<span className="text-brand">UP</span></h2>
+            <h2 className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter"><BrandWordmark /></h2>
             <h2 className="font-display text-3xl font-black text-gray-900 dark:text-white">Crie sua conta</h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Comece hoje mesmo.</p>
           </div>
