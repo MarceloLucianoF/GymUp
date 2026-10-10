@@ -10,6 +10,9 @@ import { auth, db } from "../firebase/config";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { syncPublicCoachProfile } from "../services/coachProfile";
 
+// Versão do texto de Termos/Privacidade aceito no cadastro (atualize ao mudar os textos).
+export const TERMS_VERSION = '2026-10';
+
 const AuthContext = createContext();
 
 const translateError = (code) => {
@@ -54,6 +57,11 @@ export function AuthProvider({ children }) {
             // Campos de autorização, identidade e auditoria nunca são sobrescritos pelo cliente.
             if (typeof additionalData.coachId === 'string' && additionalData.coachId.trim()) {
                 initialData.coachId = additionalData.coachId.trim();
+            }
+            // Aceite dos termos (a tela de cadastro só envia com o checkbox marcado).
+            if (additionalData.acceptedTerms === true) {
+                initialData.termsAcceptedAt = new Date().toISOString();
+                initialData.termsVersion = TERMS_VERSION;
             }
             if (typeof additionalData.currentTrainingId === 'string' && additionalData.currentTrainingId.trim()) {
                 initialData.currentTrainingId = additionalData.currentTrainingId.trim();

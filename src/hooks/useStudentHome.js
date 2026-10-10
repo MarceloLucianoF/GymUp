@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { db } from '../firebase/config';
 import { activeWorkoutService } from '../services/activeWorkoutService';
@@ -119,7 +119,7 @@ export function useStudentHome(user, userProfile) {
   }, []);
 
   const syncPending = useCallback(async () => {
-    const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, addDoc, collection);
+    const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, setDoc, doc);
     if (synced > 0 && mounted.current) toast.success(`✓ ${synced} treino(s) pendente(s) sincronizado(s)!`);
     return synced;
   }, [uid]);

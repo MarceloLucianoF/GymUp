@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { doc, getDoc, addDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
@@ -318,7 +318,9 @@ export default function TrainingExecutionPage() {
         try {
             const { totalVolume, setsCompleted, executedExercises } = summarizeSession(training.exercises, sessionData);
 
+            const clientId = activeWorkoutService.newCheckInId();
             const checkInPayload = {
+                clientId,
                 userId: user.uid,
                 userEmail: user.email,
                 userPhoto: user.photoURL || null,
@@ -335,7 +337,7 @@ export default function TrainingExecutionPage() {
 
             if (navigator.onLine) {
                 try {
-                    await addDoc(collection(db, 'checkIns'), checkInPayload);
+                    await setDoc(doc(db, 'checkIns', clientId), checkInPayload);
                     await updateDoc(doc(db, 'users', user.uid), { lastWorkoutDate: new Date().toISOString() });
                 } catch (err) {
                     console.warn("Sem rede no Firestore, enfileirando offline:", err);

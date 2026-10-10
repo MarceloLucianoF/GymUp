@@ -174,4 +174,10 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Treinador:** fila de ação do dia, aderência (heatmap), atribuição em lote, CSV de alunos/financeiro, cobrança por WhatsApp/cópia, respostas rápidas no chat, editor de fichas com predefinições e reordenação por teclado.
 - **Plataforma:** ErrorBoundary global/por rota, 404, recarga de chunk, `/privacidade` e `/termos` (modelo, revisar com advogado), aceite no cadastro (só local), exportar dados (JSON), SEO (OG/Twitter/JSON-LD/robots/sitemap), SDK de IA carregado sob demanda, skip link e foco por rota.
 - **Coach IA:** NVIDIA com prompt próprio (sem funções simuladas), pedidos de ficha vão ao Gemini, Markdown seguro.
-- **Pendente:** exclusão real de conta (exige regras), `phone` do aluno para WhatsApp direto, revisão jurídica, domínio próprio (atualizar sitemap/canonical), duplicação de check-ins na sincronização offline após falha parcial.
+- **Pendente:** exclusão real de conta (exige regras), revisão jurídica, domínio próprio (atualizar sitemap/canonical).
+
+## Atualização — fase 6
+- **Sync offline idempotente:** cada check-in tem `clientId` e é gravado com `setDoc` em `checkIns/{clientId}`; falha no meio da fila não duplica; itens antigos recebem ID determinístico; sincronizações simultâneas são bloqueadas (6 testes).
+- **Regras:** aceite dos termos gravado na criação da conta (`termsAcceptedAt`, `termsVersion`, validados); telefone do aluno (`phone`, só dígitos e `+()- `, ≤ 20) editável pelo próprio aluno e visível ao treinador vinculado. Testado em produção com tokens reais (10 casos).
+- **Perfil:** campo WhatsApp/Telefone; cobrança do treinador abre o WhatsApp direto quando há telefone.
+- **Home:** atalho para `/ferramentas`.
