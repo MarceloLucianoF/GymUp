@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { addDoc, collection } from 'firebase/firestore';
+import { setDoc, doc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { db } from '../firebase/config';
 import { activeWorkoutService } from '../services/activeWorkoutService';
@@ -10,14 +10,10 @@ export function useOfflineSync(user) {
 
     const syncPendingOfflineCheckIns = useCallback(async () => {
         if (!user) return;
-        const pending = activeWorkoutService.getOfflineCheckIns(user.uid);
-        if (pending.length === 0) return;
+        if (activeWorkoutService.getOfflineCheckIns(user.uid).length === 0) return;
         try {
-            for (const payload of pending) {
-                await addDoc(collection(db, 'checkIns'), payload);
-            }
-            activeWorkoutService.clearOfflineCheckIns(user.uid);
-            toast.success("✓ Treinos offline sincronizados com sucesso!");
+            const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, setDoc, doc);
+            if (synced > 0) toast.success("✓ Treinos offline sincronizados com sucesso!");
         } catch (err) {
             console.error("Erro ao sincronizar treinos offline:", err);
         }

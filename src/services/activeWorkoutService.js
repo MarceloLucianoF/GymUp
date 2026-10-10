@@ -69,13 +69,32 @@ export const activeWorkoutService = {
   /**
    * Fila Offline: Salva check-in pendente caso ocorra falha de rede ao finalizar.
    */
+  // ID estável do check-in, gerado no cliente: reenviar o mesmo check-in nunca cria um documento novo.
+  newCheckInId() {
+    try {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    } catch (e) { /* usa o fallback */ }
+    return `ci-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  },
+
+  // Itens enfileirados por versões antigas não têm clientId: o ID é derivado dos dados (determinístico).
+  checkInDocId(userId, item) {
+    if (item?.clientId) return String(item.clientId);
+    const stamp = Date.parse(item?.date) || item?.queuedAt || 0;
+    return `legacy-${userId}-${stamp}-${String(item?.trainingId || 'x').replace(/[^A-Za-z0-9_-]/g, '')}`;
+  },
+
   saveOfflineCheckIn(userId, checkInPayload) {
     if (!userId || !checkInPayload) return;
     try {
       const key = `${OFFLINE_CHECKINS_PREFIX}${userId}`;
       const existing = this.getOfflineCheckIns(userId);
+      const clientId = checkInPayload.clientId || this.newCheckInId();
+      // Mesmo check-in enfileirado duas vezes (ex.: tentativa online que falhou e fila): mantém um só.
+      if (existing.some((item) => item.clientId === clientId)) return;
       existing.push({
         ...checkInPayload,
+        clientId,
         queuedAt: Date.now()
       });
       localStorage.setItem(key, JSON.stringify(existing));
@@ -114,36 +133,35 @@ export const activeWorkoutService = {
 
   /**
    * Sincroniza a fila de check-ins pendentes com o Firestore quando a rede é restabelecida.
+   * Idempotente: cada item vai para o documento `checkIns/{clientId}` via setDoc, então um reenvio
+   * (falha no meio da fila, duas abas, evento online repetido) sobrescreve o mesmo documento.
+   * Cada item enviado sai da fila na hora, antes de tentar o próximo.
    */
-  async syncPendingCheckIns(userId, db, addDoc, collection) {
-    if (!userId || !db || !addDoc || !collection) return 0;
-    const pending = this.getOfflineCheckIns(userId);
-    if (pending.length === 0) return 0;
+  async syncPendingCheckIns(userId, db, setDoc, doc) {
+    if (!userId || !db || !setDoc || !doc) return 0;
+    if (this.syncing?.[userId]) return 0; // evita duas sincronizações simultâneas do mesmo usuário
+    this.syncing = { ...(this.syncing || {}), [userId]: true };
 
+    const key = `${OFFLINE_CHECKINS_PREFIX}${userId}`;
     let syncedCount = 0;
-    const remaining = [];
-
-    for (const item of pending) {
-      try {
-        const { queuedAt, ...payload } = item;
-        await addDoc(collection(db, 'checkIns'), {
-          ...payload,
-          syncedAt: new Date().toISOString()
-        });
-        syncedCount++;
-      } catch (err) {
-        console.error('Falha ao enviar check-in offline pendente:', err);
-        remaining.push(item);
+    try {
+      let pending = this.getOfflineCheckIns(userId);
+      for (const item of pending) {
+        try {
+          const { queuedAt, ...payload } = item;
+          const id = this.checkInDocId(userId, item);
+          await setDoc(doc(db, 'checkIns', id), { ...payload, clientId: id, syncedAt: new Date().toISOString() });
+          syncedCount++;
+          pending = pending.filter((entry) => entry !== item && this.checkInDocId(userId, entry) !== id);
+          if (pending.length === 0) localStorage.removeItem(key);
+          else localStorage.setItem(key, JSON.stringify(pending));
+        } catch (err) {
+          console.error('Falha ao enviar check-in offline pendente:', err);
+        }
       }
+    } finally {
+      this.syncing = { ...(this.syncing || {}), [userId]: false };
     }
-
-    if (remaining.length === 0) {
-      this.clearOfflineCheckIns(userId);
-    } else {
-      const key = `${OFFLINE_CHECKINS_PREFIX}${userId}`;
-      localStorage.setItem(key, JSON.stringify(remaining));
-    }
-
     return syncedCount;
   },
 

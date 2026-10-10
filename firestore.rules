@@ -54,7 +54,21 @@ service cloud.firestore {
       return data.get('experience', 'iniciante') in ['iniciante', 'intermediario', 'avancado']
         && data.get('weeklyGoal', 4) is int
         && data.get('weeklyGoal', 4) >= 2 && data.get('weeklyGoal', 4) <= 7
-        && data.get('onboardedAt', '') is string;
+        && data.get('onboardedAt', '') is string
+        && validPhone(data);
+    }
+
+    // Aceite dos termos (LGPD): data ISO e versão do texto, gravados só na criação da conta.
+    function validTerms(data) {
+      return data.get('termsAcceptedAt', '') is string
+        && data.get('termsVersion', '') is string
+        && data.get('termsVersion', '').size() <= 20;
+    }
+
+    // Telefone do aluno: só dígitos e símbolos comuns; visível ao treinador vinculado (que lê o perfil).
+    function validPhone(data) {
+      return data.get('phone', '') is string
+        && data.get('phone', '').matches('^[0-9+() -]{0,20}$');
     }
 
     function ownProfileChanges() {
@@ -62,7 +76,7 @@ service cloud.firestore {
       return (fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
         'updatedAt', 'lastWorkoutDate', 'coachId',
-        'experience', 'weeklyGoal', 'onboardedAt'
+        'experience', 'weeklyGoal', 'onboardedAt', 'phone'
       ]) && validProfileExtras(request.resource.data)) || (isCoach() && fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
         'updatedAt', 'lastWorkoutDate', 'bio', 'phone', 'pixKey', 'defaultMonthlyFee'
@@ -87,9 +101,11 @@ service cloud.firestore {
           && request.resource.data.uid == userId
           && request.resource.data.role == 'user'
           && request.resource.data.get('currentTrainingId', null) == null
+          && validTerms(request.resource.data)
           && request.resource.data.keys().hasOnly([
             'uid', 'displayName', 'email', 'role', 'createdAt', 'age',
-            'weight', 'height', 'photoURL', 'coachId', 'currentTrainingId'
+            'weight', 'height', 'photoURL', 'coachId', 'currentTrainingId',
+            'termsAcceptedAt', 'termsVersion'
           ])
         )
       );

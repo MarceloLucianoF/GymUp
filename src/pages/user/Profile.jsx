@@ -44,7 +44,8 @@ export default function Profile() {
     height: '',
     weight: '',
     age: '',
-    photoURL: ''
+    photoURL: '',
+    phone: ''
   });
 
   const [isDirty, setIsDirty] = useState(false);
@@ -65,7 +66,8 @@ export default function Profile() {
             height: data.height || '',
             weight: data.weight || '',
             age: data.age || '',
-            photoURL: data.photoURL || ''
+            photoURL: data.photoURL || '',
+            phone: data.phone || ''
           };
           setFormData(initialData);
           setOriginalData(initialData);
@@ -142,6 +144,7 @@ export default function Profile() {
           weight: formData.weight ? parseFloat(formData.weight) : null,
           height: formData.height ? parseFloat(formData.height) : null,
           age: formData.age ? parseInt(formData.age) : null,
+          phone: String(formData.phone || '').replace(/[^0-9+() -]/g, '').slice(0, 20),
           updatedAt: new Date().toISOString()
       };
 
@@ -245,6 +248,23 @@ export default function Profile() {
                                 placeholder="Seu nome"
                                 className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-bold"
                             />
+                        </div>
+
+                        <div className="col-span-1 md:col-span-2">
+                            <label htmlFor="profile-phone" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">WhatsApp / Telefone</label>
+                            <input
+                                id="profile-phone"
+                                type="tel"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                maxLength={20}
+                                placeholder="(31) 99999-9999"
+                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white"
+                            />
+                            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Opcional. Só o seu treinador vinculado consegue ver este número.</p>
                         </div>
 
                         <div className="col-span-1 md:col-span-2">

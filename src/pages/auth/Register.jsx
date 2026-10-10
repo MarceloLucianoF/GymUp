@@ -105,9 +105,10 @@ export default function Register() {
     try {
       await register(email, password, displayName, { 
           coachId: verifiedCoachId,
-          currentTrainingId: null 
+          currentTrainingId: null,
+          acceptedTerms: true
       });
-      // Registro apenas local (as regras de criação não aceitam campo novo no perfil).
+      // O aceite também fica na conta (termsAcceptedAt/termsVersion); a cópia local serve de reserva.
       try { localStorage.setItem('bt_terms_accepted_at', new Date().toISOString()); } catch { /* sem storage */ }
       toast.success(`Bem-vindo!`, { id: loadingToast });
       navigate('/home');

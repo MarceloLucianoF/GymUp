@@ -204,6 +204,18 @@ export default function Home() {
           </Reveal>
         )}
 
+        {/* ATALHOS */}
+        <Reveal>
+          <Link to="/ferramentas" className="surface surface-hover pressable flex items-center gap-4 p-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Wrench className="h-6 w-6" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-base font-black text-gray-900 dark:text-white">Ferramentas</span>
+              <span className="block text-xs text-gray-500 dark:text-gray-400">Calculadora de 1RM e anilhas, kg/lb, timer, IMC e hidratação.</span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          </Link>
+        </Reveal>
+
         {/* PRÓXIMO NÍVEL + PESO */}
         {!loading && (
         <Reveal>
