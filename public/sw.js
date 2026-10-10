@@ -1,9 +1,9 @@
 /* eslint-disable no-restricted-globals */
 // Incremente VERSION a cada mudança de estratégia/shell. Os bundles do CRA têm hash no nome,
 // então são buscados na rede e guardados em runtime (stale-while-revalidate).
-const VERSION = 'v2';
-const SHELL_CACHE = `academyup-shell-${VERSION}`;
-const RUNTIME_CACHE = `academyup-runtime-${VERSION}`;
+const VERSION = 'v3';
+const SHELL_CACHE = `bohtreinar-shell-${VERSION}`;
+const RUNTIME_CACHE = `bohtreinar-runtime-${VERSION}`;
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 // Nunca cacheia: Firebase/Google (Firestore, Auth, Storage, APIs).
@@ -20,7 +20,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((k) => k.startsWith('academyup-') && k !== SHELL_CACHE && k !== RUNTIME_CACHE).map((k) => caches.delete(k))
+        keys.filter((k) => /^(academyup|bohtreinar)-/.test(k) && k !== SHELL_CACHE && k !== RUNTIME_CACHE).map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );

@@ -1,5 +1,5 @@
 /**
- * Service de Persistência de Treino Ativo e Fila Offline para o AcademyUp
+ * Service de Persistência de Treino Ativo e Fila Offline para o BohTreinar
  */
 
 const ACTIVE_WORKOUT_PREFIX = 'academyup_active_workout_';

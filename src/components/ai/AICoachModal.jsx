@@ -14,7 +14,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     {
       id: 'welcome',
       sender: 'ai',
-      text: `Olá! Sou seu **Coach de IA no AcademyUp**. Analiso seu histórico real de treinos e métricas corporais para oferecer orientações científicas e personalizadas. Como posso te ajudar hoje?`
+      text: `Olá! Sou seu **Coach de IA no BohTreinar**. Analiso seu histórico real de treinos e métricas corporais para oferecer orientações científicas e personalizadas. Como posso te ajudar hoje?`
     }
   ]);
   const [inputPrompt, setInputPrompt] = useState('');
@@ -78,7 +78,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
       {
         id: 'welcome',
         sender: 'ai',
-        text: `Olá! Sou seu **Coach de IA no AcademyUp**. Analiso seu histórico real de treinos e métricas corporais para oferecer orientações científicas e personalizadas. Como posso te ajudar hoje?`
+        text: `Olá! Sou seu **Coach de IA no BohTreinar**. Analiso seu histórico real de treinos e métricas corporais para oferecer orientações científicas e personalizadas. Como posso te ajudar hoje?`
       }
     ]);
     toast.success('Conversa reiniciada.');

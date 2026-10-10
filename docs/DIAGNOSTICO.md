@@ -165,3 +165,6 @@ O build local pode regenerar `build/`, que já é ignorado pelo Git.
 - **Notificações:** apenas locais (descanso concluído com aba oculta, lembrete ao abrir o app). **Não há push em background** (exigiria servidor/Blaze)..
 - **Onboarding:** `/onboarding` em 5 passos para alunos novos (sem `goal` e sem `onboardedAt`); regras validam `experience`, `weeklyGoal` (2–7) e `onboardedAt`.
 - **Evolução por exercício:** `/analytics` (lista) e `/analytics/:exercicio` com carga, 1RM (Epley), volume, recordes, tendência e próxima carga sugerida (progressão dupla 8–12).
+
+## Rebrand — AcademyUp → BohTreinar
+Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Brand.jsx` (monograma B + seta e wordmark). Ícones do PWA regenerados. **Mantidos de propósito** (renomear apagaria dados locais/infra): chaves `academyup:*` de localStorage, ID do projeto Firebase e contas demo `@academyup.com`.

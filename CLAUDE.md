@@ -1,4 +1,4 @@
-# CLAUDE.md — AcademyUp (workout-app)
+# CLAUDE.md — BohTreinar (workout-app)
 
 React (CRA) em `src/`, Firebase Auth/Firestore/Hosting, Cloud Functions em `functions/` (proxy de IA).
 Coordenação por frentes: ver [AGENTS.md](AGENTS.md) e `docs/agents/`. Diagnóstico: `docs/DIAGNOSTICO.md`.

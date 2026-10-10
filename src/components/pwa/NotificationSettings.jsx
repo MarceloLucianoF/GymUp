@@ -22,7 +22,7 @@ export default function NotificationSettings({ uid }) {
   const test = async () => {
     vibrate();
     playSound();
-    const ok = await notify('AcademyUp', 'Notificação de teste funcionando!', { tag: 'test' });
+    const ok = await notify('BohTreinar', 'Notificação de teste funcionando!', { tag: 'test' });
     if (!ok) toast('Sem permissão de notificação: vibração e som foram testados.');
   };
 

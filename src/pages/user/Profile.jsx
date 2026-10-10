@@ -399,7 +399,7 @@ export default function Profile() {
 
         {/* Rodapé Informativo */}
         <div className="text-center mt-8 text-gray-500 dark:text-gray-400 text-xs">
-            <p>AcademyUp v2.0</p>
+            <p>BohTreinar v2.0</p>
             <p className="mt-1 font-mono opacity-50">UID: {user.uid.slice(0, 8)}...</p>
             <p className="mt-1">{user.email}</p>
         </div>

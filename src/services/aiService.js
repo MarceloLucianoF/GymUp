@@ -155,7 +155,7 @@ const COACH_TOOLS = [{
 }];
 
 const buildSystemInstruction = ({ name, goal, weightNum, heightNum, targetProteinGrams }) =>
-  `Você é o Coach IA e Nutricionista Esportivo do AcademyUp, falando com ${name}.
+  `Você é o Coach IA e Nutricionista Esportivo do BohTreinar, falando com ${name}.
 PERFIL: objetivo ${goal}; ${weightNum} kg; ${heightNum} cm; meta proteica estimada ${targetProteinGrams} g/dia.
 REGRAS:
 1. Responda direto ao que foi perguntado, em português do Brasil, com Markdown simples (negrito e listas).
@@ -189,7 +189,7 @@ const askNvidiaProxy = async (messages) => {
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
 /**
- * Serviço de Inteligência Artificial do AcademyUp
+ * Serviço de Inteligência Artificial do BohTreinar
  */
 export const aiService = {
   /**
