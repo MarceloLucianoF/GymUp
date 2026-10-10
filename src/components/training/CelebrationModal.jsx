@@ -33,7 +33,7 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                 </div>
 
                 <span className="bg-brand/10 text-brand text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider border border-brand/20 inline-block mb-2">
-                    Sensacional! 🔥
+                    Sensacional!
                 </span>
 
                 <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">TREINO CONCLUÍDO!</h2>
@@ -45,7 +45,7 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                             <Trophy className="w-4 h-4 fill-current" /> Novo Recorde Pessoal!
                         </div>
                         <p className="text-xs text-gray-300">
-                            Superou sua marca anterior em <span className="font-bold text-white">{stats.newPRs.join(', ')}</span>! 🚀
+                            Superou sua marca anterior em <span className="font-bold text-white">{stats.newPRs.join(', ')}</span>!
                         </p>
                     </div>
                 )}

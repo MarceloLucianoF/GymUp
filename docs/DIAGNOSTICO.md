@@ -181,3 +181,8 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Regras:** aceite dos termos gravado na criação da conta (`termsAcceptedAt`, `termsVersion`, validados); telefone do aluno (`phone`, só dígitos e `+()- `, ≤ 20) editável pelo próprio aluno e visível ao treinador vinculado. Testado em produção com tokens reais (10 casos).
 - **Perfil:** campo WhatsApp/Telefone; cobrança do treinador abre o WhatsApp direto quando há telefone.
 - **Home:** atalho para `/ferramentas`.
+
+## Atualização — exclusão de conta e interface sem emojis
+- **Exclusão de conta do aluno (LGPD):** botão "Excluir minha conta" em Perfil → confirmação digitada + reautenticação (senha ou Google) → apaga check-ins, medidas, conversas (mensagens antes do chat), fichas de IA, perfil e login; limpa o navegador. Regras: aluno apaga o próprio perfil e as conversas em que participa; treinador não. Testado em produção (12 cenários) e com 13 testes unitários. **Não apaga** anotações privadas do treinador (`coachNotes`) nem os registros de cobrança que ele mantém; treinador/admin continuam sendo removidos pelo suporte.
+- **Sem emojis:** removidos da interface (ícones SVG no lugar), dos textos de resumo/compartilhamento, dos modelos de mensagem e dos scripts de seed; prompts da IA proíbem emojis e `stripEmojis` filtra qualquer resposta que ainda traga algum. Código morto (`Navigation`, `TrainingList`) removido.
+- Banner flutuante de treino ativo deixa de cobrir o campo de mensagem do chat.

@@ -361,7 +361,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="bg-[#FFC107]/10 text-[#FFC107] text-[10px] font-black px-2.5 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">
-                        Gerado com IA ✨
+                        Gerado com IA
                       </span>
                       <h3 className="text-lg font-black text-gray-900 dark:text-white mt-1">{generatedWorkout.name}</h3>
                       <p className="text-xs text-gray-400">{generatedWorkout.description}</p>
@@ -448,7 +448,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                 
                 <div className="space-y-2">
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <span className="text-[10px] font-black text-[#FFC107] uppercase block">🍌 Pré-Treino Recomendado</span>
+                    <span className="text-[10px] font-black text-[#FFC107] uppercase block">Pré-Treino Recomendado</span>
                     <ul className="text-xs text-gray-700 dark:text-gray-300 mt-1 space-y-1">
                       {nutritionData.mealSuggestions.preWorkout.map((item, idx) => (
                         <li key={idx} className="flex items-start gap-1.5">
@@ -460,7 +460,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   </div>
 
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <span className="text-[10px] font-black text-green-500 uppercase block">🍗 Pós-Treino Recomendado</span>
+                    <span className="text-[10px] font-black text-green-500 uppercase block">Pós-Treino Recomendado</span>
                     <ul className="text-xs text-gray-700 dark:text-gray-300 mt-1 space-y-1">
                       {nutritionData.mealSuggestions.postWorkout.map((item, idx) => (
                         <li key={idx} className="flex items-start gap-1.5">
@@ -473,7 +473,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
 
                   <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex justify-between items-center">
                     <div>
-                      <span className="text-[10px] font-black text-blue-400 uppercase block">💧 Hidratação Diária Recomendada</span>
+                      <span className="text-[10px] font-black text-blue-400 uppercase block">Hidratação Diária Recomendada</span>
                       <span className="text-xs text-gray-300">Baseado no seu peso corporal ({userProfile?.weight || 70}kg)</span>
                     </div>
                     <span className="text-base font-black text-blue-400 font-mono">{(nutritionData.mealSuggestions.hydrationWaterMl / 1000).toFixed(1)} L/dia</span>

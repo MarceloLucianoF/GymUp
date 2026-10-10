@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { Dumbbell, Sparkles, Flame, PartyPopper } from 'lucide-react';
+import { Dumbbell, Sparkles, Flame, PartyPopper, Zap, Wind } from 'lucide-react';
 import useOnboarding, { goToDashboard } from '../../hooks/useOnboarding';
 import {
   ProgressBar, ErrorAlert, OptionGroup, NumberField, FooterBar,
@@ -10,10 +10,10 @@ import {
 } from '../../utils/onboarding';
 
 const GOAL_OPTIONS = [
-  { value: 'Hipertrofia', label: 'Hipertrofia', hint: 'Ganhar massa muscular', emoji: '💪' },
-  { value: 'Emagrecimento', label: 'Emagrecimento', hint: 'Perder gordura', emoji: '🔥' },
-  { value: 'Força', label: 'Força', hint: 'Levantar mais pesado', emoji: '🏋️' },
-  { value: 'Resistência', label: 'Resistência', hint: 'Mais fôlego e disposição', emoji: '🏃' },
+  { value: 'Hipertrofia', label: 'Hipertrofia', hint: 'Ganhar massa muscular', icon: Dumbbell },
+  { value: 'Emagrecimento', label: 'Emagrecimento', hint: 'Perder gordura', icon: Flame },
+  { value: 'Força', label: 'Força', hint: 'Levantar mais pesado', icon: Zap },
+  { value: 'Resistência', label: 'Resistência', hint: 'Mais fôlego e disposição', icon: Wind },
 ];
 const LEVEL_OPTIONS = [
   { value: 'iniciante', label: 'Iniciante', hint: 'Menos de 6 meses de treino' },

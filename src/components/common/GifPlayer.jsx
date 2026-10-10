@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Image as ImageIcon, Play } from 'lucide-react';
 
 export default function GifPlayer({ src, alt, className }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -8,7 +9,7 @@ export default function GifPlayer({ src, alt, className }) {
   if (!src || hasError) {
     return (
       <div className={`bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ${className}`}>
-        <span className="text-2xl">🖼️</span>
+        <ImageIcon className="h-7 w-7" aria-hidden="true" />
       </div>
     );
   }
@@ -32,7 +33,7 @@ export default function GifPlayer({ src, alt, className }) {
         <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center transition-colors">
           {/* Tenta mostrar uma versão estática se você tiver (ex: supino.jpg), senão mostra ícone */}
           <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-            <span className="text-white text-xl ml-1">▶️</span>
+            <Play className="ml-1 h-6 w-6 fill-current text-white" aria-hidden="true" />
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">Passe o mouse</p>
         </div>

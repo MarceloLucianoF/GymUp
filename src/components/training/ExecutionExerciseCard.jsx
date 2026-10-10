@@ -72,7 +72,7 @@ const ExecutionExerciseCard = ({
                                 className="text-[10px] bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 px-2 py-0.5 rounded font-bold hover:scale-105 active:scale-95 transition-all flex items-center gap-1"
                                 title="Ver histórico de cargas deste exercício"
                             >
-                                <History className="w-3 h-3" /> ↺ {lastLoad}kg
+                                <History className="w-3 h-3" /> {lastLoad}kg
                             </button>
                         ) : null}
                         <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">

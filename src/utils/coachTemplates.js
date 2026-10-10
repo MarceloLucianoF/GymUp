@@ -2,7 +2,7 @@
 export const TEMPLATES_KEY = 'academyup.coach.messageTemplates.v1';
 
 export const DEFAULT_TEMPLATES = [
-  { id: 'record', label: 'Parabéns pelo recorde', text: 'Parabéns, {nome}! Vi que você bateu um recorde{recorde}. Continue assim! 💪' },
+  { id: 'record', label: 'Parabéns pelo recorde', text: 'Parabéns, {nome}! Vi que você bateu um recorde{recorde}. Continue assim!' },
   { id: 'miss', label: 'Sentimos sua falta', text: 'Oi, {nome}! Sentimos sua falta nos treinos. Está tudo bem? Posso ajustar sua ficha para ficar mais fácil de encaixar na sua rotina.' },
   { id: 'reminder', label: 'Lembrete de treino', text: 'Oi, {nome}! Passando para lembrar do treino de hoje. Qualquer dúvida, me chame por aqui.' },
   { id: 'billing', label: 'Cobrança educada', text: 'Oi, {nome}! Tudo bem? Passando para lembrar da mensalidade{valor}. Se já pagou, desconsidere. Obrigado!' }

@@ -120,7 +120,7 @@ export function useStudentHome(user, userProfile) {
 
   const syncPending = useCallback(async () => {
     const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, setDoc, doc);
-    if (synced > 0 && mounted.current) toast.success(`✓ ${synced} treino(s) pendente(s) sincronizado(s)!`);
+    if (synced > 0 && mounted.current) toast.success(`${synced} treino(s) pendente(s) sincronizado(s)!`);
     return synced;
   }, [uid]);
 

@@ -4,7 +4,7 @@ import { doc, getDoc, collection, getDocs, query, where, orderBy, limit } from '
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
-import { Dumbbell, Flame, Scale, ClipboardList } from 'lucide-react';
+import { Dumbbell, Flame, Scale, ClipboardList, Wrench } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 
 export default function TrainingPage() {
@@ -208,7 +208,7 @@ export default function TrainingPage() {
 
   if (errorDebug) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-6 text-center text-white">
-        <div className="text-4xl mb-4">🚧</div>
+        <Wrench className="mx-auto mb-4 h-10 w-10 text-brand" aria-hidden="true" />
         <p className="mb-4 text-red-300">{errorDebug}</p>
         <button onClick={() => navigate('/trainings')} className="bg-brand text-black px-6 py-3 rounded-xl font-bold">Voltar</button>
     </div>
@@ -311,7 +311,7 @@ export default function TrainingPage() {
                                 </span>
                                 {lastLoad && (
                                     <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-800/30">
-                                        ↺ {lastLoad}kg
+                                        {lastLoad}kg
                                     </span>
                                 )}
                             </div>

@@ -75,3 +75,13 @@ describe('roteamento e proteção da rota NVIDIA', () => {
     expect(text).not.toMatch(/CHAME as funções/);
   });
 });
+
+describe('sem emojis nas respostas da IA', () => {
+  const { buildContextInstruction } = jest.requireActual('./aiService');
+
+  test('o prompt da NVIDIA proíbe emojis', () => {
+    const nutrition = { targetCalories: 2000, tdee: 2400, macros: { protein: { grams: 160 }, carbs: { grams: 200 }, fats: { grams: 60 } }, mealSuggestions: { hydrationWaterMl: 3000 } };
+    const text = buildContextInstruction({ name: 'Ana', goal: 'Hipertrofia', weightNum: 62, heightNum: 165, nutrition, historyText: 'x' });
+    expect(text).toMatch(/NUNCA use emojis/);
+  });
+});
