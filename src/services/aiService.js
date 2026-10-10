@@ -19,7 +19,8 @@ const USE_NVIDIA_PROXY = process.env.REACT_APP_NVIDIA_PROXY === 'true';
 // REACT_APP_AI_PRIMARY=nvidia: conversa do Coach IA tenta primeiro a NVIDIA (via /api/nvidia); funções e fichas seguem no Gemini.
 const NVIDIA_FIRST = USE_NVIDIA_PROXY && process.env.REACT_APP_AI_PRIMARY === 'nvidia';
 const MAX_PROMPT_LENGTH = 2000;
-const NVIDIA_MODEL = 'nvidia/llama-3.1-nemotron-70b-instruct';
+// 'auto': o proxy escolhe o primeiro modelo da NVIDIA que a chave consegue chamar.
+const NVIDIA_MODEL = 'auto';
 
 let aiInstance = null;
 const getAIInstance = () => {
@@ -183,7 +184,7 @@ const askNvidiaProxy = async (messages) => {
     const data = await response.json();
     const reply = data?.choices?.[0]?.message?.content;
     if (!reply?.trim()) throw new Error('Resposta vazia.');
-    return reply.trim();
+    return { text: reply.trim(), model: data?.model || NVIDIA_MODEL };
   } finally {
     clearTimeout(timeout);
   }
@@ -240,13 +241,13 @@ export const aiService = {
     // NVIDIA via Worker/Function (/api/nvidia): só conversa; funções e fichas seguem no Gemini.
     const tryNvidia = async () => {
       try {
-        const reply = await askNvidiaProxy([
+        const { text, model } = await askNvidiaProxy([
           { role: 'system', content: systemText },
           ...conversationHistory.slice(-6).map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text })),
           { role: 'user', content: safePrompt }
         ]);
-        onMeta?.({ provider: 'nvidia', model: NVIDIA_MODEL });
-        return reply;
+        onMeta?.({ provider: 'nvidia', model });
+        return text;
       } catch (error) {
         console.error('NVIDIA indisponível:', error?.message || error);
         return null;

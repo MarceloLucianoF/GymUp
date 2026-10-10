@@ -109,3 +109,73 @@ test('normalizeMessages limita tamanho e quantidade', () => {
   assert.equal(normalizeMessages([{ role: 'user', content: 'a'.repeat(8001) }]), null);
   assert.deepEqual(normalizeMessages([{ role: 'user', content: '  oi ' }]), [{ role: 'user', content: 'oi' }]);
 });
+
+// ---- modo 'auto': escolhe o primeiro modelo que a chave consegue chamar ----
+import { resetModelCache } from '../src/nvidiaProxy.js';
+
+const okBody = (text = 'ok') => new Response(JSON.stringify({ choices: [{ message: { content: text } }] }), { status: 200 });
+const statusOf = (code) => new Response('detalhe interno', { status: code });
+const bodyModel = (init) => JSON.parse(init.body).model;
+
+test('auto: pula modelos 404 e usa o primeiro que responde; devolve o modelo usado', async () => {
+  resetRateLimit(); resetModelCache();
+  const tried = [];
+  const fetchImpl = async (url, init) => { tried.push(bodyModel(init)); return tried.length < 3 ? statusOf(404) : okBody('olá'); };
+  const res = await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl });
+  const data = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(tried.length, 3);
+  assert.equal(data.model, tried[2]);
+  assert.equal(data.choices[0].message.content, 'olá');
+});
+
+test('auto: lembra o último modelo que funcionou e começa por ele', async () => {
+  resetRateLimit(); resetModelCache();
+  let calls = [];
+  const first = async (url, init) => { calls.push(bodyModel(init)); return calls.length < 2 ? statusOf(404) : okBody(); };
+  await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: first });
+  const worked = calls[1];
+  calls = [];
+  await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async (url, init) => { calls.push(bodyModel(init)); return okBody(); } });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0], worked);
+});
+
+test('auto: 401/403/429 interrompem (trocar de modelo não ajuda) e informam o status', async () => {
+  for (const code of [401, 403, 429]) {
+    resetRateLimit(); resetModelCache();
+    let count = 0;
+    const res = await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async () => { count += 1; return statusOf(code); } });
+    const data = await res.json();
+    assert.equal(res.status, 502);
+    assert.equal(data.upstreamStatus, code);
+    assert.equal(count, 1);
+    assert.ok(!JSON.stringify(data).includes('detalhe interno'));
+  }
+});
+
+test('auto: todos os modelos indisponíveis → 502 com upstreamStatus 404 e no máximo 8 tentativas', async () => {
+  resetRateLimit(); resetModelCache();
+  let count = 0;
+  const res = await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async () => { count += 1; return statusOf(404); } });
+  assert.equal(res.status, 502);
+  assert.equal((await res.json()).upstreamStatus, 404);
+  assert.ok(count <= 8);
+});
+
+test('auto: resposta vazia (modelo de raciocínio) passa para o próximo', async () => {
+  resetRateLimit(); resetModelCache();
+  let count = 0;
+  const empty = new Response(JSON.stringify({ choices: [{ message: { content: null } }] }), { status: 200 });
+  const res = await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async () => { count += 1; return count === 1 ? empty : okBody('texto'); } });
+  assert.equal(res.status, 200);
+  assert.equal(count, 2);
+});
+
+test('modelo explícito: 404 não tenta outros modelos', async () => {
+  resetRateLimit(); resetModelCache();
+  let count = 0;
+  const res = await handleNvidiaRequest(request({ ...valid, model: 'google/gemma-3-12b-it' }), env, { verify: okVerify, fetchImpl: async () => { count += 1; return statusOf(404); } });
+  assert.equal(res.status, 502);
+  assert.equal(count, 1);
+});

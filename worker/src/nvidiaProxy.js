@@ -3,14 +3,27 @@ import { verifyFirebaseIdToken } from './firebaseAuth.js';
 
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 // Modelos conferidos no catálogo público da NVIDIA (scripts/check-nvidia-models.mjs avisa se algum for aposentado).
-const DEFAULT_MODEL = 'nvidia/llama-3.1-nemotron-70b-instruct';
-const ALLOWED_MODELS = new Set([
-  DEFAULT_MODEL,
+// Estar no catálogo NÃO garante que a chave consegue chamar o modelo (404): por isso existe o modo 'auto'.
+const AUTO = 'auto';
+const AUTO_ORDER = [
+  'nvidia/llama-3.1-nemotron-70b-instruct',
   'nvidia/llama-3.1-nemotron-51b-instruct',
-  'nvidia/llama-3.1-nemotron-ultra-253b-v1',
   'nv-mistralai/mistral-nemo-12b-instruct',
-  'google/gemma-3-12b-it'
-]);
+  'google/gemma-3-12b-it',
+  'google/gemma-4-31b-it',
+  'mistralai/mistral-large-2-instruct',
+  'openai/gpt-oss-20b',
+  'nvidia/nemotron-nano-3-30b-a3b',
+  'z-ai/glm-5.3-flash',
+  'nvidia/llama-3.1-nemotron-ultra-253b-v1'
+];
+const DEFAULT_MODEL = AUTO;
+const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER]);
+// Status que significam "este modelo não serve para esta chave": tenta o próximo.
+const SKIP_STATUS = new Set([400, 404, 410, 422]);
+const MAX_ATTEMPTS = 8;
+let lastWorkingModel = null;
+export const resetModelCache = () => { lastWorkingModel = null; };
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant']);
 const ALLOWED_BODY_FIELDS = new Set(['messages', 'model', 'temperature', 'max_tokens']);
 const MAX_BODY_BYTES = 64 * 1024;
@@ -103,24 +116,39 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
 
   if (!env.NVIDIA_API_KEY) return json(503, { error: 'Serviço de IA indisponível.' }, cors);
 
+  const candidates = model === AUTO
+    ? [...new Set([lastWorkingModel, ...AUTO_ORDER].filter(Boolean))].slice(0, MAX_ATTEMPTS)
+    : [model];
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 25_000);
+  let lastStatus = null;
   try {
-    const upstream = await fetchImpl(NVIDIA_API_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${env.NVIDIA_API_KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens })
-    });
-    if (!upstream.ok) {
-      console.warn(`NVIDIA recusou a solicitação: HTTP ${upstream.status} (modelo ${model})`);
-      // Só o código de status (nunca o corpo) para facilitar o diagnóstico sem vazar detalhes do provedor.
-      return json(502, { error: 'O provedor de IA não respondeu corretamente.', upstreamStatus: upstream.status }, cors);
+    for (const candidate of candidates) {
+      const upstream = await fetchImpl(NVIDIA_API_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${env.NVIDIA_API_KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ model: candidate, messages, temperature, max_tokens: maxTokens })
+      });
+      if (!upstream.ok) {
+        lastStatus = upstream.status;
+        console.warn(`NVIDIA recusou: HTTP ${upstream.status} (modelo ${candidate})`);
+        if (SKIP_STATUS.has(upstream.status) && model === AUTO) continue; // modelo indisponível para esta chave
+        break; // 401/403/429/5xx: trocar de modelo não resolve
+      }
+      const data = await upstream.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string' || !content.trim()) {
+        lastStatus = 200;
+        if (model === AUTO) continue; // modelo de raciocínio sem texto final: tenta o próximo
+        return json(502, { error: 'Resposta inválida do provedor de IA.' }, cors);
+      }
+      lastWorkingModel = candidate;
+      return json(200, { model: candidate, choices: [{ message: { role: 'assistant', content: content.trim() } }] }, cors);
     }
-    const data = await upstream.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string' || !content.trim()) return json(502, { error: 'Resposta inválida do provedor de IA.' }, cors);
-    return json(200, { choices: [{ message: { role: 'assistant', content: content.trim() } }] }, cors);
+    // Só o código de status (nunca o corpo) para diagnosticar sem vazar detalhes do provedor.
+    return json(502, { error: 'O provedor de IA não respondeu corretamente.', upstreamStatus: lastStatus }, cors);
   } catch (error) {
     if (error?.name === 'AbortError') return json(504, { error: 'Tempo limite do provedor de IA excedido.' }, cors);
     return json(502, { error: 'Não foi possível consultar o provedor de IA.' }, cors);

@@ -33,3 +33,6 @@ O runtime local (`wrangler dev`) não roda em Ubuntu 20.04 (glibc antiga): use U
 O catálogo muda: o `meta/llama-3.1-70b-instruct` (antigo padrão) foi aposentado e causava 502. O padrão agora é `nvidia/llama-3.1-nemotron-70b-instruct`.
 Para conferir se os modelos permitidos ainda existem: `node scripts/check-nvidia-models.mjs` (sem chave; falha com exit 1 se algum sumiu).
 Quando a NVIDIA recusa, a resposta 502 do Worker inclui `upstreamStatus` (só o código HTTP) e `npx wrangler tail --config ../wrangler.jsonc` mostra o log.
+
+### Modo `auto` (padrão)
+Estar listado no catálogo público não garante que a **sua chave** consegue chamar o modelo (a NVIDIA responde 404). O proxy usa `model: "auto"`: tenta uma lista ordenada (até 8 modelos), pula 400/404/410/422 e respostas vazias, para em 401/403/429/5xx e lembra o último que funcionou. A resposta traz `model` (o modelo usado), e o selo do Coach IA mostra esse nome.
