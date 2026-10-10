@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { aiService } from '../../services/aiService';
+import { modelLabel } from '../../services/aiMeta';
+import Markdown from '../common/Markdown';
 import { db } from '../../firebase/config';
 import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 export default function AICoachModal({ isOpen, onClose, userProfile, user, customExercises = [], onWorkoutSaved }) {
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'generator' | 'nutrition'
+  const [aiMeta, setAiMeta] = useState(null); // provedor/modelo da última resposta
   const [historyDocs, setHistoryDocs] = useState([]);
 
   // Chat State
@@ -101,6 +104,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         historyDocs,
         conversationHistory: messages,
         customExercises,
+        onMeta: setAiMeta,
         onWorkout: (workout) => {
           setGeneratedWorkout(workout);
           toast.success('Treino gerado! Veja na aba Treino.');
@@ -177,7 +181,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">Coach IA & Nutrição</h3>
-                <span className="bg-[#FFC107]/10 text-[#FFC107] text-[9px] font-black px-2 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">Llama 3.1 70B</span>
+                <span className="bg-[#FFC107]/10 text-[#FFC107] text-[9px] font-black px-2 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">{modelLabel(aiMeta)}</span>
               </div>
               <p className="text-[11px] text-gray-400">Inteligência fitness com dados do seu perfil</p>
             </div>
@@ -237,7 +241,9 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                         ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black font-semibold rounded-tr-none'
                         : 'card-premium-glass text-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-800'
                     }`}>
-                      {msg.text.split('**').map((chunk, i) => i % 2 === 1 ? <strong key={i} className="font-black text-[#FFC107] dark:text-[#FFC107]">{chunk}</strong> : chunk)}
+                      {msg.sender === 'user'
+                        ? <p className="whitespace-pre-wrap text-left">{msg.text}</p>
+                        : <Markdown text={msg.text} />}
                     </div>
                   </div>
                 ))}

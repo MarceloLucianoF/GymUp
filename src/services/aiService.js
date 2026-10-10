@@ -199,7 +199,7 @@ export const aiService = {
    * 1. Coach IA conversacional com execução de funções (function calling).
    * onWorkout recebe a ficha quando o modelo chama gerar_treino.
    */
-  async askAICoach({ prompt, userProfile, historyDocs = [], conversationHistory = [], customExercises = [], onWorkout }) {
+  async askAICoach({ prompt, userProfile, historyDocs = [], conversationHistory = [], customExercises = [], onWorkout, onMeta }) {
     if (!auth.currentUser) return 'Sua sessão expirou. Entre novamente para usar o Coach IA.';
 
     const name = userProfile?.displayName || 'Atleta';
@@ -237,16 +237,25 @@ export const aiService = {
       return { erro: 'Função desconhecida.' };
     };
 
-    if (NVIDIA_FIRST) {
+    // NVIDIA via Worker/Function (/api/nvidia): só conversa; funções e fichas seguem no Gemini.
+    const tryNvidia = async () => {
       try {
-        return await askNvidiaProxy([
+        const reply = await askNvidiaProxy([
           { role: 'system', content: systemText },
           ...conversationHistory.slice(-6).map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text })),
           { role: 'user', content: safePrompt }
         ]);
+        onMeta?.({ provider: 'nvidia', model: NVIDIA_MODEL });
+        return reply;
       } catch (error) {
-        console.error('NVIDIA indisponível, tentando Gemini:', error?.message || error);
+        console.error('NVIDIA indisponível:', error?.message || error);
+        return null;
       }
+    };
+
+    if (NVIDIA_FIRST) {
+      const reply = await tryNvidia();
+      if (reply) return reply;
     }
 
     try {
@@ -272,6 +281,7 @@ export const aiService = {
           if (!calls || calls.length === 0) {
             const text = result.response.text();
             if (!text?.trim()) throw new Error('Resposta vazia.');
+            onMeta?.({ provider: 'gemini', model: modelName });
             return text.trim();
           }
           contents.push(result.response.candidates[0].content);
@@ -288,17 +298,11 @@ export const aiService = {
     }
 
     if (USE_NVIDIA_PROXY && !NVIDIA_FIRST) {
-      try {
-        return await askNvidiaProxy([
-          { role: 'system', content: systemText },
-          ...conversationHistory.slice(-6).map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text })),
-          { role: 'user', content: safePrompt }
-        ]);
-      } catch (error) {
-        console.error('Proxy NVIDIA indisponível:', error?.message || error);
-      }
+      const reply = await tryNvidia();
+      if (reply) return reply;
     }
 
+    onMeta?.({ provider: 'local' });
     const nutrition = calcNutrition({ weight: weightNum, height: heightNum, age: userProfile?.age, goal });
     return `Estou sem acesso ao modelo de IA neste momento, mas com base no seu perfil (${goal}, ${weightNum} kg) o ponto de partida é:\n\n- **Calorias:** ~${nutrition.targetCalories} kcal/dia\n- **Proteína:** ${nutrition.macros.protein.grams} g · **Carboidratos:** ${nutrition.macros.carbs.grams} g · **Gorduras:** ${nutrition.macros.fats.grams} g\n- **Água:** ~${(nutrition.mealSuggestions.hydrationWaterMl / 1000).toFixed(1)} L/dia\n\nTente sua pergunta novamente em instantes.`;
   },
