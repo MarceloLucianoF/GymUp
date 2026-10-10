@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const { createNvidiaProxyHandler } = require("../lib/nvidiaProxy");
 
 const ORIGIN = "https://academyup.example";
-const MODEL = "meta/llama-3.1-70b-instruct";
+const MODEL = "nvidia/llama-3.1-nemotron-70b-instruct";
 
 const response = () => {
   const res = { headers: {} };

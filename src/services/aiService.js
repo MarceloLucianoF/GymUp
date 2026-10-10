@@ -19,6 +19,7 @@ const USE_NVIDIA_PROXY = process.env.REACT_APP_NVIDIA_PROXY === 'true';
 // REACT_APP_AI_PRIMARY=nvidia: conversa do Coach IA tenta primeiro a NVIDIA (via /api/nvidia); funções e fichas seguem no Gemini.
 const NVIDIA_FIRST = USE_NVIDIA_PROXY && process.env.REACT_APP_AI_PRIMARY === 'nvidia';
 const MAX_PROMPT_LENGTH = 2000;
+const NVIDIA_MODEL = 'nvidia/llama-3.1-nemotron-70b-instruct';
 
 let aiInstance = null;
 const getAIInstance = () => {
@@ -176,7 +177,7 @@ const askNvidiaProxy = async (messages) => {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
       signal: controller.signal,
-      body: JSON.stringify({ model: 'meta/llama-3.1-70b-instruct', messages, temperature: 0.6, max_tokens: 1000 })
+      body: JSON.stringify({ model: NVIDIA_MODEL, messages, temperature: 0.6, max_tokens: 1000 })
     });
     if (!response.ok) throw new Error(`NVIDIA proxy ${response.status}`);
     const data = await response.json();

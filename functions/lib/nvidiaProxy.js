@@ -1,11 +1,13 @@
 "use strict";
 
 const NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const DEFAULT_MODEL = "meta/llama-3.1-70b-instruct";
+const DEFAULT_MODEL = "nvidia/llama-3.1-nemotron-70b-instruct";
 const ALLOWED_MODELS = new Set([
   DEFAULT_MODEL,
-  "nvidia/llama-3.1-nemotron-70b-instruct",
-  "mistralai/mixtral-8x7b-instruct-v0.1"
+  "nvidia/llama-3.1-nemotron-51b-instruct",
+  "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+  "nv-mistralai/mistral-nemo-12b-instruct",
+  "google/gemma-3-12b-it"
 ]);
 const ALLOWED_ROLES = new Set(["system", "user", "assistant"]);
 const ALLOWED_BODY_FIELDS = new Set(["messages", "model", "temperature", "max_tokens"]);

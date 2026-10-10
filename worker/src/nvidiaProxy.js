@@ -2,11 +2,14 @@
 import { verifyFirebaseIdToken } from './firebaseAuth.js';
 
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
-const DEFAULT_MODEL = 'meta/llama-3.1-70b-instruct';
+// Modelos conferidos no catálogo público da NVIDIA (scripts/check-nvidia-models.mjs avisa se algum for aposentado).
+const DEFAULT_MODEL = 'nvidia/llama-3.1-nemotron-70b-instruct';
 const ALLOWED_MODELS = new Set([
   DEFAULT_MODEL,
-  'nvidia/llama-3.1-nemotron-70b-instruct',
-  'mistralai/mixtral-8x7b-instruct-v0.1'
+  'nvidia/llama-3.1-nemotron-51b-instruct',
+  'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+  'nv-mistralai/mistral-nemo-12b-instruct',
+  'google/gemma-3-12b-it'
 ]);
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant']);
 const ALLOWED_BODY_FIELDS = new Set(['messages', 'model', 'temperature', 'max_tokens']);
@@ -109,7 +112,11 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
       signal: controller.signal,
       body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens })
     });
-    if (!upstream.ok) return json(502, { error: 'O provedor de IA não respondeu corretamente.' }, cors);
+    if (!upstream.ok) {
+      console.warn(`NVIDIA recusou a solicitação: HTTP ${upstream.status} (modelo ${model})`);
+      // Só o código de status (nunca o corpo) para facilitar o diagnóstico sem vazar detalhes do provedor.
+      return json(502, { error: 'O provedor de IA não respondeu corretamente.', upstreamStatus: upstream.status }, cors);
+    }
     const data = await upstream.json();
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim()) return json(502, { error: 'Resposta inválida do provedor de IA.' }, cors);
