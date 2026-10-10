@@ -47,3 +47,31 @@ describe('calcNutrition', () => {
     expect(sum).toBeLessThanOrEqual(102);
   });
 });
+
+describe('roteamento e proteção da rota NVIDIA', () => {
+  const { needsTools, looksLikeToolCall, buildContextInstruction } = jest.requireActual('./aiService');
+
+  test('needsTools detecta pedido de montar/gerar ficha', () => {
+    expect(needsTools('Monte um treino de peito para mim')).toBe(true);
+    expect(needsTools('gere uma ficha de pernas')).toBe(true);
+    expect(needsTools('Como foi meu último treino?')).toBe(false);
+    expect(needsTools('quais as melhores dicas de dieta?')).toBe(false);
+    expect(needsTools(null)).toBe(false);
+  });
+
+  test('looksLikeToolCall pega JSON de ação simulado, mas não texto normal', () => {
+    expect(looksLikeToolCall('{ "action": "get_last_workout", "parameters": {} }')).toBe(true);
+    expect(looksLikeToolCall('[{"name":"calcular_macros","arguments":{}}]')).toBe(true);
+    expect(looksLikeToolCall('Seu último treino foi o Treino A.')).toBe(false);
+    expect(looksLikeToolCall('{texto entre chaves sem json}')).toBe(false);
+  });
+
+  test('o prompt da NVIDIA traz os dados e proíbe chamadas de função', () => {
+    const nutrition = { targetCalories: 2000, tdee: 2400, macros: { protein: { grams: 160 }, carbs: { grams: 200 }, fats: { grams: 60 } }, mealSuggestions: { hydrationWaterMl: 3000 } };
+    const text = buildContextInstruction({ name: 'Ana', goal: 'Hipertrofia', weightNum: 62, heightNum: 165, nutrition, historyText: 'Treino #1 - Treino A' });
+    expect(text).toMatch(/2000 kcal/);
+    expect(text).toMatch(/Treino #1 - Treino A/);
+    expect(text).toMatch(/NUNCA escreva JSON/);
+    expect(text).not.toMatch(/CHAME as funções/);
+  });
+});

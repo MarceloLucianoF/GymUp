@@ -43,3 +43,10 @@ describe('Markdown', () => {
     expect(screen.getByText('rtk gain').tagName).toBe('CODE');
   });
 });
+
+describe('Markdown: sublinhado não é formatação', () => {
+  test('get_last_workout e __init__ ficam intactos', () => {
+    render(<Markdown text={'Use get_last_workout e __init__ no código'} />);
+    expect(screen.getByText('Use get_last_workout e __init__ no código')).toBeInTheDocument();
+  });
+});

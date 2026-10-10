@@ -3,16 +3,17 @@ import React from 'react';
 // Markdown mínimo e SEGURO para respostas da IA: títulos, listas, regra horizontal, negrito, itálico e código.
 // Nunca usa dangerouslySetInnerHTML: todo texto vira nó React (sem execução de HTML/scripts).
 
-const INLINE = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g;
+// Sublinhado (_ e __) NÃO é formatação: nomes como get_last_workout devem aparecer intactos.
+const INLINE = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/g;
 
 export const renderInline = (text, keyPrefix = 'i') => String(text)
   .split(INLINE)
   .filter((part) => part !== '')
   .map((part, index) => {
     const key = `${keyPrefix}-${index}`;
-    if (/^\*\*[^*]+\*\*$/.test(part) || /^__[^_]+__$/.test(part)) return <strong key={key} className="font-black text-gray-900 dark:text-white">{part.slice(2, -2)}</strong>;
+    if (/^\*\*[^*]+\*\*$/.test(part)) return <strong key={key} className="font-black text-gray-900 dark:text-white">{part.slice(2, -2)}</strong>;
     if (/^`[^`]+`$/.test(part)) return <code key={key} className="rounded bg-black/10 px-1 py-0.5 font-mono text-[0.9em] dark:bg-white/10">{part.slice(1, -1)}</code>;
-    if (/^\*[^*\s][^*]*\*$/.test(part) || /^_[^_\s][^_]*_$/.test(part)) return <em key={key} className="italic">{part.slice(1, -1)}</em>;
+    if (/^\*[^*\s][^*]*\*$/.test(part)) return <em key={key} className="italic">{part.slice(1, -1)}</em>;
     return part;
   });
 
