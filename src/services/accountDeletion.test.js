@@ -1,9 +1,9 @@
 import { deleteUserData, purgeLocalData, chunk, providerOf, friendlyDeletionError, DELETION_STEPS } from './accountDeletion';
 
 // Firestore falso: registra a ordem das operações.
-const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = [], failOn = null } = {}) => {
+const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = [], profileCoachId = null, noteDenied = [], noteError = null, failOn = null } = {}) => {
   const log = [];
-  const docsOf = (list, prefix) => list.map((d) => ({ id: d.id, ref: { path: `${prefix}/${d.id}` }, data: () => d.data || {} }));
+  const docsOf = (list, prefix) => list.map((d) => ({ id: d.id, ref: { path: `${prefix}/${d.id}` }, data: () => d.data || (d.participants ? { participants: d.participants } : {}) }));
   const deps = {
     db: {},
     where: (field, op, value) => ({ field, op, value }),
@@ -25,7 +25,15 @@ const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = []
       return { delete: (ref) => refs.push(ref.path), commit: async () => { log.push(['batch', refs.length, refs[0]]); } };
     },
     doc: (db, col, id) => ({ path: `${col}/${id}` }),
-    deleteDoc: async (ref) => { log.push(['delete', ref.path || ref.ref?.path]); }
+    getDoc: async () => ({ exists: () => true, data: () => ({ coachId: profileCoachId }) }),
+    deleteDoc: async (ref) => {
+      const path = ref.path || ref.ref?.path;
+      if (path.startsWith('coachNotes/')) {
+        if (noteError) throw Object.assign(new Error('boom'), { code: noteError });
+        if (noteDenied.includes(path)) throw Object.assign(new Error('negado'), { code: 'permission-denied' });
+      }
+      log.push(['delete', path]);
+    }
   };
   return { deps, log };
 };
@@ -42,13 +50,13 @@ describe('deleteUserData', () => {
     const { deps, log } = makeDeps({
       checkIns: [{ id: 'c1' }, { id: 'c2' }],
       measurements: [{ id: 'm1' }],
-      chats: [{ id: 'chatA', messages: [{ id: 'x' }, { id: 'y' }] }],
+      chats: [{ id: 'chatA', participants: ['u1', 'coachX'], messages: [{ id: 'x' }, { id: 'y' }] }],
       trainings: [{ id: 't1', data: { isAIGenerated: true } }, { id: 't2', data: { isAIGenerated: false } }, { id: 't3', data: { isAIGenerated: true, coachId: 'coach' } }]
     });
     const steps = [];
     const counts = await deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) });
-    expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, profile: 1 });
-    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:users/u1']);
+    expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, notes: 1, profile: 1 });
+    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:users/u1']);
     expect(steps.slice(0, 2)).toEqual(['checkIns:running', 'checkIns:done']);
     expect(steps[steps.length - 1]).toBe('profile:done');
   });
@@ -69,6 +77,36 @@ describe('deleteUserData', () => {
 
   test('sem uid lança erro', async () => {
     await expect(deleteUserData('')).rejects.toThrow();
+  });
+});
+
+describe('notas privadas do treinador', () => {
+  test('apaga as notas do treinador do perfil e dos treinadores das conversas, sem repetir', async () => {
+    const { deps, log } = makeDeps({ profileCoachId: 'coachA', chats: [{ id: 'c1', participants: ['u1', 'coachA'], messages: [] }, { id: 'c2', participants: ['u1', 'coachOld'], messages: [] }] });
+    const counts = await deleteUserData('u1', { deps });
+    expect(counts.notes).toBe(2);
+    const noteDeletes = log.filter((entry) => String(entry[1]).startsWith('coachNotes/')).map((entry) => entry[1]).sort();
+    expect(noteDeletes).toEqual(['coachNotes/coachA_u1', 'coachNotes/coachOld_u1']);
+  });
+
+  test('nota inexistente (negada por regra) é ignorada e o fluxo continua até o perfil', async () => {
+    const { deps, log } = makeDeps({ profileCoachId: 'coachA', noteDenied: ['coachNotes/coachA_u1'] });
+    const counts = await deleteUserData('u1', { deps });
+    expect(counts.notes).toBe(0);
+    expect(log[log.length - 1][1]).toBe('users/u1');
+  });
+
+  test('erro real ao apagar nota (não é permissão) interrompe antes do perfil', async () => {
+    const { deps, log } = makeDeps({ profileCoachId: 'coachA', noteError: 'unavailable' });
+    await expect(deleteUserData('u1', { deps })).rejects.toMatchObject({ step: 'notes' });
+    expect(log.some((entry) => entry[1] === 'users/u1')).toBe(false);
+  });
+
+  test('sem treinador vinculado nem conversas, não tenta apagar nenhuma nota', async () => {
+    const { deps, log } = makeDeps({ profileCoachId: null });
+    const counts = await deleteUserData('u1', { deps });
+    expect(counts.notes).toBe(0);
+    expect(log.some((entry) => String(entry[1]).startsWith('coachNotes/'))).toBe(false);
   });
 });
 
@@ -101,6 +139,6 @@ describe('providerOf e mensagens', () => {
   });
 
   test('as etapas exibidas cobrem o fluxo inteiro', () => {
-    expect(DELETION_STEPS.map((s) => s.id)).toEqual(['reauth', 'checkIns', 'measurements', 'chats', 'trainings', 'profile', 'login']);
+    expect(DELETION_STEPS.map((s) => s.id)).toEqual(['reauth', 'checkIns', 'measurements', 'chats', 'trainings', 'notes', 'profile', 'login']);
   });
 });

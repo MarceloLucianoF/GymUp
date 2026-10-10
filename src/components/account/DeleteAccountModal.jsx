@@ -50,8 +50,8 @@ export default function DeleteAccountModal({ user, onClose, onDeleted, onExport 
         </div>
 
         <div className="mt-4 space-y-2 rounded-2xl bg-gray-50 p-4 text-xs text-gray-600 dark:bg-white/5 dark:text-gray-300">
-          <p><strong className="text-gray-900 dark:text-white">Será apagado:</strong> seus treinos realizados, medidas, conversas (inclusive as mensagens do seu treinador nelas), fichas geradas por IA, perfil e o login.</p>
-          <p><strong className="text-gray-900 dark:text-white">Não será apagado:</strong> anotações privadas que o seu treinador escreveu sobre você (são dele) e registros de cobrança que ele mantém. Para pedir a remoção, fale com ele ou com o suporte.</p>
+          <p><strong className="text-gray-900 dark:text-white">Será apagado:</strong> seus treinos realizados, medidas, conversas (inclusive as mensagens do seu treinador nelas), fichas geradas por IA, as anotações privadas que seu treinador escreveu sobre você, seu perfil (com dados de mensalidade) e o login.</p>
+          <p><strong className="text-gray-900 dark:text-white">Fora do nosso alcance:</strong> cópias que o seu treinador tenha exportado ou anotado fora do app (planilhas, WhatsApp). Para essas, fale com ele.</p>
           {onExport && <p>Antes de excluir, você pode <button type="button" onClick={onExport} className="font-bold text-amber-700 underline dark:text-brand">baixar uma cópia dos seus dados</button>.</p>}
         </div>
 

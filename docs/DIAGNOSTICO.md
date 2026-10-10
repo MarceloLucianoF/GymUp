@@ -183,6 +183,10 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Home:** atalho para `/ferramentas`.
 
 ## Atualização — exclusão de conta e interface sem emojis
-- **Exclusão de conta do aluno (LGPD):** botão "Excluir minha conta" em Perfil → confirmação digitada + reautenticação (senha ou Google) → apaga check-ins, medidas, conversas (mensagens antes do chat), fichas de IA, perfil e login; limpa o navegador. Regras: aluno apaga o próprio perfil e as conversas em que participa; treinador não. Testado em produção (12 cenários) e com 13 testes unitários. **Não apaga** anotações privadas do treinador (`coachNotes`) nem os registros de cobrança que ele mantém; treinador/admin continuam sendo removidos pelo suporte.
+- **Exclusão de conta do aluno (LGPD):** botão "Excluir minha conta" em Perfil → confirmação digitada + reautenticação (senha ou Google) → apaga check-ins, medidas, conversas (mensagens antes do chat), fichas de IA, perfil e login; limpa o navegador. Regras: aluno apaga o próprio perfil e as conversas em que participa; treinador não. Testado em produção (12 cenários) e com 13 testes unitários. Também apaga as anotações privadas do treinador sobre o aluno (`coachNotes`) e os dados de mensalidade (ficam no perfil); treinador/admin continuam sendo removidos pelo suporte. **Fora do alcance:** cópias que o treinador exportou ou anotou fora do app, e notas de treinadores antigos sem conversa registrada com o aluno (o app só conhece o treinador do perfil e os das conversas).
 - **Sem emojis:** removidos da interface (ícones SVG no lugar), dos textos de resumo/compartilhamento, dos modelos de mensagem e dos scripts de seed; prompts da IA proíbem emojis e `stripEmojis` filtra qualquer resposta que ainda traga algum. Código morto (`Navigation`, `TrainingList`) removido.
 - Banner flutuante de treino ativo deixa de cobrir o campo de mensagem do chat.
+
+## Atualização — notas do treinador na exclusão do aluno
+- `coachNotes`: o aluno pode apenas **apagar** notas cujo `studentId` é o dele (regra por dado do documento); continua sem poder ler ou listar o conteúdo. O app apaga `coachNotes/{coachId}_{uid}` para o treinador do perfil e para os das conversas; documento inexistente é negado por regra e ignorado.
+- Testado em produção (7 cenários) e com 4 testes unitários novos.
