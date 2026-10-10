@@ -1,15 +1,15 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy } from 'lucide-react';
+import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote } from 'lucide-react';
 import SetRow from './SetRow';
-import { getLastReps, getSmartTip } from '../../utils/training';
+import { getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
 
 // Card de exercício da execução do treino (modo lista ou foco).
 const ExecutionExerciseCard = ({
     ex, exIndex, isFocusMode = false,
     historyMap, rawHistoryDocs, sessionData,
     isLastExercise,
-    onInput, onCheckSet, onOpenLoadHistory, onZoom, onShowVideo, onNextExercise, onFinish
+    onInput, onCheckSet, onAdjust, onCopyLast, onNote, onOpenLoadHistory, onZoom, onShowVideo, onNextExercise, onFinish
 }) => {
     if (!ex) return null;
 
@@ -26,6 +26,10 @@ const ExecutionExerciseCard = ({
     const lastReps = getLastReps(rawHistoryDocs, exName);
     const targetRepsNum = parseInt(repsPlaceholder, 10) || 10;
     const smartTip = getSmartTip(lastLoad, lastReps, targetRepsNum);
+
+    const lastNote = getLastNote(rawHistoryDocs, exName);
+    const hasLastSession = getLastSessionSets(rawHistoryDocs, exName).length > 0;
+    const noteValue = sessionData[noteKey(exIndex)]?.note || '';
 
     const isSetDone = (sIdx) => sessionData[`${exIndex}-${sIdx}`]?.completed;
     const allDone = setsArray.every((_, sIdx) => isSetDone(sIdx));
@@ -94,6 +98,30 @@ const ExecutionExerciseCard = ({
                 </div>
             </div>
 
+            {/* Cópia da última sessão e nota do exercício */}
+            <div className="px-4 py-3 space-y-2 border-b border-gray-100 dark:border-gray-700/50">
+                {hasLastSession && (
+                    <button
+                        type="button" onClick={() => onCopyLast(exIndex, exName, setsCount)}
+                        className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/10 px-3 text-xs font-black text-brand active:scale-95 transition-all"
+                    >
+                        <Copy className="w-4 h-4" aria-hidden="true" /> Copiar da última sessão
+                    </button>
+                )}
+                {lastNote && (
+                    <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                        <StickyNote className="w-4 h-4 shrink-0" aria-hidden="true" /> <span><b>Última nota:</b> {lastNote}</span>
+                    </p>
+                )}
+                <input
+                    type="text" maxLength={NOTE_MAX} value={noteValue}
+                    onChange={(e) => onNote(exIndex, e.target.value)}
+                    placeholder="Nota do exercício (ex.: ajustar banco no 4)"
+                    aria-label={`Nota para ${exName}`}
+                    className="w-full rounded-xl bg-gray-100 dark:bg-white/5 px-3 py-2 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand"
+                />
+            </div>
+
             {/* Séries */}
             <div className="divide-y divide-gray-100 dark:divide-gray-700/50 flex-1 overflow-y-auto">
                 {setsArray.map((_, setIndex) => (
@@ -104,6 +132,8 @@ const ExecutionExerciseCard = ({
                         weightPlaceholder={lastLoad}
                         repsPlaceholder={repsPlaceholder}
                         isFocusMode={isFocusMode}
+                        isPR={!!sessionData[`${exIndex}-${setIndex}`]?.completed && isPRSet(sessionData[`${exIndex}-${setIndex}`]?.weight, lastLoad)}
+                        onAdjust={(sIdx, field, delta) => onAdjust(exIndex, sIdx, field, delta, field === 'weight' ? lastLoad : targetRepsNum)}
                         onInput={(sIdx, field, value) => onInput(exIndex, sIdx, field, value)}
                         onCheck={checkSet}
                     />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Wallet, PiggyBank, Clock, AlertOctagon, Pencil, Check, Undo2, Users, TriangleAlert } from 'lucide-react';
+import { Wallet, PiggyBank, Clock, AlertOctagon, Pencil, Check, Undo2, Users, TriangleAlert, Download, MessageCircle, History } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import PageHeader from '../../components/ui/PageHeader';
@@ -16,6 +16,8 @@ import Avatar from '../../components/coach/Avatar';
 import BarChart from '../../components/coach/BarChart';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import { brl, toDate, MONTHS_SHORT } from '../../components/coach/helpers';
+import { financeCsv, downloadCsv } from '../../utils/coachCsv';
+import { loadTemplates, fillTemplate, firstName, whatsappLink } from '../../utils/coachTemplates';
 import { DEFAULT_FEE } from '../../hooks/useCoachRoster';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
@@ -55,6 +57,17 @@ const monthlyRevenue = (list, months = 6) => {
   });
   return buckets;
 };
+
+const statusTotals = (list) => ['paid', 'pending', 'overdue'].map((id) => {
+  const items = list.filter((s) => s.paymentStatus === id);
+  return { id, count: items.length, total: items.reduce((acc, s) => acc + s.monthlyFee, 0) };
+});
+
+// Movimentações do mês corrente a partir de lastPaymentUpdate (só a última alteração de cada aluno é guardada).
+const monthHistory = (list, now = new Date()) => list
+  .map((s) => ({ s, date: toDate(s.lastPaymentUpdate) }))
+  .filter(({ date }) => date && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth())
+  .sort((a, b) => b.date - a.date);
 
 export default function FinancialPage() {
   const { user } = useAuthContext();
@@ -96,6 +109,8 @@ export default function FinancialPage() {
   const revenue = useMemo(() => monthlyRevenue(students), [students]);
   const overdue = useMemo(() => students.filter((s) => s.paymentStatus === 'overdue'), [students]);
   const visible = useMemo(() => students.filter((s) => filter === 'all' || s.paymentStatus === filter), [students, filter]);
+  const totals = useMemo(() => statusTotals(students), [students]);
+  const history = useMemo(() => monthHistory(students), [students]);
   const monthName = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   // Campos permitidos pelas regras ao treinador vinculado: paymentStatus, paymentDate, lastPaymentUpdate, monthlyFee.
@@ -114,6 +129,29 @@ export default function FinancialPage() {
       toast.error('Erro ao atualizar.');
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const exportCsv = () => {
+    const rows = visible.map((s) => ({ ...s, paymentDateObj: s.paymentStatus === 'paid' ? toDate(s.paymentDate) : null }));
+    const stamp = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    downloadCsv(`financeiro-${stamp}.csv`, financeCsv(rows, monthName, { delimiter: ';' }));
+  };
+
+  // Lembrete de cobrança: abre o WhatsApp se o perfil tiver telefone; senão copia a mensagem.
+  const remind = async (student) => {
+    const tpl = loadTemplates().find((t) => t.id === 'billing');
+    const text = fillTemplate(tpl?.text || 'Oi, {nome}! Passando para lembrar da mensalidade{valor}.', { nome: firstName(student.displayName), valor: ` de ${brl(student.monthlyFee)}` });
+    const link = whatsappLink(student.phone, text);
+    if (link) {
+      window.open(link, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Sem telefone no perfil: mensagem copiada.');
+    } catch {
+      toast.error('Não foi possível copiar a mensagem.');
     }
   };
 
@@ -149,6 +187,7 @@ export default function FinancialPage() {
         ) : (
           <>
             <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'paid')} className={`${small} bg-emerald-500 text-white`}><Check className="h-4 w-4" /> Marcar pago</button>
+            <button type="button" onClick={() => remind(s)} aria-label={`Lembrar ${s.displayName || 'aluno'} por WhatsApp`} className={`${small} bg-emerald-500/10 text-emerald-600`}><MessageCircle className="h-4 w-4" /> Cobrar</button>
             {s.paymentStatus === 'pending' && <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'overdue')} className={`${small} bg-rose-500/10 text-rose-600`}><TriangleAlert className="h-4 w-4" /> Atrasado</button>}
           </>
         )}
@@ -199,6 +238,16 @@ export default function FinancialPage() {
           </Reveal>
         )}
 
+        <section className="grid grid-cols-3 gap-3" aria-label="Total por status">
+          {totals.map((t) => (
+            <div key={t.id} className="surface p-3 text-center">
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${PAY_META[t.id].cls}`}>{PAY_META[t.id].label}</span>
+              <p className="mt-2 font-display text-lg font-black text-gray-900 dark:text-white">{brl(t.total)}</p>
+              <p className="text-xs text-gray-500">{t.count} aluno{t.count === 1 ? '' : 's'}</p>
+            </div>
+          ))}
+        </section>
+
         <Reveal>
           <section className="surface p-5">
             <h2 className="mb-1 font-display text-base font-black text-gray-900 dark:text-white">Receita dos últimos 6 meses</h2>
@@ -213,6 +262,10 @@ export default function FinancialPage() {
               <button key={f.id} type="button" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}
                 className={`pressable min-h-[44px] shrink-0 rounded-2xl px-4 text-sm font-bold ${filter === f.id ? 'bg-brand text-black' : 'bg-white/70 text-gray-600 dark:bg-white/5 dark:text-gray-300'}`}>{f.label}</button>
             ))}
+          </div>
+
+          <div className="flex justify-end">
+            <button type="button" onClick={exportCsv} disabled={visible.length === 0} className={btnGhost}><Download className="h-4 w-4" /> Exportar CSV ({visible.length})</button>
           </div>
 
           {students.length === 0 ? (
@@ -242,6 +295,25 @@ export default function FinancialPage() {
             </ul>
           )}
         </section>
+
+        <Reveal>
+          <section className="surface p-5" aria-label="Histórico do mês">
+            <h2 className="mb-1 flex items-center gap-2 font-display text-base font-black text-gray-900 dark:text-white"><History className="h-5 w-5 text-brand" aria-hidden="true" /> Histórico de {monthName}</h2>
+            <p className="mb-3 text-xs text-gray-500">Última alteração de pagamento de cada aluno neste mês (o banco não guarda o histórico completo).</p>
+            {history.length === 0 ? <p className="text-sm text-gray-500">Nenhuma movimentação neste mês.</p> : (
+              <ul className="divide-y divide-gray-100 dark:divide-white/10">
+                {history.map(({ s, date }) => (
+                  <li key={s.id} className="flex items-center gap-3 py-2.5 text-sm">
+                    <span className="w-24 shrink-0 text-xs text-gray-500">{date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${(PAY_META[s.paymentStatus] || PAY_META.pending).cls}`}>{(PAY_META[s.paymentStatus] || PAY_META.pending).label}</span>
+                    <span className="w-20 shrink-0 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{brl(s.monthlyFee)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </Reveal>
       </div>
 
       {editing && (

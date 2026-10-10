@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /trainings
+Disallow: /training/
+Disallow: /execution/
+Disallow: /history
+Disallow: /analytics
+Disallow: /measurements
+Disallow: /profile
+Disallow: /chat
+Disallow: /ferramentas
+Disallow: /onboarding
+Disallow: /coach/
+Disallow: /admin
+Disallow: /home
+
+Sitemap: https://bohtreinar.bohtreinar-app.workers.dev/sitemap.xml

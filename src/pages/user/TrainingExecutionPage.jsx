@@ -18,7 +18,11 @@ import ExecutionHeader from '../../components/training/ExecutionHeader';
 import ExecutionExerciseCard from '../../components/training/ExecutionExerciseCard';
 import { exercises as defaultExercises } from '../../data/exercises';
 import { Award, ChevronLeft, ChevronRight } from 'lucide-react';
-import { hydrateExercises, buildLoadMap, buildExerciseLoadLogs, summarizeSession, detectNewPRs } from '../../utils/training';
+import { useWakeLock } from '../../components/training/useWakeLock';
+import {
+    hydrateExercises, buildLoadMap, buildExerciseLoadLogs, summarizeSession, detectNewPRs,
+    adjustValue, getLastSessionSets, buildCopyFromLast, noteKey, NOTE_MAX, formatDuration
+} from '../../utils/training';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
 export default function TrainingExecutionPage() {
@@ -38,6 +42,7 @@ export default function TrainingExecutionPage() {
     const [elapsedTime, setElapsedTime] = useState(0); 
     const [restTimerObj, setRestTimerObj] = useState(null); // { endTime, duration }
     const startedAtRef = useRef(null);
+    const lastPayloadRef = useRef(null);
 
     // Modos de Visualização
     const [viewMode, setViewMode] = useState('list'); 
@@ -55,11 +60,14 @@ export default function TrainingExecutionPage() {
     const [showCelebration, setShowCelebration] = useState(false);
     const [celebrationStats, setCelebrationStats] = useState(null);
 
+    // Mantém a tela acesa durante o treino (some após a celebração)
+    useWakeLock(!!training && !showCelebration);
+
     // Conectividade e Sync Offline
     const { isOnline } = useOfflineSync(user);
 
     // Auto-Save do Treino em Andamento
-    useActiveWorkoutAutosave({ user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj, startedAtRef });
+    useActiveWorkoutAutosave({ enabled: !showCelebration, user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj, startedAtRef });
 
     // 1. Inicialização e Detecção de Dispositivo
     useEffect(() => {
@@ -255,8 +263,51 @@ export default function TrainingExecutionPage() {
         }));
     };
 
+    const handleAdjust = (exIndex, setIndex, field, delta, base) => {
+        const key = `${exIndex}-${setIndex}`;
+        setSessionData(prev => ({
+            ...prev,
+            [key]: { ...prev[key], [field]: adjustValue(prev[key]?.[field], delta, base) }
+        }));
+    };
+
+    const handleCopyLast = (exIndex, exName, setsCount) => {
+        const values = buildCopyFromLast(getLastSessionSets(rawHistoryDocs, exName), setsCount);
+        if (values.length === 0) {
+            toast.error('Sem histórico deste exercício.');
+            return;
+        }
+        setSessionData(prev => {
+            const next = { ...prev };
+            values.forEach((v, i) => {
+                const key = `${exIndex}-${i}`;
+                next[key] = { ...next[key], weight: v.weight, reps: v.reps };
+            });
+            return next;
+        });
+        toast.success('Valores da última sessão copiados.', { duration: 1500 });
+    };
+
+    const handleNote = (exIndex, value) => {
+        setSessionData(prev => ({ ...prev, [noteKey(exIndex)]: { note: String(value).slice(0, NOTE_MAX) } }));
+    };
+
     const handleOpenLoadHistory = (exerciseName) => {
         setSelectedHistoryExercise({ exerciseName, historyLogs: buildExerciseLoadLogs(rawHistoryDocs, exerciseName) });
+    };
+
+    // Recomeça o mesmo treino do zero, já considerando o check-in recém-salvo no histórico.
+    const handleRepeat = () => {
+        const docs = lastPayloadRef.current ? [lastPayloadRef.current, ...rawHistoryDocs] : rawHistoryDocs;
+        setRawHistoryDocs(docs);
+        setHistoryMap(buildLoadMap(docs));
+        setSessionData({});
+        setRestTimerObj(null);
+        setActiveExerciseIndex(0);
+        setElapsedTime(0);
+        startedAtRef.current = Date.now();
+        setCelebrationStats(null);
+        setShowCelebration(false);
     };
 
     // 3. Finalizar Treino
@@ -297,16 +348,16 @@ export default function TrainingExecutionPage() {
             // Limpa o rascunho de sessão
             activeWorkoutService.clearActiveSession(user.uid);
 
+            lastPayloadRef.current = checkInPayload;
+
             // Detector de Novos Recordes (PRs)
             const newPRs = detectNewPRs(training.exercises, sessionData, historyMap);
 
             try { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); } catch(e){}
 
-            const timeMinutes = Math.floor(elapsedTime / 60);
-            const timeSecs = elapsedTime % 60;
-
             setCelebrationStats({
-                timeStr: `${timeMinutes}m ${(timeSecs).toString().padStart(2, '0')}s`,
+                trainingName: training.name,
+                timeStr: formatDuration(elapsedTime),
                 volumeKg: totalVolume,
                 completedSetsCount: setsCompleted,
                 executedExercisesCount: executedExercises.length,
@@ -343,6 +394,9 @@ export default function TrainingExecutionPage() {
             isLastExercise={activeExerciseIndex >= lastExerciseIndex}
             onInput={handleInput}
             onCheckSet={handleCheckSet}
+            onAdjust={handleAdjust}
+            onCopyLast={handleCopyLast}
+            onNote={handleNote}
             onOpenLoadHistory={handleOpenLoadHistory}
             onZoom={setZoomedImage}
             onShowVideo={() => setShowVideo(true)}
@@ -437,6 +491,7 @@ export default function TrainingExecutionPage() {
                         setShowCelebration(false);
                         navigate('/home');
                     }}
+                    onRepeat={handleRepeat}
                 />
             )}
 

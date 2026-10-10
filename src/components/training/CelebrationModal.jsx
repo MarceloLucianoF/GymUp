@@ -1,8 +1,30 @@
 import React from 'react';
-import { Trophy } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Trophy, Share2, RotateCcw } from 'lucide-react';
+import { buildShareText } from '../../utils/training';
 
 // Tela de treino concluído (sem fechar por clique fora: o treino já foi salvo).
-const CelebrationModal = ({ stats, onFinish }) => {
+const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
+    const handleShare = async () => {
+        const text = buildShareText(stats);
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: 'Treino concluído', text });
+                return;
+            }
+            await navigator.clipboard.writeText(text);
+            toast.success('Resumo copiado!');
+        } catch (e) {
+            if (e?.name === 'AbortError') return;
+            try {
+                await navigator.clipboard.writeText(text);
+                toast.success('Resumo copiado!');
+            } catch (err) {
+                toast.error('Não foi possível compartilhar.');
+            }
+        }
+    };
+
     return (
         <div role="dialog" aria-modal="true" aria-label="Treino concluído" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
             <div className="bg-white dark:bg-[#1F2937] border border-brand/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden animate-scale-in">
@@ -45,6 +67,17 @@ const CelebrationModal = ({ stats, onFinish }) => {
                         <p className="text-[10px] font-bold text-gray-400 uppercase">Exercícios</p>
                         <p className="text-xl font-black text-white font-mono mt-0.5">{stats.executedExercisesCount}</p>
                     </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                    <button type="button" onClick={handleShare} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-brand text-sm font-black active:scale-95 transition-all">
+                        <Share2 className="w-4 h-4" aria-hidden="true" /> Compartilhar
+                    </button>
+                    {onRepeat && (
+                        <button type="button" onClick={onRepeat} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-brand text-sm font-black active:scale-95 transition-all">
+                            <RotateCcw className="w-4 h-4" aria-hidden="true" /> Treinar de novo
+                        </button>
+                    )}
                 </div>
 
                 <button 

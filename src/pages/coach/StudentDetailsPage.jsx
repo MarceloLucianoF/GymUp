@@ -18,6 +18,8 @@ import StatusBadge from '../../components/coach/StatusBadge';
 import Tabs from '../../components/coach/Tabs';
 import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
 import PageSkeleton from '../../components/coach/PageSkeleton';
+import AdherenceHeatmap from '../../components/coach/AdherenceHeatmap';
+import { adherenceGrid, adherencePct } from '../../utils/coachInsights';
 import { chatState, studentStatus, timeAgo, startOfDay, toDate, DAY_MS } from '../../components/coach/helpers';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
@@ -130,6 +132,7 @@ export default function StudentDetailsPage() {
     const volumeSeries = history.slice(0, 10).reverse().map((c) => ({
       label: String(toDate(c.date)?.getDate() ?? ''), hint: formatDate(c.date), value: c.totalVolume || 0
     }));
+    const grid = adherenceGrid(history, now);
     const weights = measurements.filter((m) => Number.isFinite(Number(m.weight)));
     const first = weights[0];
     const latest = weights[weights.length - 1];
@@ -139,6 +142,8 @@ export default function StudentDetailsPage() {
       lastWorkout,
       status: studentStatus(lastWorkout, now),
       frequency: weeklyFrequency(history),
+      grid,
+      adherence: adherencePct(grid, student?.weeklyGoal),
       volumeSeries,
       weightSeries: weights.map((m) => ({ label: formatDate(m.date, { day: '2-digit', month: '2-digit' }), value: Number(m.weight) })),
       firstWeight: first ? Number(first.weight) : null,
@@ -198,6 +203,14 @@ export default function StudentDetailsPage() {
                 <p className="truncate font-bold text-gray-900 dark:text-white">{student.currentTrainingId ? (currentTraining?.name || 'Ficha de outro autor') : 'Sem ficha ativa'}</p>
               </div>
               <button type="button" onClick={() => setAssigning(true)} className={btnGhost}>{student.currentTrainingId ? 'Trocar' : 'Atribuir'}</button>
+            </section>
+            <section className="surface flex flex-wrap items-center gap-5 p-5" aria-label="Aderência semanal">
+              <AdherenceHeatmap grid={derived.grid} />
+              <div>
+                <h2 className="font-display text-base font-black text-gray-900 dark:text-white">Aderência (4 semanas)</h2>
+                <p className="font-display text-3xl font-black text-brand">{derived.adherence}%</p>
+                <p className="text-xs text-gray-500">Meta de {student.weeklyGoal || 3} treinos por semana. Cada quadrado é um dia (o último é hoje).</p>
+              </div>
             </section>
             <div className="grid gap-5 lg:grid-cols-2">
               <Reveal>

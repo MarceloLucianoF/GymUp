@@ -1,5 +1,6 @@
 import {
   hydrateExercises, buildLoadMap, getLastReps, getSmartTip, summarizeSession, detectNewPRs, buildExerciseLoadLogs,
+  adjustValue, getLastSessionSets, getLastNote, buildCopyFromLast, isPRSet, normalizeRpe, buildShareText, formatDuration,
 } from './training';
 
 describe('hydrateExercises', () => {
@@ -88,5 +89,58 @@ describe('detectNewPRs', () => {
   });
   it('não conta como recorde sem histórico prévio', () => {
     expect(detectNewPRs(exercises, session, {})).toEqual([]);
+  });
+});
+
+describe('utilidades de execução', () => {
+  const hist = [
+    { exercises: [{ name: 'Supino', note: ' banco no 4 ', sets: [{ weight: 60, reps: 10 }, { weight: 70, reps: 8 }] }] },
+    { exercises: [{ name: 'Supino', sets: [{ weight: 50, reps: 12 }] }] },
+  ];
+
+  it('adjustValue soma, parte da base e não fica negativo', () => {
+    expect(adjustValue('60', 2.5)).toBe('62.5');
+    expect(adjustValue('', 2.5, 40)).toBe('42.5');
+    expect(adjustValue('1', -2.5)).toBe('');
+    expect(adjustValue('10,5', 1)).toBe('11.5');
+  });
+  it('lê a última sessão e a nota', () => {
+    expect(getLastSessionSets(hist, 'Supino')).toEqual([{ weight: 60, reps: 10 }, { weight: 70, reps: 8 }]);
+    expect(getLastSessionSets(hist, 'Remada')).toEqual([]);
+    expect(getLastNote(hist, 'Supino')).toBe('banco no 4');
+    expect(getLastNote([], 'X')).toBe('');
+  });
+  it('buildCopyFromLast repete a última série e ignora vazio', () => {
+    expect(buildCopyFromLast([{ weight: 60, reps: 10 }, { weight: 70, reps: 8 }], 3)).toEqual([
+      { weight: '60', reps: '10' }, { weight: '70', reps: '8' }, { weight: '70', reps: '8' },
+    ]);
+    expect(buildCopyFromLast([], 3)).toEqual([]);
+  });
+  it('isPRSet exige histórico prévio', () => {
+    expect(isPRSet('72', 70)).toBe(true);
+    expect(isPRSet('70', 70)).toBe(false);
+    expect(isPRSet('80', 0)).toBe(false);
+  });
+  it('normalizeRpe valida 1-10', () => {
+    expect(normalizeRpe(8)).toBe(8);
+    expect(normalizeRpe(0)).toBeNull();
+    expect(normalizeRpe(11)).toBeNull();
+    expect(normalizeRpe('x')).toBeNull();
+  });
+  it('summarizeSession inclui rpe e nota opcionais', () => {
+    const exs = [{ name: 'Supino', muscleGroup: 'Peito', sets: '2' }];
+    const sd = { '0-0': { completed: true, weight: '60', reps: '10', rpe: 8 }, '0-1': { completed: true, weight: '60', reps: '10' }, 'note-0': { note: 'banco no 4' } };
+    const { executedExercises } = summarizeSession(exs, sd);
+    expect(executedExercises[0].note).toBe('banco no 4');
+    expect(executedExercises[0].sets[0].rpe).toBe(8);
+    expect(executedExercises[0].sets[1].rpe).toBeUndefined();
+  });
+  it('formata texto de compartilhamento e duração', () => {
+    const t = buildShareText({ trainingName: 'Treino A', timeStr: '45m 00s', volumeKg: 5000.4, completedSetsCount: 12, newPRs: ['Supino'] });
+    expect(t).toContain('Treino A');
+    expect(t).toContain('5000 kg');
+    expect(t).toContain('Recordes: Supino');
+    expect(buildShareText({ timeStr: '1m', volumeKg: 0, completedSetsCount: 0 })).not.toContain('Recordes');
+    expect(formatDuration(125)).toBe('2m 05s');
   });
 });

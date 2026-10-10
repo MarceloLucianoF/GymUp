@@ -2,6 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+import toast from 'react-hot-toast';
+import { reloadOnceForChunkError } from './utils/chunkReload';
+
+// Promessas rejeitadas sem tratamento: registra, recarrega 1x se for chunk antigo, senão toast discreto.
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Promessa rejeitada sem tratamento:', event.reason);
+  if (reloadOnceForChunkError(event.reason)) return;
+  toast('Algo não saiu como esperado. Tente novamente.', { id: 'unhandled-rejection', duration: 3000 });
+});
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
