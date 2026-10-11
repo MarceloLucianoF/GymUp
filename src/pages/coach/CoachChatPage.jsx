@@ -85,7 +85,7 @@ export default function CoachChatPage() {
                       <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{student.name || 'Aluno'}</span>
                       <span className="shrink-0 text-[11px] text-gray-400">{chat.updatedAt ? timeAgo(chat.updatedAt) : ''}</span>
                     </span>
-                    <span className="block truncate text-xs text-gray-500">{chat.lastMessage || <i className="opacity-60">Nova conversa</i>}</span>
+                    <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{chat.lastMessage || <i className="opacity-60">Nova conversa</i>}</span>
                   </span>
                 </button>
               </li>
@@ -99,11 +99,11 @@ export default function CoachChatPage() {
         {activeChat ? (
           <>
             <header className="flex items-center gap-3 border-b border-gray-200 bg-white/80 px-3 py-2 backdrop-blur dark:border-white/10 dark:bg-white/[0.03]">
-              <button type="button" aria-label="Voltar às conversas" onClick={() => setActiveChat(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 md:hidden"><ArrowLeft className="h-5 w-5" /></button>
+              <button type="button" aria-label="Voltar às conversas" onClick={() => setActiveChat(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 md:hidden"><ArrowLeft className="h-5 w-5" /></button>
               <Avatar name={active.name || 'Aluno'} src={active.photo} />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate font-display font-black text-gray-900 dark:text-white">{active.name || 'Aluno'}</h2>
-                <p className="text-xs text-gray-500">Conversa com seu aluno</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Conversa com seu aluno</p>
               </div>
               {active.id && <button type="button" aria-label="Ver perfil do aluno" onClick={() => navigate(`/coach/students/${active.id}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"><Eye className="h-5 w-5" /></button>}
             </header>

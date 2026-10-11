@@ -34,7 +34,7 @@ export default function ActionQueue({ items, busyId, onMessage, onView, onMarkPa
                 <Avatar name={name} src={s.photoURL} size="sm" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{name}</p>
-                  <p className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
+                  <p className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500 dark:text-gray-400">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold ${cls}`}><Icon className="h-3 w-3" aria-hidden="true" />{label}</span>
                     <span>{item.detail}{item.type === 'overdue' && item.weight ? ` · ${brl(item.weight)}` : ''}</span>
                   </p>
@@ -56,7 +56,7 @@ export default function ActionQueue({ items, busyId, onMessage, onView, onMarkPa
           );
         })}
       </ul>
-      {items.length > shown.length && <p className="mt-3 flex items-center gap-1 text-xs text-gray-500"><ListChecks className="h-3.5 w-3.5" aria-hidden="true" />+{items.length - shown.length} itens na fila</p>}
+      {items.length > shown.length && <p className="mt-3 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><ListChecks className="h-3.5 w-3.5" aria-hidden="true" />+{items.length - shown.length} itens na fila</p>}
     </>
   );
 }

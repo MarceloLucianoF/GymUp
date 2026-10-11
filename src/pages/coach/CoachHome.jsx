@@ -123,7 +123,7 @@ export default function CoachHome() {
         <div className="grid gap-6 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
             <section className="surface h-full p-5">
-              <SectionTitle icon={Activity} action={<span className="text-xs font-bold text-gray-500">{weekTotal} treinos / 7 dias</span>}>Check-ins da semana</SectionTitle>
+              <SectionTitle icon={Activity} action={<span className="text-xs font-bold text-gray-500 dark:text-gray-400">{weekTotal} treinos / 7 dias</span>}>Check-ins da semana</SectionTitle>
               <BarChart data={weekly} ariaLabel="Check-ins por dia na última semana" />
             </section>
           </Reveal>
@@ -140,7 +140,7 @@ export default function CoachHome() {
                         <span className={`w-5 text-center font-display text-lg font-black ${i === 0 ? 'text-brand' : 'text-gray-400'}`}>{i + 1}</span>
                         <Avatar name={s.displayName} src={s.photoURL} size="sm" />
                         <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
-                        <span className="text-xs font-bold text-gray-500">{s.workouts30} treinos</span>
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{s.workouts30} treinos</span>
                       </button>
                     </li>
                   ))}
@@ -187,7 +187,7 @@ export default function CoachHome() {
                         <Avatar name={c.student?.displayName || c.userEmail} src={c.student?.photoURL} size="sm" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{c.student?.displayName || c.userEmail || 'Aluno'}</p>
-                          <p className="truncate text-xs text-gray-500">Finalizou <span className="font-semibold text-brand">{c.trainingName || 'treino'}</span></p>
+                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">Finalizou <span className="font-semibold text-brand">{c.trainingName || 'treino'}</span></p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs font-bold text-gray-900 dark:text-white">{c.totalVolume > 0 ? formatTonnage(c.totalVolume) : '-'}</p>
