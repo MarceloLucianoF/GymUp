@@ -33,9 +33,9 @@ export default function MonthCalendar({ history }) {
   return (
     <div className="surface p-4 sm:p-6 mb-6 animate-fade-up">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="font-bold text-gray-800 dark:text-white uppercase text-sm tracking-wider">
+        <h2 className="font-bold text-gray-800 dark:text-white uppercase text-sm tracking-wider">
            {formatDate(today, { month: 'long', year: 'numeric' })}
-        </h3>
+        </h2>
         <div className="flex gap-2 items-center text-[10px] text-gray-600 dark:text-gray-400">
             <span className="w-3 h-3 rounded-full bg-gray-100 dark:bg-gray-700"></span> Descanso
             <span className="w-3 h-3 rounded-full bg-brand"></span> Treino

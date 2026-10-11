@@ -174,7 +174,7 @@
   .reveal { opacity: 1; transform: none; }
 }
 
-:root { color-scheme: light; }
+:root { color-scheme: only light; }
 .dark { color-scheme: dark; }
 
 /* Contraste do texto em gradiente da marca no tema claro */
