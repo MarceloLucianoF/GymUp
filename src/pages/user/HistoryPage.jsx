@@ -6,7 +6,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
 import MonthCalendar from '../../components/dashboard/MonthCalendar';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Dumbbell, Flame, Search, Trash2, ArrowUpRight } from 'lucide-react';
+import { Clock, Dumbbell, Flame, Search, Trash2, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { SkeletonList } from '../../components/common/Skeleton';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
@@ -20,6 +20,8 @@ export default function HistoryPage() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [expanded, setExpanded] = useState(() => new Set());
+  const toggleExpanded = (id) => setExpanded((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const [reloadKey, setReloadKey] = useState(0);
   
   // Filtros Locais
@@ -258,12 +260,12 @@ export default function HistoryPage() {
                                     <Clock className="w-3 h-3 text-amber-800 dark:text-brand" /> {formatDuration(item.duration)}
                                 </span>
                                 {item.totalVolume > 0 && (
-                                    <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                    <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
                                         <Dumbbell className="w-3 h-3 text-purple-500" /> {item.totalVolume}kg
                                     </span>
                                 )}
                                 {item.totalSetsDone !== undefined && (
-                                    <span className="inline-flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                    <span className="inline-flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
                                         <Flame className="w-3 h-3 text-orange-500" /> {item.totalSetsDone} Sets
                                     </span>
                                 )}
@@ -285,8 +287,18 @@ export default function HistoryPage() {
 
                     {/* Lista Expansível de Exercícios */}
                     {item.exercises && item.exercises.length > 0 && (
-                        <div className="bg-gray-50/70 dark:bg-white/[0.03] p-3 sm:p-4">
-                            <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase mb-2">Detalhes</p>
+                        <button
+                            type="button"
+                            aria-expanded={expanded.has(item.firestoreId)}
+                            onClick={(e) => { e.stopPropagation(); toggleExpanded(item.firestoreId); }}
+                            className="flex min-h-[44px] w-full items-center justify-between bg-gray-50/70 px-4 text-xs font-bold uppercase tracking-wide text-gray-600 dark:bg-white/[0.03] dark:text-gray-400"
+                        >
+                            {expanded.has(item.firestoreId) ? 'Ocultar exercícios' : `Ver exercícios (${item.exercises.length})`}
+                            <ChevronDown className={`h-4 w-4 transition-transform ${expanded.has(item.firestoreId) ? 'rotate-180' : ''}`} aria-hidden="true" />
+                        </button>
+                    )}
+                    {item.exercises && item.exercises.length > 0 && expanded.has(item.firestoreId) && (
+                        <div className="bg-gray-50/70 p-3 pt-0 dark:bg-white/[0.03] sm:p-4 sm:pt-0">
                             <div className="space-y-2">
                                 {item.exercises.map((ex, i) => {
                                     const maxWeight = Math.max(...(ex.sets?.map(s => Number(s.weight) || 0) || [0]));

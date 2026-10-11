@@ -104,7 +104,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 labelAside={(
-                  <Link to="/forgot-password" className="text-xs font-bold text-brand hover:text-brand-dark transition-colors min-h-[44px] inline-flex items-center">
+                  <Link to="/forgot-password" className="text-xs font-bold text-amber-700 dark:text-brand hover:text-brand-dark transition-colors min-h-[44px] inline-flex items-center">
                     Esqueceu a senha?
                   </Link>
                 )}
@@ -129,7 +129,7 @@ export default function Login() {
           <div className="text-center pt-2">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Não tem uma conta?{' '}
-              <Link to="/register" className="font-bold text-brand hover:text-brand-dark transition-colors">
+              <Link to="/register" className="font-bold text-amber-700 dark:text-brand hover:text-brand-dark transition-colors">
                 Criar conta grátis
               </Link>
             </p>
