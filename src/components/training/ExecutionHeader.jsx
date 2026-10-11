@@ -18,7 +18,7 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    <span className="font-mono font-black text-sm text-amber-600 dark:text-brand">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
+                    <span className="font-mono font-black text-sm text-amber-700 dark:text-brand">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
                     <span>•</span>
                     <span className="font-bold">{completedSetsCount}/{totalSetsInTraining} séries</span>
                 </p>

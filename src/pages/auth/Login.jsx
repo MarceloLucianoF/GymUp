@@ -52,9 +52,9 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
         
         <div className="relative z-10 p-12 text-white max-w-lg">
-          <h1 className="text-5xl font-black mb-6 leading-tight tracking-tight">
+          <div className="text-5xl font-black mb-6 leading-tight tracking-tight">
             <BrandWordmark />
-          </h1>
+          </div>
           <p className="text-2xl font-light text-gray-200 mb-8 leading-relaxed">
             "A única repetição ruim é aquela que você não fez."
           </p>
@@ -71,8 +71,8 @@ export default function Login() {
         <div className="surface w-full max-w-md space-y-6 p-6 sm:p-8 animate-fade-up">
           
           <div className="text-center lg:text-left">
-            <h2 className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter"><BrandWordmark /></h2>
-            <h2 className="font-display text-3xl font-black text-gray-900 dark:text-white">Bem-vindo de volta!</h2>
+            <div className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter"><BrandWordmark /></div>
+            <h1 className="font-display text-3xl font-black text-gray-900 dark:text-white">Bem-vindo de volta!</h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Digite suas credenciais para acessar sua ficha.</p>
           </div>
 

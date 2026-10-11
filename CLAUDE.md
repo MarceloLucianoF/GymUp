@@ -12,6 +12,7 @@ Coordenação por frentes: ver [AGENTS.md](AGENTS.md) e `docs/agents/`. Diagnós
 | Build | `npm run build` |
 | Testes | `CI=true npm test -- --watchAll=false` |
 | Testes das functions | `(cd functions && node --test test/*.test.js)` |
+| Regras Firestore (emulador, requer Java) | `make test-rules` (antes: `npm ci` em `rules-test/`) |
 | Sintaxe das functions | `node --check functions/index.js` |
 
 Prefixe comandos verbosos com `rtk` (git, npm, lint, testes). Falhou? `rtk recall <id>` em vez de reexecutar.

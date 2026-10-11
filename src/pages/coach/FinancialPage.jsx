@@ -30,7 +30,7 @@ const FILTERS = [
 
 const PAY_META = {
   paid: { label: 'Pago', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
-  pending: { label: 'Pendente', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
+  pending: { label: 'Pendente', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
   overdue: { label: 'Atrasado', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' }
 };
 

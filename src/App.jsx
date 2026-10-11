@@ -169,7 +169,11 @@ const ProtectedRoute = ({ children, allowedRoles = VALID_ROLES }) => {
   return (
     <>
       <Navbar />
-      <main id="main-content" tabIndex={-1} className="outline-none">{children}</main>
+      <main id="main-content" tabIndex={-1} className="outline-none">
+        {/* Título da rota para leitores de tela; a Home já tem o próprio h1. */}
+        {pathname !== '/dashboard' && metaForPath(pathname)?.title && <h1 className="sr-only">{metaForPath(pathname).title}</h1>}
+        {children}
+      </main>
     </>
   );
 };

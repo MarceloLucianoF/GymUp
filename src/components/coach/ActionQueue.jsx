@@ -6,7 +6,7 @@ import { brl } from './helpers';
 
 const META = {
   overdue: { icon: AlertOctagon, cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400', label: 'Cobrança' },
-  inactive: { icon: Clock, cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', label: 'Parado' },
+  inactive: { icon: Clock, cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', label: 'Parado' },
   nofile: { icon: ClipboardList, cls: 'bg-sky-500/10 text-sky-600 dark:text-sky-400', label: 'Sem ficha' },
   record: { icon: Trophy, cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', label: 'Recorde' }
 };

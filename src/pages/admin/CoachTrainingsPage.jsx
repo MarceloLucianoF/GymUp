@@ -15,7 +15,7 @@ import { btnPrimary, inputCls, pageCls } from '../../components/coach/styles';
 
 const LEVEL_CLS = {
   Iniciante: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  Intermediário: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  Intermediário: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   Avançado: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
   Elite: 'bg-violet-500/15 text-violet-600 dark:text-violet-400'
 };

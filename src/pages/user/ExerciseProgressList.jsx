@@ -50,7 +50,7 @@ export default function ExerciseProgressList() {
     return [...list].sort(by[sort]);
   }, [items, term, group, sort]);
 
-  const chip = (active) => `pressable shrink-0 px-3.5 min-h-[36px] rounded-full text-xs font-bold border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${active ? 'bg-brand text-black border-brand' : 'surface text-gray-600 dark:text-gray-300'}`;
+  const chip = (active) => `pressable shrink-0 px-3.5 min-h-[44px] rounded-full text-xs font-bold border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${active ? 'bg-brand text-black border-brand' : 'surface text-gray-600 dark:text-gray-300'}`;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 pb-32">
@@ -86,7 +86,7 @@ export default function ExerciseProgressList() {
                           <p className="font-bold text-gray-900 dark:text-white truncate">{i.name}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{i.muscleGroup || 'Sem grupo'} · {i.sessions.length} treino{i.sessions.length > 1 ? 's' : ''}</p>
                           <div className="mt-1 flex items-center gap-2">
-                            <span className="text-sm font-black text-amber-600 dark:text-brand">{i.last.maxWeight > 0 ? `${i.last.maxWeight} kg` : `${i.last.totalReps} reps`}</span>
+                            <span className="text-sm font-black text-amber-700 dark:text-brand">{i.last.maxWeight > 0 ? `${i.last.maxWeight} kg` : `${i.last.totalReps} reps`}</span>
                             <TrendBadge trend={i.trend} />
                             {i.recent && <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded"><Trophy className="w-3 h-3" aria-hidden="true" />Recorde</span>}
                           </div>

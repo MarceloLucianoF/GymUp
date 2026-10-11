@@ -131,7 +131,7 @@ export default function Register() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
         
         <div className="relative z-10 p-12 text-white max-w-lg">
-          <h1 className="text-5xl font-black mb-6 leading-tight">Construa sua melhor versão.</h1>
+          <h2 className="text-5xl font-black mb-6 leading-tight">Construa sua melhor versão.</h2>
           <ul className="space-y-4 text-lg text-gray-200">
             <li className="flex items-center gap-3">
               <div className="bg-green-500/20 p-1 rounded-full text-green-450 flex items-center justify-center">
@@ -160,8 +160,8 @@ export default function Register() {
         <div className="surface w-full max-w-md space-y-6 p-6 sm:p-8 animate-fade-up">
           
           <div className="text-center lg:text-left">
-            <h2 className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter"><BrandWordmark /></h2>
-            <h2 className="font-display text-3xl font-black text-gray-900 dark:text-white">Crie sua conta</h2>
+            <div className="lg:hidden font-display text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter"><BrandWordmark /></div>
+            <h1 className="font-display text-3xl font-black text-gray-900 dark:text-white">Crie sua conta</h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Comece hoje mesmo.</p>
           </div>
 
