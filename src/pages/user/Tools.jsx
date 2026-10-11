@@ -77,7 +77,7 @@ const Plates = () => {
                         <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Por lado</p>
                         <p className="text-xl font-black text-brand">{res.perSide.length ? res.perSide.join(' + ') + ' kg' : 'Só a barra'}</p>
                         {res.remainder > 0 && (
-                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                                 Não fecha exato: faltam {res.remainder} kg por lado. Carga montada: {res.total} kg.
                             </p>
                         )}

@@ -181,3 +181,6 @@
 html:not(.dark) .text-gradient-brand {
   background-image: linear-gradient(135deg, #D97706 0%, #EA580C 100%);
 }
+
+/* Brilhos decorativos (aurora) passam da borda: não podem alargar a página no celular. */
+html, body { overflow-x: clip; }

@@ -4,7 +4,7 @@ import { Award, Lock } from 'lucide-react';
 // Selos de conquistas rápidas.
 export default function AchievementBadges({ achievements }) {
   return (
-    <section className="surface p-5" aria-label="Conquistas">
+    <section className="surface min-w-0 p-5" aria-label="Conquistas">
       <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Conquistas</h2>
       <ul className="no-scrollbar -mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
         {achievements.map((a) => (

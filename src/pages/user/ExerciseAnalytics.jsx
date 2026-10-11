@@ -114,7 +114,7 @@ export default function ExerciseAnalytics() {
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase flex items-center gap-1"><Lightbulb className="w-3 h-3" aria-hidden="true" />Próxima carga</p>
                   {suggestion ? (
                     <>
-                      <p className="text-xl font-black text-amber-600 dark:text-brand">{dec(suggestion.weight)} kg</p>
+                      <p className="text-xl font-black text-amber-700 dark:text-brand">{dec(suggestion.weight)} kg</p>
                       <p className="text-[11px] text-gray-600 dark:text-gray-300">{suggestion.reason}</p>
                     </>
                   ) : <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Sem carga registrada para sugerir.</p>}

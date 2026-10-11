@@ -270,8 +270,9 @@ export default function Profile() {
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
-                            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Meta Principal</label>
+                            <label htmlFor="goal" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Meta Principal</label>
                             <select 
+                                id="goal"
                                 name="goal"
                                 value={formData.goal} 
                                 onChange={handleChange}
@@ -403,7 +404,7 @@ export default function Profile() {
                                         theme === 'dark' ? 'translate-x-6' : 'translate-x-0'
                                     }`}
                                 >
-                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-brand" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
+                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-brand" /> : <Sun className="w-3.5 h-3.5 text-amber-700" />}
                                 </span>
                             </button>
                         </div>

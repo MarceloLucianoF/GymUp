@@ -7,7 +7,7 @@ export default function VolumeTrend({ history }) {
   const values = history.slice(0, 7).map((h) => Number(h.totalVolume) || 0).reverse();
   const last = values[values.length - 1] || 0;
   return (
-    <section className="surface p-5" aria-label="Volume dos últimos 7 treinos">
+    <section className="surface min-w-0 p-5" aria-label="Volume dos últimos 7 treinos">
       <div className="mb-2 flex items-end justify-between">
         <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Volume dos últimos 7 treinos</h2>
         {values.length > 0 && <span className="text-xs font-bold text-gray-700 dark:text-gray-200">Último: {formatTonnage(last, ' t')}</span>}
