@@ -190,3 +190,9 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 ## Atualização — notas do treinador na exclusão do aluno
 - `coachNotes`: o aluno pode apenas **apagar** notas cujo `studentId` é o dele (regra por dado do documento); continua sem poder ler ou listar o conteúdo. O app apaga `coachNotes/{coachId}_{uid}` para o treinador do perfil e para os das conversas; documento inexistente é negado por regra e ignorado.
 - Testado em produção (7 cenários) e com 4 testes unitários novos.
+
+## Atualização — acessibilidade, emulador de regras e build
+- **Auditoria axe-core (34 telas, claro/escuro, 390 px):** corrigidos zoom bloqueado no viewport, contraste do âmbar no tema claro (`amber-600` para `amber-700`), `h1` ausente (login, cadastro e título oculto nas rotas privadas), `select` sem rótulo (perfil) e overflow horizontal no painel (brilho `aurora` e cartões em grid). Chips de evolução com 44 px de alto.
+- **Regras no emulador:** `rules-test/` (16 testes: isolamento aluno/treinador, escalada de papel, check-ins, notas, chats, fichas, perfil público). Roda no CI (`setup-java` + `emulators:exec`) e em `make test-rules`.
+- **Build:** sem source maps em produção; `caniuse-lite` atualizado.
+- **Pendente (a11y):** alvos de toque pequenos em links de texto (Termos/Privacidade) e no alternador de tema (56x32).

@@ -27,6 +27,9 @@ deploy-hosting:
 deploy-functions:
 	firebase deploy --only functions
 
+test-rules:
+	firebase emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js"
+
 deploy-rules:
 	firebase deploy --only firestore:rules
 

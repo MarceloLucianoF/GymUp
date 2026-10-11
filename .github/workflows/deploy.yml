@@ -28,3 +28,10 @@ jobs:
         working-directory: functions
       - run: node --test test/*.test.js
         working-directory: worker
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+        working-directory: rules-test
+      - run: npx --yes firebase-tools@13.29.1 emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js"
