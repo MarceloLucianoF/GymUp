@@ -394,7 +394,7 @@ export default function Profile() {
                                 type="button"
                                 onClick={toggleTheme}
                                 role="switch" aria-checked={theme === 'dark'}
-                                className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                                className={`relative inline-flex h-8 w-14 before:absolute before:-inset-2 before:content-[''] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                                     theme === 'dark' ? 'bg-brand' : 'bg-gray-300'
                                 }`}
                                 title="Alternar entre modo escuro e claro"
