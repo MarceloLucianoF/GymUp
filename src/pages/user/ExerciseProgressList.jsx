@@ -64,9 +64,9 @@ export default function ExerciseProgressList() {
           ) : (
             <>
               <div className="relative mb-3">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 dark:text-gray-400" aria-hidden="true" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 w-4 h-4 text-gray-600 dark:text-gray-400" aria-hidden="true" />
                 <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Buscar exercício" aria-label="Buscar exercício"
-                  className="w-full min-h-[44px] pl-10 pr-3 rounded-2xl surface text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand" />
+                  className="w-full min-h-[44px] pl-11 pr-3 rounded-2xl surface text-base text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand" />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" role="group" aria-label="Filtrar por grupo muscular">
                 <button type="button" className={chip(!group)} aria-pressed={!group} onClick={() => setGroup('')}>Todos</button>

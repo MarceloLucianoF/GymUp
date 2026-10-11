@@ -1,3 +1,4 @@
+import ExerciseThumb from '../../components/ui/ExerciseThumb';
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, orderBy, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
@@ -136,7 +137,7 @@ export default function ExerciseLibrary() {
               <li key={ex.id} className="surface surface-hover animate-fade-up flex flex-col overflow-hidden" style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}>
                 <div className="flex items-center gap-3 p-3">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 dark:bg-white/5">
-                    {(ex.demoUrl || ex.machineImage) ? <img src={ex.demoUrl || ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-7 w-7 text-gray-600 dark:text-gray-400" aria-hidden="true" />}
+                    <ExerciseThumb src={ex.demoUrl || ex.machineImage} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>

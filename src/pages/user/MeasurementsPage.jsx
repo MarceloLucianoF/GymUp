@@ -305,7 +305,7 @@ export default function MeasurementsPage() {
             <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="btn-primary-gradient pressable min-h-[44px] px-4 text-xs"
+                className="btn-primary-gradient pressable min-h-[44px] px-4 text-sm"
             >
                 <Plus className="w-4 h-4" aria-hidden="true" /> Nova medida
             </button>

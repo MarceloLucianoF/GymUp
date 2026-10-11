@@ -182,9 +182,9 @@ export default function Register() {
 
             {/* CAMPO DE CÓDIGO DO TREINADOR */}
             <div className="pt-2">
-                <label htmlFor="register-coach-code" className="text-xs font-bold text-brand uppercase ml-1 flex justify-between cursor-pointer group">
+                <label htmlFor="register-coach-code" className="text-xs font-bold text-amber-700 dark:text-brand uppercase ml-1 flex justify-between cursor-pointer group">
                     <span>Código do Treinador (Opcional)</span>
-                    <span className="text-[10px] opacity-70 group-hover:opacity-100 transition-opacity">Peça ao seu coach</span>
+                    <span className="text-xs font-semibold normal-case">Peça ao seu coach</span>
                 </label>
                 <div className="relative mt-1">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 flex items-center justify-center">
@@ -258,7 +258,7 @@ export default function Register() {
           <div className="text-center pt-2">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Já tem conta?{' '}
-              <Link to="/login" className="font-bold text-brand hover:text-brand-dark transition-colors">
+              <Link to="/login" className="font-bold text-amber-700 dark:text-brand hover:text-brand-dark transition-colors">
                 Fazer Login
               </Link>
             </p>

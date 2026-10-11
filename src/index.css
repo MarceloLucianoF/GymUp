@@ -62,7 +62,7 @@
 
   /* Estilos de Botão Modernos (Squircle substancial, sem formato pílula fina) */
   .btn-primary-gradient {
-    @apply bg-gradient-to-r from-brand to-[#FF9800] text-black font-black rounded-2xl shadow-lg shadow-brand/20 hover:from-brand hover:to-brand-dark hover:shadow-[0_0_25px_rgba(255,193,7,0.35)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
+    @apply min-h-[44px] px-5 text-sm bg-gradient-to-r from-brand to-[#FF9800] text-black font-black rounded-2xl shadow-lg shadow-brand/20 hover:from-brand hover:to-brand-dark hover:shadow-[0_0_25px_rgba(255,193,7,0.35)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
   }
 
   .btn-secondary-dark {
