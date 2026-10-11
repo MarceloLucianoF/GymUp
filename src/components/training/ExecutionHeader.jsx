@@ -40,14 +40,14 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
                 <button
                     onClick={() => onChangeViewMode('list')}
                     aria-pressed={viewMode === 'list'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-600 dark:text-gray-400'}`}
+                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-800 dark:text-brand' : 'text-gray-600 dark:text-gray-400'}`}
                 >
                     <List className="w-3.5 h-3.5" /> Lista
                 </button>
                 <button
                     onClick={() => onChangeViewMode('focus')}
                     aria-pressed={viewMode === 'focus'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-600 dark:text-gray-400'}`}
+                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-800 dark:text-brand' : 'text-gray-600 dark:text-gray-400'}`}
                 >
                     <Search className="w-3.5 h-3.5" /> Foco
                 </button>

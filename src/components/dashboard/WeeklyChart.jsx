@@ -34,7 +34,7 @@ export default function WeeklyChart({ history }) {
   const maxVal = Math.max(...chartData.map(d => d.count), 1); // Escala máxima
 
   return (
-    <div className="surface p-5 h-full flex flex-col">
+    <div className="surface p-5 flex flex-col lg:h-full">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
             Frequência (7 dias)
@@ -45,7 +45,7 @@ export default function WeeklyChart({ history }) {
       </div>
 
       {/* Área do Gráfico */}
-      <div className="flex items-end justify-between flex-1 gap-2 sm:gap-3 min-h-[140px]" role="img" aria-label={`Treinos nos últimos 7 dias: ${chartData.reduce((a, d) => a + d.count, 0)}`}>
+      <div className="flex h-40 items-end justify-between gap-2 sm:gap-3 lg:h-auto lg:min-h-[160px] lg:flex-1" role="img" aria-label={`Treinos nos últimos 7 dias: ${chartData.reduce((a, d) => a + d.count, 0)}`}>
         {chartData.map((item, i) => {
           // Altura: Se tiver treino usa % real, se não usa 10% fixo pra mostrar a barra cinza
           const heightPct = item.count > 0 ? (item.count / maxVal) * 100 : 10; 

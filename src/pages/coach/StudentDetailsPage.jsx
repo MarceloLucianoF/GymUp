@@ -208,7 +208,7 @@ export default function StudentDetailsPage() {
               <AdherenceHeatmap grid={derived.grid} />
               <div>
                 <h2 className="font-display text-base font-black text-gray-900 dark:text-white">Aderência (4 semanas)</h2>
-                <p className="font-display text-3xl font-black text-brand">{derived.adherence}%</p>
+                <p className="font-display text-3xl font-black text-amber-700 dark:text-brand">{derived.adherence}%</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Meta de {student.weeklyGoal || 3} treinos por semana. Cada quadrado é um dia (o último é hoje).</p>
               </div>
             </section>

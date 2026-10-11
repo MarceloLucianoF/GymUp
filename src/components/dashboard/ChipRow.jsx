@@ -3,7 +3,7 @@ import React from 'react';
 // Chips de filtro com rolagem horizontal e snap. options: [{ value, label }]
 export default function ChipRow({ options, value, onChange, label = 'Filtros' }) {
   return (
-    <div role="group" aria-label={label} className="no-scrollbar scroll-snap-x -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+    <div role="group" aria-label={label} className="no-scrollbar scroll-snap-x -mx-4 flex scroll-px-4 gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0">
       {options.map((o) => {
         const active = o.value === value;
         return (

@@ -184,14 +184,16 @@ export default function CoachStudentsPage() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-display text-base font-black text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
                         <span className="block truncate text-xs text-gray-600 dark:text-gray-400">{s.lastWorkout ? `Treinou ${timeAgo(s.lastWorkout)}` : 'Ainda não treinou'}</span>
-                        <StatusBadge status={s.status} className="mt-1.5" />
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1">
-                        <AdherenceHeatmap grid={s.adherence.grid} size="sm" />
-                        <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">{s.adherence.pct}% aderência</span>
                       </span>
                       <ChevronRight className="h-5 w-5 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" />
                     </button>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <StatusBadge status={s.status} />
+                      <span className="flex items-center gap-2">
+                        <AdherenceHeatmap grid={s.adherence.grid} size="sm" />
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{s.adherence.pct}% aderência</span>
+                      </span>
                     </div>
                     <div className="mt-3 flex items-center gap-2 rounded-2xl bg-gray-100 p-2 dark:bg-white/5">
                       <ClipboardList className="ml-1 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />

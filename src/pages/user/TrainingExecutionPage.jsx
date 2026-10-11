@@ -461,9 +461,9 @@ export default function TrainingExecutionPage() {
             <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-xl border-t border-gray-200 dark:border-white/10 z-[60]" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                 <button 
                     onClick={finishWorkout}
-                    className={`mx-auto flex min-h-[48px] w-full max-w-2xl items-center justify-center gap-2 rounded-2xl font-black active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/40 ${viewMode === 'focus' ? 'border-2 border-emerald-500/60 text-emerald-700 dark:text-emerald-400 text-sm' : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white text-lg py-4 shadow-lg shadow-emerald-600/20'}`}
+                    className={`mx-auto flex min-h-[48px] w-full max-w-2xl items-center justify-center gap-2 rounded-2xl font-black active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/50 ${viewMode === 'focus' ? 'border-2 border-gray-300 text-gray-800 dark:border-white/15 dark:text-gray-100 text-sm' : 'bg-gradient-to-r from-brand to-[#FF9800] text-black text-lg py-4 shadow-lg shadow-brand/25'}`}
                 >
-                    <Award className="w-5 h-5 text-white" /> FINALIZAR TREINO
+                    <Award className="w-5 h-5" aria-hidden="true" /> FINALIZAR TREINO
                 </button>
             </div>
 

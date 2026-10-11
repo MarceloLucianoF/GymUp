@@ -183,13 +183,13 @@ export default function HistoryPage() {
         <div className="flex flex-col gap-3">
             <div className="flex-1 flex gap-2">
                 <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
+                    <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 pointer-events-none absolute left-4 top-1/2 -translate-y-1/2" aria-hidden="true" />
                     <input 
                         type="text" 
                         placeholder="Buscar treino ou exercício..." aria-label="Buscar treino ou exercício" 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full input-brand-dark !pl-10 pr-4 text-sm"
+                        className="w-full input-brand-dark !pl-11 pr-4 text-base"
                     />
                 </div>
             </div>
