@@ -51,7 +51,7 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
             </button>
         </div>
         {isPR && (
-            <div role="status" className="mt-2 ml-11 inline-flex items-center gap-1 rounded-full bg-brand/15 border border-brand/40 px-2.5 py-1 text-[11px] font-black text-brand">
+            <div role="status" className="mt-2 ml-11 inline-flex items-center gap-1 rounded-full bg-brand/15 border border-brand/40 px-2.5 py-1 text-[11px] font-black text-amber-800 dark:text-brand">
                 <Trophy className="w-3.5 h-3.5 fill-current" aria-hidden="true" /> RECORDE de carga!
             </div>
         )}

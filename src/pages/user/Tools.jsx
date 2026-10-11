@@ -41,7 +41,7 @@ const OneRm = () => {
                 <>
                     <Result>
                         <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">1RM estimado</p>
-                        <p className="text-3xl font-black text-brand">{(Math.round(base * 10) / 10).toString().replace('.', ',')} kg</p>
+                        <p className="text-3xl font-black text-amber-700 dark:text-brand">{(Math.round(base * 10) / 10).toString().replace('.', ',')} kg</p>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Epley {ep} kg | Brzycki {br || '-'} kg</p>
                     </Result>
                     <table className="w-full text-sm">
@@ -75,7 +75,7 @@ const Plates = () => {
                 <>
                     <Result>
                         <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Por lado</p>
-                        <p className="text-xl font-black text-brand">{res.perSide.length ? res.perSide.join(' + ') + ' kg' : 'Só a barra'}</p>
+                        <p className="text-xl font-black text-amber-700 dark:text-brand">{res.perSide.length ? res.perSide.join(' + ') + ' kg' : 'Só a barra'}</p>
                         {res.remainder > 0 && (
                             <p className="text-xs text-amber-800 dark:text-amber-400 mt-1">
                                 Não fecha exato: faltam {res.remainder} kg por lado. Carga montada: {res.total} kg.
@@ -111,7 +111,7 @@ const RunningTimer = ({ endTime, duration, onStop, onAdjust }) => {
     });
     return (
         <Result>
-            <p className="text-5xl font-black font-mono text-brand" aria-live="off">{formatClock(remaining)}</p>
+            <p className="text-5xl font-black font-mono text-amber-700 dark:text-brand" aria-live="off">{formatClock(remaining)}</p>
             <div className="mt-3 flex justify-center gap-3">
                 <button type="button" onClick={togglePause} className="min-h-[44px] px-5 rounded-xl border border-brand/40 text-brand font-black">{isPaused ? 'Retomar' : 'Pausar'}</button>
                 <button type="button" onClick={onStop} className="min-h-[44px] px-5 rounded-xl bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-200 font-black">Parar</button>
@@ -164,12 +164,12 @@ const Health = () => {
             <div className="grid grid-cols-2 gap-3">
                 <Result>
                     <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">IMC</p>
-                    <p className="text-2xl font-black text-brand">{bmi ? String(bmi).replace('.', ',') : '-'}</p>
+                    <p className="text-2xl font-black text-amber-700 dark:text-brand">{bmi ? String(bmi).replace('.', ',') : '-'}</p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">{bmiCategory(bmi)}</p>
                 </Result>
                 <Result>
                     <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Água/dia</p>
-                    <p className="text-2xl font-black text-brand">{water ? `${(water / 1000).toFixed(2).replace('.', ',')} L` : '-'}</p>
+                    <p className="text-2xl font-black text-amber-700 dark:text-brand">{water ? `${(water / 1000).toFixed(2).replace('.', ',')} L` : '-'}</p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">35 ml por kg</p>
                 </Result>
             </div>

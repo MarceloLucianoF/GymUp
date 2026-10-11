@@ -65,7 +65,7 @@ const ExecutionExerciseCard = ({
                     <h3 className={`${isFocusMode ? 'text-xl' : 'text-lg'} font-black text-gray-800 dark:text-white leading-tight truncate`}>{exName}</h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 uppercase font-bold">{ex.muscleGroup || 'Geral'}</p>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] bg-brand/10 text-brand border border-brand/20 px-2 py-0.5 rounded font-bold">Meta: {setsCount}x {repsRaw}</span>
+                        <span className="text-[10px] bg-brand/10 text-amber-800 dark:text-brand border border-brand/20 px-2 py-0.5 rounded font-bold">Meta: {setsCount}x {repsRaw}</span>
                         {lastLoad ? (
                             <button
                                 onClick={() => onOpenLoadHistory(exName)}
@@ -91,8 +91,8 @@ const ExecutionExerciseCard = ({
             {/* Dica Inteligente de Progresso de Cargas */}
             <div className="bg-brand/10 border-y border-brand/20 px-4 py-2.5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                    <Sparkles className="w-4 h-4 text-brand shrink-0 animate-pulse" />
-                    <span className="font-bold text-brand truncate">
+                    <Sparkles className="w-4 h-4 text-amber-800 dark:text-brand shrink-0 animate-pulse" />
+                    <span className="min-w-0 font-bold leading-snug text-amber-800 dark:text-brand">
                         {smartTip}
                     </span>
                 </div>
@@ -103,7 +103,7 @@ const ExecutionExerciseCard = ({
                 {hasLastSession && (
                     <button
                         type="button" onClick={() => onCopyLast(exIndex, exName, setsCount)}
-                        className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/10 px-3 text-xs font-black text-brand active:scale-95 transition-all"
+                        className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/10 px-3 text-xs font-black text-amber-800 dark:text-brand active:scale-95 transition-all"
                     >
                         <Copy className="w-4 h-4" aria-hidden="true" /> Copiar da última sessão
                     </button>

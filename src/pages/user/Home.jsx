@@ -280,7 +280,7 @@ export default function Home() {
           </Reveal>
 
           <Reveal delay={100}>
-            <div className="surface flex h-full flex-col p-5">
+            <div className="surface flex flex-col p-5 lg:h-full">
               <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Atividade recente</h2>
               {recent.length > 0 ? (
                 <ul className="flex-1 space-y-2">

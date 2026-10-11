@@ -32,7 +32,7 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                     <Trophy className="w-10 h-10 text-black fill-current animate-bounce" />
                 </div>
 
-                <span className="bg-brand/10 text-brand text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider border border-brand/20 inline-block mb-2">
+                <span className="bg-brand/10 text-amber-800 dark:text-brand text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider border border-brand/20 inline-block mb-2">
                     Sensacional!
                 </span>
 
@@ -41,7 +41,7 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
 
                 {stats.newPRs && stats.newPRs.length > 0 && (
                     <div className="mb-6 p-3.5 bg-brand/10 border border-brand/30 rounded-2xl text-left">
-                        <div className="flex items-center gap-1.5 text-xs font-black text-brand uppercase tracking-wider mb-1">
+                        <div className="flex items-center gap-1.5 text-xs font-black text-amber-800 dark:text-brand uppercase tracking-wider mb-1">
                             <Trophy className="w-4 h-4 fill-current" /> Novo Recorde Pessoal!
                         </div>
                         <p className="text-xs text-gray-300">
@@ -53,7 +53,7 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                 <div className="grid grid-cols-2 gap-3 mb-8">
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Tempo Total</p>
-                        <p className="text-xl font-black text-brand font-mono mt-0.5">{stats.timeStr}</p>
+                        <p className="text-xl font-black text-amber-800 dark:text-brand font-mono mt-0.5">{stats.timeStr}</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Volume Total</p>
@@ -70,11 +70,11 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                    <button type="button" onClick={handleShare} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-brand text-sm font-black active:scale-95 transition-all">
+                    <button type="button" onClick={handleShare} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-amber-800 dark:text-brand text-sm font-black active:scale-95 transition-all">
                         <Share2 className="w-4 h-4" aria-hidden="true" /> Compartilhar
                     </button>
                     {onRepeat && (
-                        <button type="button" onClick={onRepeat} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-brand text-sm font-black active:scale-95 transition-all">
+                        <button type="button" onClick={onRepeat} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-amber-800 dark:text-brand text-sm font-black active:scale-95 transition-all">
                             <RotateCcw className="w-4 h-4" aria-hidden="true" /> Treinar de novo
                         </button>
                     )}

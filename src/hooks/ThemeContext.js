@@ -22,6 +22,10 @@ export function ThemeProvider({ children }) {
       root.classList.remove('dark');
     }
     
+    // Declara o esquema ao navegador: evita o escurecimento forçado (amarelo vira marrom) no tema claro.
+    const meta = window.document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? 'dark' : 'only light');
+
     // Salva no localStorage
     localStorage.setItem('theme', theme);
   }, [theme]);

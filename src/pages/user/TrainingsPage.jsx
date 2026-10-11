@@ -274,14 +274,14 @@ export default function TrainingsPage() {
 
             {/* Busca + Filtros */}
             <div className="relative mb-3">
-                <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
+                <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 pointer-events-none absolute left-4 top-1/2 -translate-y-1/2" aria-hidden="true" />
                 <input
                     type="search"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Buscar ficha ou exercício..."
                     aria-label="Buscar ficha ou exercício"
-                    className="w-full input-brand-dark pl-10 pr-4 text-sm"
+                    className="w-full input-brand-dark !pl-11 pr-4 text-base"
                 />
             </div>
             <ChipRow
