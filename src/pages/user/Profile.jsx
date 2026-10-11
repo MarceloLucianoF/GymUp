@@ -174,11 +174,11 @@ export default function Profile() {
       if (h > 0 && w > 0) {
           const imc = w / (h * h);
           let label = "Normal";
-          let color = "text-green-500";
+          let color = "text-green-700 dark:text-green-400";
           
           if (imc < 18.5) { label = "Abaixo do peso"; color = "text-yellow-500"; }
           else if (imc >= 25 && imc < 30) { label = "Sobrepeso"; color = "text-orange-500"; }
-          else if (imc >= 30) { label = "Obesidade"; color = "text-red-500"; }
+          else if (imc >= 30) { label = "Obesidade"; color = "text-red-600 dark:text-red-400"; }
 
           return { value: imc.toFixed(1), label, color };
       }
@@ -216,11 +216,11 @@ export default function Profile() {
             <div className="aurora-bg h-32 bg-gradient-to-r from-brand to-[#FF9800] relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                     <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl relative group">
-                        <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-400">
+                        <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-600 dark:text-gray-400">
                             {formData.photoURL ? (
                                 <img src={formData.photoURL} alt="Foto de perfil" loading="lazy" className="w-full h-full object-cover" />
                             ) : (
-                                <span className="text-lg text-gray-500 dark:text-gray-400 flex items-center justify-center">
+                                <span className="text-lg text-gray-600 dark:text-gray-400 flex items-center justify-center">
                                   {formData.displayName?.charAt(0).toUpperCase() || <User className="w-10 h-10" />}
                                 </span>
                             )}
@@ -266,7 +266,7 @@ export default function Profile() {
                                 placeholder="(31) 99999-9999"
                                 className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white"
                             />
-                            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Opcional. Só o seu treinador vinculado consegue ver este número.</p>
+                            <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400">Opcional. Só o seu treinador vinculado consegue ver este número.</p>
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
@@ -290,7 +290,7 @@ export default function Profile() {
                     {coachData && (
                         <div className="bg-brand/10 border border-brand/20 rounded-2xl p-4 flex items-center justify-between">
                             <div>
-                                <p className="text-[10px] font-bold text-brand dark:text-brand uppercase mb-1">Seu Treinador</p>
+                                <p className="text-[10px] font-bold text-amber-700 dark:text-brand uppercase mb-1">Seu Treinador</p>
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-brand/20 dark:bg-brand/10 flex items-center justify-center text-brand dark:text-brand-dark font-bold text-sm">
                                         {coachData.displayName?.charAt(0)}
@@ -304,7 +304,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/chat')}
-                                className="pressable min-h-[44px] bg-white dark:bg-white/10 text-amber-700 dark:text-brand px-4 rounded-2xl shadow-sm font-bold text-xs border border-brand/25 flex items-center gap-1.5"
+                                className="pressable min-h-[44px] bg-white dark:bg-white/10 text-amber-800 dark:text-amber-400 dark:text-brand px-4 rounded-2xl shadow-sm font-bold text-xs border border-brand/25 flex items-center gap-1.5"
                             >
                                 <MessageSquare className="w-3.5 h-3.5" /> Chat
                             </button>
@@ -316,7 +316,7 @@ export default function Profile() {
                     {/* Medidas Físicas + IMC */}
                     <div>
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-white">Medidas</h3>
+                            <h2 className="text-lg font-bold text-gray-800 dark:text-white">Medidas</h2>
                             {imcData && (
                                 <div className="text-right">
                                     <span className="text-[10px] text-gray-600 dark:text-gray-300 uppercase font-bold block">IMC Estimado</span>
@@ -368,7 +368,7 @@ export default function Profile() {
                             <button 
                                 type="button"
                                 onClick={() => navigate('/measurements')}
-                                className="min-h-[44px] text-xs text-amber-700 dark:text-brand font-bold hover:underline"
+                                className="min-h-[44px] text-xs text-amber-800 dark:text-amber-400 dark:text-brand font-bold hover:underline"
                             >
                                 Ver histórico de evolução →
                             </button>
@@ -386,7 +386,7 @@ export default function Profile() {
                                 <p className="text-sm font-bold text-gray-800 dark:text-white">
                                     {theme === 'dark' ? 'Modo Escuro (Nativo)' : 'Modo Claro'}
                                 </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                                     {theme === 'dark' ? 'Identidade principal para uso no celular' : 'Visual claro alternativo'}
                                 </p>
                             </div>
@@ -404,7 +404,7 @@ export default function Profile() {
                                         theme === 'dark' ? 'translate-x-6' : 'translate-x-0'
                                     }`}
                                 >
-                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-brand" /> : <Sun className="w-3.5 h-3.5 text-amber-700" />}
+                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-brand" /> : <Sun className="w-3.5 h-3.5 text-amber-800 dark:text-amber-400" />}
                                 </span>
                             </button>
                         </div>
@@ -417,17 +417,17 @@ export default function Profile() {
                             className={`w-full min-h-[56px] font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
                                 isDirty 
                                 ? 'bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark text-black shadow-lg shadow-brand/20 hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]' 
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed shadow-none'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 cursor-not-allowed shadow-none'
                             }`}
                         >
                             {isDirty ? (
                                 <><Save className="w-5 h-5 text-black" /> Salvar Alterações</>
                             ) : (
-                                <><CheckCircle className="w-5 h-5 text-gray-400" /> Tudo atualizado</>
+                                <><CheckCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" /> Tudo atualizado</>
                             )}
                         </button>
                         
-                        <button type="button" onClick={handleLogout} className="w-full min-h-[52px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                        <button type="button" onClick={handleLogout} className="w-full min-h-[52px] bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
                             <LogOut className="w-4 h-4" /> Sair da Conta
                         </button>
                     </div>
@@ -479,9 +479,9 @@ export default function Profile() {
         )}
 
         {/* Rodapé Informativo */}
-        <div className="text-center mt-8 text-gray-500 dark:text-gray-400 text-xs">
+        <div className="text-center mt-8 text-gray-600 dark:text-gray-400 text-xs">
             <p>BohTreinar v2.0</p>
-            <p className="mt-1 font-mono opacity-50">UID: {user.uid.slice(0, 8)}...</p>
+            <p className="mt-1 font-mono text-gray-600 dark:text-gray-400">UID: {user.uid.slice(0, 8)}...</p>
             <p className="mt-1">{user.email}</p>
         </div>
 

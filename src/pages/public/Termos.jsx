@@ -31,7 +31,7 @@ export default function Termos() {
         <p>Você pode pedir a exclusão da conta a qualquer momento. Podemos suspender contas que violem estes Termos.</p>
       </Section>
       <Section title="9. Alterações e contato">
-        <p>Podemos atualizar estes Termos; mudanças relevantes serão avisadas no app. Contato: <a className="font-bold text-amber-700 underline dark:text-brand" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> (a confirmar). Foro: a definir.</p>
+        <p>Podemos atualizar estes Termos; mudanças relevantes serão avisadas no app. Contato: <a className="font-bold text-amber-800 dark:text-amber-400 underline dark:text-brand" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> (a confirmar). Foro: a definir.</p>
       </Section>
     </LegalLayout>
   );

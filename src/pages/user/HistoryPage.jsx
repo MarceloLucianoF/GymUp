@@ -132,7 +132,7 @@ export default function HistoryPage() {
             </button>
         </div>
       </div>
-    ), { duration: 4000, icon: <Trash2 className="w-5 h-5 text-red-500" /> });
+    ), { duration: 4000, icon: <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" /> });
   };
 
   const deleteItem = async (itemId) => {
@@ -183,7 +183,7 @@ export default function HistoryPage() {
         <div className="flex flex-col gap-3">
             <div className="flex-1 flex gap-2">
                 <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
+                    <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
                     <input 
                         type="text" 
                         placeholder="Buscar treino ou exercício..." aria-label="Buscar treino ou exercício" 
@@ -202,7 +202,7 @@ export default function HistoryPage() {
             />
 
             {/* Contador de Resultados */}
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">
+            <div className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider px-1">
                 {filteredHistory.length} {filteredHistory.length === 1 ? 'atividade encontrada' : 'atividades encontradas'}
             </div>
         </div>
@@ -210,9 +210,9 @@ export default function HistoryPage() {
         {/* Lista de Resultados */}
         {filteredHistory.length === 0 ? (
           <div className="text-center py-20 surface border-dashed flex flex-col items-center justify-center">
-            <Search className="w-12 h-12 text-gray-400 mb-4 opacity-50" />
-            <h3 className="text-lg font-bold text-gray-700 dark:text-white">Nada encontrado</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
+            <Search className="w-12 h-12 text-gray-600 dark:text-gray-400 mb-4 opacity-50" />
+            <h2 className="text-lg font-bold text-gray-700 dark:text-white">Nada encontrado</h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -220,7 +220,7 @@ export default function HistoryPage() {
             <section key={group.key} aria-label={group.label} className="space-y-4">
               <div className="flex items-baseline justify-between px-1">
                 <h2 className="font-display text-lg font-black first-letter:uppercase text-gray-900 dark:text-white">{group.label}</h2>
-                <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                <p className="text-xs font-bold text-gray-600 dark:text-gray-400">
                   {group.items.length} {group.items.length === 1 ? 'treino' : 'treinos'} • {formatTonnage(group.volume, ' t')}
                 </p>
               </div>
@@ -239,23 +239,23 @@ export default function HistoryPage() {
                         
                         {/* Data Box */}
                         <div className="flex flex-col items-center justify-center bg-brand/10 rounded-2xl min-w-[64px] h-[64px] sm:min-w-[70px] sm:h-[70px]">
-                            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">{dateObj.month}</span>
+                            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">{dateObj.month}</span>
                             <span className="text-2xl font-black text-gray-800 dark:text-white leading-none">{dateObj.day}</span>
                         </div>
 
                         {/* Infos Principais */}
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-white leading-tight truncate pr-6">
+                            <h2 className="text-lg font-bold text-gray-800 dark:text-white leading-tight truncate pr-6">
                                 {item.trainingName || 'Treino Sem Nome'}
-                            </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 first-letter:uppercase mb-3">
+                            </h2>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 first-letter:uppercase mb-3">
                                 {dateObj.full}
                             </p>
                             
                             {/* Badges */}
                             <div className="flex flex-wrap gap-2">
-                                <span className="inline-flex items-center gap-1 bg-brand/10 text-brand border border-brand/20 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                    <Clock className="w-3 h-3 text-brand" /> {formatDuration(item.duration)}
+                                <span className="inline-flex items-center gap-1 bg-brand/10 text-amber-800 dark:text-brand border border-brand/20 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                    <Clock className="w-3 h-3 text-amber-800 dark:text-brand" /> {formatDuration(item.duration)}
                                 </span>
                                 {item.totalVolume > 0 && (
                                     <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
@@ -276,7 +276,7 @@ export default function HistoryPage() {
                                 e.stopPropagation();
                                 handleDeleteRequest(item.firestoreId);
                             }}
-                            className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center text-gray-400 hover:text-red-500 rounded-xl md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center text-gray-600 dark:text-gray-400 hover:text-red-500 rounded-xl md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                             title="Apagar registro" aria-label="Apagar registro"
                         >
                             <Trash2 className="w-4 h-4" />
@@ -286,7 +286,7 @@ export default function HistoryPage() {
                     {/* Lista Expansível de Exercícios */}
                     {item.exercises && item.exercises.length > 0 && (
                         <div className="bg-gray-50/70 dark:bg-white/[0.03] p-3 sm:p-4">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Detalhes</p>
+                            <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase mb-2">Detalhes</p>
                             <div className="space-y-2">
                                 {item.exercises.map((ex, i) => {
                                     const maxWeight = Math.max(...(ex.sets?.map(s => Number(s.weight) || 0) || [0]));
@@ -308,7 +308,7 @@ export default function HistoryPage() {
                                             </div>
                                             
                                             <div className="text-right flex items-center gap-3 shrink-0">
-                                                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                                <span className="text-xs text-gray-600 dark:text-gray-400 font-mono">
                                                     {ex.sets?.length || 0} sets
                                                 </span>
                                                 {maxWeight > 0 && (

@@ -201,7 +201,7 @@ export default function TrainingsPage() {
                   <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border mb-1 ${getDifficultyColor(training.difficulty)}`}>
                       {training.difficulty || 'Geral'}
                   </span>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">
+                  <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">
                       {lastDoneText ? `Última: ${lastDoneText}` : 'Nunca realizado'}
                   </p>
               </div>
@@ -211,17 +211,17 @@ export default function TrainingsPage() {
               {training.name || 'Treino Sem Nome'}
           </h3>
           
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mb-4">
+          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mb-4">
               {training.day ? `${training.day} • ` : ''}{training.description || "Foco total no desenvolvimento muscular."}
           </p>
 
           <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
               <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-gray-900/60 px-2 py-1 rounded-lg">
-                      <ClipboardList className="w-3.5 h-3.5 text-gray-500" /> {training.exercises?.length || 0}
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-900/60 px-2 py-1 rounded-lg">
+                      <ClipboardList className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" /> {training.exercises?.length || 0}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-gray-900/60 px-2 py-1 rounded-lg">
-                      <Clock className="w-3.5 h-3.5 text-gray-500" /> ~{estimatedTime} min
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-900/60 px-2 py-1 rounded-lg">
+                      <Clock className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" /> ~{estimatedTime} min
                   </div>
               </div>
               
@@ -274,7 +274,7 @@ export default function TrainingsPage() {
 
             {/* Busca + Filtros */}
             <div className="relative mb-3">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
+                <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute left-3.5 top-4" aria-hidden="true" />
                 <input
                     type="search"
                     value={searchTerm}
@@ -355,9 +355,9 @@ export default function TrainingsPage() {
             {looseTrainings.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 px-1">
-                  <Layers className="w-5 h-5 text-gray-400" />
+                  <Layers className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   <h2 className="text-lg font-bold text-gray-600 dark:text-gray-300">Treinos Avulsos</h2>
-                  <span className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
                     {looseTrainings.length}
                   </span>
                 </div>

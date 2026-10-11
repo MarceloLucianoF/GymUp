@@ -22,7 +22,7 @@ export default function InstallPrompt() {
           </p>
         )}
       </div>
-      <button type="button" onClick={dismiss} aria-label="Dispensar por 14 dias" className="min-w-[44px] min-h-[44px] -mr-2 -mt-2 flex items-center justify-center text-gray-500">
+      <button type="button" onClick={dismiss} aria-label="Dispensar por 14 dias" className="min-w-[44px] min-h-[44px] -mr-2 -mt-2 flex items-center justify-center text-gray-600 dark:text-gray-400">
         <X className="w-4 h-4" />
       </button>
     </div>

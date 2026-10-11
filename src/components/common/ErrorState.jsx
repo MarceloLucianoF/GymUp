@@ -4,7 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 export default function ErrorState({ message = 'Não foi possível carregar os dados.', onRetry }) {
   return (
     <div role="alert" className="flex flex-col items-center justify-center text-center py-12 px-6">
-      <AlertTriangle className="w-12 h-12 mb-4 text-red-500" aria-hidden="true" />
+      <AlertTriangle className="w-12 h-12 mb-4 text-red-600 dark:text-red-400" aria-hidden="true" />
       <p className="font-bold text-gray-700 dark:text-gray-200">{message}</p>
       {onRetry && (
         <button

@@ -65,7 +65,7 @@ export default function CoachChatPage() {
             <button type="button" onClick={() => navigate('/coach/students')} className="pressable min-h-[44px] rounded-2xl bg-gray-100 px-3 text-xs font-bold text-gray-600 dark:bg-white/5 dark:text-gray-300">Alunos</button>
           </div>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600 dark:text-gray-400" aria-hidden="true" />
             <input type="search" aria-label="Buscar conversa" placeholder="Buscar aluno..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputCls} pl-11`} />
           </div>
         </div>
@@ -83,9 +83,9 @@ export default function CoachChatPage() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{student.name || 'Aluno'}</span>
-                      <span className="shrink-0 text-[11px] text-gray-400">{chat.updatedAt ? timeAgo(chat.updatedAt) : ''}</span>
+                      <span className="shrink-0 text-[11px] text-gray-600 dark:text-gray-400">{chat.updatedAt ? timeAgo(chat.updatedAt) : ''}</span>
                     </span>
-                    <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{chat.lastMessage || <i className="opacity-60">Nova conversa</i>}</span>
+                    <span className="block truncate text-xs text-gray-600 dark:text-gray-400">{chat.lastMessage || <i className="opacity-60">Nova conversa</i>}</span>
                   </span>
                 </button>
               </li>
@@ -99,11 +99,11 @@ export default function CoachChatPage() {
         {activeChat ? (
           <>
             <header className="flex items-center gap-3 border-b border-gray-200 bg-white/80 px-3 py-2 backdrop-blur dark:border-white/10 dark:bg-white/[0.03]">
-              <button type="button" aria-label="Voltar às conversas" onClick={() => setActiveChat(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 md:hidden"><ArrowLeft className="h-5 w-5" /></button>
+              <button type="button" aria-label="Voltar às conversas" onClick={() => setActiveChat(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 md:hidden"><ArrowLeft className="h-5 w-5" /></button>
               <Avatar name={active.name || 'Aluno'} src={active.photo} />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate font-display font-black text-gray-900 dark:text-white">{active.name || 'Aluno'}</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Conversa com seu aluno</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Conversa com seu aluno</p>
               </div>
               {active.id && <button type="button" aria-label="Ver perfil do aluno" onClick={() => navigate(`/coach/students/${active.id}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"><Eye className="h-5 w-5" /></button>}
             </header>
@@ -119,12 +119,12 @@ export default function CoachChatPage() {
                 return (
                   <React.Fragment key={msg.id}>
                     {day && day !== prevDay && (
-                      <p className="py-2 text-center text-[11px] font-bold uppercase tracking-wide text-gray-400">{toDate(msg.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</p>
+                      <p className="py-2 text-center text-[11px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">{toDate(msg.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</p>
                     )}
                     <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                       <div className={`animate-scale-in max-w-[82%] rounded-3xl px-4 py-2.5 text-sm shadow-sm md:max-w-[65%] ${isMe ? 'rounded-br-lg bg-brand text-black' : 'rounded-bl-lg border border-gray-200 bg-white text-gray-800 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100'}`}>
                         <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
-                        <p className={`mt-1 text-right text-[10px] ${isMe ? 'text-black/60' : 'text-gray-400'}`}>{formatTime(msg.createdAt)}</p>
+                        <p className={`mt-1 text-right text-[10px] ${isMe ? 'text-black/60' : 'text-gray-600 dark:text-gray-400'}`}>{formatTime(msg.createdAt)}</p>
                       </div>
                     </div>
                   </React.Fragment>

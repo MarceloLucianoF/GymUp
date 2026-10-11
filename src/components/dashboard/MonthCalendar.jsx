@@ -36,7 +36,7 @@ export default function MonthCalendar({ history }) {
         <h3 className="font-bold text-gray-800 dark:text-white uppercase text-sm tracking-wider">
            {formatDate(today, { month: 'long', year: 'numeric' })}
         </h3>
-        <div className="flex gap-2 items-center text-[10px] text-gray-500 dark:text-gray-400">
+        <div className="flex gap-2 items-center text-[10px] text-gray-600 dark:text-gray-400">
             <span className="w-3 h-3 rounded-full bg-gray-100 dark:bg-gray-700"></span> Descanso
             <span className="w-3 h-3 rounded-full bg-brand"></span> Treino
         </div>
@@ -45,7 +45,7 @@ export default function MonthCalendar({ history }) {
       <div className="grid grid-cols-7 gap-1 md:gap-2">
         {/* Cabeçalho Semana */}
         {weekDays.map((d, i) => (
-            <div key={i} className="text-center text-[10px] font-bold text-gray-400 py-1">
+            <div key={i} className="text-center text-[10px] font-bold text-gray-600 dark:text-gray-400 py-1">
                 {d}
             </div>
         ))}
@@ -65,9 +65,9 @@ export default function MonthCalendar({ history }) {
                         aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all
                         ${isTrained 
                             ? 'bg-gradient-to-br from-brand to-[#FF9800] text-black shadow-md shadow-brand/30 scale-105' 
-                            : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
                         }
-                        ${isToday && !isTrained ? 'border-2 border-brand text-brand' : ''}
+                        ${isToday && !isTrained ? 'border-2 border-brand text-amber-700 dark:text-brand' : ''}
                     `}
                 >
                     {isTrained ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Treinou" /> : dayNum}
@@ -76,7 +76,7 @@ export default function MonthCalendar({ history }) {
         })}
       </div>
       
-      <p className="text-center text-xs text-gray-400 mt-4">
+      <p className="text-center text-xs text-gray-600 dark:text-gray-400 mt-4">
           Você treinou <strong>{trainedDays.length} dias</strong> este mês!
       </p>
     </div>

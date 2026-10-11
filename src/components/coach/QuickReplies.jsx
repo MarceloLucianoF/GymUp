@@ -12,10 +12,10 @@ function EditorModal({ templates, onSave, onClose }) {
       <div className="surface flex max-h-[85vh] flex-col bg-white dark:bg-gray-900 animate-scale-in">
         <div className="flex items-center gap-3 border-b border-gray-100 p-4 dark:border-white/10">
           <h3 className="flex-1 font-display text-lg font-black text-gray-900 dark:text-white">Respostas rápidas</h3>
-          <button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+          <button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
         </div>
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Use <code>{'{nome}'}</code> para o primeiro nome do aluno. Os modelos ficam salvos só neste navegador.</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Use <code>{'{nome}'}</code> para o primeiro nome do aluno. Os modelos ficam salvos só neste navegador.</p>
           {draft.map((t, i) => (
             <div key={t.id} className="space-y-2 rounded-2xl border border-gray-200 p-3 dark:border-white/10">
               <div className="flex items-end gap-2">
@@ -23,7 +23,7 @@ function EditorModal({ templates, onSave, onClose }) {
                   <label htmlFor={`tpl-label-${i}`} className={labelCls}>Título</label>
                   <input id={`tpl-label-${i}`} value={t.label} maxLength={40} onChange={(e) => patch(i, 'label', e.target.value)} className={inputCls} />
                 </div>
-                <button type="button" aria-label={`Remover modelo ${t.label}`} onClick={() => setDraft((d) => d.filter((_, idx) => idx !== i))} className="inline-flex h-12 w-12 items-center justify-center rounded-2xl text-rose-500 hover:bg-rose-500/10"><Trash2 className="h-5 w-5" /></button>
+                <button type="button" aria-label={`Remover modelo ${t.label}`} onClick={() => setDraft((d) => d.filter((_, idx) => idx !== i))} className="inline-flex h-12 w-12 items-center justify-center rounded-2xl text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"><Trash2 className="h-5 w-5" /></button>
               </div>
               <label htmlFor={`tpl-text-${i}`} className={labelCls}>Mensagem</label>
               <textarea id={`tpl-text-${i}`} rows={3} value={t.text} maxLength={1000} onChange={(e) => patch(i, 'text', e.target.value)} className={`${inputCls} py-3`} />
@@ -61,7 +61,7 @@ export default function QuickReplies({ studentName, onPick }) {
             className="pressable min-h-[44px] shrink-0 rounded-full bg-gray-100 px-4 text-xs font-bold text-gray-700 hover:bg-brand/20 dark:bg-white/10 dark:text-gray-200">{t.label}</button>
         ))}
       </div>
-      <button type="button" aria-label="Editar respostas rápidas" onClick={() => setEditing(true)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><Settings2 className="h-5 w-5" /></button>
+      <button type="button" aria-label="Editar respostas rápidas" onClick={() => setEditing(true)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><Settings2 className="h-5 w-5" /></button>
       {editing && <EditorModal templates={templates} onSave={save} onClose={() => setEditing(false)} />}
     </div>
   );

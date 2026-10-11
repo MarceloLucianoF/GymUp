@@ -51,7 +51,7 @@ const LinkCoachModal = ({ isOpen, onClose, currentUserId, onSuccess }) => {
         <Modal onClose={onClose} label="Vincular treinador" className="w-full max-w-sm">
             <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
                 <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Vincular Treinador</h3>
-                <p className="text-sm text-gray-500 mb-4">Peça o "Código de Convite" (UID) para seu coach e digite abaixo.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Peça o "Código de Convite" (UID) para seu coach e digite abaixo.</p>
                 
                 <input 
                     value={code}
@@ -61,7 +61,7 @@ const LinkCoachModal = ({ isOpen, onClose, currentUserId, onSuccess }) => {
                 />
 
                 <div className="flex gap-2">
-                    <button onClick={onClose} className="flex-1 py-2 text-gray-500 font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancelar</button>
+                    <button onClick={onClose} className="flex-1 py-2 text-gray-600 dark:text-gray-400 font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancelar</button>
                     <button 
                         onClick={handleLink} 
                         disabled={loading}

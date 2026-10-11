@@ -295,7 +295,7 @@ export default function AdminPanel() {
         />
 
         <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600 dark:text-gray-400" aria-hidden="true" />
           <input type="search" aria-label="Buscar" placeholder={activeTab === 'exercises' ? 'Buscar exercício ou grupo' : 'Buscar ficha'} value={search} onChange={(e) => setSearch(e.target.value)} className={`${inputCls} pl-11`} />
         </div>
 
@@ -309,7 +309,7 @@ export default function AdminPanel() {
                   {editingId ? <Edit3 className="h-5 w-5 text-orange-500" /> : <PlusCircle className="h-5 w-5 text-emerald-500" />}
                   {editingId ? 'Editar exercício' : 'Novo exercício'}
                 </h2>
-                {editingId && <button type="button" onClick={resetExerciseForm} className="min-h-[44px] px-2 text-xs font-bold text-rose-500">Cancelar</button>}
+                {editingId && <button type="button" onClick={resetExerciseForm} className="min-h-[44px] px-2 text-xs font-bold text-rose-700 dark:text-rose-400">Cancelar</button>}
               </div>
               <form onSubmit={handleSaveExercise} className="space-y-4">
                 <div>
@@ -352,14 +352,14 @@ export default function AdminPanel() {
               ) : filteredExercises.map((ex, i) => (
                 <article key={ex.firestoreId} className={`surface animate-fade-up flex items-center gap-3 p-3 transition ${editingId === ex.firestoreId ? 'border-orange-400 ring-2 ring-orange-400/30' : ''}`} style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 dark:bg-white/5">
-                    {ex.machineImage ? <img src={ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-6 w-6 text-gray-400" aria-hidden="true" />}
+                    {ex.machineImage ? <img src={ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-6 w-6 text-gray-600 dark:text-gray-400" aria-hidden="true" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>
-                    <p className="text-xs uppercase text-gray-500 dark:text-gray-400">{ex.muscleGroup} · {ex.sets}x{ex.reps}</p>
+                    <p className="text-xs uppercase text-gray-600 dark:text-gray-400">{ex.muscleGroup} · {ex.sets}x{ex.reps}</p>
                   </div>
                   <button type="button" aria-label={`Editar ${ex.name}`} onClick={() => { handleEditExercise(ex); document.getElementById('admin-form')?.scrollIntoView({ behavior: 'smooth' }); }} className={iconBtn}><Edit3 className="h-4 w-4" /></button>
-                  <button type="button" aria-label={`Apagar ${ex.name}`} onClick={() => handleDeleteExercise(ex.firestoreId)} className={`${iconBtn} !text-rose-500`}><Trash2 className="h-4 w-4" /></button>
+                  <button type="button" aria-label={`Apagar ${ex.name}`} onClick={() => handleDeleteExercise(ex.firestoreId)} className={`${iconBtn} !text-rose-700 dark:text-rose-400`}><Trash2 className="h-4 w-4" /></button>
                 </article>
               ))}
             </section>
@@ -372,7 +372,7 @@ export default function AdminPanel() {
                   {editingId ? <Edit3 className="h-5 w-5 text-orange-500" /> : <Sparkles className="h-5 w-5 text-brand" />}
                   {editingId ? 'Editar ficha' : 'Nova ficha'}
                 </h2>
-                {editingId && <button type="button" onClick={resetTrainingForm} className="min-h-[44px] px-2 text-xs font-bold text-rose-500">Cancelar</button>}
+                {editingId && <button type="button" onClick={resetTrainingForm} className="min-h-[44px] px-2 text-xs font-bold text-rose-700 dark:text-rose-400">Cancelar</button>}
               </div>
               <form onSubmit={handleSaveTraining} className="space-y-4">
                 <div>
@@ -416,11 +416,11 @@ export default function AdminPanel() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="truncate font-display text-lg font-black text-gray-900 dark:text-white">{tr.name}</h3>
-                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-brand">{tr.difficulty || 'Ficha'}</span>
+                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-400 dark:text-brand">{tr.difficulty || 'Ficha'}</span>
                     </div>
                     <div className="flex gap-2">
                       <button type="button" aria-label={`Editar ${tr.name}`} onClick={() => { handleEditTraining(tr); document.getElementById('admin-form')?.scrollIntoView({ behavior: 'smooth' }); }} className={iconBtn}><Edit3 className="h-4 w-4" /></button>
-                      <button type="button" aria-label={`Apagar ${tr.name}`} onClick={() => handleDeleteTraining(tr.firestoreId)} className={`${iconBtn} !text-rose-500`}><Trash2 className="h-4 w-4" /></button>
+                      <button type="button" aria-label={`Apagar ${tr.name}`} onClick={() => handleDeleteTraining(tr.firestoreId)} className={`${iconBtn} !text-rose-700 dark:text-rose-400`}><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">

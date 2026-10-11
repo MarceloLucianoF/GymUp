@@ -9,7 +9,7 @@ export default function VolumeTrend({ history }) {
   return (
     <section className="surface min-w-0 p-5" aria-label="Volume dos últimos 7 treinos">
       <div className="mb-2 flex items-end justify-between">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Volume dos últimos 7 treinos</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Volume dos últimos 7 treinos</h2>
         {values.length > 0 && <span className="text-xs font-bold text-gray-700 dark:text-gray-200">Último: {formatTonnage(last, ' t')}</span>}
       </div>
       {values.length >= 2 ? (
@@ -18,7 +18,7 @@ export default function VolumeTrend({ history }) {
           <p className="sr-only">Volumes em kg: {values.join(', ')}</p>
         </>
       ) : (
-        <p className="py-4 text-sm text-gray-500 dark:text-gray-400">Complete ao menos 2 treinos para ver a evolução.</p>
+        <p className="py-4 text-sm text-gray-600 dark:text-gray-400">Complete ao menos 2 treinos para ver a evolução.</p>
       )}
     </section>
   );

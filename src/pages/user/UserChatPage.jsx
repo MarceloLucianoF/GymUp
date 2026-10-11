@@ -54,7 +54,7 @@ export default function UserChatPage() {
                   <Bot className="w-8 h-8" />
               </div>
               <h2 className="font-display text-xl font-black text-gray-800 dark:text-white mb-2">Treine com o Coach IA</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs mb-6">Você ainda não tem um treinador humano vinculado, mas pode conversar com nosso Coach IA sobre treinos, nutrição e metas!</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm max-w-xs mb-6">Você ainda não tem um treinador humano vinculado, mas pode conversar com nosso Coach IA sobre treinos, nutrição e metas!</p>
               <div className="flex flex-col gap-3 w-full max-w-xs">
                 <button onClick={() => setIsAIModalOpen(true)} className="btn-primary-gradient min-h-[48px] px-6 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2">
                     <Sparkles className="w-4 h-4 fill-current" /> Conversar com Coach IA
@@ -83,18 +83,18 @@ export default function UserChatPage() {
                 <button onClick={() => navigate('/home')} aria-label="Voltar" className="pressable text-gray-600 dark:text-gray-300 hover:text-brand w-11 h-11 -ml-2 flex items-center justify-center transition-colors rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
                     <ArrowLeft className="w-5 h-5" aria-hidden="true" />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-lg font-bold text-brand border border-brand/20">
+                <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-lg font-bold text-amber-700 dark:text-brand border border-brand/20">
                     {coach?.displayName?.[0] || 'C'}
                 </div>
                 <div>
-                    <h3 className="font-bold text-gray-800 dark:text-white">{coach?.displayName || 'Treinador'}</h3>
-                    <p className="text-xs font-semibold text-brand">Seu treinador</p>
+                    <h2 className="font-bold text-gray-800 dark:text-white">{coach?.displayName || 'Treinador'}</h2>
+                    <p className="text-xs font-semibold text-amber-700 dark:text-brand">Seu treinador</p>
                 </div>
             </div>
 
             <button
               onClick={() => setIsAIModalOpen(true)}
-              className="pressable min-h-[44px] bg-brand/10 hover:bg-brand/20 text-amber-700 dark:text-brand border border-brand/30 px-4 rounded-2xl text-xs font-black flex items-center gap-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="pressable min-h-[44px] bg-brand/10 hover:bg-brand/20 text-amber-800 dark:text-amber-400 dark:text-brand border border-brand/30 px-4 rounded-2xl text-xs font-black flex items-center gap-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current" /> Coach IA
             </button>

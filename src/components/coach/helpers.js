@@ -51,9 +51,9 @@ export const studentStatus = (lastWorkout, now = new Date()) => {
 };
 
 export const STATUS_META = {
-  active: { label: 'Ativo', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  risk: { label: 'Em risco', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-400', dot: 'bg-rose-500' },
-  new: { label: 'Sem treino', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' }
+  active: { label: 'Ativo', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  risk: { label: 'Em risco', cls: 'bg-rose-500/15 text-rose-700 dark:text-rose-400', dot: 'bg-rose-500' },
+  new: { label: 'Sem treino', cls: 'bg-amber-500/15 text-amber-800 dark:text-amber-400', dot: 'bg-amber-500' }
 };
 
 export const chatState = (student) => ({

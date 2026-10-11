@@ -60,7 +60,7 @@ export const parseBlocks = (source) => {
 const HEADING_CLASS = {
   1: 'mt-3 mb-1.5 font-display text-base font-black',
   2: 'mt-3 mb-1.5 font-display text-sm font-black',
-  3: 'mt-3 mb-1 font-display text-[13px] font-black text-amber-700 dark:text-brand',
+  3: 'mt-3 mb-1 font-display text-[13px] font-black text-amber-800 dark:text-amber-400 dark:text-brand',
   4: 'mt-2 mb-1 text-xs font-black uppercase tracking-wide'
 };
 
@@ -83,7 +83,7 @@ export default function Markdown({ text, className = '' }) {
             </List>
           );
         }
-        if (block.type === 'quote') return <blockquote key={key} className="border-l-2 border-brand pl-3 text-gray-500 dark:text-gray-400">{renderInline(block.text, key)}</blockquote>;
+        if (block.type === 'quote') return <blockquote key={key} className="border-l-2 border-brand pl-3 text-gray-600 dark:text-gray-400">{renderInline(block.text, key)}</blockquote>;
         return <p key={key}>{renderInline(block.text, key)}</p>;
       })}
     </div>

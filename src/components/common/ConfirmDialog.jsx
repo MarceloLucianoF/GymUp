@@ -16,7 +16,7 @@ export default function ConfirmDialog({
   return (
     <Modal onClose={onCancel} label={title} className="w-full max-w-sm">
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200 dark:border-gray-700 shadow-2xl">
-        <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">{title}</h3>
+        <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2">{title}</h2>
         {message && <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">{message}</p>}
         <div className="flex gap-3">
           <button

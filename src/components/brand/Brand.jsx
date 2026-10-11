@@ -16,6 +16,6 @@ export const BrandMark = ({ className = 'w-10 h-10' }) => (
 // "BOH" na cor do texto + "TREINAR" na cor da marca.
 export const BrandWordmark = ({ className = '' }) => (
   <span className={className}>
-    BOH<span className="text-amber-700 dark:text-brand">TREINAR</span>
+    BOH<span className="text-amber-800 dark:text-amber-400 dark:text-brand">TREINAR</span>
   </span>
 );

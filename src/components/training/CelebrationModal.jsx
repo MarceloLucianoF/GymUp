@@ -37,7 +37,7 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                 </span>
 
                 <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">TREINO CONCLUÍDO!</h2>
-                <p className="text-gray-400 text-xs mb-6">Excelente trabalho! Mais um passo em direção ao seu objetivo.</p>
+                <p className="text-gray-600 dark:text-gray-400 text-xs mb-6">Excelente trabalho! Mais um passo em direção ao seu objetivo.</p>
 
                 {stats.newPRs && stats.newPRs.length > 0 && (
                     <div className="mb-6 p-3.5 bg-brand/10 border border-brand/30 rounded-2xl text-left">
@@ -52,19 +52,19 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
 
                 <div className="grid grid-cols-2 gap-3 mb-8">
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Tempo Total</p>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Tempo Total</p>
                         <p className="text-xl font-black text-brand font-mono mt-0.5">{stats.timeStr}</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Volume Total</p>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Volume Total</p>
                         <p className="text-xl font-black text-white font-mono mt-0.5">{stats.volumeKg}kg</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Séries Concluídas</p>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Séries Concluídas</p>
                         <p className="text-xl font-black text-white font-mono mt-0.5">{stats.completedSetsCount}</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Exercícios</p>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Exercícios</p>
                         <p className="text-xl font-black text-white font-mono mt-0.5">{stats.executedExercisesCount}</p>
                     </div>
                 </div>

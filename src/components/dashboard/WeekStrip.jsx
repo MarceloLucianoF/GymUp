@@ -29,7 +29,7 @@ export default function WeekStrip({ days }) {
     <ul className="grid grid-cols-7 gap-1.5 sm:gap-3" aria-label="Treinos da semana">
       {days.map((d, i) => (
         <li key={d.full} className="flex flex-col items-center gap-1.5" style={{ animationDelay: `${i * 60}ms` }}>
-          <span className={`text-[11px] font-bold ${d.isToday ? 'text-brand' : 'text-gray-500 dark:text-gray-400'}`}>{d.label}</span>
+          <span className={`text-[11px] font-bold ${d.isToday ? 'text-amber-700 dark:text-brand' : 'text-gray-600 dark:text-gray-400'}`}>{d.label}</span>
           <span
             role="img"
             aria-label={`${d.full}${d.trained ? ': treinou' : d.isFuture ? '' : ': sem treino'}${d.isToday ? ' (hoje)' : ''}`}
@@ -37,8 +37,8 @@ export default function WeekStrip({ days }) {
               d.trained
                 ? 'bg-gradient-to-br from-brand to-[#FF9800] text-black shadow-md shadow-brand/30'
                 : d.isToday
-                  ? 'border-2 border-dashed border-brand text-brand'
-                  : 'bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500'
+                  ? 'border-2 border-dashed border-brand text-amber-700 dark:text-brand'
+                  : 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-500'
             }`}
             style={{ animationDelay: `${i * 60}ms` }}
           >

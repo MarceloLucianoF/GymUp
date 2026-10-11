@@ -16,17 +16,17 @@ export default function MuscleBalance({ checkIns, data, days = 30, title = 'Equi
     <section className={`surface p-4 ${className}`} aria-label={`${title}, últimos ${days} dias`}>
       <div className="flex items-baseline justify-between mb-3">
         <h3 className="font-bold text-gray-800 dark:text-white">{title}</h3>
-        <span className="text-xs text-gray-500 dark:text-gray-400">últimos {days} dias</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400">últimos {days} dias</span>
       </div>
       {rows.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">Sem treinos no período.</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Sem treinos no período.</p>
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
             <li key={r.group}>
               <div className="flex justify-between text-xs mb-1">
                 <span className="font-semibold text-gray-700 dark:text-gray-200">{r.group}</span>
-                <span className="text-gray-500 dark:text-gray-400">{formatTonnage(r.volume)} · {r.sessions}x</span>
+                <span className="text-gray-600 dark:text-gray-400">{formatTonnage(r.volume)} · {r.sessions}x</span>
               </div>
               <div className="h-2.5 rounded-full bg-gray-200 dark:bg-gray-700/60 overflow-hidden" role="presentation">
                 <div className="h-full rounded-full bg-gradient-to-r from-brand to-[#FF9800] transition-[width] duration-700 ease-out motion-reduce:transition-none"

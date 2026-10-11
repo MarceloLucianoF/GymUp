@@ -18,7 +18,7 @@ import EmptyState from '../../components/common/EmptyState';
 // 1. Gráfico de Peso (Custom SVG)
 const WeightChart = ({ data }) => {
   if (!data || data.length < 2) return (
-    <div className="surface h-48 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 border-dashed">
+    <div className="surface h-48 flex flex-col items-center justify-center text-gray-600 dark:text-gray-400 border-dashed">
         <TrendingDown className="w-8 h-8 mb-2 opacity-60" aria-hidden="true" />
         <p className="text-sm">Registre pelo menos 2 pesagens.</p>
     </div>
@@ -50,8 +50,8 @@ const WeightChart = ({ data }) => {
   return (
     <div className="surface w-full p-4 sm:p-5 overflow-hidden animate-fade-up">
       <div className="flex justify-between items-center mb-3">
-          <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Histórico de peso</h3>
-          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${diff <= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'}`}>
+          <h2 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Histórico de peso</h2>
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${diff <= 0 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-700 dark:text-rose-400'}`}>
             {diff > 0 ? '+' : ''}{diff.toFixed(1)} kg
           </span>
       </div>
@@ -79,7 +79,7 @@ const WeightChart = ({ data }) => {
             <circle cx={last[0]} cy={last[1]} r="9" fill="#FFC107" opacity="0.25" className="animate-pulse" />
         </svg>
       </div>
-      <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mt-2 font-mono uppercase">
+      <div className="flex justify-between text-[10px] text-gray-600 dark:text-gray-400 mt-2 font-mono uppercase">
          <span>{formatDate(data[0].date)}</span>
          <span>{formatDate(data[data.length-1].date)}</span>
       </div>
@@ -121,7 +121,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
     return (
         <Modal onClose={onClose} label="Registrar medidas" className="w-full max-w-sm">
             <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
-                <button aria-label="Fechar" onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <button aria-label="Fechar" onClick={onClose} className="absolute top-4 right-4 text-gray-600 dark:text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     <X className="w-4 h-4" />
                 </button>
                 
@@ -129,7 +129,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Peso Atual (kg)</label>
+                        <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Peso Atual (kg)</label>
                         <input 
                             autoFocus
                             type="number" 
@@ -142,15 +142,15 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Foto do Shape (Opcional)</label>
+                        <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Foto do Shape (Opcional)</label>
                         <div className="flex justify-center">
                             <label className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors relative overflow-hidden">
                                 {preview ? (
                                     <img src={preview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
                                 ) : (
                                     <>
-                                        <Camera className="w-6 h-6 text-gray-400 mb-1" />
-                                        <span className="text-xs text-gray-400">Clique para enviar</span>
+                                        <Camera className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-1" />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">Clique para enviar</span>
                                     </>
                                 )}
                                 <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
@@ -262,15 +262,15 @@ export default function MeasurementsPage() {
       // IMC
       let imc = null;
       let imcLabel = '';
-      let imcColor = 'text-gray-500';
+      let imcColor = 'text-gray-600 dark:text-gray-400';
       
       if (userHeight) {
           const h = userHeight / 100;
           imc = (current / (h * h)).toFixed(1);
           if (imc < 18.5) { imcLabel = 'Abaixo'; imcColor = 'text-yellow-500'; }
-          else if (imc < 25) { imcLabel = 'Normal'; imcColor = 'text-green-500'; }
+          else if (imc < 25) { imcLabel = 'Normal'; imcColor = 'text-green-700 dark:text-green-400'; }
           else if (imc < 30) { imcLabel = 'Sobrepeso'; imcColor = 'text-orange-500'; }
-          else { imcLabel = 'Obesidade'; imcColor = 'text-red-500'; }
+          else { imcLabel = 'Obesidade'; imcColor = 'text-red-600 dark:text-red-400'; }
       }
 
       return {
@@ -316,9 +316,9 @@ export default function MeasurementsPage() {
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-brand"><LineChart className="h-6 w-6" aria-hidden="true" /></span>
           <span className="min-w-0 flex-1">
             <span className="block font-display text-base font-black text-gray-900 dark:text-white">Evolução por exercício</span>
-            <span className="block text-xs text-gray-500 dark:text-gray-400">Carga, 1RM estimado, volume e recordes de cada exercício.</span>
+            <span className="block text-xs text-gray-600 dark:text-gray-400">Carga, 1RM estimado, volume e recordes de cada exercício.</span>
           </span>
-          <span aria-hidden="true" className="text-gray-400">›</span>
+          <span aria-hidden="true" className="text-gray-600 dark:text-gray-400">›</span>
         </Link>
 
         {measurements.length === 0 ? (
@@ -333,25 +333,25 @@ export default function MeasurementsPage() {
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="surface p-4 sm:p-5 animate-fade-up">
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Peso atual</p>
-                        <h3 className="font-display text-3xl font-black text-gray-900 dark:text-white mt-1">{stats.current}kg</h3>
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Peso atual</p>
+                        <p className="font-display text-3xl font-black text-gray-900 dark:text-white mt-1">{stats.current}kg</p>
                     </div>
                     <div className="surface p-4 sm:p-5 animate-fade-up" style={{ animationDelay: '70ms' }}>
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Variação total</p>
-                        <h3 className={`font-display text-3xl font-black mt-1 ${Number(stats.diff) <= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Variação total</p>
+                        <p className={`font-display text-3xl font-black mt-1 ${Number(stats.diff) <= 0 ? 'text-emerald-500' : 'text-rose-700 dark:text-rose-400'}`}>
                             {stats.diffSign}{stats.diff}kg
-                        </h3>
+                        </p>
                     </div>
                     <div className="surface p-4 sm:p-5 animate-fade-up" style={{ animationDelay: '140ms' }}>
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">IMC estimado</p>
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">IMC estimado</p>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <h3 className="font-display text-3xl font-black text-gray-900 dark:text-white">{stats.imc || '--'}</h3>
+                            <p className="font-display text-3xl font-black text-gray-900 dark:text-white">{stats.imc || '--'}</p>
                             <span className={`text-xs font-bold ${stats.imcColor}`}>{stats.imcLabel}</span>
                         </div>
                     </div>
                     <button type="button" className="surface surface-hover pressable p-4 sm:p-5 flex flex-col justify-center items-center min-h-[88px] animate-fade-up focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" style={{ animationDelay: '210ms' }} onClick={() => setShowModal(true)}>
                         <Plus className="w-6 h-6 mb-1 text-brand" aria-hidden="true" />
-                        <span className="text-xs font-bold text-amber-700 dark:text-brand">Adicionar</span>
+                        <span className="text-xs font-bold text-amber-800 dark:text-amber-400 dark:text-brand">Adicionar</span>
                     </button>
                 </div>
 
@@ -372,7 +372,7 @@ export default function MeasurementsPage() {
                                     </div>
                                     <div className="mt-2 text-center">
                                         <p className="text-sm font-bold text-gray-800 dark:text-white">{item.weight}kg</p>
-                                        <p className="text-[10px] text-gray-500 uppercase">{formatDate(item.date)}</p>
+                                        <p className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">{formatDate(item.date)}</p>
                                     </div>
                                 </div>
                             ))}
@@ -390,7 +390,7 @@ export default function MeasurementsPage() {
                             <div key={item.id} className="p-3 sm:p-4 flex justify-between items-center group animate-fade-up" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                                 <div>
                                     <p className="font-bold text-gray-800 dark:text-white">{item.weight}kg</p>
-                                    <p className="text-xs text-gray-400 capitalize">
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
                                         {formatDate(item.date, {weekday: 'short', day: 'numeric', month: 'long'})}
                                     </p>
                                 </div>
@@ -399,7 +399,7 @@ export default function MeasurementsPage() {
                                     {i < measurements.length - 1 && (
                                         <span className={`text-xs font-bold ${
                                             (item.weight - measurements[measurements.length - 1 - (i+1)].weight) <= 0 
-                                            ? 'text-green-500' : 'text-red-500'
+                                            ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                                         }`}>
                                             {(item.weight - measurements[measurements.length - 1 - (i+1)].weight).toFixed(1)}kg
                                         </span>
@@ -407,7 +407,7 @@ export default function MeasurementsPage() {
                                     <button 
                                         onClick={() => handleDelete(item.id)}
                                         aria-label="Apagar medida"
-                                        className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 hover:text-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                                        className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-600 dark:text-gray-400 hover:text-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                                     >
                                         <Trash2 className="w-4 h-4" aria-hidden="true" />
                                     </button>

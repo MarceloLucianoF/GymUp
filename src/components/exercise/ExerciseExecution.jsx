@@ -22,14 +22,14 @@ function ExerciseExecution({ exercise }) {
             loading="lazy"
             className="max-h-64 w-full rounded-2xl bg-white object-contain dark:bg-black/20"
           />
-          <figcaption className="mt-1.5 text-center text-xs text-gray-500 dark:text-gray-400">Máquina: {exercise.name}</figcaption>
+          <figcaption className="mt-1.5 text-center text-xs text-gray-600 dark:text-gray-400">Máquina: {exercise.name}</figcaption>
         </figure>
       )}
 
       {exercise.execution && <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{exercise.execution}</p>}
 
       <div>
-        <h5 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Dicas importantes</h5>
+        <h5 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Dicas importantes</h5>
         <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
           {TIPS.map((tip) => (
             <li key={tip} className="flex gap-2">

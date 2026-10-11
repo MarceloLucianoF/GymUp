@@ -24,7 +24,7 @@ const ActiveWorkoutBanner = ({ activeSession, onContinue, onDiscard }) => {
               </span>
               <span className="text-[10px] font-black uppercase tracking-wider text-orange-400">Treino em andamento</span>
             </div>
-            <h3 className="font-display text-xl font-black tracking-tight text-white sm:text-2xl">{activeSession.trainingName}</h3>
+            <h2 className="font-display text-xl font-black tracking-tight text-white sm:text-2xl">{activeSession.trainingName}</h2>
             <p className="mt-1 text-xs text-gray-300">
               <span className="font-bold text-white">{completedSetsCount}</span> séries concluídas • retome de onde parou
             </p>

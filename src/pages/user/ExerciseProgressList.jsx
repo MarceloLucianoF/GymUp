@@ -64,7 +64,7 @@ export default function ExerciseProgressList() {
           ) : (
             <>
               <div className="relative mb-3">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 dark:text-gray-400" aria-hidden="true" />
                 <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Buscar exercício" aria-label="Buscar exercício"
                   className="w-full min-h-[44px] pl-10 pr-3 rounded-2xl surface text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand" />
               </div>
@@ -84,14 +84,14 @@ export default function ExerciseProgressList() {
                         className="pressable surface w-full p-4 flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-gray-900 dark:text-white truncate">{i.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{i.muscleGroup || 'Sem grupo'} · {i.sessions.length} treino{i.sessions.length > 1 ? 's' : ''}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{i.muscleGroup || 'Sem grupo'} · {i.sessions.length} treino{i.sessions.length > 1 ? 's' : ''}</p>
                           <div className="mt-1 flex items-center gap-2">
-                            <span className="text-sm font-black text-amber-700 dark:text-brand">{i.last.maxWeight > 0 ? `${i.last.maxWeight} kg` : `${i.last.totalReps} reps`}</span>
+                            <span className="text-sm font-black text-amber-800 dark:text-amber-400 dark:text-brand">{i.last.maxWeight > 0 ? `${i.last.maxWeight} kg` : `${i.last.totalReps} reps`}</span>
                             <TrendBadge trend={i.trend} />
                             {i.recent && <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded"><Trophy className="w-3 h-3" aria-hidden="true" />Recorde</span>}
                           </div>
                         </div>
-                        {i.series.length >= 2 ? <Sparkline data={i.series} width={80} height={32} className="shrink-0" /> : <span className="text-xs text-gray-400 shrink-0" aria-hidden="true">-</span>}
+                        {i.series.length >= 2 ? <Sparkline data={i.series} width={80} height={32} className="shrink-0" /> : <span className="text-xs text-gray-600 dark:text-gray-400 shrink-0" aria-hidden="true">-</span>}
                       </button>
                     </li>
                   ))}
