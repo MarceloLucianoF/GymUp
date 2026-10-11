@@ -76,7 +76,7 @@ export default function Navbar() {
               <span className="font-display text-xl font-black text-gray-800 dark:text-white tracking-tighter leading-none">
                 <BrandWordmark />
               </span>
-              <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold tracking-[0.2em] mt-0.5">TREINE • EVOLUA</span>
+              <span className="text-[8px] text-gray-600 dark:text-gray-400 font-bold tracking-[0.2em] mt-0.5">TREINE • EVOLUA</span>
             </div>
           </Link>
 
@@ -93,7 +93,7 @@ export default function Navbar() {
                     className={`relative flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                       active
                         ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-brand shadow-sm'
-                        : 'text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${it.live ? 'text-orange-500 animate-pulse' : active ? 'text-brand' : ''}`} aria-hidden="true" />
@@ -106,7 +106,7 @@ export default function Navbar() {
                   to="/chat"
                   aria-current={isActive('/chat') ? 'page' : undefined}
                   className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                    isActive('/chat') ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-brand shadow-sm' : 'text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    isActive('/chat') ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-brand shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   <MessageSquare className="w-4 h-4" aria-hidden="true" /> Chat
@@ -125,7 +125,7 @@ export default function Navbar() {
               <Link to="/profile" className="flex items-center gap-3 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="Ver perfil">
                 <div className="text-right hidden lg:block">
                   <p className="text-sm font-bold text-gray-800 dark:text-white group-hover:text-brand transition-colors">{displayName}</p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Ver Perfil</p>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider">Ver Perfil</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-2 border-transparent group-hover:border-brand transition-all shadow-sm">
                   {avatarUrl ? (
@@ -200,12 +200,12 @@ export default function Navbar() {
                       <Avatar active={active} />
                     ) : (
                       <Icon
-                        className={`w-6 h-6 transition-colors ${it.live ? 'text-orange-500 fill-orange-500 animate-pulse' : active ? 'text-brand' : 'text-gray-500 dark:text-gray-400'}`}
+                        className={`w-6 h-6 transition-colors ${it.live ? 'text-orange-500 fill-orange-500 animate-pulse' : active ? 'text-brand' : 'text-gray-600 dark:text-gray-400'}`}
                         aria-hidden="true"
                       />
                     )}
                   </span>
-                  <span className={`text-[10px] font-bold tracking-wide transition-colors ${active ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>{it.label}</span>
+                  <span className={`text-[10px] font-bold tracking-wide transition-colors ${active ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>{it.label}</span>
                 </Link>
               );
             })}

@@ -52,7 +52,7 @@ export default function NotificationSettings({ uid }) {
         <div className="mt-2">
           <label htmlFor="reminder-time" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase block mb-1">Horário do lembrete</label>
           <input id="reminder-time" type="time" value={prefs.reminderTime} onChange={(e) => updatePrefs({ reminderTime: e.target.value })} className="min-h-[44px] bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 dark:text-white font-bold" />
-          <p className="text-[11px] text-gray-500 mt-1">O aviso aparece ao abrir o app depois desse horário, se não houver treino hoje. Sem servidor, não é possível avisar com o app fechado.</p>
+          <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1">O aviso aparece ao abrir o app depois desse horário, se não houver treino hoje. Sem servidor, não é possível avisar com o app fechado.</p>
         </div>
       )}
 

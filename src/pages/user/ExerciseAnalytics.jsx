@@ -59,7 +59,7 @@ export default function ExerciseAnalytics() {
             <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </button>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Evolução</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider">Evolução</p>
             <h1 className="font-display text-2xl font-black text-gray-900 dark:text-white leading-tight break-words">{cleanName}</h1>
           </div>
         </div>
@@ -76,9 +76,9 @@ export default function ExerciseAnalytics() {
                   {records.weight && <p className="text-[11px] font-semibold opacity-80">em {formatDate(records.weight.date, { day: '2-digit', month: 'short', year: 'numeric' })}</p>}
                 </div>
                 <div className="surface p-4 animate-scale-in" style={{ animationDelay: '80ms' }}>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">1RM estimado</p>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase">1RM estimado</p>
                   <p className="text-3xl font-black text-gray-800 dark:text-white">{records.e1rm ? `${dec(records.e1rm.value)} kg` : '-'}</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">{sessions.length} treino{sessions.length > 1 ? 's' : ''}</p>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-400">{sessions.length} treino{sessions.length > 1 ? 's' : ''}</p>
                 </div>
               </div>
 
@@ -92,32 +92,32 @@ export default function ExerciseAnalytics() {
                   {PERIODS.map((p) => <button key={p.id} type="button" aria-pressed={period === p.id} className={chip(period === p.id)} onClick={() => setPeriod(p.id)}>{p.label}</button>)}
                 </div>
                 {points.length === 0 ? (
-                  <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">Sem treinos com este dado no período.</p>
+                  <p className="py-12 text-center text-sm text-gray-600 dark:text-gray-400">Sem treinos com este dado no período.</p>
                 ) : (
                   <ExerciseChart key={`${tab}-${period}`} points={points} unit={tabCfg.unit} label={tabCfg.label} recordDates={recordDates} />
                 )}
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1"><Trophy className="w-3 h-3 text-brand" aria-hidden="true" />Círculos destacados marcam recordes.</p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-1"><Trophy className="w-3 h-3 text-brand" aria-hidden="true" />Círculos destacados marcam recordes.</p>
               </section>
 
               <div className="grid sm:grid-cols-3 gap-3">
                 <div className="surface p-4">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase flex items-center gap-1"><Target className="w-3 h-3" aria-hidden="true" />Melhor série</p>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase flex items-center gap-1"><Target className="w-3 h-3" aria-hidden="true" />Melhor série</p>
                   <p className="text-xl font-black text-gray-800 dark:text-white">{best?.bestSet ? `${dec(best.bestSet.weight)} kg x ${best.bestSet.reps}` : '-'}</p>
-                  {best && <p className="text-[11px] text-gray-500 dark:text-gray-400">{formatDate(best.date, { day: '2-digit', month: 'short' })}</p>}
+                  {best && <p className="text-[11px] text-gray-600 dark:text-gray-400">{formatDate(best.date, { day: '2-digit', month: 'short' })}</p>}
                 </div>
                 <div className="surface p-4">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase flex items-center gap-1"><TrendingUp className="w-3 h-3" aria-hidden="true" />Tendência mensal</p>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase flex items-center gap-1"><TrendingUp className="w-3 h-3" aria-hidden="true" />Tendência mensal</p>
                   <p className="text-xl font-black text-gray-800 dark:text-white"><TrendBadge trend={trend} showLabel /></p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">{trend.enough ? `Baseada nos últimos ${trend.points} treinos (1RM).` : 'Precisa de 3 treinos para calcular.'}</p>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-400">{trend.enough ? `Baseada nos últimos ${trend.points} treinos (1RM).` : 'Precisa de 3 treinos para calcular.'}</p>
                 </div>
                 <div className="surface p-4 border-brand/40">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase flex items-center gap-1"><Lightbulb className="w-3 h-3" aria-hidden="true" />Próxima carga</p>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase flex items-center gap-1"><Lightbulb className="w-3 h-3" aria-hidden="true" />Próxima carga</p>
                   {suggestion ? (
                     <>
-                      <p className="text-xl font-black text-amber-700 dark:text-brand">{dec(suggestion.weight)} kg</p>
+                      <p className="text-xl font-black text-amber-800 dark:text-amber-400 dark:text-brand">{dec(suggestion.weight)} kg</p>
                       <p className="text-[11px] text-gray-600 dark:text-gray-300">{suggestion.reason}</p>
                     </>
-                  ) : <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Sem carga registrada para sugerir.</p>}
+                  ) : <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Sem carga registrada para sugerir.</p>}
                 </div>
               </div>
 
@@ -127,7 +127,7 @@ export default function ExerciseAnalytics() {
                   <table className="w-full text-sm">
                     <caption className="sr-only">Histórico de {cleanName}: data, séries, melhor série e volume por sessão</caption>
                     <thead>
-                      <tr className="text-left text-[11px] uppercase text-gray-500 dark:text-gray-400">
+                      <tr className="text-left text-[11px] uppercase text-gray-600 dark:text-gray-400">
                         <th scope="col" className="p-3">Data</th><th scope="col" className="p-3">Séries</th>
                         <th scope="col" className="p-3">Melhor</th><th scope="col" className="p-3 text-right">Volume</th>
                       </tr>

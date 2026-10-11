@@ -29,9 +29,9 @@ const FILTERS = [
 ];
 
 const PAY_META = {
-  paid: { label: 'Pago', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
-  pending: { label: 'Pendente', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
-  overdue: { label: 'Atrasado', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' }
+  paid: { label: 'Pago', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+  pending: { label: 'Pendente', cls: 'bg-amber-500/15 text-amber-800 dark:text-amber-400' },
+  overdue: { label: 'Atrasado', cls: 'bg-rose-500/15 text-rose-700 dark:text-rose-400' }
 };
 
 const computeStats = (list) => {
@@ -186,9 +186,9 @@ export default function FinancialPage() {
           <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'pending')} className={`${small} bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300`}><Undo2 className="h-4 w-4" /> Desfazer</button>
         ) : (
           <>
-            <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'paid')} className={`${small} bg-emerald-500 text-white`}><Check className="h-4 w-4" /> Marcar pago</button>
-            <button type="button" onClick={() => remind(s)} aria-label={`Lembrar ${s.displayName || 'aluno'} por WhatsApp`} className={`${small} bg-emerald-500/10 text-emerald-600`}><MessageCircle className="h-4 w-4" /> Cobrar</button>
-            {s.paymentStatus === 'pending' && <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'overdue')} className={`${small} bg-rose-500/10 text-rose-600`}><TriangleAlert className="h-4 w-4" /> Atrasado</button>}
+            <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'paid')} className={`${small} bg-emerald-700 text-white`}><Check className="h-4 w-4" /> Marcar pago</button>
+            <button type="button" onClick={() => remind(s)} aria-label={`Lembrar ${s.displayName || 'aluno'} por WhatsApp`} className={`${small} bg-emerald-500/10 text-emerald-700 dark:text-emerald-400`}><MessageCircle className="h-4 w-4" /> Cobrar</button>
+            {s.paymentStatus === 'pending' && <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'overdue')} className={`${small} bg-rose-500/10 text-rose-700 dark:text-rose-400`}><TriangleAlert className="h-4 w-4" /> Atrasado</button>}
           </>
         )}
       </div>
@@ -205,8 +205,8 @@ export default function FinancialPage() {
             <div className="surface flex items-center gap-5 p-5">
               <ProgressRing value={stats.pct} size={96} stroke={9}><span className="font-display text-xl font-black text-gray-900 dark:text-white">{stats.pct}%</span></ProgressRing>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Recebido do previsto</p>
-                <p className="font-display text-xl font-black text-gray-900 dark:text-white">{brl(stats.received)} <span className="text-sm font-medium text-gray-400">de {brl(stats.total)}</span></p>
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Recebido do previsto</p>
+                <p className="font-display text-xl font-black text-gray-900 dark:text-white">{brl(stats.received)} <span className="text-sm font-medium text-gray-600 dark:text-gray-400">de {brl(stats.total)}</span></p>
               </div>
             </div>
           </Reveal>
@@ -220,7 +220,7 @@ export default function FinancialPage() {
         {overdue.length > 0 && (
           <Reveal>
             <section className="surface border-rose-500/40 bg-rose-500/5 p-5" aria-label="Inadimplentes">
-              <h2 className="mb-3 flex items-center gap-2 font-display text-base font-black text-rose-600 dark:text-rose-400">
+              <h2 className="mb-3 flex items-center gap-2 font-display text-base font-black text-rose-700 dark:text-rose-400">
                 <AlertOctagon className="h-5 w-5" aria-hidden="true" /> {overdue.length} inadimplente{overdue.length > 1 ? 's' : ''} · {brl(stats.overdueTotal)}
               </h2>
               <ul className="space-y-2">
@@ -228,7 +228,7 @@ export default function FinancialPage() {
                   <li key={s.id} className="flex flex-col gap-3 rounded-2xl bg-white/70 p-3 dark:bg-white/5 sm:flex-row sm:items-center">
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <Avatar name={s.displayName} src={s.photoURL} size="sm" />
-                      <div className="min-w-0"><p className="truncate font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p><p className="text-xs font-semibold text-rose-500">{brl(s.monthlyFee)} em atraso</p></div>
+                      <div className="min-w-0"><p className="truncate font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p><p className="text-xs font-semibold text-rose-700 dark:text-rose-400">{brl(s.monthlyFee)} em atraso</p></div>
                     </div>
                     {renderActions(s)}
                   </li>
@@ -243,7 +243,7 @@ export default function FinancialPage() {
             <div key={t.id} className="surface p-3 text-center">
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${PAY_META[t.id].cls}`}>{PAY_META[t.id].label}</span>
               <p className="mt-2 font-display text-lg font-black text-gray-900 dark:text-white">{brl(t.total)}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t.count} aluno{t.count === 1 ? '' : 's'}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t.count} aluno{t.count === 1 ? '' : 's'}</p>
             </div>
           ))}
         </section>
@@ -251,7 +251,7 @@ export default function FinancialPage() {
         <Reveal>
           <section className="surface p-5">
             <h2 className="mb-1 font-display text-base font-black text-gray-900 dark:text-white">Receita dos últimos 6 meses</h2>
-            <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Baseada na data do último pagamento de cada aluno marcado como pago (não há histórico mensal armazenado).</p>
+            <p className="mb-4 text-xs text-gray-600 dark:text-gray-400">Baseada na data do último pagamento de cada aluno marcado como pago (não há histórico mensal armazenado).</p>
             <BarChart data={revenue} formatValue={brl} ariaLabel="Receita por mês" />
           </section>
         </Reveal>
@@ -280,13 +280,13 @@ export default function FinancialPage() {
                     <Avatar name={s.displayName} src={s.photoURL} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{s.paymentStatus === 'paid' && s.paymentDate ? `Pago em ${toDate(s.paymentDate)?.toLocaleDateString('pt-BR')}` : s.email}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{s.paymentStatus === 'paid' && s.paymentDate ? `Pago em ${toDate(s.paymentDate)?.toLocaleDateString('pt-BR')}` : s.email}</p>
                     </div>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${(PAY_META[s.paymentStatus] || PAY_META.pending).cls}`}>{(PAY_META[s.paymentStatus] || PAY_META.pending).label}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <button type="button" onClick={() => setEditing({ student: s, value: String(s.monthlyFee) })} aria-label={`Editar mensalidade de ${s.displayName || 'aluno'}`} className={`${btnGhost} font-mono`}>
-                      {brl(s.monthlyFee)} <Pencil className="h-3.5 w-3.5 text-gray-400" />
+                      {brl(s.monthlyFee)} <Pencil className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
                     </button>
                     {renderActions(s)}
                   </div>
@@ -299,12 +299,12 @@ export default function FinancialPage() {
         <Reveal>
           <section className="surface p-5" aria-label="Histórico do mês">
             <h2 className="mb-1 flex items-center gap-2 font-display text-base font-black text-gray-900 dark:text-white"><History className="h-5 w-5 text-brand" aria-hidden="true" /> Histórico de {monthName}</h2>
-            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Última alteração de pagamento de cada aluno neste mês (o banco não guarda o histórico completo).</p>
-            {history.length === 0 ? <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma movimentação neste mês.</p> : (
+            <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">Última alteração de pagamento de cada aluno neste mês (o banco não guarda o histórico completo).</p>
+            {history.length === 0 ? <p className="text-sm text-gray-600 dark:text-gray-400">Nenhuma movimentação neste mês.</p> : (
               <ul className="divide-y divide-gray-100 dark:divide-white/10">
                 {history.map(({ s, date }) => (
                   <li key={s.id} className="flex items-center gap-3 py-2.5 text-sm">
-                    <span className="w-24 shrink-0 text-xs text-gray-500 dark:text-gray-400">{date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="w-24 shrink-0 text-xs text-gray-600 dark:text-gray-400">{date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                     <span className="min-w-0 flex-1 truncate font-semibold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${(PAY_META[s.paymentStatus] || PAY_META.pending).cls}`}>{(PAY_META[s.paymentStatus] || PAY_META.pending).label}</span>
                     <span className="w-20 shrink-0 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{brl(s.monthlyFee)}</span>

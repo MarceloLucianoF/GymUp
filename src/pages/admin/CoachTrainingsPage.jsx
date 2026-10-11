@@ -14,9 +14,9 @@ import { estimateWorkout, toDate, timeAgo } from '../../components/coach/helpers
 import { btnPrimary, inputCls, pageCls } from '../../components/coach/styles';
 
 const LEVEL_CLS = {
-  Iniciante: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  Intermediário: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  Avançado: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+  Iniciante: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  Intermediário: 'bg-amber-500/15 text-amber-800 dark:text-amber-400',
+  Avançado: 'bg-rose-500/15 text-rose-700 dark:text-rose-400',
   Elite: 'bg-violet-500/15 text-violet-600 dark:text-violet-400'
 };
 
@@ -98,13 +98,13 @@ export default function CoachTrainingsPage() {
     <div className={pageCls}>
       {dialog}
       <div className="mx-auto max-w-6xl space-y-5">
-        <button type="button" onClick={() => navigate('/coach/dashboard')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-brand"><ArrowLeft className="h-4 w-4" /> Painel</button>
+        <button type="button" onClick={() => navigate('/coach/dashboard')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-brand"><ArrowLeft className="h-4 w-4" /> Painel</button>
         <PageHeader eyebrow="Treinos" title="Minhas fichas" subtitle="Monte as fichas que seus alunos vão executar."
           actions={<button type="button" disabled={busy} onClick={() => create()} className={btnPrimary}><Plus className="h-4 w-4" /> Nova ficha</button>} />
 
         {trainings.length > 0 && (
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600 dark:text-gray-400" aria-hidden="true" />
             <input type="search" aria-label="Buscar ficha" placeholder="Buscar ficha..." value={search} onChange={(e) => setSearch(e.target.value)} className={`${inputCls} pl-11`} />
           </div>
         )}
@@ -124,24 +124,24 @@ export default function CoachTrainingsPage() {
                 <li key={t.firestoreId} className="surface surface-hover animate-fade-up flex flex-col overflow-hidden" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
                   <button type="button" onClick={() => navigate(`/admin/trainings/${t.firestoreId}`)} className="flex-1 p-5 text-left">
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${LEVEL_CLS[t.difficulty] || 'bg-gray-500/15 text-gray-500 dark:text-gray-400'}`}>{t.difficulty || 'Ficha'}</span>
-                      <span className="text-[11px] text-gray-400">{stamp(t) ? timeAgo(stamp(t)) : ''}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${LEVEL_CLS[t.difficulty] || 'bg-gray-500/15 text-gray-600 dark:text-gray-400'}`}>{t.difficulty || 'Ficha'}</span>
+                      <span className="text-[11px] text-gray-600 dark:text-gray-400">{stamp(t) ? timeAgo(stamp(t)) : ''}</span>
                     </div>
                     <h2 className="truncate font-display text-xl font-black text-gray-900 dark:text-white">{t.name}</h2>
-                    <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-gray-500 dark:text-gray-400">{t.description || 'Sem descrição.'}</p>
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-gray-600 dark:text-gray-400">{t.description || 'Sem descrição.'}</p>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-gray-600 dark:text-gray-400">
                       <span className="inline-flex items-center gap-1"><ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />{t.exercises?.length || 0} exerc.</span>
                       {est.sets > 0 && <span className="inline-flex items-center gap-1"><Layers className="h-3.5 w-3.5" aria-hidden="true" />{est.sets} séries</span>}
                       {est.minutes > 0 && <span className="inline-flex items-center gap-1"><Timer className="h-3.5 w-3.5" aria-hidden="true" />~{est.minutes} min</span>}
                     </div>
                     {groups.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">{groups.map((g) => <span key={g} className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">{g}</span>)}</div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">{groups.map((g) => <span key={g} className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:text-brand">{g}</span>)}</div>
                     )}
                   </button>
                   <div className="flex border-t border-gray-100 dark:border-white/10">
                     <button type="button" onClick={() => navigate(`/admin/trainings/${t.firestoreId}`)} aria-label={`Editar ${t.name}`} className="flex min-h-[48px] flex-1 items-center justify-center gap-1.5 text-xs font-bold text-gray-600 hover:bg-brand/10 dark:text-gray-300"><Pencil className="h-3.5 w-3.5" /> Editar</button>
                     <button type="button" disabled={busy} onClick={() => create(t)} aria-label={`Duplicar ${t.name}`} className="flex min-h-[48px] flex-1 items-center justify-center gap-1.5 border-l border-gray-100 text-xs font-bold text-gray-600 hover:bg-brand/10 disabled:opacity-50 dark:border-white/10 dark:text-gray-300"><Copy className="h-3.5 w-3.5" /> Duplicar</button>
-                    <button type="button" onClick={() => handleDelete(t)} aria-label={`Excluir ${t.name}`} className="flex min-h-[48px] flex-1 items-center justify-center gap-1.5 border-l border-gray-100 text-xs font-bold text-rose-500 hover:bg-rose-500/10 dark:border-white/10"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
+                    <button type="button" onClick={() => handleDelete(t)} aria-label={`Excluir ${t.name}`} className="flex min-h-[48px] flex-1 items-center justify-center gap-1.5 border-l border-gray-100 text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-500/10 dark:border-white/10"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
                   </div>
                 </li>
               );

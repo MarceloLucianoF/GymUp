@@ -136,7 +136,7 @@ const ProfileAccessError = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6 text-center dark:bg-gray-900">
       <div className="max-w-md rounded-2xl bg-white p-8 shadow-sm dark:bg-gray-800">
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Perfil indisponível</h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           Não foi possível identificar as permissões desta conta. Entre novamente ou procure o suporte.
         </p>
         <button

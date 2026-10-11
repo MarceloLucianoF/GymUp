@@ -30,7 +30,7 @@ export default function LineChart({ data = [], height = 160, unit = '', decimals
         <path d={line} fill="none" stroke="#FFC107" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
           style={{ '--len': 900, strokeDasharray: 900 }} className="animate-draw" />
       </svg>
-      <div className="mt-1 flex justify-between text-[11px] font-medium text-gray-400">
+      <div className="mt-1 flex justify-between text-[11px] font-medium text-gray-600 dark:text-gray-400">
         <span>{points[0].label} · <b className="text-gray-600 dark:text-gray-300">{fmt(values[0])}</b></span>
         <span>{points[points.length - 1].label} · <b className="text-gray-600 dark:text-gray-300">{fmt(values[values.length - 1])}</b></span>
       </div>

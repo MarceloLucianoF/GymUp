@@ -47,7 +47,7 @@ export default function ChatMessages({
             <MessageSquare className="h-7 w-7" aria-hidden="true" />
           </span>
           <p className="font-display font-black text-gray-800 dark:text-white">{emptyTitle}</p>
-          <p className="mt-1 max-w-xs text-sm text-gray-500 dark:text-gray-400">{emptyText}</p>
+          <p className="mt-1 max-w-xs text-sm text-gray-600 dark:text-gray-400">{emptyText}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -74,7 +74,7 @@ export default function ChatMessages({
                     </div>
                   );
                 })}
-                <span className="px-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                <span className="px-1 text-[11px] font-medium text-gray-600 dark:text-gray-400">
                   {formatTime(last.createdAt, 'enviando...')}
                 </span>
               </div>

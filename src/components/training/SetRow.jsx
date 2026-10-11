@@ -14,7 +14,7 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
     return (
         <div className={`p-3 sm:p-4 transition-colors duration-500 ${isDone ? 'bg-emerald-500/10' : ''}`}>
         <div className="flex items-center gap-3">
-            <span className="w-8 text-center text-sm font-bold text-gray-500 dark:text-gray-400">#{setIndex + 1}</span>
+            <span className="w-8 text-center text-sm font-bold text-gray-600 dark:text-gray-400">#{setIndex + 1}</span>
 
             <div className="flex-1 grid grid-cols-2 gap-3">
                 <div className="relative">
@@ -25,7 +25,7 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
                         onChange={(e) => onInput(setIndex, 'weight', e.target.value)}
                         className={inputClass(isFocusMode)}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 dark:text-gray-400 font-bold pointer-events-none">KG</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 dark:text-gray-400 font-bold pointer-events-none">KG</span>
                 </div>
                 <div className="relative">
                     <input
@@ -35,7 +35,7 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
                         onChange={(e) => onInput(setIndex, 'reps', e.target.value)}
                         className={inputClass(isFocusMode)}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 dark:text-gray-400 font-bold pointer-events-none">REPS</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 dark:text-gray-400 font-bold pointer-events-none">REPS</span>
                 </div>
             </div>
 
@@ -44,7 +44,7 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
                 aria-label={isDone ? `Desmarcar série ${setIndex + 1}` : `Concluir série ${setIndex + 1}`}
                 aria-pressed={!!isDone}
                 className={`${isFocusMode ? 'w-16 h-16' : 'w-14 h-14'} shrink-0 rounded-2xl flex items-center justify-center transition-all duration-300 active:scale-90 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                    isDone ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                    isDone ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-500/30' : 'bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400'
                 }`}
             >
                 {isDone ? <Check className="w-7 h-7 animate-scale-in" strokeWidth={3} aria-hidden="true" /> : <Circle className="w-6 h-6" aria-hidden="true" />}
@@ -69,7 +69,7 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
         )}
         {isDone && (
             <div className="mt-2 ml-11 flex items-center gap-1.5" role="group" aria-label={`Esforço (RPE) da série ${setIndex + 1}`}>
-                <span className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mr-1">RPE</span>
+                <span className="text-[10px] font-bold uppercase text-gray-600 dark:text-gray-400 mr-1">RPE</span>
                 {RPE_OPTIONS.map(v => (
                     <button
                         key={v} type="button" aria-pressed={data.rpe === v}

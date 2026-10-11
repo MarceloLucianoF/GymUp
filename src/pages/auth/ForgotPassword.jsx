@@ -68,7 +68,7 @@ export default function ForgotPassword() {
             error={error}
           />
 
-          <p role="status" aria-live="polite" className={sent ? 'text-sm font-medium text-emerald-600 dark:text-emerald-400' : 'sr-only'}>
+          <p role="status" aria-live="polite" className={sent ? 'text-sm font-medium text-emerald-700 dark:text-emerald-400' : 'sr-only'}>
             {sent ? 'Email de recuperação enviado. Verifique sua caixa de entrada.' : ''}
           </p>
 

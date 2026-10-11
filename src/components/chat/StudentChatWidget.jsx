@@ -66,18 +66,18 @@ export default function StudentChatWidget() {
                                 {coach.photoURL ? (
                                     <img src={coach.photoURL} alt="" className="h-full w-full object-cover" />
                                 ) : (
-                                    <span className="font-bold text-brand">{coach.displayName?.[0]}</span>
+                                    <span className="font-bold text-amber-700 dark:text-brand">{coach.displayName?.[0]}</span>
                                 )}
                             </div>
                             <div className="min-w-0">
-                                <h3 className="truncate text-sm font-bold text-gray-900 dark:text-white">{coach.displayName}</h3>
-                                <p className="text-xs font-semibold text-brand">Seu treinador</p>
+                                <h2 className="truncate text-sm font-bold text-gray-900 dark:text-white">{coach.displayName}</h2>
+                                <p className="text-xs font-semibold text-amber-700 dark:text-brand">Seu treinador</p>
                             </div>
                         </div>
                         <button
                             onClick={() => setIsOpen(false)}
                             aria-label="Fechar chat"
-                            className="pressable flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            className="pressable flex h-11 w-11 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                         >
                             <X className="h-5 w-5" aria-hidden="true" />
                         </button>

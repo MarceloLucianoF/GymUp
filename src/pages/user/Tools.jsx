@@ -9,7 +9,7 @@ import {
 } from '../../utils/tools';
 
 const fieldClass = 'w-full rounded-xl bg-gray-100 dark:bg-white/5 px-3 py-3 text-lg font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand min-h-[48px]';
-const labelClass = 'block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1';
+const labelClass = 'block text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-1';
 const cardClass = 'surface p-4 space-y-4';
 
 const Field = ({ label, value, onChange, placeholder, step }) => (
@@ -40,12 +40,12 @@ const OneRm = () => {
             {base > 0 ? (
                 <>
                     <Result>
-                        <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">1RM estimado</p>
+                        <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">1RM estimado</p>
                         <p className="text-3xl font-black text-brand">{(Math.round(base * 10) / 10).toString().replace('.', ',')} kg</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Epley {ep} kg | Brzycki {br || '-'} kg</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Epley {ep} kg | Brzycki {br || '-'} kg</p>
                     </Result>
                     <table className="w-full text-sm">
-                        <thead><tr className="text-left text-xs uppercase text-gray-500 dark:text-gray-400"><th className="py-1">% do 1RM</th><th className="py-1 text-right">Carga</th></tr></thead>
+                        <thead><tr className="text-left text-xs uppercase text-gray-600 dark:text-gray-400"><th className="py-1">% do 1RM</th><th className="py-1 text-right">Carga</th></tr></thead>
                         <tbody>
                             {table.map(r => (
                                 <tr key={r.pct} className="border-t border-gray-100 dark:border-white/10 text-gray-900 dark:text-white">
@@ -56,7 +56,7 @@ const OneRm = () => {
                         </tbody>
                     </table>
                 </>
-            ) : <p className="text-sm text-gray-500 dark:text-gray-400">Informe carga e repetições (use séries de até 36 repetições).</p>}
+            ) : <p className="text-sm text-gray-600 dark:text-gray-400">Informe carga e repetições (use séries de até 36 repetições).</p>}
         </div>
     );
 };
@@ -74,10 +74,10 @@ const Plates = () => {
             {res.valid ? (
                 <>
                     <Result>
-                        <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Por lado</p>
+                        <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Por lado</p>
                         <p className="text-xl font-black text-brand">{res.perSide.length ? res.perSide.join(' + ') + ' kg' : 'Só a barra'}</p>
                         {res.remainder > 0 && (
-                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                            <p className="text-xs text-amber-800 dark:text-amber-400 mt-1">
                                 Não fecha exato: faltam {res.remainder} kg por lado. Carga montada: {res.total} kg.
                             </p>
                         )}
@@ -85,11 +85,11 @@ const Plates = () => {
                     <PlatesVisual perSide={res.perSide} />
                 </>
             ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                     {res.reason === 'below-bar' ? `A carga é menor que a barra (${bar} kg).` : 'Informe a carga total.'}
                 </p>
             )}
-            <p className="text-xs text-gray-500 dark:text-gray-400">Anilhas: {PLATES.join(' / ')} kg.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">Anilhas: {PLATES.join(' / ')} kg.</p>
         </div>
     );
 };
@@ -116,7 +116,7 @@ const RunningTimer = ({ endTime, duration, onStop, onAdjust }) => {
                 <button type="button" onClick={togglePause} className="min-h-[44px] px-5 rounded-xl border border-brand/40 text-brand font-black">{isPaused ? 'Retomar' : 'Pausar'}</button>
                 <button type="button" onClick={onStop} className="min-h-[44px] px-5 rounded-xl bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-200 font-black">Parar</button>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">de {formatClock(duration)}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">de {formatClock(duration)}</p>
         </Result>
     );
 };
@@ -163,17 +163,17 @@ const Health = () => {
             </div>
             <div className="grid grid-cols-2 gap-3">
                 <Result>
-                    <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">IMC</p>
+                    <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">IMC</p>
                     <p className="text-2xl font-black text-brand">{bmi ? String(bmi).replace('.', ',') : '-'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{bmiCategory(bmi)}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{bmiCategory(bmi)}</p>
                 </Result>
                 <Result>
-                    <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Água/dia</p>
+                    <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Água/dia</p>
                     <p className="text-2xl font-black text-brand">{water ? `${(water / 1000).toFixed(2).replace('.', ',')} L` : '-'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">35 ml por kg</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">35 ml por kg</p>
                 </Result>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Estimativas gerais; não substituem orientação profissional.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">Estimativas gerais; não substituem orientação profissional.</p>
         </div>
     );
 };

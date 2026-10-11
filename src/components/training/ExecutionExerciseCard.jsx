@@ -57,13 +57,13 @@ const ExecutionExerciseCard = ({
                             })}
                         /> :
                         <div className="h-full flex items-center justify-center">
-                            <Dumbbell className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                            <Dumbbell className="w-6 h-6 text-gray-600 dark:text-gray-500" />
                         </div>
                     }
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <h3 className={`${isFocusMode ? 'text-xl' : 'text-lg'} font-black text-gray-800 dark:text-white leading-tight truncate`}>{exName}</h3>
-                    <p className="text-xs text-gray-500 mt-1 uppercase font-bold">{ex.muscleGroup || 'Geral'}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 uppercase font-bold">{ex.muscleGroup || 'Geral'}</p>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="text-[10px] bg-brand/10 text-brand border border-brand/20 px-2 py-0.5 rounded font-bold">Meta: {setsCount}x {repsRaw}</span>
                         {lastLoad ? (
@@ -75,7 +75,7 @@ const ExecutionExerciseCard = ({
                                 <History className="w-3 h-3" /> {lastLoad}kg
                             </button>
                         ) : null}
-                        <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                        <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
                             <Timer className="w-3 h-3" /> {restSeconds}s
                         </span>
                     </div>
@@ -83,7 +83,7 @@ const ExecutionExerciseCard = ({
                 {/* Botão de Dica/Vídeo no header */}
                 {isFocusMode && ex.videoUrl && (
                     <button onClick={onShowVideo} aria-label="Ver vídeo do exercício" className="absolute top-4 right-4 text-xl opacity-50 hover:opacity-100 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                        <Video className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        <Video className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                 )}
             </div>
@@ -109,7 +109,7 @@ const ExecutionExerciseCard = ({
                     </button>
                 )}
                 {lastNote && (
-                    <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                    <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-300">
                         <StickyNote className="w-4 h-4 shrink-0" aria-hidden="true" /> <span><b>Última nota:</b> {lastNote}</span>
                     </p>
                 )}

@@ -62,10 +62,10 @@ function AddExerciseModal({ library, onAdd, onClose, onGoLibrary }) {
         <div className="space-y-3 border-b border-gray-100 p-4 dark:border-white/10">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Adicionar exercício</h2>
-            <button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+            <button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
           </div>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600 dark:text-gray-400" aria-hidden="true" />
             <input type="search" autoFocus aria-label="Buscar exercício" placeholder="Buscar (ex: supino) e Enter para adicionar o primeiro" value={term} onChange={(e) => setTerm(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && list[0]) { e.preventDefault(); onAdd(list[0]); } }} className={`${inputCls} pl-11`} />
           </div>
@@ -86,9 +86,9 @@ function AddExerciseModal({ library, onAdd, onClose, onGoLibrary }) {
                 <li key={lib.id}>
                   <button type="button" onClick={() => onAdd(lib)} className="pressable flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-gray-200 p-2 text-left transition hover:border-brand dark:border-white/10">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 dark:bg-white/5">
-                      {(lib.machineImage || lib.demoUrl) ? <img src={lib.machineImage || lib.demoUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-5 w-5 text-gray-400" />}
+                      {(lib.machineImage || lib.demoUrl) ? <img src={lib.machineImage || lib.demoUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
                     </span>
-                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-gray-900 dark:text-white">{lib.name}</span><span className="text-xs text-gray-500 dark:text-gray-400">{cap(lib.muscleGroup)}</span></span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-gray-900 dark:text-white">{lib.name}</span><span className="text-xs text-gray-600 dark:text-gray-400">{cap(lib.muscleGroup)}</span></span>
                     <Plus className="h-5 w-5 text-brand" aria-hidden="true" />
                   </button>
                 </li>
@@ -242,7 +242,7 @@ export default function WorkoutEditor() {
       <header className="sticky top-0 z-30 -mx-4 mb-5 flex items-center gap-2 border-b border-gray-200/70 bg-gray-50/90 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/90 sm:-mx-6 sm:px-6 md:-mx-8 md:top-20 md:px-8">
         <button type="button" aria-label="Voltar às fichas" onClick={goBack} className={iconBtn}><ArrowLeft className="h-5 w-5" /></button>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 dark:text-brand">Editor de ficha</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-800 dark:text-amber-400 dark:text-brand">Editor de ficha</p>
           <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{training.name || 'Sem nome'}{dirty && <span className="ml-2 text-xs font-medium text-amber-500">● não salvo</span>}</p>
         </div>
         <button type="button" onClick={saveAll} disabled={saving || !dirty} className={btnPrimary}><Save className="h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar'}</button>
@@ -280,7 +280,7 @@ export default function WorkoutEditor() {
               <div key={label} className="rounded-2xl bg-gray-100 p-3 dark:bg-white/5">
                 <Icon className="mb-1 h-4 w-4 text-brand" aria-hidden="true" />
                 <p className="font-display text-2xl font-black text-gray-900 dark:text-white"><AnimatedNumber value={value} duration={600} /></p>
-                <p className="text-[11px] font-medium uppercase text-gray-500 dark:text-gray-400">{label}</p>
+                <p className="text-[11px] font-medium uppercase text-gray-600 dark:text-gray-400">{label}</p>
                 {hint && <p className="sr-only">Duração estimada: {hint}</p>}
               </div>
             ))}
@@ -291,13 +291,13 @@ export default function WorkoutEditor() {
                 <div key={g} className="flex items-center gap-3 text-xs">
                   <span className="w-20 shrink-0 truncate font-bold text-gray-600 dark:text-gray-300">{g}</span>
                   <span className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10"><span className="block h-full rounded-full bg-gradient-to-r from-brand to-orange-500 transition-all duration-700" style={{ width: `${Math.min(100, (count / (summary.sets || 1)) * 100)}%` }} /></span>
-                  <span className="w-12 shrink-0 text-right text-gray-500 dark:text-gray-400">{count} sér.</span>
+                  <span className="w-12 shrink-0 text-right text-gray-600 dark:text-gray-400">{count} sér.</span>
                 </div>
               ))}
             </div>
           )}
           <p className="mt-3 text-sm font-bold text-gray-700 dark:text-gray-200">Tempo estimado do treino: <span className="text-brand">{formatMinutes(summary.minutes)}</span></p>
-          <p className="mt-1 text-[11px] text-gray-400">Estimativa por séries x repetições e descanso; a carga real é registrada pelo aluno.</p>
+          <p className="mt-1 text-[11px] text-gray-600 dark:text-gray-400">Estimativa por séries x repetições e descanso; a carga real é registrada pelo aluno.</p>
         </section>
 
         <section aria-label="Exercícios da ficha" className="space-y-3">
@@ -315,7 +315,7 @@ export default function WorkoutEditor() {
               </select>
             </div>
             <button type="button" onClick={applyPresetToAll} disabled={!presetId || training.exercises.length === 0} className={btnGhost}>Aplicar a todos</button>
-            <p className="text-[11px] text-gray-400 sm:w-48">Novos exercícios já entram com a predefinição escolhida.</p>
+            <p className="text-[11px] text-gray-600 dark:text-gray-400 sm:w-48">Novos exercícios já entram com a predefinição escolhida.</p>
           </div>
           <p className="sr-only" role="status" aria-live="polite">{announce}</p>
 
@@ -334,17 +334,17 @@ export default function WorkoutEditor() {
                         onDragStart={(e) => { setDragIndex(i); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); }}
                         onDragEnd={() => setDragIndex(null)} onKeyDown={(e) => onHandleKey(e, i)}
                         aria-label={`Reordenar ${ex.name}, posição ${i + 1} de ${training.exercises.length}. Use as setas para cima e para baixo.`}
-                        className="inline-flex h-8 w-11 cursor-grab items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-white/10"><GripVertical className="h-4 w-4" aria-hidden="true" /><span className="text-xs font-black">{i + 1}</span></button>
+                        className="inline-flex h-8 w-11 cursor-grab items-center justify-center rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-white/10"><GripVertical className="h-4 w-4" aria-hidden="true" /><span className="text-xs font-black">{i + 1}</span></button>
                       <button type="button" onClick={() => move(i, 1)} disabled={i === training.exercises.length - 1} aria-label={`Descer ${ex.name}`} className={`${iconBtn} !h-11 !w-11`}><ChevronDown className="h-5 w-5" /></button>
                     </div>
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 dark:bg-white/5">
-                      {ex.machineImage ? <img src={ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-6 w-6 text-gray-400" aria-hidden="true" />}
+                      {ex.machineImage ? <img src={ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-6 w-6 text-gray-600 dark:text-gray-400" aria-hidden="true" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>
-                      <p className="text-xs uppercase text-gray-500 dark:text-gray-400">{cap(ex.muscleGroup)}</p>
+                      <p className="text-xs uppercase text-gray-600 dark:text-gray-400">{cap(ex.muscleGroup)}</p>
                     </div>
-                    <button type="button" onClick={() => removeExercise(i)} aria-label={`Remover ${ex.name}`} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-rose-500 hover:bg-rose-500/10"><Trash2 className="h-5 w-5" /></button>
+                    <button type="button" onClick={() => removeExercise(i)} aria-label={`Remover ${ex.name}`} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"><Trash2 className="h-5 w-5" /></button>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     <div>

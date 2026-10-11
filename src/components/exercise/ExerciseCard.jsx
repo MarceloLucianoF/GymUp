@@ -32,7 +32,7 @@ function ExerciseCard({ exercise, isCompleted, onCheckIn, exerciseNumber }) {
         </span>
         <div className="min-w-0">
           <h3 className="font-display text-lg font-black leading-tight text-gray-900 dark:text-white">{exercise.name}</h3>
-          <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{exercise.muscleGroup}</p>
+          <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">{exercise.muscleGroup}</p>
         </div>
       </header>
 

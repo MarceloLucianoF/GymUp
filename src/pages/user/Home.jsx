@@ -33,7 +33,7 @@ const getGreeting = () => {
 const BlockError = ({ label, onRetry }) => (
   <div role="alert" className="surface flex items-center justify-between gap-3 p-4 text-sm text-gray-600 dark:text-gray-300">
     <span>Não foi possível carregar {label}.</span>
-    <button type="button" onClick={onRetry} className="pressable min-h-[44px] rounded-xl px-3 text-xs font-bold text-amber-700 dark:text-brand">Tentar de novo</button>
+    <button type="button" onClick={onRetry} className="pressable min-h-[44px] rounded-xl px-3 text-xs font-bold text-amber-800 dark:text-amber-400 dark:text-brand">Tentar de novo</button>
   </div>
 );
 
@@ -96,12 +96,12 @@ export default function Home() {
                 )}
               </button>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{greeting},</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{greeting},</p>
                 <h1 className="truncate font-display text-2xl font-black text-gray-900 dark:text-white sm:text-3xl">
                   <span className="text-gradient-brand">{firstName}</span>
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-brand">{stats.level}</span>
+                  <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 dark:text-brand">{stats.level}</span>
                   {!loading && !userProfile?.coachId && (
                     <button
                       type="button"
@@ -127,11 +127,11 @@ export default function Home() {
               <div className="flex flex-col items-center rounded-2xl bg-orange-500/10 px-3 py-2" aria-label={`Sequência de ${stats.streak} dias`}>
                 <Flame className={`h-6 w-6 fill-orange-500 text-orange-500 ${stats.streak > 0 ? 'motion-safe:animate-float' : 'opacity-50'}`} aria-hidden="true" />
                 <p className="font-display text-lg font-black leading-none text-gray-900 dark:text-white"><AnimatedNumber value={stats.streak} /></p>
-                <p className="text-[9px] font-bold uppercase text-gray-500 dark:text-gray-400">dias</p>
+                <p className="text-[9px] font-bold uppercase text-gray-600 dark:text-gray-400">dias</p>
               </div>
             </div>
           </div>
-          {error?.profile && <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Perfil indisponível no momento.</p>}
+          {error?.profile && <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">Perfil indisponível no momento.</p>}
         </section>
 
         {/* TREINO DE HOJE */}
@@ -210,9 +210,9 @@ export default function Home() {
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Wrench className="h-6 w-6" aria-hidden="true" /></span>
             <span className="min-w-0 flex-1">
               <span className="block font-display text-base font-black text-gray-900 dark:text-white">Ferramentas</span>
-              <span className="block text-xs text-gray-500 dark:text-gray-400">Calculadora de 1RM e anilhas, kg/lb, timer, IMC e hidratação.</span>
+              <span className="block text-xs text-gray-600 dark:text-gray-400">Calculadora de 1RM e anilhas, kg/lb, timer, IMC e hidratação.</span>
             </span>
-            <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
           </Link>
         </Reveal>
 
@@ -222,21 +222,21 @@ export default function Home() {
           <div className="grid gap-3 md:grid-cols-2 md:gap-4">
             <div className="surface p-5">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"><Target className="h-4 w-4 text-brand" aria-hidden="true" /> Próximo nível</h2>
+                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400"><Target className="h-4 w-4 text-brand" aria-hidden="true" /> Próximo nível</h2>
                 <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{stats.totalTreinos}/{stats.nextLevelTreinos}</span>
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10" role="progressbar" aria-valuenow={Math.round(stats.progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso para o próximo nível">
                 <div className="h-full rounded-full bg-gradient-to-r from-brand to-[#FF9800] transition-all duration-1000" style={{ width: `${stats.progress}%` }} />
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Faltam {Math.max(0, stats.nextLevelTreinos - stats.totalTreinos)} treinos.</p>
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Faltam {Math.max(0, stats.nextLevelTreinos - stats.totalTreinos)} treinos.</p>
             </div>
             <button type="button" onClick={() => navigate('/measurements')} className="surface surface-hover pressable group flex min-h-[44px] items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
               <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Peso corporal</h2>
-                <p className="font-display text-3xl font-black text-gray-900 dark:text-white">{userProfile?.weight || '--'}<span className="ml-0.5 text-base text-gray-500">kg</span></p>
-                <p className="mt-1 text-xs font-bold text-amber-700 dark:text-brand">Atualizar medidas →</p>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Peso corporal</h2>
+                <p className="font-display text-3xl font-black text-gray-900 dark:text-white">{userProfile?.weight || '--'}<span className="ml-0.5 text-base text-gray-600 dark:text-gray-400">kg</span></p>
+                <p className="mt-1 text-xs font-bold text-amber-800 dark:text-amber-400 dark:text-brand">Atualizar medidas →</p>
               </div>
-              <Scale className="h-8 w-8 text-gray-400 transition-all group-hover:scale-110 group-hover:text-brand" aria-hidden="true" />
+              <Scale className="h-8 w-8 text-gray-600 dark:text-gray-400 transition-all group-hover:scale-110 group-hover:text-brand" aria-hidden="true" />
             </button>
           </div>
         </Reveal>
@@ -247,7 +247,7 @@ export default function Home() {
           <section aria-label="Treinos disponíveis">
             <div className="mb-3 flex items-end justify-between px-1">
               <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Treinos para você</h2>
-              <Link to="/trainings" className="flex min-h-[44px] items-center text-xs font-bold text-amber-700 dark:text-brand">Ver todos <ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>
+              <Link to="/trainings" className="flex min-h-[44px] items-center text-xs font-bold text-amber-800 dark:text-amber-400 dark:text-brand">Ver todos <ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>
             </div>
             <div className="no-scrollbar scroll-snap-x scroll-px-4 -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
               {carousel.map((t, i) => (
@@ -259,7 +259,7 @@ export default function Home() {
                 >
                   <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Dumbbell className="h-5 w-5" aria-hidden="true" /></span>
                   <h3 className="mt-3 line-clamp-1 font-display text-base font-black text-gray-900 dark:text-white">{t.name}</h3>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t.exercises?.length || 0} exercícios{t.difficulty ? ` • ${t.difficulty}` : ''}</p>
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">{t.exercises?.length || 0} exercícios{t.difficulty ? ` • ${t.difficulty}` : ''}</p>
                 </Link>
               ))}
             </div>
@@ -274,14 +274,14 @@ export default function Home() {
           <Reveal className="lg:col-span-2">
             <div className="mb-3 flex items-center justify-between px-1">
               <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Frequência semanal</h2>
-              <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Mantenha o foco!</span>
+              <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Mantenha o foco!</span>
             </div>
             <WeeklyChart history={history} />
           </Reveal>
 
           <Reveal delay={100}>
             <div className="surface flex h-full flex-col p-5">
-              <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Atividade recente</h2>
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Atividade recente</h2>
               {recent.length > 0 ? (
                 <ul className="flex-1 space-y-2">
                   {recent.map((h, i) => (
@@ -293,11 +293,11 @@ export default function Home() {
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/15"><Trophy className="h-5 w-5 text-brand" aria-hidden="true" /></span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-bold text-gray-900 dark:text-white">{h.trainingName}</span>
-                          <span className="block text-xs capitalize text-gray-500 dark:text-gray-400">
+                          <span className="block text-xs capitalize text-gray-600 dark:text-gray-400">
                             {formatDate(h.date, { weekday: 'short', day: 'numeric', month: 'short' })} • {Math.floor((h.duration || 0) / 60)} min • {formatVolume(h.totalVolume || 0)}
                           </span>
                         </span>
-                        <ChevronRight className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" aria-hidden="true" />
                       </Link>
                     </li>
                   ))}
@@ -327,7 +327,7 @@ export default function Home() {
               <div className="text-center sm:text-left">
                 <span className="rounded-full bg-brand px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-black">Modo Coach</span>
                 <h2 className="mt-2 font-display text-xl font-black text-gray-900 dark:text-white">Painel do Treinador</h2>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Gerencie seus alunos e prescreva treinos.</p>
+                <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">Gerencie seus alunos e prescreva treinos.</p>
               </div>
               <button type="button" onClick={() => navigate('/coach/dashboard')} className="btn-primary-gradient min-h-[48px] w-full px-6 text-sm sm:w-auto">
                 <Wrench className="h-4 w-4" aria-hidden="true" /> Acessar painel

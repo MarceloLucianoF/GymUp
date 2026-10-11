@@ -11,7 +11,7 @@ export default function WeeklyGoalCard({ days, count, goal, onGoalChange }) {
     <section className="surface p-5" aria-label="Meta semanal">
       <div className="flex items-center gap-5">
         <ProgressRing value={pct} size={88} stroke={9}>
-          <p className="font-display text-xl font-black leading-none text-gray-900 dark:text-white">{count}<span className="text-xs font-bold text-gray-500">/{goal}</span></p>
+          <p className="font-display text-xl font-black leading-none text-gray-900 dark:text-white">{count}<span className="text-xs font-bold text-gray-600 dark:text-gray-400">/{goal}</span></p>
         </ProgressRing>
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Meta semanal</h2>

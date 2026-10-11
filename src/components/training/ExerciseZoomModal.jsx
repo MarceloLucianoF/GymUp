@@ -17,8 +17,8 @@ const ExerciseZoomModal = ({ exercise, onClose }) => {
 <X className="h-4 w-4" aria-hidden="true" />
                 </button>
 
-                <h3 className="text-xl font-black mb-1 text-brand pr-8 leading-tight">{exercise.name}</h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-4">{exercise.muscleGroup}</p>
+                <h3 className="text-xl font-black mb-1 text-amber-700 dark:text-brand pr-8 leading-tight">{exercise.name}</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider mb-4">{exercise.muscleGroup}</p>
 
                 {/* Zoomable Image Container */}
                 <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-950 flex items-center justify-center mb-6 group cursor-zoom-in">
@@ -36,14 +36,14 @@ const ExerciseZoomModal = ({ exercise, onClose }) => {
                 <div className="space-y-4 max-h-48 overflow-y-auto pr-1">
                     {exercise.description && (
                         <div>
-                            <h4 className="text-xs font-bold text-brand uppercase mb-1">Sobre</h4>
+                            <h4 className="text-xs font-bold text-amber-700 dark:text-brand uppercase mb-1">Sobre</h4>
                             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{exercise.description}</p>
                         </div>
                     )}
                     {exercise.execution && (
                         <div>
-                            <h4 className="text-xs font-bold text-brand uppercase mb-1">Como Executar</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">{exercise.execution}</p>
+                            <h4 className="text-xs font-bold text-amber-700 dark:text-brand uppercase mb-1">Como Executar</h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">{exercise.execution}</p>
                         </div>
                     )}
                 </div>

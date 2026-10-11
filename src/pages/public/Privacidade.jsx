@@ -50,7 +50,7 @@ export default function Privacidade() {
         <p>O app é destinado a maiores de 18 anos. Menores de idade devem usar com consentimento e acompanhamento de um responsável.</p>
       </Section>
       <Section title="9. Contato">
-        <p>Dúvidas ou pedidos sobre seus dados: <a className="font-bold text-amber-700 underline dark:text-brand" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> (endereço a confirmar).</p>
+        <p>Dúvidas ou pedidos sobre seus dados: <a className="font-bold text-amber-800 dark:text-amber-400 underline dark:text-brand" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> (endereço a confirmar).</p>
       </Section>
     </LegalLayout>
   );

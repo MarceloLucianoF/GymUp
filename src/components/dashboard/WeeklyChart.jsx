@@ -36,10 +36,10 @@ export default function WeeklyChart({ history }) {
   return (
     <div className="surface p-5 h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <h2 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
             Frequência (7 dias)
-        </h3>
-        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-1 rounded-full">
+        </h2>
+        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 px-2 py-1 rounded-full">
             Meta: 4/semana
         </span>
       </div>
@@ -78,7 +78,7 @@ export default function WeeklyChart({ history }) {
 
               {/* Label do Dia */}
               <span className={`text-[10px] mt-3 font-bold uppercase transition-colors ${
-                  item.isToday ? 'text-brand dark:text-brand' : 'text-gray-400 dark:text-gray-500'
+                  item.isToday ? 'text-brand dark:text-brand' : 'text-gray-600 dark:text-gray-500'
               }`}>
                 {item.day}
               </span>

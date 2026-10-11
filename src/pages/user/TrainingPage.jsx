@@ -226,7 +226,7 @@ export default function TrainingPage() {
                 <h1 className="font-display text-2xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight">{training.name}</h1>
                 {lastWorkoutDate && (
                     <div className="text-right shrink-0 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg border border-green-100 dark:border-green-800/30">
-                        <p className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Último</p>
+                        <p className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase">Último</p>
                         <p className="text-xs font-bold text-gray-700 dark:text-white">{formatDate(lastWorkoutDate)}</p>
                     </div>
                 )}
@@ -238,7 +238,7 @@ export default function TrainingPage() {
 
             <div className="flex gap-3">
                 <span className="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full text-xs font-bold text-gray-600 dark:text-gray-300">
-                    <ClipboardList className="w-3.5 h-3.5 text-gray-500" /> {exerciseList.filter((_,i) => selectedExercises[i]).length} Exercícios
+                    <ClipboardList className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" /> {exerciseList.filter((_,i) => selectedExercises[i]).length} Exercícios
                 </span>
                 <span className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full text-xs font-bold text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800/30">
                     <Scale className="w-3.5 h-3.5 text-blue-500" /> Vol. Est: {calculateEstimatedVolume() > 0 ? formatTonnage(calculateEstimatedVolume()) : '--'}
@@ -249,8 +249,8 @@ export default function TrainingPage() {
         {/* LISTA DE EXERCÍCIOS */}
         <div className="p-4 max-w-3xl mx-auto space-y-3">
             <div className="flex items-center justify-between mb-2 px-1">
-                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Roteiro</h2>
-                <span className="text-[10px] text-gray-400">Arraste para ordenar</span>
+                <h2 className="text-sm font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Roteiro</h2>
+                <span className="text-[10px] text-gray-600 dark:text-gray-400">Arraste para ordenar</span>
             </div>
 
             {exerciseList.map((exercise, index) => {
@@ -292,7 +292,7 @@ export default function TrainingPage() {
                                 <img src={exercise.machineImage} alt={exercise.name} className="w-full h-full object-cover" loading="lazy" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <Dumbbell className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                                    <Dumbbell className="w-6 h-6 text-gray-600 dark:text-gray-500" />
                                 </div>
                             )}
                             <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-tl-md backdrop-blur-sm">
@@ -302,11 +302,11 @@ export default function TrainingPage() {
 
                         {/* Infos */}
                         <div className="flex-1 min-w-0 select-none">
-                            <h3 className={`font-bold text-sm truncate ${isSelected ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>
+                            <h3 className={`font-bold text-sm truncate ${isSelected ? 'text-gray-800 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
                                 {exercise.name}
                             </h3>
                             <div className="flex flex-wrap gap-2 mt-1">
-                                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
+                                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
                                     {exercise.sets} x {exercise.reps}
                                 </span>
                                 {lastLoad && (

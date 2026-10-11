@@ -86,7 +86,7 @@ export default function WorkoutDetailsPage() {
             </button>
             <div>
                 <h1 className="font-display text-2xl font-black text-gray-900 dark:text-white leading-tight">{workout.trainingName}</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 first-letter:uppercase">{date}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 first-letter:uppercase">{date}</p>
             </div>
         </div>
 
@@ -94,17 +94,17 @@ export default function WorkoutDetailsPage() {
         <div className="grid grid-cols-3 gap-3">
             <div className="surface p-4 text-center flex flex-col items-center justify-center animate-scale-in">
                 <Clock className="w-6 h-6 text-brand mb-1" />
-                <p className="text-[10px] uppercase font-bold text-gray-400">Duração</p>
+                <p className="text-[10px] uppercase font-bold text-gray-600 dark:text-gray-400">Duração</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{durationMinutes} min</p>
             </div>
             <div className="surface p-4 text-center flex flex-col items-center justify-center animate-scale-in">
                 <Scale className="w-6 h-6 text-brand mb-1" />
-                <p className="text-[10px] uppercase font-bold text-gray-400">Volume</p>
+                <p className="text-[10px] uppercase font-bold text-gray-600 dark:text-gray-400">Volume</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{formatTonnage(workout.totalVolume, ' ton')}</p>
             </div>
             <div className="surface p-4 text-center flex flex-col items-center justify-center animate-scale-in">
                 <CheckCircle2 className="w-6 h-6 text-brand mb-1" />
-                <p className="text-[10px] uppercase font-bold text-gray-400">Exercícios</p>
+                <p className="text-[10px] uppercase font-bold text-gray-600 dark:text-gray-400">Exercícios</p>
                 <p className="font-black text-gray-800 dark:text-white text-lg">{workout.exercises?.length || 0}</p>
             </div>
         </div>
@@ -122,15 +122,15 @@ export default function WorkoutDetailsPage() {
             {summary.prs.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="Novos recordes">
                 {summary.prs.map((r) => (
-                  <li key={r.name} className="rounded-full bg-brand/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-brand">Recorde: {r.name} {r.weight} kg</li>
+                  <li key={r.name} className="rounded-full bg-brand/15 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-400 dark:text-brand">Recorde: {r.name} {r.weight} kg</li>
                 ))}
               </ul>
             )}
             {summary.prev && (
               <p className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                {summary.delta === null ? <Minus className="w-4 h-4 text-gray-400 shrink-0" aria-hidden="true" />
-                  : summary.delta >= 0 ? <TrendingUp className="w-4 h-4 text-green-500 shrink-0" aria-hidden="true" />
-                  : <TrendingDown className="w-4 h-4 text-red-500 shrink-0" aria-hidden="true" />}
+                {summary.delta === null ? <Minus className="w-4 h-4 text-gray-600 dark:text-gray-400 shrink-0" aria-hidden="true" />
+                  : summary.delta >= 0 ? <TrendingUp className="w-4 h-4 text-green-700 dark:text-green-400 shrink-0" aria-hidden="true" />
+                  : <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" aria-hidden="true" />}
                 {summary.delta === null
                   ? 'Sem volume comparável no treino anterior.'
                   : <>Volume <strong>{summary.delta >= 0 ? '+' : ''}{summary.delta.toFixed(1)}%</strong> vs. {formatDate(summary.prev.date, { day: 'numeric', month: 'short' })} (mesmo treino)</>}
@@ -150,16 +150,16 @@ export default function WorkoutDetailsPage() {
                              {ex.machineImage ? (
                                 <img src={ex.machineImage} className="w-full h-full object-cover" alt="" loading="lazy" />
                              ) : (
-                                <Dumbbell className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                                <Dumbbell className="w-6 h-6 text-gray-600 dark:text-gray-500" />
                              )}
                         </div>
                         <div>
                             <h4 className="font-bold text-gray-800 dark:text-white text-lg">{ex.name}</h4>
-                            <p className="text-xs text-gray-500">{ex.muscleGroup}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{ex.muscleGroup}</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">
+                    <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wider">
                         <span>Set</span>
                         <span>Carga (kg)</span>
                         <span>Reps</span>
@@ -169,14 +169,14 @@ export default function WorkoutDetailsPage() {
                     <div className="space-y-2">
                         {ex.sets?.map((set, j) => (
                             <div key={j} className="grid grid-cols-4 gap-2 text-center items-center min-h-[40px] py-2 bg-gray-50 dark:bg-white/5 rounded-xl text-sm">
-                                <span className="font-mono text-gray-400 text-xs">{j + 1}</span>
+                                <span className="font-mono text-gray-600 dark:text-gray-400 text-xs">{j + 1}</span>
                                 <span className="font-black text-gray-800 dark:text-white">{set.weight || '-'}</span>
                                 <span className="font-bold text-gray-600 dark:text-gray-300">{set.reps || '-'}</span>
                                 <span className="flex items-center justify-center">
                                   {set.completed ? (
-                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                    <CheckCircle2 className="w-4 h-4 text-green-700 dark:text-green-400" />
                                   ) : (
-                                    <XCircle className="w-4 h-4 text-red-500" />
+                                    <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
                                   )}
                                 </span>
                             </div>

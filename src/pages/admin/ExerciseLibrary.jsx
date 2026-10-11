@@ -110,13 +110,13 @@ export default function ExerciseLibrary() {
     <div className={pageCls}>
       {dialog}
       <div className="mx-auto max-w-6xl space-y-5">
-        <button type="button" onClick={() => navigate('/coach/dashboard')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-brand"><ArrowLeft className="h-4 w-4" /> Painel</button>
+        <button type="button" onClick={() => navigate('/coach/dashboard')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-brand"><ArrowLeft className="h-4 w-4" /> Painel</button>
         <PageHeader eyebrow="Biblioteca" title="Exercícios" subtitle={`${exercises.length} movimentos disponíveis para suas fichas`}
           actions={<button type="button" onClick={() => setForm({ ...EMPTY_FORM })} className={btnPrimary}><Plus className="h-4 w-4" /> Novo</button>} />
 
         <div className="surface space-y-3 p-3 sm:p-4">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600 dark:text-gray-400" aria-hidden="true" />
             <input type="search" aria-label="Buscar exercício" placeholder="Buscar por nome, grupo ou equipamento" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputCls} pl-11`} />
           </div>
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1" role="group" aria-label="Filtrar por grupo muscular">
@@ -136,19 +136,19 @@ export default function ExerciseLibrary() {
               <li key={ex.id} className="surface surface-hover animate-fade-up flex flex-col overflow-hidden" style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}>
                 <div className="flex items-center gap-3 p-3">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 dark:bg-white/5">
-                    {(ex.demoUrl || ex.machineImage) ? <img src={ex.demoUrl || ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-7 w-7 text-gray-400" aria-hidden="true" />}
+                    {(ex.demoUrl || ex.machineImage) ? <img src={ex.demoUrl || ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-7 w-7 text-gray-600 dark:text-gray-400" aria-hidden="true" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:text-brand">{cap(ex.muscleGroup)}</span>
-                      {ex.equipment && <span className="text-[11px] text-gray-500 dark:text-gray-400">{ex.equipment}</span>}
+                      <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:text-amber-400 dark:text-brand">{cap(ex.muscleGroup)}</span>
+                      {ex.equipment && <span className="text-[11px] text-gray-600 dark:text-gray-400">{ex.equipment}</span>}
                     </div>
                   </div>
                 </div>
                 <div className="mt-auto flex border-t border-gray-100 dark:border-white/10">
                   <button type="button" onClick={() => openEdit(ex)} aria-label={`Editar ${ex.name}`} className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 text-xs font-bold text-gray-600 hover:bg-brand/10 dark:text-gray-300"><Pencil className="h-3.5 w-3.5" /> Editar</button>
-                  <button type="button" onClick={() => handleDelete(ex)} aria-label={`Excluir ${ex.name}`} className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 border-l border-gray-100 text-xs font-bold text-rose-500 hover:bg-rose-500/10 dark:border-white/10"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
+                  <button type="button" onClick={() => handleDelete(ex)} aria-label={`Excluir ${ex.name}`} className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 border-l border-gray-100 text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-500/10 dark:border-white/10"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
                 </div>
               </li>
             ))}
@@ -161,7 +161,7 @@ export default function ExerciseLibrary() {
           <form onSubmit={handleSave} className="surface max-h-[90vh] space-y-4 overflow-y-auto bg-white p-5 dark:bg-gray-900 animate-scale-in sm:p-6">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl font-black text-gray-900 dark:text-white">{form.id ? 'Editar exercício' : 'Novo exercício'}</h2>
-              <button type="button" aria-label="Fechar" onClick={() => setForm(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+              <button type="button" aria-label="Fechar" onClick={() => setForm(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
             </div>
             <div>
               <label htmlFor="ex-name" className={labelCls}>Nome</label>

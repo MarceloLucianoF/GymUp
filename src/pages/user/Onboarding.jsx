@@ -64,7 +64,7 @@ function Step({ step, data, setField, bmi, plan, coachError, onContinueWithoutCo
               {bmi === null ? '—' : bmi.toFixed(1)}
               {bmi !== null && <span className="ml-2 text-base font-medium text-gray-600 dark:text-gray-300">{bmiCategory(bmi)}</span>}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Apenas uma referência, não é diagnóstico.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Apenas uma referência, não é diagnóstico.</p>
           </div>
         </div>
       );
@@ -110,7 +110,7 @@ function Step({ step, data, setField, bmi, plan, coachError, onContinueWithoutCo
             <p className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white"><Flame aria-hidden="true" className="w-5 h-5 text-brand" /> {plan.days} dias por semana</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Divisão:</strong> {plan.split}</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Foco ({data.goal}):</strong> {plan.focus}</p>
-            {plan.adjusted && <p className="text-xs text-gray-500">Ajustamos a frequência ao seu nível para uma progressão segura.</p>}
+            {plan.adjusted && <p className="text-xs text-gray-600 dark:text-gray-400">Ajustamos a frequência ao seu nível para uma progressão segura.</p>}
             <p className="italic text-gray-800 dark:text-gray-100">“{plan.quote}”</p>
           </div>
           <div>
@@ -172,7 +172,7 @@ export default function Onboarding() {
   return (
     <main className="min-h-screen bg-white dark:bg-brand-darkBg" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
       <div className="mx-auto max-w-lg px-4 pt-6">
-        <div className="flex items-center justify-between mb-3 text-sm text-gray-500">
+        <div className="flex items-center justify-between mb-3 text-sm text-gray-600 dark:text-gray-400">
           <span className="flex items-center gap-1"><Dumbbell aria-hidden="true" className="w-4 h-4 text-brand" /> Passo {step + 1} de {TOTAL_STEPS}</span>
           <button type="button" onClick={ob.skip} disabled={saving} className="min-h-[44px] px-2 underline disabled:opacity-50">Pular por agora</button>
         </div>

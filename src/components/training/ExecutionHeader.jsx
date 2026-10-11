@@ -8,17 +8,17 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                     <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight truncate">{trainingName}</h2>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${isOnline ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 animate-pulse'}`}>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${isOnline ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse'}`}>
                         {isOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
                         {isOnline ? 'Sincronizado' : 'Offline'}
                     </span>
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
+                <p className="text-[11px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
                     <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    <span className="font-mono font-black text-sm text-amber-700 dark:text-brand">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
+                    <span className="font-mono font-black text-sm text-amber-800 dark:text-amber-400 dark:text-brand">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
                     <span>•</span>
                     <span className="font-bold">{completedSetsCount}/{totalSetsInTraining} séries</span>
                 </p>
@@ -32,7 +32,7 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
                         style={{ width: `${progressPercent}%` }}
                     />
                 </div>
-                <span className="text-[10px] font-bold text-gray-400">{progressPercent}%</span>
+                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{progressPercent}%</span>
             </div>
 
             {/* Toggle de Modo */}
@@ -40,14 +40,14 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
                 <button
                     onClick={() => onChangeViewMode('list')}
                     aria-pressed={viewMode === 'list'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-400'}`}
+                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-600 dark:text-gray-400'}`}
                 >
                     <List className="w-3.5 h-3.5" /> Lista
                 </button>
                 <button
                     onClick={() => onChangeViewMode('focus')}
                     aria-pressed={viewMode === 'focus'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-400'}`}
+                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-brand' : 'text-gray-600 dark:text-gray-400'}`}
                 >
                     <Search className="w-3.5 h-3.5" /> Foco
                 </button>

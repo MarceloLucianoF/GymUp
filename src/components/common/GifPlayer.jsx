@@ -8,7 +8,7 @@ export default function GifPlayer({ src, alt, className }) {
   // Se não tiver imagem, mostra placeholder
   if (!src || hasError) {
     return (
-      <div className={`bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ${className}`}>
+      <div className={`bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-500 ${className}`}>
         <ImageIcon className="h-7 w-7" aria-hidden="true" />
       </div>
     );
@@ -35,7 +35,7 @@ export default function GifPlayer({ src, alt, className }) {
           <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
             <Play className="ml-1 h-6 w-6 fill-current text-white" aria-hidden="true" />
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">Passe o mouse</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 font-medium">Passe o mouse</p>
         </div>
       )}
 

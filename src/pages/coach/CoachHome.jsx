@@ -114,7 +114,7 @@ export default function CoachHome() {
 
         <Reveal>
           <section className="surface p-5" aria-label="Fila de ação do dia">
-            <SectionTitle icon={ListChecks} action={<span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:text-brand">{actionQueue.length}</span>}>Fila de ação do dia</SectionTitle>
+            <SectionTitle icon={ListChecks} action={<span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-400 dark:text-brand">{actionQueue.length}</span>}>Fila de ação do dia</SectionTitle>
             <ActionQueue items={actionQueue} busyId={busyId} onMessage={messageStudent} onMarkPaid={markPaid}
               onView={(st) => navigate(`/coach/students/${st.uid}`)} onAssign={setAssigning} />
           </section>
@@ -123,7 +123,7 @@ export default function CoachHome() {
         <div className="grid gap-6 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
             <section className="surface h-full p-5">
-              <SectionTitle icon={Activity} action={<span className="text-xs font-bold text-gray-500 dark:text-gray-400">{weekTotal} treinos / 7 dias</span>}>Check-ins da semana</SectionTitle>
+              <SectionTitle icon={Activity} action={<span className="text-xs font-bold text-gray-600 dark:text-gray-400">{weekTotal} treinos / 7 dias</span>}>Check-ins da semana</SectionTitle>
               <BarChart data={weekly} ariaLabel="Check-ins por dia na última semana" />
             </section>
           </Reveal>
@@ -137,10 +137,10 @@ export default function CoachHome() {
                   {ranking.map((s, i) => (
                     <li key={s.uid} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
                       <button type="button" onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable flex min-h-[48px] w-full items-center gap-3 rounded-2xl text-left hover:bg-black/5 dark:hover:bg-white/5">
-                        <span className={`w-5 text-center font-display text-lg font-black ${i === 0 ? 'text-brand' : 'text-gray-400'}`}>{i + 1}</span>
+                        <span className={`w-5 text-center font-display text-lg font-black ${i === 0 ? 'text-brand' : 'text-gray-600 dark:text-gray-400'}`}>{i + 1}</span>
                         <Avatar name={s.displayName} src={s.photoURL} size="sm" />
                         <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
-                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{s.workouts30} treinos</span>
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{s.workouts30} treinos</span>
                       </button>
                     </li>
                   ))}
@@ -153,7 +153,7 @@ export default function CoachHome() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Reveal>
             <section className={`surface h-full p-5 ${studentsAtRisk.length ? 'border-rose-500/30' : ''}`}>
-              <SectionTitle icon={AlertTriangle} action={<span className="rounded-full bg-rose-500/15 px-2.5 py-0.5 text-xs font-bold text-rose-500">{stats.risk}</span>}>Alunos em risco</SectionTitle>
+              <SectionTitle icon={AlertTriangle} action={<span className="rounded-full bg-rose-500/15 px-2.5 py-0.5 text-xs font-bold text-rose-700 dark:text-rose-400">{stats.risk}</span>}>Alunos em risco</SectionTitle>
               {studentsAtRisk.length === 0 ? (
                 <EmptyState icon={Smile} title="Tudo tranquilo!" description="Nenhum aluno parado há mais de 7 dias." />
               ) : (
@@ -163,10 +163,10 @@ export default function CoachHome() {
                       <Avatar name={s.displayName} src={s.photoURL} size="sm" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p>
-                        <p className="text-xs font-medium text-rose-500">{typeof s.daysInactive === 'number' ? `${s.daysInactive} dias sem treinar` : 'Ainda não treinou'}</p>
+                        <p className="text-xs font-medium text-rose-700 dark:text-rose-400">{typeof s.daysInactive === 'number' ? `${s.daysInactive} dias sem treinar` : 'Ainda não treinou'}</p>
                       </div>
-                      <button type="button" aria-label={`Abrir chat com ${s.displayName || 'aluno'}`} onClick={() => navigate('/coach/chat', { state: chatState(s) })} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600"><MessageSquare className="h-4 w-4" /></button>
-                      <button type="button" aria-label={`Ver ${s.displayName || 'aluno'}`} onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-600"><Eye className="h-4 w-4" /></button>
+                      <button type="button" aria-label={`Abrir chat com ${s.displayName || 'aluno'}`} onClick={() => navigate('/coach/chat', { state: chatState(s) })} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"><MessageSquare className="h-4 w-4" /></button>
+                      <button type="button" aria-label={`Ver ${s.displayName || 'aluno'}`} onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-700 dark:text-sky-400"><Eye className="h-4 w-4" /></button>
                     </li>
                   ))}
                 </ul>
@@ -187,11 +187,11 @@ export default function CoachHome() {
                         <Avatar name={c.student?.displayName || c.userEmail} src={c.student?.photoURL} size="sm" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{c.student?.displayName || c.userEmail || 'Aluno'}</p>
-                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">Finalizou <span className="font-semibold text-brand">{c.trainingName || 'treino'}</span></p>
+                          <p className="truncate text-xs text-gray-600 dark:text-gray-400">Finalizou <span className="font-semibold text-brand">{c.trainingName || 'treino'}</span></p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs font-bold text-gray-900 dark:text-white">{c.totalVolume > 0 ? formatTonnage(c.totalVolume) : '-'}</p>
-                          <p className="text-[11px] text-gray-400">{timeAgo(c.date)}</p>
+                          <p className="text-[11px] text-gray-600 dark:text-gray-400">{timeAgo(c.date)}</p>
                         </div>
                       </button>
                     </li>

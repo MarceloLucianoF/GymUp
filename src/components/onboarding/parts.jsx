@@ -56,7 +56,7 @@ export function OptionGroup({ name, legend, value, options, onChange, columns = 
               {o.icon && <o.icon aria-hidden="true" className="h-6 w-6 text-brand" />}
               <span className="flex-1">
                 <span className="block font-semibold text-gray-900 dark:text-white">{o.label}</span>
-                {o.hint && <span className="block text-sm text-gray-500 dark:text-gray-400">{o.hint}</span>}
+                {o.hint && <span className="block text-sm text-gray-600 dark:text-gray-400">{o.hint}</span>}
               </span>
               {checked && <Check aria-hidden="true" className="w-5 h-5 text-brand" />}
             </label>
@@ -83,7 +83,7 @@ export function NumberField({ id, label, unit, value, onChange, inputMode = 'num
           onChange={(e) => onChange(e.target.value.replace(inputMode === 'decimal' ? /[^0-9.,]/g : /[^0-9]/g, '').slice(0, 5))}
           className="w-full bg-transparent py-3 text-xl font-semibold text-gray-900 dark:text-white outline-none"
         />
-        <span className="text-gray-500 text-sm">{unit}</span>
+        <span className="text-gray-600 dark:text-gray-400 text-sm">{unit}</span>
       </div>
     </div>
   );

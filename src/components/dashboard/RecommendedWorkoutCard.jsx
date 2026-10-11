@@ -24,7 +24,7 @@ const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTra
       <div className="surface flex flex-col items-center p-8 text-center">
         <Dumbbell className="mb-3 h-10 w-10 text-brand/60" aria-hidden="true" />
         <p className="font-bold text-gray-800 dark:text-gray-100">Nenhum treino disponível</p>
-        <p className="mt-1 max-w-xs text-xs text-gray-500 dark:text-gray-400">Aguarde seu treinador criar uma ficha ou vincule-se a um coach.</p>
+        <p className="mt-1 max-w-xs text-xs text-gray-600 dark:text-gray-400">Aguarde seu treinador criar uma ficha ou vincule-se a um coach.</p>
         {onBrowse && <button type="button" onClick={onBrowse} className="btn-primary-gradient mt-4 min-h-[44px] px-5 text-sm">Ver fichas</button>}
       </div>
     );

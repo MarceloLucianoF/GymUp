@@ -183,11 +183,11 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                 <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">Coach IA & Nutrição</h3>
                 <span className="bg-[#FFC107]/10 text-[#FFC107] text-[9px] font-black px-2 py-0.5 rounded-full border border-[#FFC107]/20 uppercase">{modelLabel(aiMeta)}</span>
               </div>
-              <p className="text-[11px] text-gray-400">Inteligência fitness com dados do seu perfil</p>
+              <p className="text-[11px] text-gray-600 dark:text-gray-400">Inteligência fitness com dados do seu perfil</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full bg-gray-100 dark:bg-gray-800 transition-colors">
+            <button onClick={onClose} className="p-2 text-gray-600 dark:text-gray-400 hover:text-white rounded-full bg-gray-100 dark:bg-gray-800 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -200,7 +200,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
             className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'chat'
                 ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black shadow-md font-black'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-600 dark:text-gray-400 hover:text-white'
             }`}
           >
             <MessageSquare className="w-4 h-4" /> Chat IA
@@ -210,7 +210,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
             className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'generator'
                 ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black shadow-md font-black'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-600 dark:text-gray-400 hover:text-white'
             }`}
           >
             <Sparkles className="w-4 h-4" /> Gerador Treino
@@ -220,7 +220,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
             className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'nutrition'
                 ? 'bg-gradient-to-r from-[#FFC107] to-[#FF9800] text-black shadow-md font-black'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-600 dark:text-gray-400 hover:text-white'
             }`}
           >
             <Utensils className="w-4 h-4" /> Nutrição
@@ -249,7 +249,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                 ))}
                 {isTyping && (
                   <div className="flex justify-start">
-                    <div className="card-premium-glass p-3 rounded-2xl text-xs text-gray-400 flex items-center gap-2">
+                    <div className="card-premium-glass p-3 rounded-2xl text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#FFC107]" /> Coach IA digitando...
                     </div>
                   </div>
@@ -261,7 +261,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
               <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-hide items-center">
                 <button 
                   onClick={handleClearHistory} 
-                  className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-red-400 border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 rounded-full flex items-center gap-1 shrink-0 transition-colors"
+                  className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-red-400 border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 rounded-full flex items-center gap-1 shrink-0 transition-colors"
                   title="Limpar conversa"
                 >
                   <Trash2 className="w-3 h-3" /> Limpar
@@ -303,7 +303,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Objetivo Principal</label>
+                    <label className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase block mb-1">Objetivo Principal</label>
                     <select
                       value={selectedGoal}
                       onChange={e => setSelectedGoal(e.target.value)}
@@ -317,7 +317,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Foco Muscular</label>
+                    <label className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase block mb-1">Foco Muscular</label>
                     <select
                       value={selectedFocus}
                       onChange={e => setSelectedFocus(e.target.value)}
@@ -332,7 +332,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Duração Desejada</label>
+                    <label className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase block mb-1">Duração Desejada</label>
                     <select
                       value={selectedDuration}
                       onChange={e => setSelectedDuration(Number(e.target.value))}
@@ -364,7 +364,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                         Gerado com IA
                       </span>
                       <h3 className="text-lg font-black text-gray-900 dark:text-white mt-1">{generatedWorkout.name}</h3>
-                      <p className="text-xs text-gray-400">{generatedWorkout.description}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{generatedWorkout.description}</p>
                     </div>
                   </div>
 
@@ -377,12 +377,12 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                           </span>
                           <div>
                             <h4 className="text-xs font-bold text-gray-800 dark:text-white">{ex.name}</h4>
-                            <p className="text-[10px] text-gray-400 uppercase font-bold">{ex.muscleGroup}</p>
+                            <p className="text-[10px] text-gray-600 dark:text-gray-400 uppercase font-bold">{ex.muscleGroup}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <span className="text-xs font-black text-[#FFC107]">{ex.sets}x {ex.reps}</span>
-                          <p className="text-[9px] text-gray-400 font-bold">{ex.rest}s descanso</p>
+                          <p className="text-[9px] text-gray-600 dark:text-gray-400 font-bold">{ex.rest}s descanso</p>
                         </div>
                       </div>
                     ))}
@@ -405,11 +405,11 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="card-premium-glass p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 text-center">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">TMB (Metabolismo Basal)</span>
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">TMB (Metabolismo Basal)</span>
                   <p className="text-lg font-black text-gray-800 dark:text-white font-mono mt-0.5">{nutritionData.bmr} kcal</p>
                 </div>
                 <div className="card-premium-glass p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 text-center">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Gasto Total (TDEE)</span>
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Gasto Total (TDEE)</span>
                   <p className="text-lg font-black text-[#FFC107] font-mono mt-0.5">{nutritionData.tdee} kcal</p>
                 </div>
                 <div className="col-span-2 sm:col-span-1 card-premium-glass p-3.5 rounded-2xl border border-[#FFC107]/30 text-center bg-[#FFC107]/5">
@@ -425,17 +425,17 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
                     <span className="text-[10px] font-bold text-red-400 uppercase block">Proteínas</span>
                     <span className="text-base font-black text-red-400 font-mono">{nutritionData.macros.protein.grams}g</span>
-                    <span className="text-[9px] text-gray-400 block">{nutritionData.macros.protein.percent}% das calorias</span>
+                    <span className="text-[9px] text-gray-600 dark:text-gray-400 block">{nutritionData.macros.protein.percent}% das calorias</span>
                   </div>
                   <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
                     <span className="text-[10px] font-bold text-amber-400 uppercase block">Carboidratos</span>
                     <span className="text-base font-black text-amber-400 font-mono">{nutritionData.macros.carbs.grams}g</span>
-                    <span className="text-[9px] text-gray-400 block">{nutritionData.macros.carbs.percent}% das calorias</span>
+                    <span className="text-[9px] text-gray-600 dark:text-gray-400 block">{nutritionData.macros.carbs.percent}% das calorias</span>
                   </div>
                   <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-center">
                     <span className="text-[10px] font-bold text-blue-400 uppercase block">Gorduras</span>
                     <span className="text-base font-black text-blue-400 font-mono">{nutritionData.macros.fats.grams}g</span>
-                    <span className="text-[9px] text-gray-400 block">{nutritionData.macros.fats.percent}% das calorias</span>
+                    <span className="text-[9px] text-gray-600 dark:text-gray-400 block">{nutritionData.macros.fats.percent}% das calorias</span>
                   </div>
                 </div>
               </div>
@@ -460,11 +460,11 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   </div>
 
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <span className="text-[10px] font-black text-green-500 uppercase block">Pós-Treino Recomendado</span>
+                    <span className="text-[10px] font-black text-green-700 dark:text-green-400 uppercase block">Pós-Treino Recomendado</span>
                     <ul className="text-xs text-gray-700 dark:text-gray-300 mt-1 space-y-1">
                       {nutritionData.mealSuggestions.postWorkout.map((item, idx) => (
                         <li key={idx} className="flex items-start gap-1.5">
-                          <ChevronRight className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                          <ChevronRight className="w-3.5 h-3.5 text-green-700 dark:text-green-400 shrink-0 mt-0.5" />
                           <span>{item}</span>
                         </li>
                       ))}
