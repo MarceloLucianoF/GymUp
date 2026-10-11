@@ -183,12 +183,12 @@ export default function CoachStudentsPage() {
                       <Avatar name={s.displayName} src={s.photoURL} size="lg" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-display text-base font-black text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
-                        <span className="block truncate text-xs text-gray-500">{s.lastWorkout ? `Treinou ${timeAgo(s.lastWorkout)}` : 'Ainda não treinou'}</span>
+                        <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{s.lastWorkout ? `Treinou ${timeAgo(s.lastWorkout)}` : 'Ainda não treinou'}</span>
                         <StatusBadge status={s.status} className="mt-1.5" />
                       </span>
                       <span className="flex shrink-0 flex-col items-end gap-1">
                         <AdherenceHeatmap grid={s.adherence.grid} size="sm" />
-                        <span className="text-[11px] font-bold text-gray-500">{s.adherence.pct}% aderência</span>
+                        <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">{s.adherence.pct}% aderência</span>
                       </span>
                       <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" aria-hidden="true" />
                     </button>
@@ -211,7 +211,7 @@ export default function CoachStudentsPage() {
             <Reveal className="hidden md:block">
               <div className="surface overflow-hidden">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-white/5">
+                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:bg-white/5">
                     <tr>
                       <th scope="col" className="w-12 p-4"><span className="sr-only">Selecionar</span></th>
                       <th scope="col" className="p-4">Aluno</th>
@@ -231,13 +231,13 @@ export default function CoachStudentsPage() {
                             <Avatar name={s.displayName} src={s.photoURL} />
                             <span>
                               <span className="block font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
-                              <span className="block text-xs text-gray-500">{s.email}</span>
+                              <span className="block text-xs text-gray-500 dark:text-gray-400">{s.email}</span>
                             </span>
                           </button>
                         </td>
                         <td className="p-4"><StatusBadge status={s.status} /></td>
                         <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{s.lastWorkout ? timeAgo(s.lastWorkout) : '-'}</td>
-                        <td className="p-4"><div className="flex items-center gap-2"><AdherenceHeatmap grid={s.adherence.grid} size="sm" /><span className="text-xs font-bold text-gray-500">{s.adherence.pct}%</span></div></td>
+                        <td className="p-4"><div className="flex items-center gap-2"><AdherenceHeatmap grid={s.adherence.grid} size="sm" /><span className="text-xs font-bold text-gray-500 dark:text-gray-400">{s.adherence.pct}%</span></div></td>
                         <td className="p-4">
                           <button type="button" onClick={() => setAssigning(s)} className={`min-h-[44px] max-w-[220px] truncate rounded-xl px-3 text-sm font-semibold hover:bg-brand/15 ${s.trainingName ? 'text-gray-800 dark:text-gray-100' : 'italic text-gray-400'}`}>
                             {s.trainingName || 'Atribuir ficha'}
@@ -263,7 +263,7 @@ export default function CoachStudentsPage() {
         <div role="region" aria-label="Ações em lote" className="fixed inset-x-0 bottom-20 z-40 mx-auto flex w-[calc(100%-2rem)] max-w-xl items-center gap-2 rounded-3xl border border-brand/40 bg-white p-3 shadow-2xl dark:bg-gray-900 md:bottom-6">
           <span className="flex-1 pl-2 text-sm font-bold text-gray-900 dark:text-white">{selected.size} selecionado{selected.size === 1 ? '' : 's'}</span>
           <button type="button" onClick={() => setBulkOpen(true)} className={btnPrimary}><ClipboardList className="h-4 w-4" /> Atribuir ficha</button>
-          <button type="button" aria-label="Limpar seleção" onClick={() => setSelected(new Set())} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+          <button type="button" aria-label="Limpar seleção" onClick={() => setSelected(new Set())} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
         </div>
       )}
       {bulkOpen && (

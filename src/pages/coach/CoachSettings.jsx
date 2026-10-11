@@ -105,7 +105,7 @@ export default function CoachSettings() {
                   <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
                 </label>
               </div>
-              <p className="text-center text-xs text-gray-500">Esta foto aparece para seus alunos no chat.</p>
+              <p className="text-center text-xs text-gray-500 dark:text-gray-400">Esta foto aparece para seus alunos no chat.</p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -134,7 +134,7 @@ export default function CoachSettings() {
 
           <section className="surface animate-fade-up p-5 sm:p-6" style={{ animationDelay: '80ms' }}>
             <h2 className="font-display text-base font-black text-gray-900 dark:text-white">Código de convite</h2>
-            <p className="mb-3 mt-1 text-xs text-gray-500">Seus alunos informam este código no cadastro para se vincular a você.</p>
+            <p className="mb-3 mt-1 text-xs text-gray-500 dark:text-gray-400">Seus alunos informam este código no cadastro para se vincular a você.</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <code className="min-h-[48px] flex-1 select-all break-all rounded-2xl bg-gray-100 px-4 py-3 font-mono text-sm text-gray-800 dark:bg-white/5 dark:text-gray-100">{user.uid}</code>
               <button type="button" onClick={copyCode} className={btnGhost}><Copy className="h-4 w-4" /> Copiar</button>

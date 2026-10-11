@@ -356,7 +356,7 @@ export default function AdminPanel() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>
-                    <p className="text-xs uppercase text-gray-500">{ex.muscleGroup} · {ex.sets}x{ex.reps}</p>
+                    <p className="text-xs uppercase text-gray-500 dark:text-gray-400">{ex.muscleGroup} · {ex.sets}x{ex.reps}</p>
                   </div>
                   <button type="button" aria-label={`Editar ${ex.name}`} onClick={() => { handleEditExercise(ex); document.getElementById('admin-form')?.scrollIntoView({ behavior: 'smooth' }); }} className={iconBtn}><Edit3 className="h-4 w-4" /></button>
                   <button type="button" aria-label={`Apagar ${ex.name}`} onClick={() => handleDeleteExercise(ex.firestoreId)} className={`${iconBtn} !text-rose-500`}><Trash2 className="h-4 w-4" /></button>

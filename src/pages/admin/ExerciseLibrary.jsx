@@ -110,7 +110,7 @@ export default function ExerciseLibrary() {
     <div className={pageCls}>
       {dialog}
       <div className="mx-auto max-w-6xl space-y-5">
-        <button type="button" onClick={() => navigate('/coach/dashboard')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-500 hover:text-brand"><ArrowLeft className="h-4 w-4" /> Painel</button>
+        <button type="button" onClick={() => navigate('/coach/dashboard')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-brand"><ArrowLeft className="h-4 w-4" /> Painel</button>
         <PageHeader eyebrow="Biblioteca" title="Exercícios" subtitle={`${exercises.length} movimentos disponíveis para suas fichas`}
           actions={<button type="button" onClick={() => setForm({ ...EMPTY_FORM })} className={btnPrimary}><Plus className="h-4 w-4" /> Novo</button>} />
 
@@ -142,7 +142,7 @@ export default function ExerciseLibrary() {
                     <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:text-brand">{cap(ex.muscleGroup)}</span>
-                      {ex.equipment && <span className="text-[11px] text-gray-500">{ex.equipment}</span>}
+                      {ex.equipment && <span className="text-[11px] text-gray-500 dark:text-gray-400">{ex.equipment}</span>}
                     </div>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export default function ExerciseLibrary() {
           <form onSubmit={handleSave} className="surface max-h-[90vh] space-y-4 overflow-y-auto bg-white p-5 dark:bg-gray-900 animate-scale-in sm:p-6">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl font-black text-gray-900 dark:text-white">{form.id ? 'Editar exercício' : 'Novo exercício'}</h2>
-              <button type="button" aria-label="Fechar" onClick={() => setForm(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+              <button type="button" aria-label="Fechar" onClick={() => setForm(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
             </div>
             <div>
               <label htmlFor="ex-name" className={labelCls}>Nome</label>

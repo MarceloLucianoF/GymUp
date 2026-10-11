@@ -205,7 +205,7 @@ export default function FinancialPage() {
             <div className="surface flex items-center gap-5 p-5">
               <ProgressRing value={stats.pct} size={96} stroke={9}><span className="font-display text-xl font-black text-gray-900 dark:text-white">{stats.pct}%</span></ProgressRing>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Recebido do previsto</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Recebido do previsto</p>
                 <p className="font-display text-xl font-black text-gray-900 dark:text-white">{brl(stats.received)} <span className="text-sm font-medium text-gray-400">de {brl(stats.total)}</span></p>
               </div>
             </div>
@@ -243,7 +243,7 @@ export default function FinancialPage() {
             <div key={t.id} className="surface p-3 text-center">
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${PAY_META[t.id].cls}`}>{PAY_META[t.id].label}</span>
               <p className="mt-2 font-display text-lg font-black text-gray-900 dark:text-white">{brl(t.total)}</p>
-              <p className="text-xs text-gray-500">{t.count} aluno{t.count === 1 ? '' : 's'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t.count} aluno{t.count === 1 ? '' : 's'}</p>
             </div>
           ))}
         </section>
@@ -251,7 +251,7 @@ export default function FinancialPage() {
         <Reveal>
           <section className="surface p-5">
             <h2 className="mb-1 font-display text-base font-black text-gray-900 dark:text-white">Receita dos últimos 6 meses</h2>
-            <p className="mb-4 text-xs text-gray-500">Baseada na data do último pagamento de cada aluno marcado como pago (não há histórico mensal armazenado).</p>
+            <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Baseada na data do último pagamento de cada aluno marcado como pago (não há histórico mensal armazenado).</p>
             <BarChart data={revenue} formatValue={brl} ariaLabel="Receita por mês" />
           </section>
         </Reveal>
@@ -280,7 +280,7 @@ export default function FinancialPage() {
                     <Avatar name={s.displayName} src={s.photoURL} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p>
-                      <p className="text-xs text-gray-500">{s.paymentStatus === 'paid' && s.paymentDate ? `Pago em ${toDate(s.paymentDate)?.toLocaleDateString('pt-BR')}` : s.email}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{s.paymentStatus === 'paid' && s.paymentDate ? `Pago em ${toDate(s.paymentDate)?.toLocaleDateString('pt-BR')}` : s.email}</p>
                     </div>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${(PAY_META[s.paymentStatus] || PAY_META.pending).cls}`}>{(PAY_META[s.paymentStatus] || PAY_META.pending).label}</span>
                   </div>
@@ -299,12 +299,12 @@ export default function FinancialPage() {
         <Reveal>
           <section className="surface p-5" aria-label="Histórico do mês">
             <h2 className="mb-1 flex items-center gap-2 font-display text-base font-black text-gray-900 dark:text-white"><History className="h-5 w-5 text-brand" aria-hidden="true" /> Histórico de {monthName}</h2>
-            <p className="mb-3 text-xs text-gray-500">Última alteração de pagamento de cada aluno neste mês (o banco não guarda o histórico completo).</p>
-            {history.length === 0 ? <p className="text-sm text-gray-500">Nenhuma movimentação neste mês.</p> : (
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Última alteração de pagamento de cada aluno neste mês (o banco não guarda o histórico completo).</p>
+            {history.length === 0 ? <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma movimentação neste mês.</p> : (
               <ul className="divide-y divide-gray-100 dark:divide-white/10">
                 {history.map(({ s, date }) => (
                   <li key={s.id} className="flex items-center gap-3 py-2.5 text-sm">
-                    <span className="w-24 shrink-0 text-xs text-gray-500">{date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="w-24 shrink-0 text-xs text-gray-500 dark:text-gray-400">{date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                     <span className="min-w-0 flex-1 truncate font-semibold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${(PAY_META[s.paymentStatus] || PAY_META.pending).cls}`}>{(PAY_META[s.paymentStatus] || PAY_META.pending).label}</span>
                     <span className="w-20 shrink-0 text-right font-mono text-xs text-gray-600 dark:text-gray-300">{brl(s.monthlyFee)}</span>

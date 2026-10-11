@@ -36,16 +36,16 @@ export default function BulkAssignModal({ students, trainings, onClose, onDone, 
         <div className="flex items-center gap-3 border-b border-gray-100 p-4 dark:border-white/10">
           <div className="min-w-0 flex-1">
             <h3 className="font-display text-lg font-black text-gray-900 dark:text-white">Atribuir ficha a vários</h3>
-            <p className="text-sm text-gray-500">{students.length} aluno{students.length === 1 ? '' : 's'} selecionado{students.length === 1 ? '' : 's'}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{students.length} aluno{students.length === 1 ? '' : 's'} selecionado{students.length === 1 ? '' : 's'}</p>
           </div>
-          <button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+          <button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
           {result ? (
             <div role="status" className="space-y-3 text-sm">
               <p className="flex items-center gap-2 font-bold text-emerald-600"><Check className="h-4 w-4" /> {result.ok.length} aluno{result.ok.length === 1 ? '' : 's'} atualizado{result.ok.length === 1 ? '' : 's'} para "{training?.name}".</p>
-              {result.same.length > 0 && <p className="text-gray-500">{result.same.length} já tinha{result.same.length === 1 ? '' : 'm'} esta ficha (sem alteração).</p>}
+              {result.same.length > 0 && <p className="text-gray-500 dark:text-gray-400">{result.same.length} já tinha{result.same.length === 1 ? '' : 'm'} esta ficha (sem alteração).</p>}
               {result.failed.length > 0 && (
                 <div className="rounded-2xl bg-rose-500/10 p-3 text-rose-600">
                   <p className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" /> {result.failed.length} falharam:</p>
@@ -59,23 +59,23 @@ export default function BulkAssignModal({ students, trainings, onClose, onDone, 
             ) : trainings.map((t) => (
               <button key={t.id} type="button" onClick={() => setTrainingId(t.id)} className="pressable flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-gray-200 p-3 text-left transition hover:border-brand dark:border-white/10">
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand"><ClipboardList className="h-5 w-5" /></span>
-                <span className="min-w-0 flex-1"><span className="block truncate font-bold text-gray-900 dark:text-white">{t.name}</span><span className="text-xs text-gray-500">{t.difficulty || 'Ficha'} · {t.exercises?.length || 0} exercícios</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate font-bold text-gray-900 dark:text-white">{t.name}</span><span className="text-xs text-gray-500 dark:text-gray-400">{t.difficulty || 'Ficha'} · {t.exercises?.length || 0} exercícios</span></span>
               </button>
             ))
           ) : (
             <div className="space-y-3 text-sm">
               <p className="font-bold text-gray-900 dark:text-white">Confirmar ficha "{training?.name}"</p>
-              {plan.change.length === 0 ? <p className="text-gray-500">Todos já têm esta ficha. Nada a alterar.</p> : (
+              {plan.change.length === 0 ? <p className="text-gray-500 dark:text-gray-400">Todos já têm esta ficha. Nada a alterar.</p> : (
                 <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-200 dark:divide-white/10 dark:border-white/10">
                   {plan.change.map(({ student, from }) => (
                     <li key={student.id} className="flex items-center justify-between gap-2 p-3">
                       <span className="min-w-0 truncate font-semibold text-gray-900 dark:text-white">{student.displayName || 'Aluno'}</span>
-                      <span className="shrink-0 text-xs text-gray-500">{from ? `de "${from}"` : 'sem ficha'}</span>
+                      <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{from ? `de "${from}"` : 'sem ficha'}</span>
                     </li>
                   ))}
                 </ul>
               )}
-              {plan.same.length > 0 && <p className="text-xs text-gray-500">{plan.same.length} já tem esta ficha e será ignorado: {plan.same.map((s) => s.displayName || 'Aluno').join(', ')}.</p>}
+              {plan.same.length > 0 && <p className="text-xs text-gray-500 dark:text-gray-400">{plan.same.length} já tem esta ficha e será ignorado: {plan.same.map((s) => s.displayName || 'Aluno').join(', ')}.</p>}
             </div>
           )}
         </div>
