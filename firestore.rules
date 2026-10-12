@@ -238,8 +238,9 @@ service cloud.firestore {
         && d.checkInCount is int && d.checkInCount >= 0
         && d.lastCheckInAt is string && d.lastCheckInId is string
         && d.get('weekCount', 0) is int && d.get('weekCount', 0) >= 0 && d.get('weekCount', 0) <= d.checkInCount
-        && d.get('streak', 0) is int && d.get('streak', 0) >= 0 && d.get('streak', 0) <= d.checkInCount
-        && d.get('weekKey', '') is string && d.get('lastActiveDay', '') is string
+        && d.get('streak', 0) is int && d.get('streak', 0) >= 0 && d.get('streak', 0) <= 3660
+        && d.get('weekKey', '') is string && (d.get('weekKey', '') == '' || d.get('weekKey', '').matches('^[0-9]{4}-W[0-9]{2}$'))
+        && d.get('lastActiveDay', '') is string && (d.get('lastActiveDay', '') == '' || d.get('lastActiveDay', '').matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'))
         && d.get('weekDays', []) is list && d.get('weekDays', []).size() <= 7;
     }
 
@@ -247,12 +248,22 @@ service cloud.firestore {
     function weeklyOkOnCreate(d) {
       return d.get('weekCount', 1) <= 1 && d.get('streak', 1) <= 1;
     }
+    // Semana e último dia ativo nunca andam para trás; a sequência só sobe (+1) quando o último dia ativo avança.
+    // Assim apagar e recriar o mesmo check-in não infla a sequência.
     function weeklyOkOnIncrement(d, old) {
       return d.get('weekCount', 1) <= old.get('weekCount', 0) + 1
-        && d.get('streak', 1) <= old.get('streak', 0) + 1;
+        && d.get('weekKey', '') >= old.get('weekKey', '')
+        && d.get('lastActiveDay', '') >= old.get('lastActiveDay', '')
+        && d.get('streak', 1) <= old.get('streak', 0) + 1
+        && (d.get('streak', 0) <= old.get('streak', 0) || d.get('lastActiveDay', '') > old.get('lastActiveDay', ''));
     }
+    // Apagar um check-in só pode baixar números: semana, último dia e sequência ficam como estavam e os dias ativos só encolhem.
     function weeklyOkOnDecrement(d, old) {
-      return d.get('weekCount', 0) <= old.get('weekCount', 0) && d.get('streak', 0) == old.get('streak', 0);
+      return d.get('weekCount', 0) <= old.get('weekCount', 0) && d.get('weekCount', 0) >= old.get('weekCount', 0) - 1
+        && d.get('streak', 0) == old.get('streak', 0)
+        && d.get('weekKey', '') == old.get('weekKey', '')
+        && d.get('lastActiveDay', '') == old.get('lastActiveDay', '')
+        && old.get('weekDays', []).hasAll(d.get('weekDays', []));
     }
 
     // Amigos que participam do ranking leem os contadores um do outro (nenhum dado de saúde está em userStats).
@@ -261,6 +272,9 @@ service cloud.firestore {
     }
     function friendPath(a, b) {
       return /databases/$(database)/documents/friendships/$(pairId(a, b));
+    }
+    function statsPath(uid) {
+      return /databases/$(database)/documents/userStats/$(uid);
     }
     function profilePath(uid) {
       return /databases/$(database)/documents/publicProfiles/$(uid);
@@ -286,7 +300,7 @@ service cloud.firestore {
     }
 
     match /userStats/{statsId} {
-      allow get: if signedIn() && (request.auth.uid == statsId || isAdmin() || rankingFriends(statsId));
+      allow get: if signedIn() && (request.auth.uid == statsId || isAdmin());
       allow list: if isAdmin();
       allow create: if signedIn() && request.auth.uid == statsId && statsShape(request.resource.data)
         && request.resource.data.checkInCount == 1 && weeklyOkOnCreate(request.resource.data)
@@ -304,6 +318,22 @@ service cloud.firestore {
             && removedNow(request.resource.data.get('lastRemovedId', null)))
         )) || isAdmin();
       allow create: if isAdmin();
+      allow delete: if (signedIn() && request.auth.uid == statsId) || isAdmin();
+    }
+
+    // Cópia pública mínima para o ranking: só o que o ranking mostra, sempre igual ao userStats do mesmo dono (nenhum horário, nenhum total).
+    match /publicStats/{statsId} {
+      allow get: if signedIn() && (request.auth.uid == statsId || isAdmin() || rankingFriends(statsId));
+      allow list: if false;
+      allow create, update: if signedIn() && request.auth.uid == statsId
+        && request.resource.data.keys().hasOnly(['uid', 'weekKey', 'weekWorkouts', 'activeDays', 'streak', 'lastActiveDay', 'updatedAt'])
+        && request.resource.data.uid == statsId && request.resource.data.updatedAt is string
+        && existsAfter(statsPath(statsId))
+        && request.resource.data.weekKey == getAfter(statsPath(statsId)).data.get('weekKey', '')
+        && request.resource.data.weekWorkouts == getAfter(statsPath(statsId)).data.get('weekCount', 0)
+        && request.resource.data.activeDays == getAfter(statsPath(statsId)).data.get('weekDays', []).size()
+        && request.resource.data.streak == getAfter(statsPath(statsId)).data.get('streak', 0)
+        && request.resource.data.lastActiveDay == getAfter(statsPath(statsId)).data.get('lastActiveDay', '');
       allow delete: if (signedIn() && request.auth.uid == statsId) || isAdmin();
     }
 
@@ -519,7 +549,9 @@ service cloud.firestore {
 
     // Amizade: um documento por par (ID = menor_maior). pending | active | blocked | removed.
     function friendshipShape(d, pairDocId) {
-      return d.keys().hasOnly(['userA', 'userB', 'status', 'requestedBy', 'blockedBy', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['userA', 'userB', 'status', 'requestedBy', 'blockedBy', 'createdAt', 'updatedAt', 'declines', 'retryAfter'])
+        && d.get('declines', 0) is int && d.get('declines', 0) >= 0 && d.get('declines', 0) <= 5
+        && d.get('retryAfter', request.time) is timestamp
         && d.userA is string && d.userB is string && d.userA < d.userB
         && pairDocId == d.userA + '_' + d.userB
         && d.status in ['pending', 'active', 'blocked', 'removed']
@@ -529,6 +561,20 @@ service cloud.firestore {
     }
     function inPair(d) {
       return request.auth.uid == d.userA || request.auth.uid == d.userB;
+    }
+    // Recusas: cada recusa soma 1 e fixa uma espera (retryAfter) para quem pediu; nenhuma outra ação mexe nesses campos.
+    function declinesUnchanged(next, old) {
+      return next.get('declines', 0) == old.get('declines', 0) && next.get('retryAfter', null) == old.get('retryAfter', null);
+    }
+    function declineBump(next, old) {
+      return next.get('declines', 0) == old.get('declines', 0) + 1
+        && next.get('retryAfter', null) is timestamp && next.retryAfter >= request.time + duration.value(12, 'h')
+        && next.retryAfter <= request.time + duration.value(48, 'h');
+    }
+    // Quem foi recusado só pede de novo depois da espera e até 3 recusas.
+    function mayRerequest(old) {
+      return old.requestedBy != request.auth.uid
+        || (old.get('declines', 0) < 3 && (old.get('retryAfter', null) == null || request.time > old.retryAfter));
     }
     function sameBase(next, old) {
       return next.userA == old.userA && next.userB == old.userB && next.createdAt == old.createdAt;
@@ -540,29 +586,40 @@ service cloud.firestore {
       // Pedido novo: quem pede é o próprio usuário; só para quem tem perfil social.
       allow create: if signedIn() && friendshipShape(request.resource.data, pairDocId) && inPair(request.resource.data)
         && request.resource.data.status == 'pending' && request.resource.data.requestedBy == request.auth.uid
+        && !('declines' in request.resource.data) && !('retryAfter' in request.resource.data)
         && exists(profilePath(request.auth.uid))
         && exists(profilePath(request.resource.data.userA == request.auth.uid ? request.resource.data.userB : request.resource.data.userA));
       allow update: if signedIn() && friendshipShape(request.resource.data, pairDocId) && inPair(resource.data)
         && sameBase(request.resource.data, resource.data) && (
           // aceitar: só quem recebeu o pedido
           (resource.data.status == 'pending' && request.resource.data.status == 'active'
-            && resource.data.requestedBy != request.auth.uid && request.resource.data.requestedBy == resource.data.requestedBy)
-          // recusar (quem recebeu) ou cancelar (quem pediu) o pedido; remover amigo (qualquer lado)
-          || (resource.data.status in ['pending', 'active'] && request.resource.data.status == 'removed'
-            && request.resource.data.requestedBy == resource.data.requestedBy)
-          // pedir de novo depois de removido (nunca depois de bloqueio)
+            && resource.data.requestedBy != request.auth.uid && request.resource.data.requestedBy == resource.data.requestedBy
+            && declinesUnchanged(request.resource.data, resource.data))
+          // recusar (quem recebeu): soma uma recusa e fixa a espera
+          || (resource.data.status == 'pending' && request.resource.data.status == 'removed'
+            && resource.data.requestedBy != request.auth.uid && request.resource.data.requestedBy == resource.data.requestedBy
+            && declineBump(request.resource.data, resource.data))
+          // cancelar (quem pediu) o pedido; remover amigo (qualquer lado)
+          || (((resource.data.status == 'pending' && resource.data.requestedBy == request.auth.uid) || resource.data.status == 'active')
+            && request.resource.data.status == 'removed'
+            && request.resource.data.requestedBy == resource.data.requestedBy && declinesUnchanged(request.resource.data, resource.data))
+          // pedir de novo depois de removido (nunca depois de bloqueio), respeitando espera e limite de recusas
           || (resource.data.status == 'removed' && request.resource.data.status == 'pending'
-            && request.resource.data.requestedBy == request.auth.uid)
+            && request.resource.data.requestedBy == request.auth.uid && mayRerequest(resource.data)
+            && declinesUnchanged(request.resource.data, resource.data))
           // bloquear (qualquer estado, exceto já bloqueado)
           || (resource.data.status != 'blocked' && request.resource.data.status == 'blocked'
-            && request.resource.data.blockedBy == request.auth.uid && request.resource.data.requestedBy == resource.data.requestedBy)
+            && request.resource.data.blockedBy == request.auth.uid && request.resource.data.requestedBy == resource.data.requestedBy
+            && declinesUnchanged(request.resource.data, resource.data))
           // desbloquear: só quem bloqueou
           || (resource.data.status == 'blocked' && resource.data.blockedBy == request.auth.uid
-            && request.resource.data.status == 'removed' && request.resource.data.requestedBy == resource.data.requestedBy)
+            && request.resource.data.status == 'removed' && request.resource.data.requestedBy == resource.data.requestedBy
+            && declinesUnchanged(request.resource.data, resource.data))
         );
-      // Quem foi bloqueado só consegue apagar o documento junto com a exclusão da própria conta (users/{uid} some no mesmo lote).
-      allow delete: if isAdmin() || (signedIn() && inPair(resource.data) && (resource.data.status != 'blocked' || resource.data.blockedBy == request.auth.uid
-        || !existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))));
+      // Só a exclusão da própria conta (users/{uid} some no mesmo lote) ou o admin apagam amizades: quem foi recusado não
+      // consegue apagar o documento para zerar a espera e o limite de recusas.
+      allow delete: if isAdmin() || (signedIn() && inPair(resource.data)
+        && !existsAfter(/databases/$(database)/documents/users/$(request.auth.uid)));
     }
 
     // Registro das ações sociais (para a auditoria do admin). Cada usuário só acrescenta as próprias entradas.

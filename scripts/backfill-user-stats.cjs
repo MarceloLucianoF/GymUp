@@ -69,7 +69,30 @@ function weekly(days) { // days: lista de AAAA-MM-DD (com repetição)
       else await db.doc(`userStats/${uid}`).set({ uid, checkInCount: r, lastCheckInAt: real[uid].lastAt, lastCheckInId: real[uid].lastId, ...w });
     }
   }
-  console.log(`\n${uids.length} alunos comparados, ${diffs} diferença(s).`);
+  // Espelho público do ranking (publicStats): só semana, treinos, dias ativos e sequência; sempre derivado do userStats final.
+  const finalStats = {};
+  for (const uid of uids) {
+    if (!(real[uid]?.count)) { if (stored[uid]) finalStats[uid] = stored[uid]; continue; }
+    const w = weekly(real[uid].days);
+    finalStats[uid] = { weekKey: w.weekKey, weekCount: w.weekCount, weekDays: w.weekDays, streak: w.streak, lastActiveDay: w.lastActiveDay };
+  }
+  const pubSnap = await db.collection('publicStats').get();
+  const pub = {};
+  pubSnap.docs.forEach((d) => { pub[d.id] = d.data(); });
+  let pubDiffs = 0;
+  for (const [uid, f] of Object.entries(finalStats)) {
+    const want = { uid, weekKey: f.weekKey || '', weekWorkouts: Number(f.weekCount) || 0, activeDays: (f.weekDays || []).length, streak: Number(f.streak) || 0, lastActiveDay: f.lastActiveDay || '' };
+    const have = pub[uid];
+    const same = have && Object.keys(want).every((k) => have[k] === want[k]);
+    if (same) continue;
+    pubDiffs += 1;
+    if (apply) await db.doc(`publicStats/${uid}`).set({ ...want, updatedAt: new Date().toISOString() });
+  }
+  for (const uid of Object.keys(pub)) {
+    if (!finalStats[uid]) { pubDiffs += 1; if (apply) await db.doc(`publicStats/${uid}`).delete(); }
+  }
+  console.log(`\n${uids.length} alunos comparados, ${diffs} diferença(s); espelho publicStats: ${pubDiffs} diferença(s).`);
+  diffs += pubDiffs;
   if (apply && diffs > 0) {
     await db.collection('adminLog').add({ at: new Date().toISOString(), uid: 'script-backfill', action: 'editar', target: 'userStats', targetId: '', name: 'Reconciliação dos contadores', detail: `${diffs} contador(es) corrigido(s)` });
   }

@@ -25,6 +25,10 @@ describe('saveCheckIn', () => {
     const m = memory();
     expect(await saveCheckIn({}, 'u1', 'c1', { userId: 'u1', date: '2026-10-12T10:00:00Z' }, m.run)).toBe(true);
     expect(m.store.get('userStats/u1')).toMatchObject({ uid: 'u1', checkInCount: 1, lastCheckInAt: '2026-10-12T10:00:00Z', lastCheckInId: 'c1', weekCount: 1, streak: 1 });
+    // Espelho público: só o que o ranking mostra (nenhum horário nem total).
+    const pub = m.store.get('publicStats/u1');
+    expect(pub).toMatchObject({ uid: 'u1', weekWorkouts: 1, activeDays: 1, streak: 1 });
+    expect(Object.keys(pub).sort()).toEqual(['activeDays', 'lastActiveDay', 'streak', 'uid', 'updatedAt', 'weekKey', 'weekWorkouts']);
   });
 
   it('soma 1 por check-in novo e não conta reenvio do mesmo ID (idempotência)', async () => {

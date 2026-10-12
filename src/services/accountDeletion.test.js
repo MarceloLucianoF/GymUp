@@ -47,7 +47,7 @@ describe('chunk', () => {
 });
 
 describe('deleteUserData - amizades', () => {
-  test('bloqueio feito por outra pessoa sai no mesmo lote do documento do usuário; os demais são apagados antes', async () => {
+  test('todas as amizades saem no mesmo lote do documento do usuário', async () => {
     const { deps, log } = makeDeps({ friendships: [
       { id: 'u1_x', data: { userA: 'u1', userB: 'x', status: 'blocked', blockedBy: 'x' } },
       { id: 'u1_y', data: { userA: 'u1', userB: 'y', status: 'active' } },
@@ -55,10 +55,8 @@ describe('deleteUserData - amizades', () => {
     ] });
     const counts = await deleteUserData('u1', { deps });
     const deletes = log.filter((e) => e[0] === 'delete').map((e) => e[1]);
-    expect(deletes).toContain('friendships/u1_y');
-    expect(deletes).toContain('friendships/u1_z');
-    expect(deletes).not.toContain('friendships/u1_x');
-    expect(log[log.length - 1][3]).toEqual(['friendships/u1_x', 'users/u1']);
+    expect(deletes.some((path) => path.startsWith('friendships/'))).toBe(false);
+    expect(log[log.length - 1][3]).toEqual(['friendships/u1_x', 'friendships/u1_y', 'friendships/u1_z', 'users/u1']);
     expect(counts.profile).toBe(1);
   });
 });
@@ -73,8 +71,8 @@ describe('deleteUserData', () => {
     });
     const steps = [];
     const counts = await deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) });
-    expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, notes: 1, social: 1, profile: 1 });
-    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:publicProfiles/u1', 'batch:1']);
+    expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, notes: 1, social: 2, profile: 1 });
+    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:publicProfiles/u1', 'delete:publicStats/u1', 'batch:1']);
     expect(steps.slice(0, 2)).toEqual(['checkIns:running', 'checkIns:done']);
     expect(steps[steps.length - 1]).toBe('profile:done');
   });

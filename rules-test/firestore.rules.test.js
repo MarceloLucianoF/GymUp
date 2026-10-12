@@ -5,7 +5,7 @@ const path = require('path');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds
 } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, query, where, writeBatch, deleteField } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, query, where, writeBatch, deleteField, Timestamp } = require('firebase/firestore');
 
 let env;
 const cache = new Map();
@@ -324,6 +324,7 @@ async function seedSocial() {
       await setDoc(doc(d, 'handles/' + p.handle), { uid: u });
       await setDoc(doc(d, 'friendCodes/' + p.friendCode), { uid: u });
       await setDoc(doc(d, 'userStats/' + u), { uid: u, checkInCount: 5, lastCheckInAt: '2026-10-12T10:00:00Z', lastCheckInId: 'c1', weekKey: '2026-W42', weekCount: 3, weekDays: ['2026-10-12'], streak: 2, lastActiveDay: '2026-10-12' });
+      await setDoc(doc(d, 'publicStats/' + u), { uid: u, weekKey: '2026-W42', weekWorkouts: 3, activeDays: 1, streak: 2, lastActiveDay: '2026-10-12', updatedAt: '2026-10-12T10:00:00Z' });
     }
   });
 }
@@ -376,14 +377,16 @@ test('social: bloqueio impede novos pedidos; só quem bloqueou desbloqueia', asy
 
 test('social: ranking só entre amigos ativos que participam; sem amizade, sem participação ou terceiros não leem', async () => {
   await seedSocial();
-  await assertFails(getDoc(doc(db('stu1'), 'userStats/stu2')));                         // ainda não são amigos
+  await assertFails(getDoc(doc(db('stu1'), 'publicStats/stu2')));                       // ainda não são amigos
   await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + pair('stu1', 'stu2')), fr('stu1', 'stu2', { status: 'active' })); });
-  await assertSucceeds(getDoc(doc(db('stu1'), 'userStats/stu2')));
-  await assertSucceeds(getDoc(doc(db('stu2'), 'userStats/stu1')));
-  await assertFails(getDoc(doc(db('stu3'), 'userStats/stu2')));
-  await assertFails(getDoc(doc(db('coach1'), 'userStats/stu2')));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'publicStats/stu2')));
+  await assertSucceeds(getDoc(doc(db('stu2'), 'publicStats/stu1')));
+  await assertFails(getDoc(doc(db('stu1'), 'userStats/stu2')));                         // amigo nunca lê o userStats (horário, total)
+  await assertFails(getDoc(doc(db('stu3'), 'publicStats/stu2')));
+  await assertFails(getDoc(doc(db('coach1'), 'publicStats/stu2')));
+  await assertFails(getDocs(collection(db('stu1'), 'publicStats')));
   await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'publicProfiles/stu2'), prof('stu2', { shareRanking: false })); });
-  await assertFails(getDoc(doc(db('stu1'), 'userStats/stu2')));                         // saiu do ranking sem desfazer a amizade
+  await assertFails(getDoc(doc(db('stu1'), 'publicStats/stu2')));                       // saiu do ranking sem desfazer a amizade
   await assertSucceeds(getDoc(doc(db('stu1'), 'friendships/' + pair('stu1', 'stu2'))));
 });
 
@@ -468,4 +471,82 @@ test('social: exclusão de conta na ordem do app (perfil, handle, código, amiza
   await assertSucceeds(deleteDoc(doc(a, 'publicProfiles/stu1')));
   await assertSucceeds(deleteDoc(doc(a, 'handles/user_stu1')));
   await assertSucceeds(deleteDoc(doc(a, 'friendCodes/' + prof('stu1').friendCode)));
+});
+
+test('publicStats: só espelha o userStats do dono; não aceita números inventados nem campos extras', async () => {
+  await seedSocial();
+  const d = db('stu1');
+  const mine = { uid: 'stu1', weekKey: '2026-W42', weekWorkouts: 3, activeDays: 1, streak: 2, lastActiveDay: '2026-10-12', updatedAt: 'x' };
+  await assertSucceeds(setDoc(doc(d, 'publicStats/stu1'), mine));
+  await assertFails(setDoc(doc(d, 'publicStats/stu1'), { ...mine, weekWorkouts: 30 }));
+  await assertFails(setDoc(doc(d, 'publicStats/stu1'), { ...mine, streak: 99 }));
+  await assertFails(setDoc(doc(d, 'publicStats/stu1'), { ...mine, lastCheckInAt: '2026-10-12T10:00:00Z' }));
+  await assertFails(setDoc(doc(db('stu2'), 'publicStats/stu1'), mine));
+  await assertSucceeds(deleteDoc(doc(d, 'publicStats/stu1')));
+});
+
+test('userStats: apagar e recriar o mesmo check-in não infla a sequência; formatos são validados', async () => {
+  await seedSocial();
+  const d = db('stu1');
+  const base = { uid: 'stu1', checkInCount: 6, lastCheckInAt: '2026-10-12T12:00:00Z', weekKey: '2026-W42', weekDays: ['2026-10-12'], lastActiveDay: '2026-10-12' };
+  const same = writeBatch(d);
+  same.set(doc(d, 'checkIns/r1'), { userId: 'stu1', date: '2026-10-12T12:00:00Z' });
+  same.set(doc(d, 'userStats/stu1'), { ...base, lastCheckInId: 'r1', weekCount: 4, streak: 3 });      // mesmo dia: sequência não sobe
+  await assertFails(same.commit());
+  const ok = writeBatch(d);
+  ok.set(doc(d, 'checkIns/r1'), { userId: 'stu1', date: '2026-10-12T12:00:00Z' });
+  ok.set(doc(d, 'userStats/stu1'), { ...base, lastCheckInId: 'r1', weekCount: 4, streak: 2 });
+  await assertSucceeds(ok.commit());
+  const badFormat = writeBatch(d);
+  badFormat.set(doc(d, 'checkIns/r2'), { userId: 'stu1', date: '2026-10-13T12:00:00Z' });
+  badFormat.set(doc(d, 'userStats/stu1'), { ...base, checkInCount: 7, lastCheckInId: 'r2', weekCount: 5, streak: 3, weekKey: 'qualquer coisa', lastActiveDay: '2026-10-13' });
+  await assertFails(badFormat.commit());
+  const back = writeBatch(d);
+  back.set(doc(d, 'checkIns/r3'), { userId: 'stu1', date: '2026-10-11T12:00:00Z' });
+  back.set(doc(d, 'userStats/stu1'), { ...base, checkInCount: 7, lastCheckInId: 'r3', weekCount: 5, streak: 2, lastActiveDay: '2026-10-01' });   // dia ativo não volta
+  await assertFails(back.commit());
+});
+
+test('amizade: recusa soma uma recusa e fixa espera; quem foi recusado espera e tem no máximo 3 tentativas', async () => {
+  await seedSocial();
+  const id = pair('stu1', 'stu2');
+  const put = (data) => env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + id), data); });
+  const past = Timestamp.fromMillis(Date.now() - 60_000);
+  const day = (n) => Timestamp.fromMillis(Date.now() + n * 86_400_000);
+  const upd = (who, patch) => setDoc(doc(db(who), 'friendships/' + id), { ...fr('stu1', 'stu2'), ...patch });
+  await put(fr('stu1', 'stu2'));
+  await assertFails(upd('stu2', { status: 'removed', updatedAt: 'y' }));                                  // recusar sem somar a recusa
+  await assertFails(upd('stu2', { status: 'removed', updatedAt: 'y', declines: 1, retryAfter: day(0) }));  // espera curta demais
+  await assertSucceeds(upd('stu2', { status: 'removed', updatedAt: 'y', declines: 1, retryAfter: day(1.1) }));
+  await assertFails(upd('stu1', { status: 'pending', updatedAt: 'z', declines: 1, retryAfter: day(1.1) })); // ainda em espera
+  await put(fr('stu1', 'stu2', { status: 'removed', declines: 1, retryAfter: past }));
+  await assertSucceeds(upd('stu1', { status: 'pending', updatedAt: 'z', declines: 1, retryAfter: past }));
+  await put(fr('stu1', 'stu2', { status: 'removed', declines: 3, retryAfter: past }));
+  await assertFails(upd('stu1', { status: 'pending', updatedAt: 'z', declines: 3, retryAfter: past })); // 3 recusas
+  await assertFails(upd('stu1', { status: 'pending', updatedAt: 'z' }));                                  // não dá para zerar a contagem
+  await assertSucceeds(upd('stu2', { status: 'pending', requestedBy: 'stu2', updatedAt: 'z', declines: 3, retryAfter: past })); // quem recusou pode pedir
+});
+
+test('amizade: quem foi recusado não apaga o documento para zerar a espera; recusa com espera absurda é negada', async () => {
+  await seedSocial();
+  const id = pair('stu1', 'stu2');
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + id), fr('stu1', 'stu2', { status: 'removed', declines: 1, retryAfter: Timestamp.fromMillis(Date.now() + 86_400_000) })); });
+  await assertFails(deleteDoc(doc(db('stu1'), 'friendships/' + id)));
+  await assertFails(deleteDoc(doc(db('stu2'), 'friendships/' + id)));
+  await assertSucceeds(deleteDoc(doc(db('admin1'), 'friendships/' + id)));
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + id), fr('stu1', 'stu2')); });
+  await assertFails(setDoc(doc(db('stu2'), 'friendships/' + id), { ...fr('stu1', 'stu2'), status: 'removed', declines: 1, retryAfter: Timestamp.fromMillis(Date.now() + 30 * 86_400_000) }));
+});
+
+test('userStats: remover o único check-in com sequência igual ao total funciona', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const f = ctx.firestore();
+    await setDoc(doc(f, 'userStats/stu1'), { ...stats(1, 'c1'), weekKey: '2026-W42', weekCount: 1, weekDays: ['2026-10-12'], streak: 1, lastActiveDay: '2026-10-12' });
+    await setDoc(doc(f, 'checkIns/c1'), ci('c1'));
+  });
+  const d = db('stu1');
+  const down = writeBatch(d);
+  down.delete(doc(d, 'checkIns/c1'));
+  down.set(doc(d, 'userStats/stu1'), { ...stats(0, 'c1', { lastRemovedId: 'c1' }), weekKey: '2026-W42', weekCount: 0, weekDays: ['2026-10-12'], streak: 1, lastActiveDay: '2026-10-12' });
+  await assertSucceeds(down.commit());
 });
