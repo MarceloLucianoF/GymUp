@@ -44,8 +44,8 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                         <div className="flex items-center gap-1.5 text-xs font-black text-amber-800 dark:text-brand uppercase tracking-wider mb-1">
                             <Trophy className="w-4 h-4 fill-current" /> Novo Recorde Pessoal!
                         </div>
-                        <p className="text-xs text-gray-300">
-                            Superou sua marca anterior em <span className="font-bold text-white">{stats.newPRs.join(', ')}</span>!
+                        <p className="text-xs text-gray-700 dark:text-gray-300">
+                            Superou sua marca anterior em <span className="font-bold text-gray-900 dark:text-white">{stats.newPRs.join(', ')}</span>!
                         </p>
                     </div>
                 )}
@@ -57,15 +57,15 @@ const CelebrationModal = ({ stats, onFinish, onRepeat }) => {
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Volume Total</p>
-                        <p className="text-xl font-black text-white font-mono mt-0.5">{stats.volumeKg}kg</p>
+                        <p className="text-xl font-black text-gray-900 dark:text-white font-mono mt-0.5">{stats.volumeKg}kg</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Séries Concluídas</p>
-                        <p className="text-xl font-black text-white font-mono mt-0.5">{stats.completedSetsCount}</p>
+                        <p className="text-xl font-black text-gray-900 dark:text-white font-mono mt-0.5">{stats.completedSetsCount}</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
                         <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Exercícios</p>
-                        <p className="text-xl font-black text-white font-mono mt-0.5">{stats.executedExercisesCount}</p>
+                        <p className="text-xl font-black text-gray-900 dark:text-white font-mono mt-0.5">{stats.executedExercisesCount}</p>
                     </div>
                 </div>
 
