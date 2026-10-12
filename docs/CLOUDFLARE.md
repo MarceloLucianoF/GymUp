@@ -11,13 +11,14 @@ npx wrangler secret put NVIDIA_API_KEY --config ../wrangler.jsonc   # cole a cha
 cd .. && REACT_APP_NVIDIA_PROXY=true REACT_APP_AI_PRIMARY=nvidia npm run build
 cd worker && npx wrangler deploy --config ../wrangler.jsonc
 ```
-Endereço atual: `https://bohtreinar.bohtreinar-app.workers.dev`. Um subdomínio novo leva alguns minutos para ganhar certificado HTTPS (até lá a conexão é recusada).
+Endereço atual: `https://bohtreinar.marcelo-labs.workers.dev`. Um subdomínio novo leva alguns minutos para ganhar certificado HTTPS (até lá a conexão é recusada).
 Cabeçalhos de segurança e cache vêm de `public/_headers` (arquivos estáticos não passam pelo código do Worker). Para republicar: refaça o build e rode `npx wrangler deploy --config ../wrangler.jsonc`.
 
 ## Depois de publicar
 1. Firebase Console → Authentication → Configurações → **Domínios autorizados**: adicione o domínio do Worker (necessário para login com Google).
 2. App Check (reCAPTCHA Enterprise): adicione o domínio do Worker na lista de domínios da chave.
-3. Em `wrangler.jsonc`, ajuste `ALLOWED_ORIGINS` se usar outro domínio (domínio próprio, por exemplo).
+3. Firebase Hosting: não é mais publicado. **Não exclua o site** do Hosting sem testar o login com Google: o `authDomain` (`*.firebaseapp.com`) serve `/__/auth/handler` pelo Hosting do Firebase. Mantê-lo vazio ou com um redirecionamento custa nada.
+4. Em `wrangler.jsonc`, ajuste `ALLOWED_ORIGINS` se usar outro domínio (domínio próprio, por exemplo).
 
 ## Como a rota é protegida
 Verifica o ID token do Firebase (RS256, JWKS do Google, `aud`/`iss`/`exp`), aceita só a mesma origem ou `ALLOWED_ORIGINS`, valida modelo/campos/tamanho, limita 20 req/min por usuário (por instância: é um freio, não garantia global) e nunca devolve erros internos do provedor.

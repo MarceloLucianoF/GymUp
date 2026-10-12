@@ -16,4 +16,4 @@ Disallow: /coach/
 Disallow: /admin
 Disallow: /home
 
-Sitemap: https://bohtreinar.bohtreinar-app.workers.dev/sitemap.xml
+Sitemap: https://bohtreinar.marcelo-labs.workers.dev/sitemap.xml
