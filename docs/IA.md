@@ -22,3 +22,8 @@ O proxy roda no Worker (`worker/src/nvidiaProxy.js`): confere o token do Firebas
 ## Recomendações
 - **App Check** (reCAPTCHA Enterprise) já está registrado; ligar o enforce só depois de observar as métricas.
 - Definir orçamento/alertas de cota no Google Cloud.
+
+## Modelos NVIDIA e prazos (12/10/2026)
+- Teste real pelo Worker: `google/gemma-4-31b-it` estourou o prazo (antes respondia em ~2 s), `openai/gpt-oss-20b` respondeu em 7–10 s e `nvidia/nemotron-3-super-120b-a12b` devolveu resposta vazia com `max_tokens` 300 (modelo de raciocínio: precisa de mais tokens).
+- Cada modelo tem prazo próprio de 12 s (total 28 s): se um trava, o modo `auto` passa ao próximo e esquece o modelo lembrado.
+- A variável `NVIDIA_MODEL` do Worker (em `wrangler.jsonc` > `vars`) coloca um modelo permitido na frente da fila, sem alterar código.

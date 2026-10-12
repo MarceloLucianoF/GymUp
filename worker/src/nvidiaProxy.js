@@ -11,6 +11,7 @@ const AUTO_ORDER = [
   'nv-mistralai/mistral-nemo-12b-instruct',
   'google/gemma-3-12b-it',
   'google/gemma-4-31b-it',
+  'nvidia/nemotron-3-super-120b-a12b',
   'mistralai/mistral-large-2-instruct',
   'openai/gpt-oss-20b',
   'nvidia/nemotron-nano-3-30b-a3b',
@@ -22,6 +23,8 @@ const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER]);
 // Status que significam "este modelo não serve para esta chave": tenta o próximo.
 const SKIP_STATUS = new Set([400, 404, 410, 422]);
 const MAX_ATTEMPTS = 8;
+const ATTEMPT_TIMEOUT_MS = 12_000;
+const TOTAL_TIMEOUT_MS = 28_000;
 let lastWorkingModel = null;
 export const resetModelCache = () => { lastWorkingModel = null; };
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant']);
@@ -117,42 +120,54 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
   if (!env.NVIDIA_API_KEY) return json(503, { error: 'Serviço de IA indisponível.' }, cors);
 
   const candidates = model === AUTO
-    ? [...new Set([lastWorkingModel, ...AUTO_ORDER].filter(Boolean))].slice(0, MAX_ATTEMPTS)
+    ? [...new Set([ALLOWED_MODELS.has(env.NVIDIA_MODEL) && env.NVIDIA_MODEL !== AUTO ? env.NVIDIA_MODEL : null, lastWorkingModel, ...AUTO_ORDER].filter(Boolean))].slice(0, MAX_ATTEMPTS)
     : [model];
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
+  // Cada modelo tem um prazo próprio: um modelo travado não consome o tempo todo e o modo 'auto' passa ao próximo.
+  const startedAt = Date.now();
   let lastStatus = null;
   try {
     for (const candidate of candidates) {
-      const upstream = await fetchImpl(NVIDIA_API_URL, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${env.NVIDIA_API_KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({ model: candidate, messages, temperature, max_tokens: maxTokens })
-      });
-      if (!upstream.ok) {
-        lastStatus = upstream.status;
-        console.warn(`NVIDIA recusou: HTTP ${upstream.status} (modelo ${candidate})`);
-        if (SKIP_STATUS.has(upstream.status) && model === AUTO) continue; // modelo indisponível para esta chave
-        break; // 401/403/429/5xx: trocar de modelo não resolve
+      const remaining = TOTAL_TIMEOUT_MS - (Date.now() - startedAt);
+      if (remaining < 3_000) break;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Math.min(ATTEMPT_TIMEOUT_MS, remaining));
+      try {
+        const upstream = await fetchImpl(NVIDIA_API_URL, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${env.NVIDIA_API_KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({ model: candidate, messages, temperature, max_tokens: maxTokens })
+        });
+        if (!upstream.ok) {
+          lastStatus = upstream.status;
+          console.warn(`NVIDIA recusou: HTTP ${upstream.status} (modelo ${candidate})`);
+          if (SKIP_STATUS.has(upstream.status) && model === AUTO) continue; // modelo indisponível para esta chave
+          break; // 401/403/429/5xx: trocar de modelo não resolve
+        }
+        const data = await upstream.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (typeof content !== 'string' || !content.trim()) {
+          lastStatus = 200;
+          if (model === AUTO) continue; // modelo de raciocínio sem texto final: tenta o próximo
+          return json(502, { error: 'Resposta inválida do provedor de IA.' }, cors);
+        }
+        lastWorkingModel = candidate;
+        return json(200, { model: candidate, choices: [{ message: { role: 'assistant', content: content.trim() } }] }, cors);
+      } catch (error) {
+        if (error?.name !== 'AbortError') throw error;
+        console.warn(`NVIDIA sem resposta no prazo (modelo ${candidate})`);
+        lastStatus = 504;
+        if (lastWorkingModel === candidate) lastWorkingModel = null; // o modelo lembrado travou: não insistir nele
+        if (model !== AUTO) return json(504, { error: 'Tempo limite do provedor de IA excedido.' }, cors);
+      } finally {
+        clearTimeout(timer);
       }
-      const data = await upstream.json();
-      const content = data?.choices?.[0]?.message?.content;
-      if (typeof content !== 'string' || !content.trim()) {
-        lastStatus = 200;
-        if (model === AUTO) continue; // modelo de raciocínio sem texto final: tenta o próximo
-        return json(502, { error: 'Resposta inválida do provedor de IA.' }, cors);
-      }
-      lastWorkingModel = candidate;
-      return json(200, { model: candidate, choices: [{ message: { role: 'assistant', content: content.trim() } }] }, cors);
     }
+    if (lastStatus === 504) return json(504, { error: 'Tempo limite do provedor de IA excedido.' }, cors);
     // Só o código de status (nunca o corpo) para diagnosticar sem vazar detalhes do provedor.
     return json(502, { error: 'O provedor de IA não respondeu corretamente.', upstreamStatus: lastStatus }, cors);
   } catch (error) {
-    if (error?.name === 'AbortError') return json(504, { error: 'Tempo limite do provedor de IA excedido.' }, cors);
     return json(502, { error: 'Não foi possível consultar o provedor de IA.' }, cors);
-  } finally {
-    clearTimeout(timer);
   }
 }
