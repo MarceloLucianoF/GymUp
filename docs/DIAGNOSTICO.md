@@ -292,3 +292,9 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - A opção do perfil virou "Mostrar meu nome a quem me achar": desligada, quem tem o @usuário ou o código vê só o @usuário até serem amigos.
 - Texto no app: encontre alguém pelo @usuário ou código; a busca por nome volta numa próxima etapa com proteção de privacidade.
 - **Para a busca por nome voltar** (só se houver necessidade real): operação no Worker com credencial de serviço exclusiva e rotacionável, permissão mínima de leitura, verificação do ID token, limite por usuário e IP, paginação, validação do termo, filtro de bloqueio no servidor, logs sem dados pessoais, testes contra enumeração e plano de revogação.
+
+## Atualização — limite durável no Worker de IA
+- Antes: o limite por usuário (20/min) vivia na memória de cada instância, então não valia entre instâncias nem regiões e não segurava inundação de tokens inválidos.
+- Agora: dois bindings de rate limit da Cloudflare (`wrangler.jsonc`): `AI_USER_LIMIT` (20/min por usuário, depois de verificar o token) e `AI_IP_LIMIT` (60/min por IP, antes de verificar o token). Se o binding falhar ou não existir (dev, testes), vale o contador em memória; a IA não cai por causa do limitador.
+- Validado em produção: rajada de 400 chamadas com token inválido, 218 receberam 429. A contagem da Cloudflare é por local e aproximada (rajadas pequenas podem passar); é um freio, não uma cota exata.
+- Teste novo no Worker (21 aprovados). Segue pendente a parte de identidade madura citada para uma futura busca por nome (credencial de serviço, filtros no servidor).

@@ -224,3 +224,16 @@ test('modelo explícito que trava → 504 sem tentar outro', async () => {
     assert.equal(res.status, 504);
   } finally { global.setTimeout = original; }
 });
+
+// ---- limite durável (binding ratelimits da Cloudflare) ----
+test('limite durável: por usuário e por IP; falha do binding não derruba a IA', async () => {
+  resetRateLimit();
+  const limiter = (success) => ({ limit: async () => ({ success }) });
+  const withIp = () => new Request('https://app.test/api/nvidia', { method: 'POST', headers: { Authorization: 'Bearer t', 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.9' }, body: JSON.stringify(valid) });
+  const deps = { verify: okVerify, fetchImpl: upstreamOk };
+  assert.equal((await handleNvidiaRequest(withIp(), { ...env, AI_USER_LIMIT: limiter(false) }, deps)).status, 429);
+  assert.equal((await handleNvidiaRequest(withIp(), { ...env, AI_IP_LIMIT: limiter(false) }, deps)).status, 429);
+  assert.equal((await handleNvidiaRequest(withIp(), { ...env, AI_USER_LIMIT: limiter(true), AI_IP_LIMIT: limiter(true) }, deps)).status, 200);
+  const broken = { limit: async () => { throw new Error('indisponível'); } };
+  assert.equal((await handleNvidiaRequest(withIp(), { ...env, AI_USER_LIMIT: broken, AI_IP_LIMIT: broken }, deps)).status, 200);
+});

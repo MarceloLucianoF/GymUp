@@ -37,6 +37,13 @@ const RATE_LIMIT = { windowMs: 60_000, max: 20, maxEntries: 5000 };
 
 const rateByUser = new Map();
 
+// Limite durável da Cloudflare (binding "ratelimits"): vale para todos os isolates e regiões. Sem o binding (testes, dev),
+// cai no contador em memória. Em erro do binding, não derruba a IA: o contador em memória continua valendo.
+const limited = async (binding, key) => {
+  if (!binding || typeof binding.limit !== 'function') return null;
+  try { return !(await binding.limit({ key })).success; } catch { return null; }
+};
+
 export const resetRateLimit = () => rateByUser.clear();
 
 const json = (status, payload, headers = {}) => new Response(JSON.stringify(payload), {
@@ -95,6 +102,10 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
   const match = (request.headers.get('Authorization') || '').match(/^Bearer\s+(.+)$/i);
   if (!match) return json(401, { error: 'Autenticação obrigatória.' }, cors);
 
+  // Por IP, antes de verificar o token: segura quem tenta inundar o endpoint com tokens inválidos.
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  if (ip && (await limited(env.AI_IP_LIMIT, `ip:${ip}`)) === true) return json(429, { error: 'Limite temporário de solicitações excedido.' }, { ...cors, 'Retry-After': '60' });
+
   let claims;
   try {
     claims = await verify(match[1], { projectId: env.FIREBASE_PROJECT_ID, fetchImpl, now });
@@ -102,7 +113,8 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
     return json(401, { error: 'Sessão inválida ou expirada.' }, cors);
   }
 
-  if (!allowRequest(claims.sub, now)) return json(429, { error: 'Limite temporário de solicitações excedido.' }, { ...cors, 'Retry-After': '60' });
+  const durable = await limited(env.AI_USER_LIMIT, `uid:${claims.sub}`);
+  if (durable === true || (durable === null && !allowRequest(claims.sub, now))) return json(429, { error: 'Limite temporário de solicitações excedido.' }, { ...cors, 'Retry-After': '60' });
 
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) return json(413, { error: 'Corpo da solicitação grande demais.' }, cors);
