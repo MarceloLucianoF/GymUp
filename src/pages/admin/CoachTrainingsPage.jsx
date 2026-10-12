@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, query, where, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Plus, Search, Pencil, Copy, Trash2, ClipboardList, Timer, Layers, ArrowLeft } from 'lucide-react';
@@ -25,7 +25,7 @@ const stamp = (t) => toDate(t.updatedAt || t.createdAt)?.getTime() || 0;
 // Lista de fichas do treinador. A edição acontece no WorkoutEditor (/admin/trainings/:id).
 export default function CoachTrainingsPage() {
   const { confirm, dialog } = useConfirm();
-  const { user } = useAuthContext();
+  const { user, userProfile } = useAuthContext();
   const navigate = useNavigate();
 
   const [trainings, setTrainings] = useState([]);
@@ -79,12 +79,28 @@ export default function CoachTrainingsPage() {
     }
   };
 
+  // Quem usa a ficha: o treinador vê só os próprios alunos vinculados; o admin vê todos.
+  const studentsUsing = async (t) => {
+    const constraints = [where('currentTrainingId', '==', t.firestoreId), where('role', '==', 'user')];
+    if (userProfile?.role !== 'admin') constraints.push(where('coachId', '==', user.uid));
+    const snap = await getDocs(query(collection(db, 'users'), ...constraints));
+    return snap.docs.map((d) => ({ id: d.id, name: d.data().displayName || 'Aluno' }));
+  };
+
   const handleDelete = async (t) => {
-    if (!(await confirm({ title: 'Excluir ficha', message: `Excluir "${t.name}"? Alunos que usam esta ficha ficarão sem treino atribuído.`, confirmLabel: 'Excluir', danger: true }))) return;
+    let using = [];
+    try { using = await studentsUsing(t); } catch (err) { console.error(err); }
+    const impact = using.length === 0
+      ? 'Nenhum aluno usa esta ficha.'
+      : `${using.length} aluno${using.length === 1 ? ' usa' : 's usam'} esta ficha (${using.slice(0, 3).map((u) => u.name).join(', ')}${using.length > 3 ? ` e mais ${using.length - 3}` : ''}) e ${using.length === 1 ? 'ficará' : 'ficarão'} sem ficha atribuída.`;
+    if (!(await confirm({ title: 'Excluir ficha', message: `Excluir "${t.name}"? ${impact} Esta ação não pode ser desfeita.`, confirmLabel: using.length ? `Excluir e desatribuir ${using.length}` : 'Excluir', danger: true }))) return;
     try {
-      await deleteDoc(doc(db, 'trainings', t.firestoreId));
+      const batch = writeBatch(db);
+      using.forEach((u) => batch.update(doc(db, 'users', u.id), { currentTrainingId: null, updatedAt: new Date().toISOString() }));
+      batch.delete(doc(db, 'trainings', t.firestoreId));
+      await batch.commit();
       setTrainings((prev) => prev.filter((x) => x.firestoreId !== t.firestoreId));
-      toast.success('Ficha removida.');
+      toast.success(using.length ? `Ficha removida; ${using.length} aluno(s) sem ficha.` : 'Ficha removida.');
     } catch (err) {
       console.error(err);
       toast.error('Erro ao remover.');

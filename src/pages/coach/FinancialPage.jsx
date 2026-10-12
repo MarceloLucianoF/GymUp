@@ -1,3 +1,4 @@
+import { parseFee } from '../../services/coachLinkService';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
@@ -158,9 +159,9 @@ export default function FinancialPage() {
   const handleSaveValue = async (e) => {
     e.preventDefault();
     const { student, value } = editing;
-    const fee = Number(String(value).replace(',', '.'));
-    if (value === '' || Number.isNaN(fee) || fee < 0) {
-      toast.error('Informe um valor válido.');
+    const fee = parseFee(value, { allowZero: true });
+    if (fee === null) {
+      toast.error('Informe um valor válido (0 para isento).');
       return;
     }
     try {

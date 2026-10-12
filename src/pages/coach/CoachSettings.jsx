@@ -1,3 +1,4 @@
+import { parseFee } from '../../services/coachLinkService';
 import React, { useState, useEffect, useCallback } from 'react';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -56,8 +57,8 @@ export default function CoachSettings() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const fee = Number(String(formData.defaultMonthlyFee).replace(',', '.'));
-    if (Number.isNaN(fee) || fee < 0) return toast.error('Informe um valor mensal válido.');
+    const fee = parseFee(formData.defaultMonthlyFee);
+    if (fee === null) return toast.error('Informe uma mensalidade padrão maior que zero.');
     if (!formData.displayName.trim()) return toast.error('Informe seu nome profissional.');
     setSaving(true);
     const toastId = toast.loading('Salvando perfil...');
@@ -125,7 +126,8 @@ export default function CoachSettings() {
               </div>
               <div>
                 <label htmlFor="cs-fee" className={labelCls}>Mensalidade padrão (R$)</label>
-                <input id="cs-fee" type="number" min="0" step="0.01" inputMode="decimal" value={formData.defaultMonthlyFee} onChange={set('defaultMonthlyFee')} className={inputCls} />
+                <p className="mb-1.5 text-xs text-gray-600 dark:text-gray-400">Sugerida ao aceitar um aluno novo (você pode mudar na hora). Não altera os alunos atuais.</p>
+                <input id="cs-fee" type="number" min="0.01" step="0.01" inputMode="decimal" value={formData.defaultMonthlyFee} onChange={set('defaultMonthlyFee')} className={inputCls} />
               </div>
               <div className="md:col-span-2">
                 <label htmlFor="cs-pix" className={labelCls}>Chave PIX (para alunos)</label>

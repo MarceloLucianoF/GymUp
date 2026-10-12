@@ -93,11 +93,24 @@ service cloud.firestore {
           && ownsCoachTraining(get(/databases/$(database)/documents/trainings/$(nextId)).data));
     }
 
+    // Mensalidade: número entre 0 (isento) e 100000 (o valor final fica registrado no aluno).
+    function validFee() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['monthlyFee'])
+        || (request.resource.data.monthlyFee is number && request.resource.data.monthlyFee >= 0 && request.resource.data.monthlyFee <= 100000);
+    }
+    // No aceite de um aluno novo a mensalidade, quando enviada, tem de ser maior que zero.
+    function positiveFeeOnAccept() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['monthlyFee']) || request.resource.data.monthlyFee > 0;
+    }
+
     // Vínculo aluno-treinador: o treinador aceita (coachLinks pending -> active) e, no mesmo lote, grava coachId no aluno.
     function coachAcceptsLink(studentId) {
       let link = get(/databases/$(database)/documents/coachLinks/$(studentId)).data;
       return isCoach()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coachId', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coachId', 'updatedAt', 'monthlyFee', 'paymentStatus'])
+        && validFee() && positiveFeeOnAccept()
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['paymentStatus'])
+          || request.resource.data.paymentStatus == 'pending')
         && resource.data.role == 'user' && resource.data.get('coachId', null) == null
         && request.resource.data.coachId == request.auth.uid
         && link.coachId == request.auth.uid && link.status == 'pending'
@@ -135,7 +148,7 @@ service cloud.firestore {
             request.resource.data.role == resource.data.role
             && (
               (request.auth.uid == userId && ownProfileChanges())
-              || (linkedStudent(resource.data) && validCoachAssignment()
+              || (linkedStudent(resource.data) && validCoachAssignment() && validFee()
                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                   'currentTrainingId', 'monthlyFee', 'paymentStatus',
                   'paymentDate', 'lastPaymentUpdate', 'updatedAt'
@@ -180,11 +193,63 @@ service cloud.firestore {
     // Solicitações de vínculo (1 por aluno: o ID é o do aluno). Só participantes leem; o aluno pede/cancela,
     // o treinador aceita (junto de users.coachId, no mesmo lote), recusa ou encerra.
     function coachLinkShape(d) {
-      return d.keys().hasOnly(['studentId', 'studentName', 'coachId', 'status', 'requestedBy', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['studentId', 'studentName', 'coachId', 'status', 'requestedBy', 'createdAt', 'updatedAt', 'inviteId'])
         && d.studentId is string && d.coachId is string
+        && d.get('inviteId', 'i_x') is string && d.get('inviteId', 'i_x').size() <= 40
         && d.status in ['pending', 'active', 'rejected', 'revoked']
         && d.createdAt is string && d.updatedAt is string
         && d.get('studentName', '') is string && d.get('studentName', '').size() <= 100;
+    }
+
+    // Convite por link (coachInvites): validade, limite de usos e revogação. Pedido com inviteId só passa se o convite está
+    // válido e o mesmo lote soma exatamente 1 uso (conferido por getAfter); sem inviteId vale o código fixo do treinador.
+    function invitePath(id) {
+      return /databases/$(database)/documents/coachInvites/$(id);
+    }
+    function inviteAllows(link) {
+      return !('inviteId' in link) || (
+        exists(invitePath(link.inviteId))
+        && get(invitePath(link.inviteId)).data.coachId == link.coachId
+        && get(invitePath(link.inviteId)).data.revoked == false
+        && get(invitePath(link.inviteId)).data.expiresAt > request.time
+        && get(invitePath(link.inviteId)).data.uses < get(invitePath(link.inviteId)).data.maxUses
+        && getAfter(invitePath(link.inviteId)).data.uses == get(invitePath(link.inviteId)).data.uses + 1
+      );
+    }
+
+    match /coachInvites/{inviteId} {
+      // O ID é um segredo não adivinhável (só vale com o link); o documento não tem dado pessoal.
+      allow get: if true;
+      allow list: if signedIn() && (isAdmin() || resource.data.coachId == request.auth.uid);
+      allow create: if signedIn() && isCoach() && inviteId.matches('^i_[A-Za-z0-9]{20}$')
+        && request.resource.data.keys().hasOnly(['coachId', 'createdAt', 'expiresAt', 'maxUses', 'uses', 'revoked'])
+        && request.resource.data.coachId == request.auth.uid
+        && request.resource.data.createdAt is string
+        && request.resource.data.uses == 0 && request.resource.data.revoked == false
+        && request.resource.data.maxUses is int && request.resource.data.maxUses >= 1 && request.resource.data.maxUses <= 200
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt >= request.time + duration.value(1, 'h')
+        && request.resource.data.expiresAt <= request.time + duration.value(31, 'd');
+      allow update: if signedIn() && (
+        // treinador: só revoga
+        (resource.data.coachId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked'])
+          && request.resource.data.revoked == true)
+        // aluno: consome 1 uso junto do próprio pedido de vínculo (mesmo lote), com o convite ainda válido
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+          && request.resource.data.uses == resource.data.uses + 1
+          && request.resource.data.uses <= resource.data.maxUses
+          && resource.data.revoked == false && resource.data.expiresAt > request.time
+          && getAfter(/databases/$(database)/documents/coachLinks/$(request.auth.uid)).data.get('inviteId', null) == inviteId
+          && getAfter(/databases/$(database)/documents/coachLinks/$(request.auth.uid)).data.status == 'pending'
+          && getAfter(/databases/$(database)/documents/coachLinks/$(request.auth.uid)).data.coachId == resource.data.coachId
+          // o pedido tem de ser ESCRITO neste lote (criado ou com updatedAt novo): sem isso, um pedido antigo serviria de álibi
+          // para gastar usos em loop
+          && (!exists(/databases/$(database)/documents/coachLinks/$(request.auth.uid))
+            || getAfter(/databases/$(database)/documents/coachLinks/$(request.auth.uid)).data.updatedAt
+               != get(/databases/$(database)/documents/coachLinks/$(request.auth.uid)).data.updatedAt))
+      );
+      allow delete: if signedIn() && (isAdmin() || resource.data.coachId == request.auth.uid);
     }
 
     match /coachLinks/{studentId} {
@@ -194,18 +259,25 @@ service cloud.firestore {
         && request.resource.data.studentId == studentId && request.resource.data.status == 'pending'
         && request.resource.data.requestedBy == 'student'
         && request.resource.data.coachId != studentId && isTrainerId(request.resource.data.coachId)
-        && get(/databases/$(database)/documents/users/$(studentId)).data.get('coachId', null) == null;
+        && get(/databases/$(database)/documents/users/$(studentId)).data.get('coachId', null) == null
+        && inviteAllows(request.resource.data);
       allow update: if signedIn() && coachLinkShape(request.resource.data) && request.resource.data.studentId == studentId && (
         // aluno: pedir de novo (sem treinador ativo) ou cancelar/encerrar
         (request.auth.uid == studentId && (
           (request.resource.data.status == 'pending' && request.resource.data.requestedBy == 'student'
             && request.resource.data.coachId != studentId && isTrainerId(request.resource.data.coachId)
-            && get(/databases/$(database)/documents/users/$(studentId)).data.get('coachId', null) == null)
-          || (request.resource.data.status == 'revoked' && request.resource.data.coachId == resource.data.coachId)))
+            && get(/databases/$(database)/documents/users/$(studentId)).data.get('coachId', null) == null
+            && inviteAllows(request.resource.data)
+            && (!('inviteId' in request.resource.data) || resource.data.get('inviteId', null) != request.resource.data.inviteId))
+          || (request.resource.data.status == 'revoked' && request.resource.data.coachId == resource.data.coachId
+            && request.resource.data.get('inviteId', null) == resource.data.get('inviteId', null)
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.requestedBy == resource.data.requestedBy)))
         // treinador: aceitar, recusar ou encerrar; nada além do status muda
         || (resource.data.coachId == request.auth.uid && request.resource.data.coachId == resource.data.coachId
           && request.resource.data.requestedBy == resource.data.requestedBy
           && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.get('inviteId', null) == resource.data.get('inviteId', null)
           && request.resource.data.get('studentName', '') == resource.data.get('studentName', '')
           && request.resource.data.status in ['active', 'rejected', 'revoked']
           && (request.resource.data.status != 'active' || (resource.data.status == 'pending'
@@ -375,9 +447,16 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // A guessed ID never authorizes reading a missing or someone else's chat.
-      allow get, list: if isParticipant(resource.data);
+      // A guessed ID never authorizes reading someone else's chat. Um chat que ainda não existe só pode ser consultado por
+      // quem faz parte do ID (menor_maior): sem isso ninguém consegue abrir a primeira conversa de um par (o get de um
+      // documento inexistente era negado e o app mostrava "Erro ao conectar").
+      allow get: if signedIn() && (resource == null
+        ? (chatId.matches(request.auth.uid + '_.*') || chatId.matches('.*_' + request.auth.uid))
+        : isParticipant(resource.data));
+      allow list: if isParticipant(resource.data);
       allow create: if validChatParticipants(request.resource.data)
+        && (chatId == request.resource.data.participants[0] + '_' + request.resource.data.participants[1]
+          || chatId == request.resource.data.participants[1] + '_' + request.resource.data.participants[0])
         && request.resource.data.keys().hasOnly([
           'participants', 'participantData', 'createdAt', 'updatedAt', 'lastMessage'
         ])
