@@ -329,3 +329,26 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
   - `react-router` (2 moderadas, só corrige na 7.18): redirecionamento aberto via `Link`/`useNavigate` com destino controlado por quem ataca. O app só navega para caminhos fixos ou montados com IDs (nenhum destino vem de parâmetro de URL), então não é explorável aqui. Migrar para a v7 tem risco com o Jest do CRA 5; deixar para quando o CRA sair.
   - Ferramentas de build/teste (`react-scripts`, emulador): 105 avisos no total contando as de desenvolvimento; não entram no que é publicado.
 - Rotina sugerida: rodar `npm audit --omit=dev` em `.`, `worker` e `mcp` uma vez por mês e antes de cada deploy grande.
+
+## Atualização — desempenho das telas autenticadas (12/10/2026)
+Medido em produção com a conta demo, só leitura. Lighthouse 12 (simulação: mobile = 4x CPU + 4G lenta; desktop = preset desktop). "Primeira" = perfil de navegador novo (cache frio) com sessão; "repetida" = segunda carga no mesmo perfil (cache e service worker quentes). Dados de laboratório, não de usuários reais.
+
+| Tela | Mobile primeira (nota / LCP) | Mobile repetida | Desktop primeira | Desktop repetida |
+| --- | --- | --- | --- | --- |
+| `/dashboard` | 37 / 9,3 s | 63 / 2,7 s (TBT 1,85 s) | 67 / 2,9 s | 99 / 0,7 s |
+| `/trainings` | 51 / 9,1 s | 89 / 2,6 s | 67 / 3,0 s | 99 / 0,7 s |
+| `/history` | 47 / 8,7 s | 85 / 2,7 s | 69 / 3,0 s | 100 / 0,7 s |
+| `/measurements` | 45 / 8,7 s | 78 / 2,4 s | 68 / 3,2 s | 98 / 0,9 s |
+| `/chat` | 47 / 9,0 s | 83 / 2,7 s | 70 / 2,9 s | 98 / 0,9 s |
+
+- **CLS:** 0,000 a 0,017 em todas as telas (meta < 0,1: ok). **INP** (interações reais de leitura, mobile com 4x CPU): 64 a 136 ms (meta < 200 ms: ok); desktop 32 a 64 ms. Um CLS de 0,176 no `/chat` apareceu só num script que clicou em "Voltar" (navegou para outra tela); não reproduz isolado nem no Lighthouse.
+- **Navegação interna (SPA, sem recarregar):** 0,5 a 1,5 s até a tela estabilizar, sem baixar JavaScript novo (mobile 1,1 a 1,5 s; desktop 0,5 a 0,9 s). Muito melhor que a primeira visita.
+- **Metas:** LCP < 2,5 s e nota mobile > 80 **só são atingidos na visita repetida e ainda assim não em todas** (`/dashboard` 63, `/measurements` 78). Na primeira visita mobile todas ficam em 37 a 51 (LCP ~9 s) e no desktop em 67 a 70 (LCP ~3 s).
+- **Causa (todas as telas iguais):** a página só desenha depois que o JavaScript roda (fase "render delay" ≈ 8,7 s de 9,3 s no LCP do `/dashboard`). JavaScript da primeira visita: **~554 KB** transferidos, dos quais **346 KB são o script do reCAPTCHA** (App Check) e 207 KB o `main.js` do app. Na CPU de celular simulada, `main.js` leva ~1,7 s e o reCAPTCHA ~2 s de execução, disputando a mesma thread. O CSS (17 KB) bloqueia a renderização em ~350 ms. Na visita repetida o `/dashboard` ainda tem TBT de 1,85 s (a Home executa muito JavaScript).
+- **Não feito (candidatos, em ordem de ganho esperado):** (1) tirar o reCAPTCHA do caminho crítico (iniciar depois da primeira pintura, aceitando as primeiras chamadas sem token; só vale decidir junto com o enforce do App Check, que exige token desde a primeira chamada); (2) analisar o `main.js` (207 KB) e adiar módulos do Firebase que a primeira tela não usa; (3) CSS crítico inline; (4) reduzir o JavaScript da Home. Reavaliar com dados reais de usuários (web-vitals no campo) antes de investir.
+
+### Bug achado na medição: app em branco com o reCAPTCHA bloqueado
+- Com o script do reCAPTCHA bloqueado (extensão de privacidade, firewall, rede restrita), **o usuário logado via tela em branco para sempre**: o SDK do App Check só trata o `onload` do script, o token nunca chega, e o Auth e o Firestore esperam o token sem prazo (nenhuma chamada saía depois da falha). Existia desde que o App Check foi ligado.
+- **Correção:** `src/firebase/appCheckProvider.js` dá 5 s ao token e, depois de uma falha, as chamadas seguintes falham na hora por 60 s (senão cada serviço esperaria 5 s um depois do outro). Validado em produção: com o reCAPTCHA bloqueado a tela aparece em ~6 s (antes: nunca); sem bloqueio, a troca do token continua dando 200 e o fluxo social completo passa (15 verificações).
+- **Atenção:** o invólucro usa a interface interna do provedor (`initialize`, `getToken`, `isEqual`); conferir ao atualizar o `firebase` (hoje 12.9.0). Quem tem o script bloqueado fica sem token: com o **enforce ligado, essas pessoas perdem acesso** (limitação já descrita no roteiro do App Check).
+- **Verificações pendentes citadas na revisão:** `firebase-admin` em `devDependencies` é seguro porque nada em `src/` nem em `worker/` o importa (conferido por busca); o MCP segue sem teste de ponta a ponta além da leitura no Firestore.

@@ -45,7 +45,7 @@ Console → App Check → **APIs** → clique em cada produto e leia "Solicitaç
 
 Se houver "não verificadas" acima de 1%, investigue antes de ligar:
 - **Clientes desatualizados:** PWA com versão antiga em cache (antes do App Check). O aviso de atualização resolve com o tempo; espere uma semana de uso real.
-- **Bloqueador de anúncios / navegador embutido (Instagram, WhatsApp):** o script do reCAPTCHA não carrega. Esses usuários vão perder acesso quando o enforce ligar; decida se aceita.
+- **Bloqueador de anúncios / navegador embutido (Instagram, WhatsApp):** o script do reCAPTCHA não carrega. Hoje o app abre assim mesmo (prazo de 5 s para o token, `appCheckProvider.js`), mas esses usuários **perdem acesso quando o enforce ligar**; decida se aceita.
 - **Automação e scripts do cliente:** testes com token customizado no navegador (como os meus E2E) passam a falhar; use o token de debug (passo 6).
 - **Aluno que treina offline por horas:** o token se renova ao voltar a rede; a fila de treinos (PR 60) reenvia depois, então não perde treino.
 

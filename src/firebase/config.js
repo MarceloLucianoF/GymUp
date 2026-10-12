@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
+import { withTokenTimeout } from './appCheckProvider';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCb6DbkDHLrvMnyYFaNEKU8VsXrG3A7c80",
@@ -26,7 +27,7 @@ export const ensureAppCheck = () => {
   appCheckStarted = true;
   if (process.env.NODE_ENV !== 'production') window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+    provider: withTokenTimeout(new ReCaptchaEnterpriseProvider(recaptchaSiteKey)),
     isTokenAutoRefreshEnabled: true
   });
 };
