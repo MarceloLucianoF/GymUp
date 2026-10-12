@@ -6,9 +6,10 @@ import {
     onAuthStateChanged,
     updateProfile,
     GoogleAuthProvider,
-    signInWithPopup
+    signInWithPopup,
+    browserPopupRedirectResolver
 } from "firebase/auth";
-import { auth, db } from "../firebase/config"; 
+import { auth, db, ensureAppCheck } from "../firebase/config"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { syncPublicCoachProfile } from "../services/coachProfile";
 
@@ -45,6 +46,7 @@ export function AuthProvider({ children }) {
 
     // --- 1. REGISTRO (Atualizado para aceitar dados extras) ---
     const register = async (email, password, displayName, additionalData = {}) => {
+        ensureAppCheck();
         try {
             const res = await createUserWithEmailAndPassword(auth, email, password);
             if (!res.user) throw new Error("Não foi possível criar o usuário.");
@@ -90,6 +92,7 @@ export function AuthProvider({ children }) {
 
     // --- 2. LOGIN ---
     const login = async (email, password) => {
+        ensureAppCheck();
         try {
             await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
@@ -100,9 +103,10 @@ export function AuthProvider({ children }) {
     // --- 2b. LOGIN COM GOOGLE ---
     // O primeiro acesso cria o perfil de aluno (o aceite dos termos é o próprio clique, com o aviso visível na tela).
     const loginWithGoogle = async () => {
+        ensureAppCheck();
         creatingProfile.current = true;
         try {
-            const res = await signInWithPopup(auth, new GoogleAuthProvider());
+            const res = await signInWithPopup(auth, new GoogleAuthProvider(), browserPopupRedirectResolver);
             const ref = doc(db, "users", res.user.uid);
             const snap = await getDoc(ref);
             if (snap.exists()) {
@@ -152,6 +156,7 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
+                ensureAppCheck();
                 setUser(firebaseUser);
                 try {
                     if (creatingProfile.current) { setAuthLoading(false); return; }

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Outfit:wght@400;500;600;700;900&display=swap');
+/* As fontes (Inter e Outfit, latin) são declaradas em public/index.html, hospedadas em /fonts. */
 
 @tailwind base;
 @tailwind components;
