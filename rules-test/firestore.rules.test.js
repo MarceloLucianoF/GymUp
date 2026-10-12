@@ -1,11 +1,12 @@
 // Testes das regras do Firestore no emulador. Rode: make test-rules (requer Java 11+).
 const { test, before, after, beforeEach } = require('node:test');
+const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds
 } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, query, where, writeBatch, deleteField, Timestamp } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, query, where, writeBatch, deleteField, Timestamp, serverTimestamp } = require('firebase/firestore');
 
 let env;
 const cache = new Map();
@@ -570,4 +571,173 @@ test('retry idempotente: reenviar o mesmo check-in não aceita novo incremento n
   replay2.set(doc(d, 'userStats/stu1'), { ...base, checkInCount: 7, lastCheckInId: 'dup1', weekCount: 5, streak: 3 });
   await assertFails(replay2.commit());
   await assertFails(setDoc(doc(d, 'publicStats/stu1'), { uid: 'stu1', weekKey: '2026-W42', weekWorkouts: 9, activeDays: 2, streak: 3, lastActiveDay: '2026-10-13', updatedAt: 'x' }));
+});
+
+// ---- convite por link (coachInvites) e mensalidade no aceite ----
+const INV = 'i_AbCdEfGhIjKlMnOpQrSt';
+const hours = (n) => Timestamp.fromMillis(Date.now() + n * 3_600_000);
+const invite = (over = {}) => ({ coachId: 'coach1', createdAt: '2026-10-12T10:00:00Z', expiresAt: hours(24 * 7), maxUses: 5, uses: 0, revoked: false, ...over });
+const putInvite = (over = {}, id = INV) => env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'coachInvites/' + id), invite(over)); });
+const useInvite = (who, linkOver = {}, bump = 1, id = INV) => {
+  const d = db(who);
+  const b = writeBatch(d);
+  b.set(doc(d, 'coachLinks/' + who), link({ studentId: who, inviteId: id, ...linkOver }));
+  b.update(doc(d, 'coachInvites/' + id), { uses: bump });
+  return b.commit();
+};
+
+test('convite: só treinador cria, com validade de 1 h a 31 dias, 1 a 200 usos, uses 0 e não revogado', async () => {
+  await assertSucceeds(setDoc(doc(db('coach1'), 'coachInvites/' + INV), invite()));
+  await assertFails(setDoc(doc(db('stu1'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZz'), invite({ coachId: 'stu1' })));          // aluno
+  await assertFails(setDoc(doc(db('coach2'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZ1'), invite()));                               // em nome de outro
+  await assertFails(setDoc(doc(db('coach1'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZ2'), invite({ expiresAt: hours(0.1) })));      // curto demais
+  await assertFails(setDoc(doc(db('coach1'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZ3'), invite({ expiresAt: hours(24 * 60) })));  // longo demais
+  await assertFails(setDoc(doc(db('coach1'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZ4'), invite({ maxUses: 0 })));
+  await assertFails(setDoc(doc(db('coach1'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZ5'), invite({ maxUses: 500 })));
+  await assertFails(setDoc(doc(db('coach1'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZ6'), invite({ uses: 3 })));
+  await assertFails(setDoc(doc(db('coach1'), 'coachInvites/i_ZzZzZzZzZzZzZzZzZzZ7'), invite({ revoked: true })));
+  await assertFails(setDoc(doc(db('coach1'), 'coachInvites/curto'), invite()));                                                  // ID fraco
+});
+
+test('convite: leitura pelo ID (inclusive sem login); lista só do dono; sem dado pessoal no documento', async () => {
+  await putInvite();
+  await assertSucceeds(getDoc(doc(anonDb(), 'coachInvites/' + INV)));
+  await assertSucceeds(getDocs(query(collection(db('coach1'), 'coachInvites'), where('coachId', '==', 'coach1'))));
+  await assertFails(getDocs(query(collection(db('coach2'), 'coachInvites'), where('coachId', '==', 'coach1'))));
+  await assertFails(getDocs(collection(anonDb(), 'coachInvites')));
+});
+
+test('convite: treinador só revoga (não reativa nem muda limites); aluno não revoga', async () => {
+  await putInvite();
+  await assertFails(updateDoc(doc(db('stu1'), 'coachInvites/' + INV), { revoked: true }));
+  await assertFails(updateDoc(doc(db('coach2'), 'coachInvites/' + INV), { revoked: true }));
+  await assertFails(updateDoc(doc(db('coach1'), 'coachInvites/' + INV), { maxUses: 100 }));
+  await assertSucceeds(updateDoc(doc(db('coach1'), 'coachInvites/' + INV), { revoked: true }));
+  await assertFails(updateDoc(doc(db('coach1'), 'coachInvites/' + INV), { revoked: false }));
+});
+
+test('convite: pedido do aluno consome exatamente 1 uso no mesmo lote; recusa expirado, revogado, esgotado e de outro treinador', async () => {
+  await seedStu3();
+  await putInvite();
+  await assertFails(setDoc(doc(db('stu3'), 'coachLinks/stu3'), link({ inviteId: INV })));                // sem somar o uso
+  await assertFails(useInvite('stu3', {}, 2));                                                           // somou 2
+  await assertFails(useInvite('stu3', { coachId: 'coach2' }));                                           // convite é de outro treinador
+  await assertSucceeds(useInvite('stu3'));
+  const after = (await getDoc(doc(db('coach1'), 'coachInvites/' + INV))).data();
+  assert.equal(after.uses, 1);
+  assert.equal((await getDoc(doc(db('stu3'), 'coachLinks/stu3'))).data().status, 'pending');             // pendente: o aceite continua com o treinador
+  assert.equal((await getDoc(doc(db('stu3'), 'users/stu3'))).data().coachId, undefined);                // e não vincula sozinho
+});
+
+test('convite: expirado, revogado e esgotado são recusados', async () => {
+  await seedStu3();
+  await putInvite({ expiresAt: Timestamp.fromMillis(Date.now() - 1000) });
+  await assertFails(useInvite('stu3'));
+  await putInvite({ revoked: true });
+  await assertFails(useInvite('stu3'));
+  await putInvite({ maxUses: 2, uses: 2 });
+  await assertFails(useInvite('stu3', {}, 3));
+  await putInvite({ maxUses: 2, uses: 1 });
+  await assertSucceeds(useInvite('stu3', {}, 2));                                                        // último uso
+});
+
+test('convite: aluno não mexe no convite sem pedido; código fixo (sem inviteId) segue valendo', async () => {
+  await seedStu3();
+  await putInvite();
+  await assertFails(updateDoc(doc(db('stu3'), 'coachInvites/' + INV), { uses: 1 }));                    // sem o pedido no lote
+  await assertFails(updateDoc(doc(db('stu3'), 'coachInvites/' + INV), { maxUses: 999 }));
+  await assertSucceeds(setDoc(doc(db('stu3'), 'coachLinks/stu3'), link()));                              // legado
+});
+
+test('convite: usuário que já tem treinador não usa convite; convite não muda papel nem expõe dados do aluno', async () => {
+  await putInvite();
+  await assertFails(useInvite('stu1'));                                                                  // stu1 já tem coach1
+  await seedStu3();
+  await assertSucceeds(useInvite('stu3'));
+  await assertFails(updateDoc(doc(db('stu3'), 'users/stu3'), { role: 'coach' }));
+  await assertFails(getDoc(doc(db('coach1'), 'users/stu3')));                                           // pendente: treinador ainda não lê o aluno
+  await assertFails(getDocs(query(collection(db('coach1'), 'checkIns'), where('userId', '==', 'stu3'))));
+});
+
+test('aceite com mensalidade: valor positivo e paymentStatus pending; zero, negativo, texto ou outro campo são recusados', async () => {
+  await seedStu3();
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'coachLinks/stu3'), link()); });
+  const accept = (extra) => {
+    const d = db('coach1');
+    const b = writeBatch(d);
+    b.update(doc(d, 'coachLinks/stu3'), { status: 'active', updatedAt: 'x' });
+    b.update(doc(d, 'users/stu3'), { coachId: 'coach1', updatedAt: 'x', ...extra });
+    return b.commit();
+  };
+  await assertFails(accept({ monthlyFee: 0 }));
+  await assertFails(accept({ monthlyFee: -10 }));
+  await assertFails(accept({ monthlyFee: 'cem' }));
+  await assertFails(accept({ monthlyFee: 150, paymentStatus: 'paid' }));
+  await assertFails(accept({ monthlyFee: 150, role: 'coach' }));
+  await assertFails(accept({ monthlyFee: 150, weight: 1 }));
+  await assertSucceeds(accept({ monthlyFee: 150, paymentStatus: 'pending' }));
+  const u = (await getDoc(doc(db('coach1'), 'users/stu3'))).data();
+  assert.equal(u.monthlyFee, 150);
+  assert.equal(u.coachId, 'coach1');
+});
+
+test('mensalidade do aluno vinculado: coach edita com valor válido (0 = isento); negativo e texto são recusados', async () => {
+  await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: 99.9 }));
+  await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: 0 }));                  // isento é permitido fora do aceite
+  await assertFails(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: -1 }));
+  await assertFails(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: 'x' }));
+  await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { paymentStatus: 'paid', paymentDate: 'd', lastPaymentUpdate: 'd' })); // marcar pago continua
+});
+
+test('chat: primeira conversa do par — participante pelo ID consulta o chat inexistente e cria; terceiros não', async () => {
+  const id = 'coach1_stu1';
+  await assertSucceeds(getDoc(doc(db('coach1'), 'chats/' + id)));                         // ainda não existe: "não encontrado", não negado
+  await assertSucceeds(getDoc(doc(db('stu1'), 'chats/' + id)));
+  await assertFails(getDoc(doc(db('coach2'), 'chats/' + id)));                            // de fora do ID
+  await assertFails(getDoc(doc(anonDb(), 'chats/' + id)));
+  const create = (who, other) => setDoc(doc(db(who), 'chats/' + id), { participants: [who, other], participantData: { [who]: { name: 'A', photo: '' }, [other]: { name: 'B', photo: '' } }, createdAt: Timestamp.now(), updatedAt: Timestamp.now(), lastMessage: '' });
+  await assertFails(create('coach2', 'stu1'));
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'chats/' + id), { participants: ['coach1', 'stu1'], participantData: { coach1: { name: 'A', photo: '' }, stu1: { name: 'B', photo: '' } }, createdAt: Timestamp.now(), updatedAt: Timestamp.now(), lastMessage: 'oi' }); });
+  await assertSucceeds(getDoc(doc(db('coach1'), 'chats/' + id)));                         // existente: só participantes
+  await assertFails(getDoc(doc(db('coach2'), 'chats/' + id)));
+  await assertFails(getDoc(doc(db('stu2'), 'chats/' + id)));
+});
+
+test('convite: gastar uso sozinho (sem escrever o pedido no mesmo lote) é negado, mesmo com pedido pendente antigo', async () => {
+  await seedStu3();
+  await putInvite();
+  await assertSucceeds(useInvite('stu3'));                                                    // uso legítimo
+  await assertFails(updateDoc(doc(db('stu3'), 'coachInvites/' + INV), { uses: 2 }));           // loop de usos sem pedido novo
+  const after = (await getDoc(doc(db('coach1'), 'coachInvites/' + INV))).data();
+  assert.equal(after.uses, 1);
+});
+
+test('convite: o mesmo aluno não reaproveita o mesmo convite; revogar o pedido não mexe em inviteId', async () => {
+  await seedStu3();
+  await putInvite();
+  await assertSucceeds(useInvite('stu3'));
+  const d = db('stu3');
+  const again = writeBatch(d);
+  again.set(doc(d, 'coachLinks/stu3'), link({ studentId: 'stu3', inviteId: INV, updatedAt: '2026-10-13T10:00:00Z' }));
+  again.update(doc(d, 'coachInvites/' + INV), { uses: 2 });
+  await assertFails(again.commit());                                                          // pedido pendente + mesmo convite
+  await assertFails(updateDoc(doc(d, 'coachLinks/stu3'), { status: 'revoked', inviteId: 'i_OutroConviteQualquer1', updatedAt: 'y' }));
+  await assertSucceeds(updateDoc(doc(d, 'coachLinks/stu3'), { status: 'revoked', updatedAt: 'y' }));
+});
+
+test('aceite: mensalidade zero é recusada mesmo sendo permitida depois', async () => {
+  await seedStu3();
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'coachLinks/stu3'), link()); });
+  const d = db('coach1');
+  const b = writeBatch(d);
+  b.update(doc(d, 'coachLinks/stu3'), { status: 'active', updatedAt: 'x' });
+  b.update(doc(d, 'users/stu3'), { coachId: 'coach1', updatedAt: 'x', monthlyFee: 0 });
+  await assertFails(b.commit());
+});
+
+test('chat: ninguém cria conversa com o ID de outro par', async () => {
+  const mk = (who, other, id) => setDoc(doc(db(who), 'chats/' + id), { participants: [who, other], participantData: { [who]: { name: 'A', photo: '' }, [other]: { name: 'B', photo: '' } }, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), lastMessage: '' });
+  await assertFails(mk('coach1', 'stu1', 'stu1_stu2'));                                        // ID de outro par
+  await assertFails(mk('coach1', 'stu1', 'qualquer'));
+  await assertSucceeds(mk('coach1', 'stu1', 'coach1_stu1'));
 });

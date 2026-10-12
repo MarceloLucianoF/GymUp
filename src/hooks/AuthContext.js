@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
@@ -12,6 +13,7 @@ import {
 import { auth, db, ensureAppCheck, markSession } from "../firebase/config"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { syncPublicCoachProfile } from "../services/coachProfile";
+import { requestWithInvite } from "../services/coachLinkService";
 
 // Versão do texto de Termos/Privacidade aceito no cadastro (atualize ao mudar os textos).
 export const TERMS_VERSION = '2026-10';
@@ -80,7 +82,16 @@ export function AuthProvider({ children }) {
             }
 
             await setDoc(doc(db, "users", res.user.uid), initialData);
-            if (inviteCoachId) {
+            const inviteLinkId = typeof additionalData.inviteId === 'string' ? additionalData.inviteId.trim() : '';
+            if (inviteLinkId) {
+                // Convite por link: pedido pendente + 1 uso do convite no mesmo lote. Se o convite não valer mais, a conta fica sem pedido.
+                try {
+                    await requestWithInvite({ uid: res.user.uid, displayName }, inviteLinkId);
+                } catch (linkError) {
+                    console.error('Convite não registrado (a conta foi criada):', linkError);
+                    toast.error(linkError.message || 'A conta foi criada, mas o convite não pôde ser usado.');
+                }
+            } else if (inviteCoachId) {
                 const stamp = new Date().toISOString();
                 try {
                     await setDoc(doc(db, "coachLinks", res.user.uid), {

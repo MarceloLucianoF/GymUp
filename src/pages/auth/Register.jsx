@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { resolveCoachCode } from '../../services/coachLinkService';
 import { KeyRound, Check } from 'lucide-react';
 import usePageMeta from '../../hooks/usePageMeta';
 import AuthField from './AuthField';
@@ -32,6 +31,9 @@ export default function Register() {
   const [coachCode, setCoachCode] = useState('');
   const [coachName, setCoachName] = useState(null);
   const [isCheckingCode, setIsCheckingCode] = useState(false);
+  const [coachKind, setCoachKind] = useState('coach');
+  const [coachResolved, setCoachResolved] = useState('');
+  const [coachMessage, setCoachMessage] = useState('');
   const [searchParams] = useSearchParams();
 
   const { register, user, authLoading } = useAuthContext();
@@ -50,22 +52,27 @@ export default function Register() {
       }
   }, [searchParams]);
 
+  // Confere o código ou o convite só com dados públicos (ainda não há login nesta tela).
   const verifyCoach = async (code) => {
       if (!code) return;
       setIsCheckingCode(true);
+      setCoachMessage('');
       try {
-          const coachRef = doc(db, 'users', code.trim());
-          const coachSnap = await getDoc(coachRef);
-          
-          if (coachSnap.exists() && (coachSnap.data().role === 'coach' || coachSnap.data().role === 'admin')) {
-              setCoachName(coachSnap.data().displayName);
-              toast.success(`Treinador encontrado: ${coachSnap.data().displayName}`);
+          const found = await resolveCoachCode(code);
+          if (found?.ok) {
+              setCoachName(found.coachName || 'Treinador');
+              setCoachKind(found.kind);
+              setCoachResolved(found.code);
+              toast.success(found.coachName ? `Treinador encontrado: ${found.coachName}` : 'Convite válido.');
           } else {
               setCoachName(null);
-              toast.error("Código de treinador inválido.");
+              setCoachMessage(found?.message || 'Código de treinador inválido.');
+              toast.error(found?.message || 'Código de treinador inválido.');
           }
       } catch (err) {
           console.error(err);
+          setCoachName(null);
+          setCoachMessage('Não foi possível conferir o código agora. Tente de novo.');
       } finally {
           setIsCheckingCode(false);
       }
@@ -88,9 +95,11 @@ export default function Register() {
     if (password !== confirmPassword) nextErrors.confirmPassword = 'As senhas não conferem!';
 
     let verifiedCoachId = null;
+    let verifiedInviteId = null;
     if (coachCode.trim()) {
-        if (!coachName) nextErrors.coachCode = 'Verifique o código do treinador antes de continuar.';
-        else verifiedCoachId = coachCode.trim();
+        if (!coachName) nextErrors.coachCode = coachMessage || 'Verifique o código do treinador antes de continuar.';
+        else if (coachKind === 'invite') verifiedInviteId = coachResolved;
+        else verifiedCoachId = coachResolved || coachCode.trim();
     }
 
     if (!accepted) nextErrors.terms = 'Aceite os Termos e a Política de Privacidade para continuar.';
@@ -108,6 +117,7 @@ export default function Register() {
     try {
       await register(email, password, displayName, { 
           coachId: verifiedCoachId,
+          inviteId: verifiedInviteId,
           currentTrainingId: null,
           acceptedTerms: true
       });
@@ -208,7 +218,7 @@ export default function Register() {
                         aria-invalid={errors.coachCode ? 'true' : undefined}
                         aria-describedby="register-coach-error"
                         onBlur={handleBlurCoachCode}
-                        onChange={(e) => { setCoachCode(e.target.value); setCoachName(null); }} 
+                        onChange={(e) => { setCoachCode(e.target.value); setCoachName(null); setCoachMessage(''); }} 
                         value={coachCode}
                         className={`w-full bg-amber-50/10 dark:bg-[#1F2937]/50 border p-3 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-brand dark:text-white transition-all font-mono tracking-wider text-sm ${coachName ? 'border-green-500' : 'border-gray-200 dark:border-gray-800'}`}
                         placeholder="Ex: CÓDIGO-DO-COACH"
@@ -218,6 +228,7 @@ export default function Register() {
                 <p id="register-coach-error" role="alert" aria-live="assertive" className={errors.coachCode ? 'mt-1.5 text-sm font-medium text-red-500' : 'sr-only'}>
                     {errors.coachCode || ''}
                 </p>
+                {coachMessage && !errors.coachCode && <p role="status" className="mt-1.5 text-sm font-medium text-red-600 dark:text-red-400">{coachMessage}</p>}
                 {/* Feedback Visual do Nome do Coach */}
                 {coachName && (
                     <div className="mt-2 flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg text-xs font-bold animate-fade-in border border-green-200 dark:border-green-950">
