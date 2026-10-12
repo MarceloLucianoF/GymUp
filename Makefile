@@ -1,6 +1,6 @@
 # Makefile do BohTreinar (workout-app). O app roda na Cloudflare; Firebase fica com Auth e Firestore.
 
-.PHONY: install dev build seed clean deploy deploy-rules deploy-redirect test-rules
+.PHONY: install dev build seed clean deploy deploy-rules test-rules
 
 install:
 	npm install --legacy-peer-deps
@@ -25,10 +25,6 @@ deploy:
 # Regras e índices do Firestore
 deploy-rules:
 	firebase deploy --only firestore:rules,firestore:indexes
-
-# Hosting do Firebase: apenas redireciona para o endereço novo (mantém /__/auth/handler)
-deploy-redirect:
-	firebase deploy --only hosting
 
 test-rules:
 	firebase emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js"

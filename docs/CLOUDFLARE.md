@@ -17,7 +17,7 @@ Cabeçalhos de segurança e cache vêm de `public/_headers` (arquivos estáticos
 ## Depois de publicar
 1. Firebase Console → Authentication → Configurações → **Domínios autorizados**: adicione o domínio do Worker (necessário para login com Google).
 2. App Check (reCAPTCHA Enterprise): adicione o domínio do Worker na lista de domínios da chave.
-3. Firebase Hosting: não é mais publicado. **Não exclua o site** do Hosting sem testar o login com Google: o `authDomain` (`*.firebaseapp.com`) serve `/__/auth/handler` pelo Hosting do Firebase. Mantê-lo vazio ou com um redirecionamento custa nada.
+3. Firebase Hosting está desativado. Recuperação de senha e login OAuth continuam funcionando porque `/__/auth/*` é servido pelo Firebase independentemente do Hosting (testado: link de redefinição abre a página de nova senha).
 4. Em `wrangler.jsonc`, ajuste `ALLOWED_ORIGINS` se usar outro domínio (domínio próprio, por exemplo).
 
 ## Como a rota é protegida

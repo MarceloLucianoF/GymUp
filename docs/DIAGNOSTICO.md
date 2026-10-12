@@ -200,5 +200,5 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 ## Atualização — limpeza do Firebase
 - App e proxy de IA somente na Cloudflare (`make deploy`). Firebase fica com Auth e Firestore (`make deploy-rules`).
 - Removidos: `functions/` (proxy antigo, substituído pelo Worker), alvos `deploy-hosting`/`deploy-functions`/`deploy-all` do Makefile, testes de functions no CI, pastas vazias (`fuctions/`, `wsl.localhost/`), `.firebase/` do git.
-- Firebase Hosting agora só redireciona (301) para `bohtreinar.marcelo-labs.workers.dev` (`hosting-redirect/`), mantendo `/__/auth/handler`. Não excluir o site sem testar o login.
-- **Pendente (console):** domínio `bohtreinar.marcelo-labs.workers.dev` em Authentication > Domínios autorizados; remover `bohtreinar.bohtreinar-app.workers.dev`.
+- Firebase Hosting desativado (`firebase hosting:disable`). `/__/auth/handler` e `/__/auth/action` seguem 200 e o link de redefinição de senha abre a página de nova senha (testado).
+- Domínio `bohtreinar.marcelo-labs.workers.dev` autorizado no Authentication; domínio antigo removido.
