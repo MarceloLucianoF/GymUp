@@ -28,6 +28,8 @@ if (recaptchaSiteKey && typeof window !== 'undefined') {
 }
 const db = getFirestore(app);
 const authService = getAuth(app);
+// E-mails do Firebase (recuperar senha etc.) e a página de ação saem em português.
+authService.languageCode = 'pt-BR';
 
 export { app, db, authService };
 export const auth = getAuth(app);
