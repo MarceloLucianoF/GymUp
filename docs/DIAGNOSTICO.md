@@ -390,3 +390,27 @@ Implementado e validado em produção com treinador e alunos fictícios (**39 de
 - **Limites e não coberto:** cadastro novo **com Google** não carrega o convite (o usuário entra e reabre o link, que abre o pedido no perfil); expiração é conferida pelo horário do servidor, mas o contador de usos aceita no máximo `maxUses` por regra, sem aviso ao treinador quando esgota; convites antigos revogados/expirados continuam listados (até 10); chat do lado do aluno para pares novos usa a mesma correção, mas não foi exercitado.
 - **Revisão (`revisor-diff`) desta frente e correções:** (1) **brecha alta:** o aluno podia gastar usos do convite em loop (`update uses+1` sozinho) com um pedido antigo; agora o pedido tem de ser escrito no mesmo lote, e o mesmo aluno não reaproveita o mesmo convite; (2) o ID do chat tem de bater com os participantes na criação (ninguém ocupa o ID de outro par); (3) a mensalidade "0 = isento" volta a ser aceita no Financeiro e nas regras, e só o **aceite** de aluno novo e o **padrão** exigem valor maior que zero; (4) revogar o pedido e o treinador não alteram `inviteId`/`createdAt`/`requestedBy`. Testes de regras: 60 casos; fluxos em produção refeitos depois das correções (39 de convite/mensalidade/chat/ficha e 20 de escrita do treinador).
 - **Aceito:** convite revogado ou expirado depois de um pedido já feito não impede o treinador de aceitar esse pedido (a decisão é dele); o `get` do convite é público por ID (62^20 combinações, sem listagem; `Referrer-Policy: strict-origin-when-cross-origin` evita vazar o caminho a terceiros).
+
+## Atualização — otimização de carga (12/10/2026)
+**Diagnóstico:** a tela só aparecia depois que o **Auth conferia a sessão** (`accounts:lookup`) e esse pedido **esperava o token do App Check** (corrente de ~2 s até o reCAPTCHA responder); `AuthProvider` não renderiza nada até lá. Ou seja, o reCAPTCHA estava no caminho crítico da primeira pintura, e o conteúdo (Firestore) também espera o token. O adiamento simples do início do token **não ajudou** (testado e descartado): o Auth continuava esperando.
+
+**O que mudou:**
+1. O App Check **não inicia mais no carregamento** das telas privadas; o `AuthContext` inicia assim que a sessão é conhecida e **antes de qualquer leitura do Firestore** (que sempre espera o token). Entrar, cadastrar e as telas públicas seguem como antes.
+2. O script do reCAPTCHA começa a baixar **já no carregamento, em paralelo** (só o download; o App Check ainda não está iniciado, então o Auth não espera). Efeito colateral: o `anchor` do reCAPTCHA é pedido duas vezes (o SDK injeta o próprio script).
+3. **Cópia mínima do perfil** (`src/utils/profileCache.js`: papel, nome, foto, objetivo, `coachId`, campos de onboarding; **nenhum dado de saúde, e-mail ou telefone**): a tela abre com ela enquanto o perfil verdadeiro é lido e a substitui; quem ainda não concluiu o onboarding não usa a cópia; sai da tela/da conta limpa a cópia. Só interface: quem autoriza são as regras.
+4. Mantidos: prazo de 5 s do token (app não fica em branco com o reCAPTCHA bloqueado — conferido de novo: a tela aparece em ~8 s) e as rotas já em carregamento sob demanda (o SDK de IA e cada página são chunks separados; o `main.js` de 207 KB é quase só Firebase e React, sem ganho fácil).
+
+**Resultado (mesmo método do diagnóstico anterior, conta demo, primeira visita com cache frio e sessão):**
+| Medida | Antes | Depois |
+| --- | --- | --- |
+| Primeira pintura real (sem simulação), todas as telas | 3,5 a 4,6 s | **1,2 a 1,6 s** |
+| LCP real, primeira visita | 3,6 a 5,7 s | 1,4 a 4,0 s |
+| Nota mobile, **visita repetida**: Painel / Medidas / Chat / Histórico / Treinos | 63 / 78 / 83 / 85 / 89 | **90 / 91 / 93 / 92 / 85** |
+| TBT do Painel, visita repetida (mobile) | 1850 ms | 208 ms |
+| Nota mobile, primeira visita (simulada, celular lento) | 37 a 51 | 40 a 49 (**sem mudança relevante**) |
+
+A nota simulada da primeira visita não melhorou: no celular lento o conteúdo (dados do Firestore) continua dependendo do token do App Check e da conexão; o que mudou foi a tela aparecer (casca, menu, título) bem antes. Para mexer nisso é preciso reduzir o caminho até os dados (por exemplo, cache de leitura do Painel), não o reCAPTCHA.
+
+**Consequência para o App Check (decisão):** a conferência de sessão do Auth (um pedido por abertura) sai **sem token**; isso desfaz o ajuste do PR 62 (`bt_has_session`), que antecipava o token por causa das métricas, ao custo de deixar a tela em branco ~2 s. **O enforce não deve cobrir o Authentication** (já era a recomendação); Firestore e AI Logic seguem recebendo o token (conferido: a troca do token responde 200 e as leituras do Firestore só começam depois dela).
+
+**Verificação funcional depois da mudança (produção):** fluxo social 15/15; login por e-mail e senha + exclusão de conta 13/13; convite, cadastro novo, chat, mensalidade e ficha 39/39; sincronização offline 13/13; reCAPTCHA bloqueado ainda abre a tela. Testes do app 287, Worker 21.
