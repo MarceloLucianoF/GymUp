@@ -215,7 +215,7 @@ const askNvidiaProxy = async (messages) => {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
       signal: controller.signal,
-      body: JSON.stringify({ model: NVIDIA_MODEL, messages, temperature: 0.6, max_tokens: 1000 })
+      body: JSON.stringify({ model: NVIDIA_MODEL, messages, temperature: 0.6, max_tokens: 1800 })
     });
     if (!response.ok) throw new Error(`NVIDIA proxy ${response.status}`);
     const data = await response.json();

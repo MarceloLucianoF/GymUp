@@ -6,17 +6,20 @@ const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 // Estar no catálogo NÃO garante que a chave consegue chamar o modelo (404): por isso existe o modo 'auto'.
 const AUTO = 'auto';
 const AUTO_ORDER = [
+  // Medidos em 12/10/2026 com a chave do projeto: respondem em 2-4 s.
+  'nvidia/nemotron-3-super-120b-a12b',
+  'openai/gpt-oss-20b',
+  // Respondiam antes e podem voltar; os que dão 404/502 falham em menos de 1 s.
   'nvidia/llama-3.1-nemotron-70b-instruct',
   'nvidia/llama-3.1-nemotron-51b-instruct',
   'nv-mistralai/mistral-nemo-12b-instruct',
   'google/gemma-3-12b-it',
-  'google/gemma-4-31b-it',
-  'nvidia/nemotron-3-super-120b-a12b',
   'mistralai/mistral-large-2-instruct',
-  'openai/gpt-oss-20b',
   'nvidia/nemotron-nano-3-30b-a3b',
-  'z-ai/glm-5.3-flash',
-  'nvidia/llama-3.1-nemotron-ultra-253b-v1'
+  'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+  // Travam até o prazo (12 s): por último.
+  'google/gemma-4-31b-it',
+  'z-ai/glm-5.3-flash'
 ];
 const DEFAULT_MODEL = AUTO;
 const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER]);
@@ -111,11 +114,11 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
   const messages = normalizeMessages(body.messages);
   const model = body.model || DEFAULT_MODEL;
   const temperature = body.temperature === undefined ? 0.6 : body.temperature;
-  const maxTokens = body.max_tokens === undefined ? 1000 : body.max_tokens;
+  const maxTokens = body.max_tokens === undefined ? 1800 : body.max_tokens;
   if (!messages) return json(400, { error: 'Mensagens inválidas.' }, cors);
   if (!ALLOWED_MODELS.has(model)) return json(400, { error: 'Modelo não permitido.' }, cors);
   if (typeof temperature !== 'number' || !Number.isFinite(temperature) || temperature < 0 || temperature > 1) return json(400, { error: 'Temperatura inválida.' }, cors);
-  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 1200) return json(400, { error: 'Limite de tokens inválido.' }, cors);
+  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 2400) return json(400, { error: 'Limite de tokens inválido.' }, cors);
 
   if (!env.NVIDIA_API_KEY) return json(503, { error: 'Serviço de IA indisponível.' }, cors);
 
