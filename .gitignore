@@ -26,3 +26,8 @@ Thumbs.db
 .env.local
 .env
 serviceAccountKey.json
+# Firebase local
+.firebase/
+firestore-debug.log
+*-debug.log
+.wrangler/

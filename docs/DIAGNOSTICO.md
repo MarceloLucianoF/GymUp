@@ -196,3 +196,9 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Regras no emulador:** `rules-test/` (16 testes: isolamento aluno/treinador, escalada de papel, check-ins, notas, chats, fichas, perfil público). Roda no CI (`setup-java` + `emulators:exec`) e em `make test-rules`.
 - **Build:** sem source maps em produção; `caniuse-lite` atualizado.
 - **a11y:** axe-core zerado nas 34 telas (claro e escuro). Gerador de treino IA reestruturado (botoes padronizados, sem rolagem interna, sheet no celular, abas acessiveis); `color-scheme: only light` no tema claro para impedir escurecimento forçado do Android.
+
+## Atualização — limpeza do Firebase
+- App e proxy de IA somente na Cloudflare (`make deploy`). Firebase fica com Auth e Firestore (`make deploy-rules`).
+- Removidos: `functions/` (proxy antigo, substituído pelo Worker), alvos `deploy-hosting`/`deploy-functions`/`deploy-all` do Makefile, testes de functions no CI, pastas vazias (`fuctions/`, `wsl.localhost/`), `.firebase/` do git.
+- Firebase Hosting agora só redireciona (301) para `bohtreinar.marcelo-labs.workers.dev` (`hosting-redirect/`), mantendo `/__/auth/handler`. Não excluir o site sem testar o login.
+- **Pendente (console):** domínio `bohtreinar.marcelo-labs.workers.dev` em Authentication > Domínios autorizados; remover `bohtreinar.bohtreinar-app.workers.dev`.

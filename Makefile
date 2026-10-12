@@ -1,6 +1,6 @@
-# Makefile interno para workout-app (AcademyUp)
+# Makefile do BohTreinar (workout-app). O app roda na Cloudflare; Firebase fica com Auth e Firestore.
 
-.PHONY: install dev build seed clean deploy deploy-hosting deploy-functions deploy-rules deploy-all
+.PHONY: install dev build seed clean deploy deploy-rules deploy-redirect test-rules
 
 install:
 	npm install --legacy-peer-deps
@@ -18,20 +18,17 @@ clean:
 	rm -rf build
 	rm -rf node_modules
 
+# Publica o app (build + Worker da Cloudflare)
 deploy:
-	npm run build && firebase deploy
+	REACT_APP_NVIDIA_PROXY=true REACT_APP_AI_PRIMARY=nvidia npm run build && cd worker && npx wrangler deploy --config ../wrangler.jsonc
 
-deploy-hosting:
-	npm run build && firebase deploy --only hosting
+# Regras e índices do Firestore
+deploy-rules:
+	firebase deploy --only firestore:rules,firestore:indexes
 
-deploy-functions:
-	firebase deploy --only functions
+# Hosting do Firebase: apenas redireciona para o endereço novo (mantém /__/auth/handler)
+deploy-redirect:
+	firebase deploy --only hosting
 
 test-rules:
 	firebase emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js"
-
-deploy-rules:
-	firebase deploy --only firestore:rules
-
-deploy-all:
-	npm run build && firebase deploy

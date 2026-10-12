@@ -11,7 +11,7 @@ Usar instalações locais existentes antes de propor mudanças no ambiente.
 - `npm run build`.
 - `CI=true npm test -- --watchAll=false --runInBand`, depois de conferir que os testes não escrevem em serviços reais.
 - ESLint disponível no projeto, sem `--fix` durante auditoria.
-- `node --check functions/index.js` e `node --check scripts/seed.cjs` (somente sintaxe).
+- `node --check scripts/seed.cjs` (somente sintaxe) e `(cd worker && node --test test/*.test.js)`.
 - Integridade de dependências e resultado do diff, em coordenação com Git.
 
 ## Cenários de integração
@@ -26,6 +26,6 @@ Usar mocks/emuladores, sem seed de produção, chamadas pagas ou envio de mensag
 - Registrar comando, código de saída, resultado e ambiente.
 - Diferenciar falha de produto, falha de teste e limitação de ambiente.
 - Não usar `--passWithNoTests` para apresentar ausência de testes como aprovação.
-- Não confundir checagem de sintaxe com execução de Cloud Functions.
+- Não confundir checagem de sintaxe com execução do Worker.
 - Informar o que não foi executado e o que bloqueia uma liberação.
 - Repetir testes apenas quando alterações, falhas ou dúvidas novas justificarem.
