@@ -22,7 +22,7 @@ Escrito em 12/10/2026. Os passos de console são seus (eu não acesso o console 
 - **Proteção contra enumeração de e-mail:** já ativa. **Conferido.**
 - **Medido no navegador (12/10):** o App Check obtém o token (troca com o reCAPTCHA responde 200, sem erro no console) e as chamadas do Firestore levam o token no corpo do canal. A primeira chamada do Auth, porém, sai **antes** do App Check iniciar (a renovação do login acontece no começo do carregamento; o App Check entrava 1,5 s depois nas telas públicas). Cada abertura do app com sessão gerava, no mínimo, uma chamada de Auth sem token.
 - **Painel do Fraud Defense (chave BohTreinar):** status "Protegido", integração do front-end ok, 0 solicitações de risco alto e o pico de ~44 solicitações coincide com o dia dos meus testes (12/10). Ou seja, a chave funciona e a leitura baixa do App Check é, em boa parte, tráfego de teste.
-- **Corrigido no código (esta etapa):** quem já tem sessão agora inicia o App Check imediatamente, mesmo em tela pública (marca local `bt_has_session`, só acelera, não autoriza nada). **Validado em produção:** com a marca, a primeira chamada do Auth já sai com o token (antes saía sem).
+- **Ajuste do PR 62 desfeito (carga):** antecipar o App Check para dar token à renovação do Auth deixava a tela em branco por ~2 s (o Auth esperava o token). Agora o App Check inicia quando a sessão é conhecida e antes do Firestore; a conferência de sessão do Auth sai sem token. **Validado em produção:** com a marca, a primeira chamada do Auth já sai com o token (antes saía sem).
 - **Enforce do Authentication: não recomendo** enquanto houver qualquer chamada de renovação sem token; uma recusa ali desloga o aluno. Firestore e AI Logic dão o ganho principal.
 
 **Novo critério:** pelo menos **200 solicitações** por produto na janela e ≥ 99% verificadas, **sem contar tráfego de teste**. Para isso, durante a observação eu evito rodar testes de navegador em produção ou os rodo com o token de debug (seção 6; você gera no console e me passa por variável de ambiente local, não pelo chat nem pelo repositório).
@@ -52,7 +52,7 @@ Se houver "não verificadas" acima de 1%, investigue antes de ligar:
 ## 4. Ordem do enforce
 1. **Firebase AI Logic** (até 2/11). Se algo der errado, o Coach IA mostra o erro padrão de indisponibilidade; o restante do app continua.
 2. **Cloud Firestore.** É o de maior risco (o app inteiro lê e grava ali). Faça em horário de pouco uso, com o celular e o computador à mão.
-3. **Authentication**, só se as métricas estiverem limpas. Opcional: Firestore e AI já fecham o principal.
+3. **Authentication: não ligar.** A conferência de sessão ao abrir o app sai sem token por decisão de desempenho; o enforce no Auth deslogaria alunos. Firestore e AI Logic fecham o principal.
 
 Cada "Enforce" leva alguns minutos para valer. **Reversão:** o mesmo botão (Unenforce); volta em minutos.
 

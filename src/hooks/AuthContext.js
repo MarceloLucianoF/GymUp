@@ -10,10 +10,11 @@ import {
     signInWithPopup,
     browserPopupRedirectResolver
 } from "firebase/auth";
-import { auth, db, ensureAppCheck, markSession } from "../firebase/config"; 
+import { auth, db, ensureAppCheck } from "../firebase/config"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { syncPublicCoachProfile } from "../services/coachProfile";
 import { requestWithInvite } from "../services/coachLinkService";
+import { readCachedProfile, writeCachedProfile, clearCachedProfile } from "../utils/profileCache";
 
 // Versão do texto de Termos/Privacidade aceito no cadastro (atualize ao mudar os textos).
 export const TERMS_VERSION = '2026-10';
@@ -167,6 +168,7 @@ export function AuthProvider({ children }) {
     const logout = async () => {
         try {
             await signOut(auth);
+            clearCachedProfile();
             setUser(null);
             setUserProfile(null);
         } catch (error) {
@@ -177,21 +179,31 @@ export function AuthProvider({ children }) {
     // --- 4. MONITORAR STATUS ---
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            markSession(!!firebaseUser);
             if (firebaseUser) {
                 ensureAppCheck();
                 setUser(firebaseUser);
+                // Primeira pintura sem esperar o Firestore: com a cópia mínima do perfil a tela abre na hora e o perfil
+                // verdadeiro (que espera o App Check) a substitui em seguida.
+                let cached = creatingProfile.current ? null : readCachedProfile(firebaseUser.uid);
+                // Quem ainda não concluiu o onboarding não usa a cópia (ela pode estar velha e causar um redirecionamento falso).
+                if (cached && cached.role === 'user' && !cached.onboardedAt && !cached.goal) cached = null;
+                if (cached) { setUserProfile(cached); setAuthLoading(false); }
                 try {
                     if (creatingProfile.current) { setAuthLoading(false); return; }
                     const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
                     if (docSnap.exists()) {
                         setUserProfile(docSnap.data());
+                        writeCachedProfile(docSnap.data());
                         syncPublicCoachProfile(firebaseUser.uid, docSnap.data()).catch(() => {});
+                    } else if (cached) {
+                        setUserProfile(null);
+                        clearCachedProfile();
                     }
                 } catch (error) {
                     console.error("Erro ao buscar perfil:", error);
                 }
             } else {
+                clearCachedProfile();
                 setUser(null);
                 setUserProfile(null);
             }

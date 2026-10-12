@@ -19,7 +19,11 @@ const app = initializeApp(firebaseConfig);
 
 // App Check (reCAPTCHA Enterprise, hoje "Fraud Defense"): só ativa quando a chave PÚBLICA do site está definida no build.
 // Em desenvolvimento, use o token de debug (console do Firebase > App Check > Gerenciar tokens de debug).
-// O script do reCAPTCHA pesa ~350 KB e custa ~3 s de CPU em celular lento, então não entra na primeira pintura.
+// O script do reCAPTCHA pesa ~350 KB e custa ~2 s de CPU em celular lento. Ele NÃO é iniciado no carregamento: o Auth
+// confere a sessão logo ao abrir e, se o App Check já estivesse de pé, esse pedido esperaria o token (~2 s) e o app inteiro
+// ficaria em branco. Quem inicia o App Check é o AuthContext, assim que a sessão é conhecida e antes de qualquer leitura do
+// Firestore (que sempre espera o token), além de entrar/cadastrar e das telas públicas (1,5 s depois do carregamento).
+// Consequência aceita: a conferência de sessão do Auth (um pedido por abertura) sai sem token; o enforce não deve cobrir o Auth.
 const recaptchaSiteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
 let appCheckStarted = false;
 export const ensureAppCheck = () => {
@@ -31,21 +35,18 @@ export const ensureAppCheck = () => {
     isTokenAutoRefreshEnabled: true
   });
 };
-// Quem já tem sessão abre o app com o Auth renovando o token logo no início: o App Check precisa estar de pé antes disso,
-// mesmo numa tela pública. O AuthContext grava/limpa esta marca; ela só decide a pressa, nunca autoriza nada.
-const SESSION_FLAG = 'bt_has_session';
-export const markSession = (on) => {
-  try { if (on) localStorage.setItem(SESSION_FLAG, '1'); else localStorage.removeItem(SESSION_FLAG); } catch (e) { /* sem localStorage */ }
-};
-const hasSessionFlag = () => { try { return localStorage.getItem(SESSION_FLAG) === '1'; } catch (e) { return false; } };
+// Em telas privadas o script do reCAPTCHA começa a baixar já, em paralelo (a corrente de pedidos até o token leva ~2 s e o
+// Firestore espera por ela), mas o App Check só é iniciado depois da sessão: o Auth não espera por ele.
 if (recaptchaSiteKey && typeof window !== 'undefined') {
-  // Telas públicas não fazem pedidos ao Firebase ao abrir: o reCAPTCHA entra depois do carregamento, ou antes,
-  // se o usuário entrar/cadastrar (ensureAppCheck é chamado) ou já houver sessão (AuthContext).
-  const lazy = !hasSessionFlag() && ['/', '/termos', '/privacidade', '/login', '/register', '/forgot-password', '/auth/action'].includes(window.location.pathname);
-  if (!lazy) ensureAppCheck();
-  else {
+  const publicPage = ['/', '/termos', '/privacidade', '/login', '/register', '/forgot-password', '/auth/action'].includes(window.location.pathname);
+  if (publicPage) {
     const later = () => setTimeout(ensureAppCheck, 1500);
     if (document.readyState === 'complete') later(); else window.addEventListener('load', later, { once: true });
+  } else {
+    const warm = document.createElement('script');
+    warm.async = true;
+    warm.src = `https://www.google.com/recaptcha/enterprise.js?render=${encodeURIComponent(recaptchaSiteKey)}`;
+    document.head.appendChild(warm);
   }
 }
 const db = getFirestore(app);
