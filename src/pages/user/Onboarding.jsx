@@ -85,7 +85,8 @@ function Step({ step, data, setField, bmi, plan, coachError, onContinueWithoutCo
               step={1}
               value={data.weeklyGoal}
               onChange={(e) => setField('weeklyGoal', Number(e.target.value))}
-              className="w-full accent-brand h-8"
+              className="range-brand w-full"
+              style={{ '--pct': `${((data.weeklyGoal - LIMITS.weeklyGoal[0]) / (LIMITS.weeklyGoal[1] - LIMITS.weeklyGoal[0])) * 100}%` }}
             />
             <div className="flex flex-wrap gap-2 mt-2" role="group" aria-label="Atalhos de frequência">
               {[2, 3, 4, 5, 6, 7].map((n) => (

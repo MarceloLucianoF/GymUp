@@ -188,3 +188,34 @@ html, body { overflow-x: clip; }
 /* No escuro, o brilho amarelo sobre fundo azul-escuro ficava lamacento (oliva): mais sutil. */
 .dark .aurora-bg::before { opacity: 0.2; }
 .dark .aurora-bg::after { opacity: 0.12; }
+
+/* Controle deslizante da marca: trilho claro/escuro previsível em qualquer navegador. */
+input[type='range'].range-brand {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #FFC107 var(--pct, 50%), #d1d5db var(--pct, 50%));
+  outline: none;
+}
+.dark input[type='range'].range-brand {
+  background: linear-gradient(to right, #FFC107 var(--pct, 50%), rgba(255, 255, 255, 0.14) var(--pct, 50%));
+}
+input[type='range'].range-brand::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 26px;
+  width: 26px;
+  border-radius: 9999px;
+  background: #FFC107;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+input[type='range'].range-brand::-moz-range-thumb {
+  height: 22px;
+  width: 22px;
+  border-radius: 9999px;
+  background: #FFC107;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+input[type='range'].range-brand:focus-visible { box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.5); }
