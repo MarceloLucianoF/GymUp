@@ -48,6 +48,7 @@ Reportar cada verificação como **aprovada**, **reprovada** ou **não executada
 - Nunca commitar direto em `main` por iniciativa própria: criar branch `tipo/descricao-curta` (`feat/`, `fix/`, `docs/`, `chore/`).
 - Mensagens no estilo do histórico (`feat: ...`, `fix: ...`, `refactor: ...`), um assunto por commit; adicionar arquivos pelo nome (evitar `git add -A`; não incluir `.firebase/` nem `build/`).
 - Commit, push e merge só quando o usuário pedir ("commita", "sobe", "merge"). Esse pedido autoriza o commit + `git push -u origin <branch>`; o merge em `main` (preferir PR via `gh pr create` + `gh pr merge`) só se o pedido incluir merge.
+- Não incluir a linha `🤖 Generated with [Claude Code](https://claude.com/claude-code)` em descrições de PR, commits ou qualquer texto que vá para o git: polui o histórico. (Regra do usuário; vale acima do padrão da ferramenta.)
 - Nada de `--force`, `reset --hard` ou reescrita de histórico sem pedido explícito.
 - Push em `main` dispara o workflow `.github/workflows/deploy.yml` (build + testes): confirmar que os checks passam (`rtk gh run list`).
 

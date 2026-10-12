@@ -179,3 +179,48 @@ test('modelo explícito: 404 não tenta outros modelos', async () => {
   assert.equal(res.status, 502);
   assert.equal(count, 1);
 });
+
+test('auto: NVIDIA_MODEL (variável do Worker) é tentado primeiro quando permitido; valor inválido é ignorado', async () => {
+  resetRateLimit(); resetModelCache();
+  let calls = [];
+  const spy = async (url, init) => { calls.push(bodyModel(init)); return okBody(); };
+  await handleNvidiaRequest(request(valid), { ...env, NVIDIA_MODEL: 'nvidia/nemotron-3-super-120b-a12b' }, { verify: okVerify, fetchImpl: spy });
+  assert.equal(calls[0], 'nvidia/nemotron-3-super-120b-a12b');
+
+  resetRateLimit(); resetModelCache(); calls = [];
+  await handleNvidiaRequest(request(valid), { ...env, NVIDIA_MODEL: 'modelo/inventado' }, { verify: okVerify, fetchImpl: spy });
+  assert.notEqual(calls[0], 'modelo/inventado');
+});
+
+test('auto: modelo que trava passa ao próximo e deixa de ser o preferido', async () => {
+  resetRateLimit(); resetModelCache();
+  const calls = [];
+  const fetchImpl = (url, init) => new Promise((resolve, reject) => {
+    calls.push(bodyModel(init));
+    if (calls.length === 1) { init.signal.addEventListener('abort', () => { const e = new Error('abort'); e.name = 'AbortError'; reject(e); }); return; }
+    resolve(okBody('veio do segundo'));
+  });
+  const original = global.setTimeout;
+  global.setTimeout = (fn, ms, ...a) => original(fn, ms >= 10_000 ? 20 : ms, ...a); // acelera só o prazo do modelo
+  try {
+    const res = await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl });
+    const data = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(calls.length, 2);
+    assert.equal(data.choices[0].message.content, 'veio do segundo');
+    assert.notEqual(calls[0], calls[1]);
+  } finally { global.setTimeout = original; }
+});
+
+test('modelo explícito que trava → 504 sem tentar outro', async () => {
+  resetRateLimit(); resetModelCache();
+  const fetchImpl = (url, init) => new Promise((resolve, reject) => {
+    init.signal.addEventListener('abort', () => { const e = new Error('abort'); e.name = 'AbortError'; reject(e); });
+  });
+  const original = global.setTimeout;
+  global.setTimeout = (fn, ms, ...a) => original(fn, ms >= 10_000 ? 20 : ms, ...a);
+  try {
+    const res = await handleNvidiaRequest(request({ ...valid, model: 'google/gemma-3-12b-it' }), env, { verify: okVerify, fetchImpl });
+    assert.equal(res.status, 504);
+  } finally { global.setTimeout = original; }
+});
