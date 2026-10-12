@@ -165,8 +165,8 @@ export default function CoachHome() {
                         <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p>
                         <p className="text-xs font-medium text-rose-700 dark:text-rose-400">{typeof s.daysInactive === 'number' ? `${s.daysInactive} dias sem treinar` : 'Ainda não treinou'}</p>
                       </div>
-                      <button type="button" aria-label={`Abrir chat com ${s.displayName || 'aluno'}`} onClick={() => navigate('/coach/chat', { state: chatState(s) })} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"><MessageSquare className="h-4 w-4" /></button>
-                      <button type="button" aria-label={`Ver ${s.displayName || 'aluno'}`} onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-700 dark:text-sky-400"><Eye className="h-4 w-4" /></button>
+                      <button type="button" aria-label={`Abrir chat com ${s.displayName || 'aluno'}`} onClick={() => navigate('/coach/chat', { state: chatState(s) })} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100"><MessageSquare className="h-4 w-4" /></button>
+                      <button type="button" aria-label={`Ver ${s.displayName || 'aluno'}`} onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100"><Eye className="h-4 w-4" /></button>
                     </li>
                   ))}
                 </ul>

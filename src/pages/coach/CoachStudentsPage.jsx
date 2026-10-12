@@ -201,8 +201,8 @@ export default function CoachStudentsPage() {
                       <button type="button" onClick={() => setAssigning(s)} className="pressable min-h-[44px] rounded-xl bg-brand px-3 text-xs font-bold text-black">{s.trainingName ? 'Trocar' : 'Atribuir'}</button>
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => openChat(s)} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-sky-500/10 text-sm font-bold text-sky-700 dark:text-sky-400"><MessageSquare className="h-4 w-4" /> Chat</button>
-                      <button type="button" onClick={() => navigate('/coach/financial')} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 text-sm font-bold text-emerald-700 dark:text-emerald-400"><DollarSign className="h-4 w-4" /> Financeiro</button>
+                      <button type="button" onClick={() => openChat(s)} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100 text-sm font-bold"><MessageSquare className="h-4 w-4" /> Chat</button>
+                      <button type="button" onClick={() => navigate('/coach/financial')} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100 text-sm font-bold"><DollarSign className="h-4 w-4" /> Financeiro</button>
                     </div>
                   </div>
                 </Reveal>
@@ -247,8 +247,8 @@ export default function CoachStudentsPage() {
                         </td>
                         <td className="p-4">
                           <div className="flex justify-end gap-2">
-                            <button type="button" aria-label={`Chat com ${s.displayName || 'aluno'}`} title="Chat" onClick={() => openChat(s)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-700 dark:text-sky-400"><MessageSquare className="h-4 w-4" /></button>
-                            <button type="button" aria-label={`Financeiro de ${s.displayName || 'aluno'}`} title="Financeiro" onClick={() => navigate('/coach/financial')} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"><DollarSign className="h-4 w-4" /></button>
+                            <button type="button" aria-label={`Chat com ${s.displayName || 'aluno'}`} title="Chat" onClick={() => openChat(s)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100"><MessageSquare className="h-4 w-4" /></button>
+                            <button type="button" aria-label={`Financeiro de ${s.displayName || 'aluno'}`} title="Financeiro" onClick={() => navigate('/coach/financial')} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100"><DollarSign className="h-4 w-4" /></button>
                           </div>
                         </td>
                       </tr>

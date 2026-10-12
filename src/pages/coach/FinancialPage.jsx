@@ -186,8 +186,8 @@ export default function FinancialPage() {
           <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'pending')} className={`${small} bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300`}><Undo2 className="h-4 w-4" /> Desfazer</button>
         ) : (
           <>
-            <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'paid')} className={`${small} bg-emerald-700 text-white`}><Check className="h-4 w-4" /> Marcar pago</button>
-            <button type="button" onClick={() => remind(s)} aria-label={`Lembrar ${s.displayName || 'aluno'} por WhatsApp`} className={`${small} bg-emerald-500/10 text-emerald-700 dark:text-emerald-400`}><MessageCircle className="h-4 w-4" /> Cobrar</button>
+            <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'paid')} className={`${small} bg-gradient-to-r from-brand to-[#FF9800] text-black`}><Check className="h-4 w-4" /> Marcar pago</button>
+            <button type="button" onClick={() => remind(s)} aria-label={`Lembrar ${s.displayName || 'aluno'} por WhatsApp`} className={`${small} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100`}><MessageCircle className="h-4 w-4" /> Cobrar</button>
             {s.paymentStatus === 'pending' && <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'overdue')} className={`${small} bg-rose-500/10 text-rose-700 dark:text-rose-400`}><TriangleAlert className="h-4 w-4" /> Atrasado</button>}
           </>
         )}
