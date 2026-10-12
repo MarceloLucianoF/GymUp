@@ -230,3 +230,11 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - Biblioteca de 22 para 51 exercícios (máquinas, polias e pernas), grupos `peito/costas/ombros/braços/pernas/core`, sem imagens. Vídeos só quando conferidos (oEmbed): Supino Máquina, Puxada Aberta Máquina, Remada Neutra Máquina, Elevação Lateral Máquina e Cadeira Extensora.
 - Removido o vídeo placeholder (`dQw4w9WgXcQ`) de 20 exercícios, de uma ficha com exercícios embutidos e de `src/data/exercises.js` e `scripts/seed.cjs`.
 - Treino A (Peitoral + Dorsal + CORE) do usuário: removidos Barra Fixa, Extensão Lombar e Abdominal; incluídos Supino Máquina e Puxada Aberta Máquina.
+
+## Atualização — painel administrativo (Centro de gestão de conteúdo)
+- `/admin` redesenhado: **Visão geral** (exercícios, fichas, alunos, treinadores, treinos em 7 dias via contagem agregada; pendências de conteúdo clicáveis; fichas com aviso; atividade recente), **Exercícios** (tabela no desktop e lista no celular, filtros por grupo, nível, mídia, pendência e status, ordenação, editor em painel lateral por blocos com prévia para o aluno e validação de links, duplicar, arquivar/restaurar, excluir com confirmação) e **Fichas** (origem, nº de exercícios, grupos, alunos usando, avisos como "nome cita CORE mas não há core", editor com ordem e busca).
+- **Importação em etapas**: prévia com novos, duplicados (mesmo nome) e inválidos (grupo, links); só grava após confirmar. Fichas importadas resolvem IDs antigos pelo `originalId`.
+- **Histórico de alterações** (`adminLog`): quem fez o quê em exercícios e fichas. Regras: só o admin lê e acrescenta; ninguém edita ou apaga. Também liberada a listagem de `checkIns` sem filtro para o admin (métricas); testado no emulador (18 casos).
+- Exercícios arquivados saem das listas de escolha (editor de fichas e biblioteca do treinador), mas continuam nas fichas já montadas.
+- Testado em produção com sessão de admin: criar, validar, arquivar, filtrar, restaurar, excluir e histórico; axe sem achados (corrigido um aviso de ordem de títulos nas fichas). O exercício e o histórico do teste foram removidos.
+- Não incluído: desfazer alterações, tela de usuários e rascunhos.
