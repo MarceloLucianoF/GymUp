@@ -8,6 +8,8 @@ import { KeyRound, Check } from 'lucide-react';
 import usePageMeta from '../../hooks/usePageMeta';
 import AuthField from './AuthField';
 import { BrandWordmark } from '../../components/brand/Brand';
+import GoogleButton, { OrDivider } from '../../components/auth/GoogleButton';
+import { validatePassword, PASSWORD_MIN_LENGTH, PASSWORD_HINT } from '../../utils/password';
 
 export default function Register() {
   usePageMeta('Criar conta', 'Crie sua conta gratuita no BohTreinar.');
@@ -81,7 +83,8 @@ export default function Register() {
     const nextErrors = {};
     if (!displayName.trim()) nextErrors.displayName = 'Informe seu nome.';
     if (!email.trim()) nextErrors.email = 'Informe seu email.';
-    if (password.length < 6) nextErrors.password = 'Senha muito curta (mínimo 6).';
+    const passwordError = validatePassword(password);
+    if (passwordError) nextErrors.password = passwordError;
     if (password !== confirmPassword) nextErrors.confirmPassword = 'As senhas não conferem!';
 
     let verifiedCoachId = null;
@@ -165,7 +168,12 @@ export default function Register() {
             <p className="mt-2 text-gray-600 dark:text-gray-400">Comece hoje mesmo.</p>
           </div>
 
-          <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
+          <div className="mt-8 space-y-5">
+            <GoogleButton label="Cadastrar com o Google" />
+            <OrDivider />
+          </div>
+
+          <form className="mt-5 space-y-5" onSubmit={handleSubmit} noValidate>
             <AuthField ref={refs.displayName} label="Nome Completo" type="text" required autoFocus autoComplete="name"
               value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ex: João Silva" error={errors.displayName} />
 
@@ -174,8 +182,8 @@ export default function Register() {
               value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" error={errors.email} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <AuthField ref={refs.password} label="Senha" passwordToggle required autoComplete="new-password" minLength={6}
-                value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6" error={errors.password} />
+              <AuthField ref={refs.password} label="Senha" passwordToggle required autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH}
+                value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Ex.: Treino#2026" hint={PASSWORD_HINT} error={errors.password} />
               <AuthField ref={refs.confirmPassword} label="Confirmar" passwordToggle required autoComplete="new-password"
                 value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita a senha" error={errors.confirmPassword} />
             </div>

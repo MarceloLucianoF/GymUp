@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
     signOut, 
     onAuthStateChanged,
-    updateProfile 
+    updateProfile,
+    GoogleAuthProvider,
+    signInWithPopup
 } from "firebase/auth";
 import { auth, db } from "../firebase/config"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -19,11 +21,17 @@ const translateError = (code) => {
     switch (code) {
         case 'auth/email-already-in-use': return 'Este email já está em uso.';
         case 'auth/invalid-email': return 'Email inválido.';
-        case 'auth/weak-password': return 'A senha deve ter pelo menos 6 caracteres.';
+        case 'auth/weak-password': return 'Senha fraca: use ao menos 8 caracteres, com maiúscula, número e símbolo.';
+        case 'auth/password-does-not-meet-requirements': return 'Senha fraca: use ao menos 8 caracteres, com maiúscula, número e símbolo.';
         case 'auth/wrong-password': return 'Senha incorreta.';
         case 'auth/user-not-found': return 'Usuário não encontrado.';
         case 'auth/too-many-requests': return 'Muitas tentativas. Tente mais tarde.';
         case 'auth/invalid-credential': return 'Credenciais inválidas.';
+        case 'auth/popup-blocked': return 'O navegador bloqueou a janela do Google. Libere pop-ups e tente de novo.';
+        case 'auth/account-exists-with-different-credential': return 'Já existe uma conta com este e-mail. Entre com e-mail e senha.';
+        case 'auth/operation-not-allowed': return 'Login com Google ainda não está ativado.';
+        case 'auth/unauthorized-domain': return 'Este endereço não está autorizado para login com Google.';
+        case 'auth/network-request-failed': return 'Sem conexão. Verifique a internet e tente de novo.';
         default: return 'Ocorreu um erro. Tente novamente.';
     }
 };
@@ -32,6 +40,8 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
+    // Enquanto o perfil do primeiro login com Google é criado, o monitor de sessão não deve tratá-lo como "sem perfil".
+    const creatingProfile = useRef(false);
 
     // --- 1. REGISTRO (Atualizado para aceitar dados extras) ---
     const register = async (email, password, displayName, additionalData = {}) => {
@@ -87,6 +97,46 @@ export function AuthProvider({ children }) {
         }
     };
 
+    // --- 2b. LOGIN COM GOOGLE ---
+    // O primeiro acesso cria o perfil de aluno (o aceite dos termos é o próprio clique, com o aviso visível na tela).
+    const loginWithGoogle = async () => {
+        creatingProfile.current = true;
+        try {
+            const res = await signInWithPopup(auth, new GoogleAuthProvider());
+            const ref = doc(db, "users", res.user.uid);
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                setUser(res.user);
+                setUserProfile(snap.data());
+                syncPublicCoachProfile(res.user.uid, snap.data()).catch(() => {});
+            } else {
+                const initialData = {
+                    uid: res.user.uid,
+                    displayName: res.user.displayName || (res.user.email || '').split('@')[0] || 'Aluno',
+                    email: res.user.email || '',
+                    role: "user",
+                    createdAt: new Date().toISOString(),
+                    age: null,
+                    weight: null,
+                    height: null,
+                    photoURL: null,
+                    termsAcceptedAt: new Date().toISOString(),
+                    termsVersion: TERMS_VERSION
+                };
+                await setDoc(ref, initialData);
+                setUser(res.user);
+                setUserProfile(initialData);
+            }
+            return res.user;
+        } catch (error) {
+            if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') return null;
+            console.error("Erro no login com Google:", error);
+            throw new Error(translateError(error.code));
+        } finally {
+            creatingProfile.current = false;
+        }
+    };
+
     // --- 3. LOGOUT ---
     const logout = async () => {
         try {
@@ -104,6 +154,7 @@ export function AuthProvider({ children }) {
             if (firebaseUser) {
                 setUser(firebaseUser);
                 try {
+                    if (creatingProfile.current) { setAuthLoading(false); return; }
                     const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
                     if (docSnap.exists()) {
                         setUserProfile(docSnap.data());
@@ -128,6 +179,7 @@ export function AuthProvider({ children }) {
         authLoading, // ou 'loading' se preferir manter compatibilidade
         register,
         login,
+        loginWithGoogle,
         logout,
         translateError
     };
