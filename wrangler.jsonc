@@ -13,6 +13,6 @@
   },
   "vars": {
     "FIREBASE_PROJECT_ID": "workout-tracker-app-20e43",
-    "ALLOWED_ORIGINS": "https://workout-tracker-app-20e43.web.app,https://workout-tracker-app-20e43.firebaseapp.com"
+    "ALLOWED_ORIGINS": "https://bohtreinar.marcelo-labs.workers.dev"
   }
 }

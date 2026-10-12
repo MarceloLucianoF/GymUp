@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export const SITE_URL = 'https://bohtreinar.bohtreinar-app.workers.dev';
+export const SITE_URL = 'https://bohtreinar.marcelo-labs.workers.dev';
 export const SITE_NAME = 'BohTreinar';
 
 const upsertMeta = (selector, create, value) => {
