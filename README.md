@@ -75,6 +75,7 @@ O Firebase Hosting está desativado: o app roda só na Cloudflare. Mais detalhes
 - [docs/DIAGNOSTICO.md](docs/DIAGNOSTICO.md): histórico de achados e entregas
 - [docs/IA.md](docs/IA.md): arquitetura da IA, modelos e limites
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md): Worker, domínio e configurações no console
+- [docs/APPCHECK.md](docs/APPCHECK.md): roteiro do enforce do App Check e da proteção contra enumeração de e-mail
 - [docs/PLANO_SOCIAL.md](docs/PLANO_SOCIAL.md): plano de amigos, ranking e desafios (MVP de amizade e ranking semanal implementado; pontos e desafios planejados)
 - [CLAUDE.md](CLAUDE.md) e [AGENTS.md](AGENTS.md): regras de trabalho para os agentes
 

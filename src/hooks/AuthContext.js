@@ -24,10 +24,11 @@ const translateError = (code) => {
         case 'auth/invalid-email': return 'Email inválido.';
         case 'auth/weak-password': return 'Senha fraca: use ao menos 8 caracteres, com maiúscula, número e símbolo.';
         case 'auth/password-does-not-meet-requirements': return 'Senha fraca: use ao menos 8 caracteres, com maiúscula, número e símbolo.';
-        case 'auth/wrong-password': return 'Senha incorreta.';
-        case 'auth/user-not-found': return 'Usuário não encontrado.';
+        // Mesma mensagem para e-mail inexistente e senha errada: não revela quais e-mails têm conta.
+        case 'auth/wrong-password':
+        case 'auth/user-not-found':
+        case 'auth/invalid-credential': return 'E-mail ou senha incorretos.';
         case 'auth/too-many-requests': return 'Muitas tentativas. Tente mais tarde.';
-        case 'auth/invalid-credential': return 'Credenciais inválidas.';
         case 'auth/popup-blocked': return 'O navegador bloqueou a janela do Google. Libere pop-ups e tente de novo.';
         case 'auth/account-exists-with-different-credential': return 'Já existe uma conta com este e-mail. Entre com e-mail e senha.';
         case 'auth/operation-not-allowed': return 'Login com Google ainda não está ativado.';

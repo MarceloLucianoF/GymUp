@@ -310,3 +310,8 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Estados no aviso do topo:** sem conexão com N treinos aguardando; sincronizando; aguardando sincronização; falha com botão. Depois do sucesso o item sai da fila e a Home recarrega.
 - **Validado em produção** (navegador real, usuário de teste): concluir sem rede (1 item na fila, nada no Firestore), fechar e reabrir offline (fila mantida), reconectar (1 check-in, `userStats` e `publicStats` +1, fila vazia), reenvio do mesmo ID 3 vezes em 2 abas (continua 1), queda de rede durante o envio (item pendente com 1 tentativa, nada pela metade) e retomada (enviado uma vez); histórico com uma entrada por check-in.
 - **Limite:** o localStorage é por navegador; limpar os dados do site com treino pendente perde o treino. Não há fila em segundo plano com o app fechado (exigiria Background Sync do service worker).
+
+## Atualização — roteiro do App Check e mensagens de login
+- Criado `docs/APPCHECK.md`: estado atual, critérios de métricas (≥ 99% verificadas por 7 dias), ordem do enforce (AI Logic até 2/11/2026, Firestore, Auth por último), roteiro de fumaça, token de debug para testes e passo da proteção contra enumeração de e-mail.
+- Código: login mostra a mesma mensagem para e-mail inexistente e senha errada; recuperação de senha responde igual com ou sem conta. O cadastro com e-mail já usado ainda informa (decisão de produto).
+- **Pendente (console, só você):** domínios da chave reCAPTCHA, ativar a proteção contra enumeração, acompanhar métricas e ligar o enforce.

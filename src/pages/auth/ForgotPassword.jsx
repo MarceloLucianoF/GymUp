@@ -28,13 +28,19 @@ export default function ForgotPassword() {
     try {
       // Depois de trocar a senha na página do Firebase, o botão "Continuar" leva de volta ao login do app.
       await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
-      toast.success('Email de recuperação enviado! Verifique sua caixa de entrada.');
+      toast.success('Se o e-mail tiver conta, o link de recuperação foi enviado. Verifique sua caixa de entrada.');
       setEmail('');
       setSent(true);
     } catch (error) {
+      // E-mail sem conta responde igual ao sucesso: não revela quais e-mails estão cadastrados.
+      if (error.code === 'auth/user-not-found') {
+        toast.success('Se o e-mail tiver conta, o link de recuperação foi enviado. Verifique sua caixa de entrada.');
+        setEmail('');
+        setSent(true);
+        return;
+      }
       console.error(error);
       let msg = "Erro ao enviar email.";
-      if (error.code === 'auth/user-not-found') msg = "Email não cadastrado.";
       if (error.code === 'auth/invalid-email') msg = "Email inválido.";
       toast.error(msg);
       setError(msg);
@@ -70,7 +76,7 @@ export default function ForgotPassword() {
           />
 
           <p role="status" aria-live="polite" className={sent ? 'text-sm font-medium text-emerald-700 dark:text-emerald-400' : 'sr-only'}>
-            {sent ? 'Email de recuperação enviado. Verifique sua caixa de entrada.' : ''}
+            {sent ? 'Se o e-mail tiver conta, enviamos o link de recuperação. Verifique sua caixa de entrada.' : ''}
           </p>
 
           <button 
