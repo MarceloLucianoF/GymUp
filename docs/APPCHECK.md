@@ -4,11 +4,30 @@ Escrito em 12/10/2026. Os passos de console são seus (eu não acesso o console 
 
 ## 1. Como está hoje
 - **Provedor:** reCAPTCHA Enterprise (`ReCaptchaEnterpriseProvider`), renovação automática do token (`src/firebase/config.js`).
-- **Quando inicia:** em telas públicas (`/`, `/login`, `/register`, termos…) 1,5 s depois do carregamento, para não pesar a primeira pintura; ao entrar/cadastrar (`ensureAppCheck`) e quando já existe sessão (`AuthContext`). Nas demais telas, no carregamento.
+- **Quando inicia:** em telas públicas (`/`, `/login`, `/register`, termos…) 1,5 s depois do carregamento, para não pesar a primeira pintura — **exceto** quando o aparelho já tem sessão (marca `bt_has_session`), que inicia na hora; ao entrar/cadastrar (`ensureAppCheck`) e quando o `AuthContext` vê uma sessão. Nas demais telas, no carregamento.
 - **Chave pública:** vem de `REACT_APP_RECAPTCHA_SITE_KEY` (`.env.local`, lida no build). **Verificado:** o bundle publicado contém a chave (2 arquivos JS).
 - **Cobertura:** Firestore, Auth e Firebase AI Logic (Gemini) passam pelo SDK e levam o token. **Não cobre:** o Worker de IA (`/api/nvidia`), que se protege por ID token + limite de chamadas; scripts e o MCP (Admin SDK ignoram App Check e as regras).
 - **Verificado em navegador sem cabeça (Chrome headless, usuário de teste):** as chamadas do Auth saem com o cabeçalho `X-Firebase-AppCheck`. As do Firestore não mostraram o cabeçalho na captura, mas o transporte do Firestore (WebChannel) nem sempre o expõe como cabeçalho, então **isso não prova nada**: quem decide é o painel de métricas do console (passo 3).
 - **Prazo que importa:** o Firebase AI Logic passa a exigir App Check a partir de **2/11/2026**.
+
+## 1b. Leitura do console em 12/10/2026 (suas capturas)
+| API | Verificadas | Sem verificação |
+| --- | --- | --- |
+| Cloud Firestore | 46% | 54% |
+| Firebase AI Logic | 23% | 77% |
+| Authentication (pré-lançamento) | 32% | 68% |
+
+**Conclusão: não ligar nenhum enforce agora.** Está longe de 99%. Mas o volume é minúsculo (o reCAPTCHA mostra 44 solicitações em 7 dias, todas em 11/10) e **o maior emissor de tráfego sem token sou eu**: meus testes automatizados abrem navegadores novos e disparam chamadas antes de o token existir. Por isso o número hoje não representa os alunos.
+- **Domínios da chave:** só `bohtreinar.marcelo-labs.workers.dev`, que é o certo. **Conferido.**
+- **Proteção contra enumeração de e-mail:** já ativa. **Conferido.**
+- **Medido no navegador (12/10):** o App Check obtém o token (troca com o reCAPTCHA responde 200, sem erro no console) e as chamadas do Firestore levam o token no corpo do canal. A primeira chamada do Auth, porém, sai **antes** do App Check iniciar (a renovação do login acontece no começo do carregamento; o App Check entrava 1,5 s depois nas telas públicas). Cada abertura do app com sessão gerava, no mínimo, uma chamada de Auth sem token.
+- **Painel do Fraud Defense (chave BohTreinar):** status "Protegido", integração do front-end ok, 0 solicitações de risco alto e o pico de ~44 solicitações coincide com o dia dos meus testes (12/10). Ou seja, a chave funciona e a leitura baixa do App Check é, em boa parte, tráfego de teste.
+- **Corrigido no código (esta etapa):** quem já tem sessão agora inicia o App Check imediatamente, mesmo em tela pública (marca local `bt_has_session`, só acelera, não autoriza nada). **Validado em produção:** com a marca, a primeira chamada do Auth já sai com o token (antes saía sem).
+- **Enforce do Authentication: não recomendo** enquanto houver qualquer chamada de renovação sem token; uma recusa ali desloga o aluno. Firestore e AI Logic dão o ganho principal.
+
+**Novo critério:** pelo menos **200 solicitações** por produto na janela e ≥ 99% verificadas, **sem contar tráfego de teste**. Para isso, durante a observação eu evito rodar testes de navegador em produção ou os rodo com o token de debug (seção 6; você gera no console e me passa por variável de ambiente local, não pelo chat nem pelo repositório).
+
+**Próxima leitura:** 19/10/2026 (uma semana depois do ajuste), com uso real de alunos. Decisão do AI Logic até 28/10 para dar margem antes de 2/11.
 
 ## 2. Antes de olhar as métricas
 1. Console Google Cloud / reCAPTCHA Enterprise → a chave da web precisa listar `bohtreinar.marcelo-labs.workers.dev` (e o domínio próprio, se um dia existir). Sem isso, tokens falham só em produção.
@@ -67,6 +86,6 @@ Console → Authentication → Configurações → **Ações do usuário** → *
 
 ## 9. Resumo do que fazer, em ordem
 1. Conferir domínios da chave reCAPTCHA e o app registrado (seção 2).
-2. Ativar a proteção contra enumeração de e-mail e testar (seção 8) — não depende de métricas.
+2. ~~Ativar a proteção contra enumeração de e-mail~~ — feito; falta só o teste da seção 8.
 3. Esperar 7 dias de métricas; ligar o enforce do AI Logic antes de 2/11; depois o Firestore; Auth por último (seções 3 e 4).
 4. Fumaça após cada passo (seção 5); reverter se "não verificadas" subir.
