@@ -315,3 +315,8 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - Criado `docs/APPCHECK.md`: estado atual, critérios de métricas (≥ 99% verificadas por 7 dias), ordem do enforce (AI Logic até 2/11/2026, Firestore, Auth por último), roteiro de fumaça, token de debug para testes e passo da proteção contra enumeração de e-mail.
 - Código: login mostra a mesma mensagem para e-mail inexistente e senha errada; recuperação de senha responde igual com ou sem conta. O cadastro com e-mail já usado ainda informa (decisão de produto).
 - **Pendente (console, só você):** domínios da chave reCAPTCHA, ativar a proteção contra enumeração, acompanhar métricas e ligar o enforce.
+
+## Atualização — leitura das métricas do App Check (12/10/2026)
+- Console: Firestore 46% verificadas, AI Logic 23%, Auth 32%; reCAPTCHA com 44 solicitações em 7 dias. Domínios da chave e proteção contra enumeração de e-mail conferidos.
+- Causa provável do baixo percentual: tráfego dos meus testes automatizados e a primeira chamada de renovação do Auth saindo antes do App Check iniciar. Ajuste: quem já tem sessão inicia o App Check imediatamente (`bt_has_session`).
+- Decisão: **sem enforce por enquanto**; reler em 19/10 com uso real, mínimo de 200 solicitações por produto e fora o tráfego de teste; Authentication fica sem enforce. Detalhes em `docs/APPCHECK.md`.

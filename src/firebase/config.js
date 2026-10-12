@@ -30,10 +30,17 @@ export const ensureAppCheck = () => {
     isTokenAutoRefreshEnabled: true
   });
 };
+// Quem já tem sessão abre o app com o Auth renovando o token logo no início: o App Check precisa estar de pé antes disso,
+// mesmo numa tela pública. O AuthContext grava/limpa esta marca; ela só decide a pressa, nunca autoriza nada.
+const SESSION_FLAG = 'bt_has_session';
+export const markSession = (on) => {
+  try { if (on) localStorage.setItem(SESSION_FLAG, '1'); else localStorage.removeItem(SESSION_FLAG); } catch (e) { /* sem localStorage */ }
+};
+const hasSessionFlag = () => { try { return localStorage.getItem(SESSION_FLAG) === '1'; } catch (e) { return false; } };
 if (recaptchaSiteKey && typeof window !== 'undefined') {
   // Telas públicas não fazem pedidos ao Firebase ao abrir: o reCAPTCHA entra depois do carregamento, ou antes,
   // se o usuário entrar/cadastrar (ensureAppCheck é chamado) ou já houver sessão (AuthContext).
-  const lazy = ['/', '/termos', '/privacidade', '/login', '/register', '/forgot-password', '/auth/action'].includes(window.location.pathname);
+  const lazy = !hasSessionFlag() && ['/', '/termos', '/privacidade', '/login', '/register', '/forgot-password', '/auth/action'].includes(window.location.pathname);
   if (!lazy) ensureAppCheck();
   else {
     const later = () => setTimeout(ensureAppCheck, 1500);

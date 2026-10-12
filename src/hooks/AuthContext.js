@@ -9,7 +9,7 @@ import {
     signInWithPopup,
     browserPopupRedirectResolver
 } from "firebase/auth";
-import { auth, db, ensureAppCheck } from "../firebase/config"; 
+import { auth, db, ensureAppCheck, markSession } from "../firebase/config"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { syncPublicCoachProfile } from "../services/coachProfile";
 
@@ -166,6 +166,7 @@ export function AuthProvider({ children }) {
     // --- 4. MONITORAR STATUS ---
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            markSession(!!firebaseUser);
             if (firebaseUser) {
                 ensureAppCheck();
                 setUser(firebaseUser);
