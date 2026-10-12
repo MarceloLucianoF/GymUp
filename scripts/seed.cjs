@@ -49,7 +49,7 @@ const exercisesData = [
     execution: "Sente-se no banco com os halteres apoiados nas coxas. Deite-se empurrando os halteres para a posição inicial (braços esticados). Desça os pesos controladamente até a linha do peito, mantendo os cotovelos levemente apontados para baixo (não totalmente abertos). Empurre de volta para cima.",
     // dumbbell incline bench press — correspondência exata
     machineImage: `${GIF_BASE}/0314-ns0SIbU.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "peito",
     difficulty: "intermediário"
   },
@@ -63,7 +63,7 @@ const exercisesData = [
     execution: "Deite-se de bruços no banco inclinado, segurando os halteres com os braços pendurados. Mantendo um leve ângulo nos cotovelos, levante os braços para os lados, apertando as costas (escápulas) no topo do movimento. Desça devagar.",
     // dumbbell incline rear lateral raise — correspondência exata
     machineImage: `${GIF_BASE}/0326-vYk8lqw.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "costas",
     difficulty: "intermediário"
   },
@@ -77,7 +77,7 @@ const exercisesData = [
     execution: "Deite-se no banco reto com os halteres na altura do peito. Empurre os pesos para cima até estender os braços e desça controladamente. Totalmente seguro para fazer sozinho, basta soltar os pesos no chão caso não consiga subir.",
     // dumbbell bench press — correspondência exata
     machineImage: `${GIF_BASE}/0289-SpYC0Kp.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "peito",
     difficulty: "intermediário"
   },
@@ -91,7 +91,7 @@ const exercisesData = [
     execution: "Em pé, com os pés na largura dos ombros, incline o tronco para frente mantendo as costas retas. Com as palmas das mãos viradas uma para a outra (pegada neutra), puxe os halteres em direção à linha do umbigo, apertando as costas. Estique os braços na descida.",
     // dumbbell bent over row — movimento exato (pegada pode variar no GIF)
     machineImage: `${GIF_BASE}/0293-BJ0Hz5L.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "costas",
     difficulty: "intermediário"
   },
@@ -105,7 +105,7 @@ const exercisesData = [
     execution: "Segure a barra com uma pegada um pouco mais larga que os ombros. Puxe o corpo para cima até o queixo passar a linha da barra, concentrando a força nas costas. Desça controlando o peso do próprio corpo.",
     // pull-up — correspondência exata
     machineImage: `${GIF_BASE}/0652-lBDjFxJ.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "costas",
     difficulty: "avançado"
   },
@@ -119,7 +119,7 @@ const exercisesData = [
     execution: "Deite-se de bruços no colchonete. Levante o tronco e os braços formando um 'Y'. Retorne e, na próxima repetição, puxe os cotovelos para trás formando um 'W'. Contraia bem a região lombar e repita.",
     // hyperextension (solo) — APROXIMADO: extensão lombar sem o padrão Y+W de braços
     machineImage: `${GIF_BASE}/0489-zhMwOwE.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "core",
     difficulty: "iniciante"
   },
@@ -133,7 +133,7 @@ const exercisesData = [
     execution: "Deite-se de costas com braços e pernas estendidos. Suba o tronco e uma perna simultaneamente, tentando tocar o pé com a mão oposta. Desça e alterne o lado.",
     // alternating v-up — APROXIMADO: movimento alternado idêntico, mas o modelo usa elástico
     machineImage: `${GIF_BASE}/0969-ztAa1RK.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "core",
     difficulty: "iniciante"
   },
@@ -149,7 +149,7 @@ const exercisesData = [
     execution: "Em pé ou sentado (em banco com encosto), segure a barra na altura dos ombros. Empurre o peso para cima da cabeça até estender os braços. Desça controladamente até a altura do queixo/clavícula.",
     // barbell seated overhead press — correspondência exata (versão sentado)
     machineImage: `${GIF_BASE}/0091-kTbSH9h.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "ombros",
     difficulty: "intermediário"
   },
@@ -163,7 +163,7 @@ const exercisesData = [
     execution: "Sente-se na ponta do banco com o peito estufado e um halter em cada mão. Eleve os braços lateralmente até a altura dos ombros, mantendo uma leve flexão nos cotovelos. Desça devagar.",
     // dumbbell seated lateral raise — correspondência exata
     machineImage: `${GIF_BASE}/0396-hxyTtWj.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "ombros",
     difficulty: "iniciante"
   },
@@ -177,7 +177,7 @@ const exercisesData = [
     execution: "Em pé, segure um halter em cada mão nas laterais do corpo. Flexione os joelhos e desça o quadril como se fosse sentar em uma cadeira, mantendo a coluna reta e o peito para cima. Empurre o chão com os calcanhares para subir.",
     // dumbbell squat — correspondência exata
     machineImage: `${GIF_BASE}/0413-HsvHqgf.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "pernas",
     difficulty: "iniciante"
   },
@@ -191,7 +191,7 @@ const exercisesData = [
     execution: "Ajoelhe-se no colchonete com os tornozelos fixos. Mantenha o corpo em linha reta dos joelhos até a cabeça. Incline o corpo para trás de forma controlada, usando a força das coxas para frear a descida e depois retorne à posição inicial.",
     // sissy squat — APROXIMADO: padrão de inclinação pra trás com foco excêntrico em quadríceps, mas em pé
     machineImage: `${GIF_BASE}/1489-xdYPUtE.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "pernas",
     difficulty: "intermediário"
   },
@@ -205,7 +205,7 @@ const exercisesData = [
     execution: "Dê um passo largo para frente. Segurando os halteres ao lado do corpo, desça o quadril flexionando ambos os joelhos até formarem ângulos de 90 graus (o joelho de trás não deve tocar o chão). Suba e repita, depois troque a perna.",
     // dumbbell lunge — correspondência exata
     machineImage: `${GIF_BASE}/0336-RRWFUcw.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "pernas",
     difficulty: "intermediário"
   },
@@ -219,7 +219,7 @@ const exercisesData = [
     execution: "Segure os halteres e apoie a ponta dos pés no degrau. Desça os calcanhares alongando a panturrilha e, em seguida, empurre o corpo para cima o máximo que conseguir, contraindo no topo.",
     // dumbbell standing calf raise — correspondência exata
     machineImage: `${GIF_BASE}/0417-dPmaUaU.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "pernas",
     difficulty: "iniciante"
   },
@@ -233,7 +233,7 @@ const exercisesData = [
     execution: "Deite-se de bruços na máquina, posicionando o rolo logo acima dos tornozelos. Puxe o peso em direção aos glúteos dobrando os joelhos. Estenda as pernas controlando o peso na volta.",
     // lever lying leg curl — correspondência exata
     machineImage: `${GIF_BASE}/0586-17lJ1kr.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "pernas",
     difficulty: "iniciante"
   },
@@ -249,7 +249,7 @@ const exercisesData = [
     execution: "Sente-se no banco Scott apoiando os braços no suporte. Segure a Barra W na curva interna e levante o peso contraindo os bíceps em direção aos ombros. Desça até quase esticar os braços completamente.",
     // ez barbell close grip preacher curl — correspondência exata (Scott com barra W, pegada na curva interna)
     machineImage: `${GIF_BASE}/1627-hacCyUv.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "braços",
     difficulty: "intermediário"
   },
@@ -263,7 +263,7 @@ const exercisesData = [
     execution: "Fique de pé próximo à polia. Segure a barra e cole os cotovelos nas costelas. Empurre a barra para baixo usando a força dos tríceps até estender totalmente os braços. Volte até a altura do peito.",
     // cable pushdown — correspondência exata
     machineImage: `${GIF_BASE}/0201-3ZflifB.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "braços",
     difficulty: "iniciante"
   },
@@ -277,7 +277,7 @@ const exercisesData = [
     execution: "Sente-se no banco inclinado e deixe os braços caírem retos nas laterais. Dobre os cotovelos e traga os halteres até a altura dos ombros. A posição do banco garante um alongamento máximo do bíceps no início do movimento.",
     // dumbbell incline curl — correspondência exata
     machineImage: `${GIF_BASE}/0318-ae9UoXQ.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "braços",
     difficulty: "intermediário"
   },
@@ -291,7 +291,7 @@ const exercisesData = [
     execution: "Deite-se no banco segurando os halteres com os braços esticados para o teto, mas com as mãos na mesma linha dos ombros (pegada fechada). Desça os halteres em direção ao seu peito mantendo os cotovelos bem rentes ao tronco. Empurre para cima.",
     // dumbbell close-grip press — correspondência exata (supino fechado com halteres p/ tríceps)
     machineImage: `${GIF_BASE}/0296-RxayqAZ.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "braços",
     difficulty: "intermediário"
   },
@@ -305,7 +305,7 @@ const exercisesData = [
     execution: "Em pé, de frente para a polia baixa, segure a corda com pegada neutra (dedões para cima). Puxe a corda em direção aos ombros, mantendo os cotovelos firmes nas laterais do corpo.",
     // cable hammer curl (with rope) — correspondência exata
     machineImage: `${GIF_BASE}/0165-HPlPoQA.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "braços",
     difficulty: "iniciante"
   },
@@ -319,7 +319,7 @@ const exercisesData = [
     execution: "Deite-se de costas com a bola presa entre os pés. Faça um movimento de canivete, subindo braços e pernas, e pegue a bola com as mãos. Desça os braços (com a bola) e as pernas (vazias) até perto do chão. Suba novamente e devolva a bola para os pés. Cada troca de mãos para pés conta como 1 repetição.",
     // jackknife sit-up — APROXIMADO: mesmo padrão de canivete, mas sem a bola suíça
     machineImage: `${GIF_BASE}/0507-mbkgB44.gif`,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: '',
     muscleGroup: "core",
     difficulty: "intermediário"
   }
