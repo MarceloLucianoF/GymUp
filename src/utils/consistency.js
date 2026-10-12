@@ -56,7 +56,21 @@ export function afterRemoval(prev, date) {
   return { weekKey: old.weekKey || '', weekCount, weekDays: old.weekDays || [], streak: Number(old.streak) || 0, lastActiveDay: old.lastActiveDay || '' };
 }
 
-/** Números exibidos no ranking, para a semana de `now`. Dados de outra semana contam zero. */
+/** Cópia pública mínima (publicStats) de um userStats: só o que o ranking mostra, sem horários nem totais. */
+export function publicStatsOf(stats, uid, updatedAt = new Date().toISOString()) {
+  const s = stats || {};
+  return {
+    uid,
+    weekKey: s.weekKey || '',
+    weekWorkouts: Number(s.weekCount) || 0,
+    activeDays: Array.isArray(s.weekDays) ? s.weekDays.length : 0,
+    streak: Number(s.streak) || 0,
+    lastActiveDay: s.lastActiveDay || '',
+    updatedAt
+  };
+}
+
+/** Números exibidos no ranking, para a semana de `now`. Aceita userStats ou publicStats. Dados de outra semana contam zero. */
 export function consistency(stats, now = new Date()) {
   const s = stats || {};
   const current = s.weekKey === weekKey(now);
@@ -64,8 +78,8 @@ export function consistency(stats, now = new Date()) {
   const yesterday = addDays(today, -1);
   const alive = s.lastActiveDay && (s.lastActiveDay === today || s.lastActiveDay === yesterday);
   return {
-    workouts: current ? Number(s.weekCount) || 0 : 0,
-    activeDays: current ? (s.weekDays || []).length : 0,
+    workouts: current ? Number(s.weekWorkouts ?? s.weekCount) || 0 : 0,
+    activeDays: current ? (Array.isArray(s.weekDays) ? s.weekDays.length : Number(s.activeDays) || 0) : 0,
     streak: alive ? Number(s.streak) || 0 : 0
   };
 }

@@ -1,9 +1,9 @@
-import { addDoc, collection, deleteField, doc, getDoc, getDocs, limit, query, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteField, doc, getDoc, getDocs, limit, query, setDoc, Timestamp, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { consistency, rankRows } from '../utils/consistency';
+import { consistency, publicStatsOf, rankRows } from '../utils/consistency';
 
 // Amigos e ranking de consistência. Nada aqui lê medidas, check-ins ou histórico: só o perfil público escolhido pelo
-// próprio usuário e os contadores de consistência (userStats). As regras do Firestore garantem isso.
+// próprio usuário e a cópia pública mínima dos contadores (publicStats). As regras do Firestore garantem isso.
 
 export const HANDLE_RE = /^[a-z0-9_]{3,20}$/;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem O/0/I/1 para não confundir ao ditar
@@ -117,6 +117,9 @@ export async function getFriendship(uid, other) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
+const isDenied = (error) => error?.code === 'permission-denied';
+const toMillis = (value) => (typeof value?.toMillis === 'function' ? value.toMillis() : Number(value) || 0);
+
 export async function sendRequest(uid, other) {
   if (uid === other) throw new Error('Você não pode adicionar a si mesmo.');
   const id = pairId(uid, other);
@@ -126,11 +129,24 @@ export async function sendRequest(uid, other) {
   if (rel === 'pending-out') throw new Error('O pedido já foi enviado.');
   if (rel === 'pending-in') { await respond(uid, other, 'accept'); return 'accepted'; } // ele já tinha pedido: vira amizade
   if (rel === 'blocked' || rel === 'blocked-by-me') throw new Error('Não foi possível enviar o pedido.');
+  if (current && current.requestedBy === uid) { // fui recusado antes: espera e limite de tentativas (as regras repetem esta conferência)
+    if ((current.declines || 0) >= 3) throw new Error('Este pedido não foi aceito nas tentativas anteriores.');
+    if (toMillis(current.retryAfter) > Date.now()) throw new Error('Aguarde um dia para pedir de novo.');
+  }
   const [userA, userB] = uid < other ? [uid, other] : [other, uid];
-  if (current) {
-    await writeBatch(db).update(doc(db, 'friendships', id), { status: 'pending', requestedBy: uid, updatedAt: now() }).commit();
-  } else {
-    await writeBatch(db).set(doc(db, 'friendships', id), { userA, userB, status: 'pending', requestedBy: uid, createdAt: now(), updatedAt: now() }).commit();
+  try {
+    if (current) {
+      await writeBatch(db).update(doc(db, 'friendships', id), { status: 'pending', requestedBy: uid, updatedAt: now() }).commit();
+    } else {
+      await writeBatch(db).set(doc(db, 'friendships', id), { userA, userB, status: 'pending', requestedBy: uid, createdAt: now(), updatedAt: now() }).commit();
+    }
+  } catch (error) {
+    if (!isDenied(error)) throw error;
+    // Pedidos cruzados ao mesmo tempo: o outro lado gravou primeiro. Relê e segue o estado que ficou, sem erro visível.
+    const after = relationOf(await getFriendship(uid, other), uid);
+    if (after === 'pending-in') { await respond(uid, other, 'accept'); return 'accepted'; }
+    if (after === 'pending-out' || after === 'active') return after === 'active' ? 'accepted' : 'sent';
+    throw error;
   }
   log(uid, 'pedir', other, id);
   return 'sent';
@@ -149,18 +165,35 @@ export async function respond(uid, other, action) {
     unblock: { status: 'removed', blockedBy: deleteField() }
   }[action];
   if (!patch) throw new Error('Ação inválida.');
+  if (action === 'decline') { // cada recusa soma 1 e fixa um dia de espera para quem pediu (as regras exigem)
+    const snap = await getDoc(ref);
+    const declines = (snap.exists() ? snap.data().declines || 0 : 0) + 1;
+    Object.assign(patch, { declines, retryAfter: Timestamp.fromMillis(Date.now() + 24 * 3600_000 + 60_000) });
+  }
   await writeBatch(db).update(ref, { ...patch, updatedAt: now() }).commit();
   log(uid, { accept: 'aceitar', decline: 'recusar', cancel: 'cancelar', remove: 'remover', block: 'bloquear', unblock: 'desbloquear' }[action], other, id);
 }
 
 // ---- ranking ----
+/** Mantém o publicStats do próprio usuário igual ao userStats (cobre quem já tinha treinos antes do espelho existir). */
+export async function syncPublicStats(uid, nowDate = new Date()) {
+  const [mine, current] = await Promise.all([getDoc(doc(db, 'userStats', uid)), getDoc(doc(db, 'publicStats', uid))]);
+  if (!mine.exists()) return false;
+  const next = publicStatsOf(mine.data(), uid, nowDate.toISOString());
+  const old = current.exists() ? current.data() : null;
+  const same = old && ['weekKey', 'weekWorkouts', 'activeDays', 'streak', 'lastActiveDay'].every((k) => old[k] === next[k]);
+  if (same) return false;
+  await setDoc(doc(db, 'publicStats', uid), next);
+  return true;
+}
+
 /** Linhas do ranking: eu (se participo) + amigos ativos que participam. Falha de leitura de um amigo só o tira da lista. */
 export async function loadRanking(uid, myProfile, friendships, nowDate = new Date()) {
   if (!myProfile?.shareRanking) return { participating: false, rows: [] };
   const friendIds = friendships.filter((f) => f.status === 'active').map((f) => otherOf(f, uid)).slice(0, 30);
   const read = async (id, mine) => {
     try {
-      const [stats, profile] = await Promise.all([getDoc(doc(db, 'userStats', id)), mine ? Promise.resolve(null) : getDoc(doc(db, 'publicProfiles', id))]);
+      const [stats, profile] = await Promise.all([getDoc(doc(db, 'publicStats', id)), mine ? Promise.resolve(null) : getDoc(doc(db, 'publicProfiles', id))]);
       const p = mine ? myProfile : (profile.exists() ? profile.data() : null);
       if (!p || (!mine && !p.shareRanking)) return null;
       const c = consistency(stats.exists() ? stats.data() : null, nowDate);
