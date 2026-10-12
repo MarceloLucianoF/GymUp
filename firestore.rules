@@ -470,7 +470,7 @@ service cloud.firestore {
         && d.displayNameLower is string && d.displayNameLower.size() <= 60
         && d.handle is string && d.handle.matches('^[a-z0-9_]{3,20}$')
         && d.friendCode is string && d.friendCode.matches('^[A-Z0-9]{8}$')
-        && d.photoURL is string && (d.photoURL == '' || d.photoURL.matches('^https://.*') ) && d.photoURL.size() <= 500
+        && d.photoURL is string && d.photoURL == ''
         && d.discoverable is bool && d.shareRanking is bool
         && d.weeklyGoal is int && d.weeklyGoal >= 2 && d.weeklyGoal <= 7
         && d.updatedAt is string;
@@ -483,8 +483,11 @@ service cloud.firestore {
     }
 
     match /publicProfiles/{profileId} {
-      allow get: if signedIn() && (request.auth.uid == profileId || isAdmin() || resource.data.discoverable == true
-        || (exists(friendPath(request.auth.uid, profileId)) && get(friendPath(request.auth.uid, profileId)).data.status in ['active', 'pending']));
+      allow get: if signedIn() && (request.auth.uid == profileId || isAdmin()
+        || (!(exists(friendPath(request.auth.uid, profileId)) && get(friendPath(request.auth.uid, profileId)).data.status == 'blocked'
+            && get(friendPath(request.auth.uid, profileId)).data.blockedBy != request.auth.uid)
+          && (resource.data.discoverable == true
+            || (exists(friendPath(request.auth.uid, profileId)) && get(friendPath(request.auth.uid, profileId)).data.status in ['active', 'pending']))));
       allow list: if signedIn() && (isAdmin() || resource.data.discoverable == true);
       allow create: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)
         && claims(profileId, request.resource.data);
@@ -497,17 +500,21 @@ service cloud.firestore {
     match /handles/{handle} {
       allow get: if signedIn();
       allow create: if signedIn() && handle.matches('^[a-z0-9_]{3,20}$')
-        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid;
+        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid
+        && getAfter(profilePath(request.auth.uid)).data.handle == handle;
       allow update: if false;
-      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid
+        && (!existsAfter(profilePath(request.auth.uid)) || getAfter(profilePath(request.auth.uid)).data.handle != handle);
     }
 
     match /friendCodes/{code} {
       allow get: if signedIn();
       allow create: if signedIn() && code.matches('^[A-Z0-9]{8}$')
-        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid;
+        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid
+        && getAfter(profilePath(request.auth.uid)).data.friendCode == code;
       allow update: if false;
-      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid
+        && (!existsAfter(profilePath(request.auth.uid)) || getAfter(profilePath(request.auth.uid)).data.friendCode != code);
     }
 
     // Amizade: um documento por par (ID = menor_maior). pending | active | blocked | removed.
@@ -553,17 +560,24 @@ service cloud.firestore {
           || (resource.data.status == 'blocked' && resource.data.blockedBy == request.auth.uid
             && request.resource.data.status == 'removed' && request.resource.data.requestedBy == resource.data.requestedBy)
         );
-      allow delete: if isAdmin() || (signedIn() && inPair(resource.data) && (resource.data.status != 'blocked' || resource.data.blockedBy == request.auth.uid));
+      // Quem foi bloqueado só consegue apagar o documento junto com a exclusão da própria conta (users/{uid} some no mesmo lote).
+      allow delete: if isAdmin() || (signedIn() && inPair(resource.data) && (resource.data.status != 'blocked' || resource.data.blockedBy == request.auth.uid
+        || !existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))));
     }
 
     // Registro das ações sociais (para a auditoria do admin). Cada usuário só acrescenta as próprias entradas.
     match /socialLog/{logId} {
-      allow get, list: if isAdmin();
+      allow get: if isAdmin();
+      allow list: if signedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
       allow create: if signedIn() && request.resource.data.keys().hasOnly(['at', 'uid', 'action', 'other', 'pairId'])
         && request.resource.data.uid == request.auth.uid && request.resource.data.at is string
         && request.resource.data.action in ['pedir', 'aceitar', 'recusar', 'cancelar', 'remover', 'bloquear', 'desbloquear', 'entrar-ranking', 'sair-ranking']
-        && request.resource.data.get('other', '') is string && request.resource.data.get('pairId', '') is string;
-      allow update, delete: if false;
+        && request.resource.data.at.size() <= 40
+        && request.resource.data.get('other', '') is string && request.resource.data.get('other', '').size() <= 128
+        && request.resource.data.get('pairId', '') is string && request.resource.data.get('pairId', '').size() <= 300;
+      allow update: if false;
+      // Quem já apagou o próprio perfil social (exclusão de conta) pode apagar os próprios registros.
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid && !exists(profilePath(request.auth.uid));
     }
 
     match /exercises/{docId} {

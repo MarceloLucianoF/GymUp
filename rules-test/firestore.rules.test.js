@@ -412,7 +412,10 @@ test('social: socialLog só acrescenta o próprio registro; só o admin lê', as
   await assertFails(setDoc(doc(db('stu1'), 'socialLog/l3'), { ...e, action: 'hackear' }));
   await assertSucceeds(getDoc(doc(db('admin1'), 'socialLog/l1')));
   await assertFails(getDoc(doc(db('stu1'), 'socialLog/l1')));
-  await assertFails(deleteDoc(doc(db('stu1'), 'socialLog/l1')));
+  await seedSocial();
+  await assertFails(deleteDoc(doc(db('stu1'), 'socialLog/l1')));                 // perfil social ainda existe
+  await env.withSecurityRulesDisabled(async (ctx) => { await deleteDoc(doc(ctx.firestore(), 'publicProfiles/stu1')); });
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'socialLog/l1')));              // exclusão de conta
 });
 
 test('social: listas do próprio usuário funcionam (amizades por userA/userB e perfil ainda inexistente)', async () => {
@@ -431,4 +434,38 @@ test('social: ler amizade inexistente do próprio par funciona; de outro par nã
   await seedSocial();
   await assertSucceeds(getDoc(doc(db('stu1'), 'friendships/' + pair('stu1', 'stu2'))));
   await assertFails(getDoc(doc(db('stu9'), 'friendships/' + pair('stu1', 'stu2'))));
+});
+
+test('social: bloqueado só apaga o bloqueio junto com a exclusão da própria conta', async () => {
+  await seedSocial();
+  const id = pair('stu1', 'stu2');
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + id), { ...fr('stu1', 'stu2'), status: 'blocked', blockedBy: 'stu1' }); });
+  const b = db('stu2');
+  await assertFails(deleteDoc(doc(b, 'friendships/' + id)));
+  const batch = writeBatch(b);
+  batch.delete(doc(b, 'friendships/' + id));
+  await assertFails(batch.commit());                       // sem apagar users/stu2 no mesmo lote
+  const ok = writeBatch(b);
+  ok.delete(doc(b, 'friendships/' + id));
+  ok.delete(doc(b, 'users/stu2'));
+  await assertSucceeds(ok.commit());
+});
+
+test('social: bloqueado não lê perfil de quem bloqueou; handle/código só soltos com o perfil; socialLog próprio', async () => {
+  await seedSocial();
+  const id = pair('stu1', 'stu2');
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + id), { ...fr('stu1', 'stu2'), status: 'blocked', blockedBy: 'stu1' }); });
+  await assertFails(getDoc(doc(db('stu2'), 'publicProfiles/stu1')));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'publicProfiles/stu2')));
+  await assertFails(deleteDoc(doc(db('stu1'), 'handles/user_stu1')));        // perfil continua com esse handle
+  await assertFails(getDocs(collection(db('stu1'), 'socialLog')));
+  await assertSucceeds(getDocs(query(collection(db('stu1'), 'socialLog'), where('uid', '==', 'stu1'))));
+});
+
+test('social: exclusão de conta na ordem do app (perfil, handle, código, amizade, log) passa', async () => {
+  await seedSocial();
+  const a = db('stu1');
+  await assertSucceeds(deleteDoc(doc(a, 'publicProfiles/stu1')));
+  await assertSucceeds(deleteDoc(doc(a, 'handles/user_stu1')));
+  await assertSucceeds(deleteDoc(doc(a, 'friendCodes/' + prof('stu1').friendCode)));
 });

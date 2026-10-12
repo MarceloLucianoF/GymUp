@@ -1,7 +1,7 @@
 import { deleteUserData, purgeLocalData, chunk, providerOf, friendlyDeletionError, DELETION_STEPS } from './accountDeletion';
 
 // Firestore falso: registra a ordem das operações.
-const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = [], profileCoachId = null, noteDenied = [], noteError = null, failOn = null } = {}) => {
+const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = [], profileCoachId = null, noteDenied = [], noteError = null, failOn = null, friendships = [] } = {}) => {
   const log = [];
   const docsOf = (list, prefix) => list.map((d) => ({ id: d.id, ref: { path: `${prefix}/${d.id}` }, data: () => d.data || (d.participants ? { participants: d.participants } : {}) }));
   const deps = {
@@ -18,11 +18,12 @@ const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = []
       if (path === 'chats') return { docs: docsOf(chats, 'chats') };
       const match = path.match(/^chats\/(.+)\/messages$/);
       if (match) return { docs: docsOf((chats.find((c) => c.id === match[1]) || {}).messages || [], path) };
+      if (path === 'friendships') return { docs: friendships.filter((f) => f.data[q.constraints[0].field] === q.constraints[0].value).map((f) => ({ ref: { path: `friendships/${f.id}` }, data: () => f.data })) };
       return { docs: [] };
     },
     writeBatch: () => {
       const refs = [];
-      return { delete: (ref) => refs.push(ref.path), commit: async () => { log.push(['batch', refs.length, refs[0]]); } };
+      return { delete: (ref) => refs.push(ref.path), commit: async () => { log.push(['batch', refs.length, refs[0], [...refs]]); } };
     },
     doc: (db, col, id) => ({ path: `${col}/${id}` }),
     getDoc: async () => ({ exists: () => true, data: () => ({ coachId: profileCoachId }) }),
@@ -45,6 +46,23 @@ describe('chunk', () => {
   });
 });
 
+describe('deleteUserData - amizades', () => {
+  test('bloqueio feito por outra pessoa sai no mesmo lote do documento do usuário; os demais são apagados antes', async () => {
+    const { deps, log } = makeDeps({ friendships: [
+      { id: 'u1_x', data: { userA: 'u1', userB: 'x', status: 'blocked', blockedBy: 'x' } },
+      { id: 'u1_y', data: { userA: 'u1', userB: 'y', status: 'active' } },
+      { id: 'u1_z', data: { userA: 'u1', userB: 'z', status: 'blocked', blockedBy: 'u1' } }
+    ] });
+    const counts = await deleteUserData('u1', { deps });
+    const deletes = log.filter((e) => e[0] === 'delete').map((e) => e[1]);
+    expect(deletes).toContain('friendships/u1_y');
+    expect(deletes).toContain('friendships/u1_z');
+    expect(deletes).not.toContain('friendships/u1_x');
+    expect(log[log.length - 1][3]).toEqual(['friendships/u1_x', 'users/u1']);
+    expect(counts.profile).toBe(1);
+  });
+});
+
 describe('deleteUserData', () => {
   test('apaga na ordem certa e o perfil por último; mensagens antes do chat', async () => {
     const { deps, log } = makeDeps({
@@ -56,7 +74,7 @@ describe('deleteUserData', () => {
     const steps = [];
     const counts = await deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) });
     expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, notes: 1, social: 1, profile: 1 });
-    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:publicProfiles/u1', 'delete:users/u1']);
+    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:publicProfiles/u1', 'batch:1']);
     expect(steps.slice(0, 2)).toEqual(['checkIns:running', 'checkIns:done']);
     expect(steps[steps.length - 1]).toBe('profile:done');
   });
@@ -64,7 +82,7 @@ describe('deleteUserData', () => {
   test('mais de 400 documentos viram vários lotes', async () => {
     const { deps, log } = makeDeps({ checkIns: Array.from({ length: 450 }, (_, i) => ({ id: `c${i}` })) });
     await deleteUserData('u1', { deps });
-    expect(log.filter((entry) => entry[0] === 'batch').map((entry) => entry[1])).toEqual([400, 50]);
+    expect(log.filter((entry) => entry[0] === 'batch').map((entry) => entry[1])).toEqual([400, 50, 1]);
   });
 
   test('erro numa etapa para o fluxo e preserva o perfil (nada depois é apagado)', async () => {
@@ -72,7 +90,7 @@ describe('deleteUserData', () => {
     const steps = [];
     await expect(deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) })).rejects.toMatchObject({ step: 'measurements' });
     expect(steps).toContain('measurements:error');
-    expect(log.some((entry) => entry[1] === 'users/u1')).toBe(false);
+    expect(log.some((entry) => entry[1] === 'users/u1' || entry[3]?.includes('users/u1'))).toBe(false);
   });
 
   test('sem uid lança erro', async () => {
@@ -93,13 +111,13 @@ describe('notas privadas do treinador', () => {
     const { deps, log } = makeDeps({ profileCoachId: 'coachA', noteDenied: ['coachNotes/coachA_u1'] });
     const counts = await deleteUserData('u1', { deps });
     expect(counts.notes).toBe(0);
-    expect(log[log.length - 1][1]).toBe('users/u1');
+    expect(log[log.length - 1][3]).toContain('users/u1');
   });
 
   test('erro real ao apagar nota (não é permissão) interrompe antes do perfil', async () => {
     const { deps, log } = makeDeps({ profileCoachId: 'coachA', noteError: 'unavailable' });
     await expect(deleteUserData('u1', { deps })).rejects.toMatchObject({ step: 'notes' });
-    expect(log.some((entry) => entry[1] === 'users/u1')).toBe(false);
+    expect(log.some((entry) => entry[1] === 'users/u1' || entry[3]?.includes('users/u1'))).toBe(false);
   });
 
   test('sem treinador vinculado nem conversas, não tenta apagar nenhuma nota', async () => {

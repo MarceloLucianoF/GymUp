@@ -112,8 +112,9 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     return removed;
   });
 
-  // Perfil social, @usuário, código de amigo e amizades. Bloqueios feitos POR OUTRA pessoa não podem ser apagados por quem foi
-  // bloqueado (permission-denied): ficam só como um par de IDs, sem nome nem dados.
+  // Perfil social, @usuário, código de amigo e amizades. Bloqueios feitos POR OUTRA pessoa só podem ser apagados por quem foi
+  // bloqueado junto com o documento do usuário (regra existsAfter): vão no mesmo lote do passo 'profile'.
+  const leftover = [];
   await run('social', async () => {
     let removed = 0;
     const tryDelete = async (ref) => {
@@ -130,12 +131,24 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     } catch (error) { if (error?.code !== 'permission-denied') throw error; }
     for (const field of ['userA', 'userB']) {
       const docs = await refsOf(deps, 'friendships', deps.where(field, '==', uid));
-      for (const d of docs) await tryDelete(d.ref);
+      for (const d of docs) {
+        if (d.data?.()?.status === 'blocked' && d.data().blockedBy !== uid) leftover.push(d.ref);
+        else await tryDelete(d.ref);
+      }
     }
-    return removed;
+    // Registro das próprias ações sociais: só pode ser apagado depois que o perfil social some.
+    const logs = await refsOf(deps, 'socialLog', deps.where('uid', '==', uid));
+    for (const group of chunk(logs)) for (const d of group) await tryDelete(d.ref);
+    return removed + leftover.length;
   });
 
-  await run('profile', async () => { await deps.deleteDoc(deps.doc(deps.db, 'users', uid)); return 1; });
+  await run('profile', async () => {
+    const batch = deps.writeBatch(deps.db);
+    leftover.forEach((ref) => batch.delete(ref));
+    batch.delete(deps.doc(deps.db, 'users', uid));
+    await batch.commit();
+    return 1;
+  });
   return counts;
 }
 
