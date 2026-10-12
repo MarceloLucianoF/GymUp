@@ -31,3 +31,6 @@ serviceAccountKey.json
 firestore-debug.log
 *-debug.log
 .wrangler/
+
+# Arquivos de teste locais (ex.: GIFs de terceiros sem licença confirmada)
+/artifacts/
