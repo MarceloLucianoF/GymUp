@@ -42,13 +42,13 @@ export default function ActionQueue({ items, busyId, onMessage, onView, onMarkPa
               </div>
               <div className="flex flex-wrap gap-2">
                 {item.type === 'overdue' && (
-                  <button type="button" disabled={busyId === s.uid} onClick={() => onMarkPaid(s)} className={`${act} bg-emerald-700 text-white`}><Check className="h-4 w-4" /> Marcar pago</button>
+                  <button type="button" disabled={busyId === s.uid} onClick={() => onMarkPaid(s)} className={`${act} bg-gradient-to-r from-brand to-[#FF9800] text-black`}><Check className="h-4 w-4" /> Marcar pago</button>
                 )}
                 {item.type === 'nofile' && (
-                  <button type="button" onClick={() => onAssign(s)} className={`${act} bg-brand text-black`}><ClipboardList className="h-4 w-4" /> Atribuir ficha</button>
+                  <button type="button" onClick={() => onAssign(s)} className={`${act} bg-gradient-to-r from-brand to-[#FF9800] text-black`}><ClipboardList className="h-4 w-4" /> Atribuir ficha</button>
                 )}
                 {MESSAGE_LABEL[item.type] && (
-                  <button type="button" onClick={() => onMessage(item)} aria-label={`${MESSAGE_LABEL[item.type]} ${name} por mensagem`} className={`${act} bg-sky-500/10 text-sky-700 dark:text-sky-400`}><MessageSquare className="h-4 w-4" /> {MESSAGE_LABEL[item.type]}</button>
+                  <button type="button" onClick={() => onMessage(item)} aria-label={`${MESSAGE_LABEL[item.type]} ${name} por mensagem`} className={`${act} bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200`}><MessageSquare className="h-4 w-4" /> {MESSAGE_LABEL[item.type]}</button>
                 )}
                 <button type="button" onClick={() => onView(s)} aria-label={`Ver ${name}`} className={`${act} bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200`}><Eye className="h-4 w-4" /> Ver</button>
               </div>
