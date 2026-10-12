@@ -1,6 +1,6 @@
-# Plano: amigos, ranking e desafios (não implementado)
+# Plano: amigos, ranking e desafios
 
-Decisões tomadas para quando esta frente for construída. Nada disto existe no código ainda.
+**Status:** itens 1 a 3 do MVP (amizade, perfil social, ranking semanal de consistência) estão implementados; pontos, conquistas e desafios continuam como plano. Detalhes em `docs/DIAGNOSTICO.md`.
 
 ## Princípios
 - **Competição opt-in** e baseada em **consistência**, nunca em dados de saúde: nada de peso, medidas, cargas ou fotos no ranking.

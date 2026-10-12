@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell, RefreshCw } from 'lucide-react';
+import { Users, Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell, RefreshCw } from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useRole } from '../../hooks/useRole';
 import { useStudentHome, useWeeklyGoal } from '../../hooks/useStudentHome';
@@ -213,6 +213,14 @@ export default function Home() {
             <span className="min-w-0 flex-1">
               <span className="block font-display text-base font-black text-gray-900 dark:text-white">Ferramentas</span>
               <span className="block text-xs text-gray-600 dark:text-gray-400">Calculadora de 1RM e anilhas, kg/lb, timer, IMC e hidratação.</span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
+          </Link>
+          <Link to="/amigos" className="surface surface-hover pressable mt-3 flex items-center gap-4 p-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-amber-800 dark:text-brand"><Users className="h-6 w-6" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-base font-black text-gray-900 dark:text-white">Amigos e ranking</span>
+              <span className="block text-xs text-gray-600 dark:text-gray-400">Compare a consistência da semana com quem treina com você.</span>
             </span>
             <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
           </Link>

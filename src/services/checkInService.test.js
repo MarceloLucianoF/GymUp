@@ -24,7 +24,7 @@ describe('saveCheckIn', () => {
   it('cria o check-in e abre o contador em 1', async () => {
     const m = memory();
     expect(await saveCheckIn({}, 'u1', 'c1', { userId: 'u1', date: '2026-10-12T10:00:00Z' }, m.run)).toBe(true);
-    expect(m.store.get('userStats/u1')).toEqual({ uid: 'u1', checkInCount: 1, lastCheckInAt: '2026-10-12T10:00:00Z', lastCheckInId: 'c1' });
+    expect(m.store.get('userStats/u1')).toMatchObject({ uid: 'u1', checkInCount: 1, lastCheckInAt: '2026-10-12T10:00:00Z', lastCheckInId: 'c1', weekCount: 1, streak: 1 });
   });
 
   it('soma 1 por check-in novo e não conta reenvio do mesmo ID (idempotência)', async () => {
@@ -42,7 +42,7 @@ describe('removeCheckIn', () => {
     const m = memory({ 'checkIns/c1': { userId: 'u1' }, 'userStats/u1': { uid: 'u1', checkInCount: 2, lastCheckInAt: 'x', lastCheckInId: 'c1' } });
     expect(await removeCheckIn({}, 'u1', 'c1', m.run)).toBe(true);
     expect(m.store.has('checkIns/c1')).toBe(false);
-    expect(m.store.get('userStats/u1')).toEqual({ uid: 'u1', checkInCount: 1, lastCheckInAt: 'x', lastCheckInId: 'c1', lastRemovedId: 'c1' });
+    expect(m.store.get('userStats/u1')).toMatchObject({ uid: 'u1', checkInCount: 1, lastCheckInAt: 'x', lastCheckInId: 'c1', lastRemovedId: 'c1' });
   });
 
   it('não baixa abaixo de zero e ignora check-in que não existe', async () => {

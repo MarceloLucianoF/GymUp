@@ -232,10 +232,45 @@ service cloud.firestore {
     }
 
     function statsShape(d) {
-      return d.keys().hasOnly(['uid', 'checkInCount', 'lastCheckInAt', 'lastCheckInId', 'lastRemovedId'])
+      return d.keys().hasOnly(['uid', 'checkInCount', 'lastCheckInAt', 'lastCheckInId', 'lastRemovedId',
+          'weekKey', 'weekCount', 'weekDays', 'streak', 'lastActiveDay'])
         && d.uid == request.auth.uid
         && d.checkInCount is int && d.checkInCount >= 0
-        && d.lastCheckInAt is string && d.lastCheckInId is string;
+        && d.lastCheckInAt is string && d.lastCheckInId is string
+        && d.get('weekCount', 0) is int && d.get('weekCount', 0) >= 0 && d.get('weekCount', 0) <= d.checkInCount
+        && d.get('streak', 0) is int && d.get('streak', 0) >= 0 && d.get('streak', 0) <= d.checkInCount
+        && d.get('weekKey', '') is string && d.get('lastActiveDay', '') is string
+        && d.get('weekDays', []) is list && d.get('weekDays', []).size() <= 7;
+    }
+
+    // Consistência semanal: cada check-in novo soma no máximo 1 (ou reinicia a semana em 1); a sequência cresce no máximo 1.
+    function weeklyOkOnCreate(d) {
+      return d.get('weekCount', 1) <= 1 && d.get('streak', 1) <= 1;
+    }
+    function weeklyOkOnIncrement(d, old) {
+      return d.get('weekCount', 1) <= old.get('weekCount', 0) + 1
+        && d.get('streak', 1) <= old.get('streak', 0) + 1;
+    }
+    function weeklyOkOnDecrement(d, old) {
+      return d.get('weekCount', 0) <= old.get('weekCount', 0) && d.get('streak', 0) == old.get('streak', 0);
+    }
+
+    // Amigos que participam do ranking leem os contadores um do outro (nenhum dado de saúde está em userStats).
+    function pairId(a, b) {
+      return a < b ? a + '_' + b : b + '_' + a;
+    }
+    function friendPath(a, b) {
+      return /databases/$(database)/documents/friendships/$(pairId(a, b));
+    }
+    function profilePath(uid) {
+      return /databases/$(database)/documents/publicProfiles/$(uid);
+    }
+    function sharesRanking(uid) {
+      return exists(profilePath(uid)) && get(profilePath(uid)).data.get('shareRanking', false) == true;
+    }
+    function rankingFriends(other) {
+      return exists(friendPath(request.auth.uid, other)) && get(friendPath(request.auth.uid, other)).data.status == 'active'
+        && sharesRanking(other) && sharesRanking(request.auth.uid);
     }
 
     function createdNow(id) {
@@ -251,19 +286,21 @@ service cloud.firestore {
     }
 
     match /userStats/{statsId} {
-      allow get: if signedIn() && (request.auth.uid == statsId || isAdmin());
+      allow get: if signedIn() && (request.auth.uid == statsId || isAdmin() || rankingFriends(statsId));
       allow list: if isAdmin();
       allow create: if signedIn() && request.auth.uid == statsId && statsShape(request.resource.data)
-        && request.resource.data.checkInCount == 1
+        && request.resource.data.checkInCount == 1 && weeklyOkOnCreate(request.resource.data)
         && !('lastRemovedId' in request.resource.data)
         && createdNow(request.resource.data.lastCheckInId);
       allow update: if (signedIn() && request.auth.uid == statsId && statsShape(request.resource.data) && (
           (request.resource.data.checkInCount == resource.data.checkInCount + 1
             && !('lastRemovedId' in request.resource.data)
             && request.resource.data.lastCheckInId != resource.data.lastCheckInId
+            && weeklyOkOnIncrement(request.resource.data, resource.data)
             && createdNow(request.resource.data.lastCheckInId))
           || (request.resource.data.checkInCount == resource.data.checkInCount - 1
             && request.resource.data.lastCheckInId == resource.data.lastCheckInId
+            && weeklyOkOnDecrement(request.resource.data, resource.data)
             && removedNow(request.resource.data.get('lastRemovedId', null)))
         )) || isAdmin();
       allow create: if isAdmin();
@@ -419,6 +456,113 @@ service cloud.firestore {
         && request.resource.data.action is string && request.resource.data.action.size() <= 40
         && request.resource.data.get('name', '') is string && request.resource.data.get('name', '').size() <= 200
         && request.resource.data.get('detail', '') is string && request.resource.data.get('detail', '').size() <= 500;
+      allow update, delete: if false;
+    }
+
+    // ---- Social: amigos e ranking de consistência (sem dados de saúde) ----
+    // Perfil público do aluno: só o que ele escolhe mostrar. `discoverable` libera a busca por nome;
+    // `shareRanking` é a participação voluntária no ranking entre amigos.
+    function publicProfileShape(d, uid) {
+      return d.keys().hasOnly(['uid', 'displayName', 'displayNameLower', 'handle', 'photoURL', 'friendCode',
+          'discoverable', 'shareRanking', 'weeklyGoal', 'updatedAt'])
+        && d.uid == uid
+        && d.displayName is string && d.displayName.size() > 0 && d.displayName.size() <= 60
+        && d.displayNameLower is string && d.displayNameLower.size() <= 60
+        && d.handle is string && d.handle.matches('^[a-z0-9_]{3,20}$')
+        && d.friendCode is string && d.friendCode.matches('^[A-Z0-9]{8}$')
+        && d.photoURL is string && (d.photoURL == '' || d.photoURL.matches('^https://.*') ) && d.photoURL.size() <= 500
+        && d.discoverable is bool && d.shareRanking is bool
+        && d.weeklyGoal is int && d.weeklyGoal >= 2 && d.weeklyGoal <= 7
+        && d.updatedAt is string;
+    }
+
+    // @usuário e código de amigo são únicos: o documento de reserva precisa nascer no mesmo lote do perfil.
+    function claims(uid, d) {
+      return getAfter(/databases/$(database)/documents/handles/$(d.handle)).data.uid == uid
+        && getAfter(/databases/$(database)/documents/friendCodes/$(d.friendCode)).data.uid == uid;
+    }
+
+    match /publicProfiles/{profileId} {
+      allow get: if signedIn() && (request.auth.uid == profileId || isAdmin() || resource.data.discoverable == true
+        || (exists(friendPath(request.auth.uid, profileId)) && get(friendPath(request.auth.uid, profileId)).data.status in ['active', 'pending']));
+      allow list: if signedIn() && (isAdmin() || resource.data.discoverable == true);
+      allow create: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)
+        && claims(profileId, request.resource.data);
+      allow update: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)
+        && request.resource.data.friendCode == resource.data.friendCode
+        && (request.resource.data.handle == resource.data.handle || claims(profileId, request.resource.data));
+      allow delete: if signedIn() && request.auth.uid == profileId;
+    }
+
+    match /handles/{handle} {
+      allow get: if signedIn();
+      allow create: if signedIn() && handle.matches('^[a-z0-9_]{3,20}$')
+        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /friendCodes/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn() && code.matches('^[A-Z0-9]{8}$')
+        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Amizade: um documento por par (ID = menor_maior). pending | active | blocked | removed.
+    function friendshipShape(d, pairDocId) {
+      return d.keys().hasOnly(['userA', 'userB', 'status', 'requestedBy', 'blockedBy', 'createdAt', 'updatedAt'])
+        && d.userA is string && d.userB is string && d.userA < d.userB
+        && pairDocId == d.userA + '_' + d.userB
+        && d.status in ['pending', 'active', 'blocked', 'removed']
+        && d.requestedBy in [d.userA, d.userB]
+        && d.createdAt is string && d.updatedAt is string
+        && (d.status == 'blocked' ? ('blockedBy' in d && d.blockedBy in [d.userA, d.userB]) : !('blockedBy' in d));
+    }
+    function inPair(d) {
+      return request.auth.uid == d.userA || request.auth.uid == d.userB;
+    }
+    function sameBase(next, old) {
+      return next.userA == old.userA && next.userB == old.userB && next.createdAt == old.createdAt;
+    }
+
+    match /friendships/{pairDocId} {
+      allow get: if signedIn() && (isAdmin() || (resource == null ? (pairDocId.matches(request.auth.uid + '_.*') || pairDocId.matches('.*_' + request.auth.uid)) : inPair(resource.data)));
+      allow list: if signedIn() && (isAdmin() || request.auth.uid == resource.data.userA || request.auth.uid == resource.data.userB);
+      // Pedido novo: quem pede é o próprio usuário; só para quem tem perfil social.
+      allow create: if signedIn() && friendshipShape(request.resource.data, pairDocId) && inPair(request.resource.data)
+        && request.resource.data.status == 'pending' && request.resource.data.requestedBy == request.auth.uid
+        && exists(profilePath(request.auth.uid))
+        && exists(profilePath(request.resource.data.userA == request.auth.uid ? request.resource.data.userB : request.resource.data.userA));
+      allow update: if signedIn() && friendshipShape(request.resource.data, pairDocId) && inPair(resource.data)
+        && sameBase(request.resource.data, resource.data) && (
+          // aceitar: só quem recebeu o pedido
+          (resource.data.status == 'pending' && request.resource.data.status == 'active'
+            && resource.data.requestedBy != request.auth.uid && request.resource.data.requestedBy == resource.data.requestedBy)
+          // recusar (quem recebeu) ou cancelar (quem pediu) o pedido; remover amigo (qualquer lado)
+          || (resource.data.status in ['pending', 'active'] && request.resource.data.status == 'removed'
+            && request.resource.data.requestedBy == resource.data.requestedBy)
+          // pedir de novo depois de removido (nunca depois de bloqueio)
+          || (resource.data.status == 'removed' && request.resource.data.status == 'pending'
+            && request.resource.data.requestedBy == request.auth.uid)
+          // bloquear (qualquer estado, exceto já bloqueado)
+          || (resource.data.status != 'blocked' && request.resource.data.status == 'blocked'
+            && request.resource.data.blockedBy == request.auth.uid && request.resource.data.requestedBy == resource.data.requestedBy)
+          // desbloquear: só quem bloqueou
+          || (resource.data.status == 'blocked' && resource.data.blockedBy == request.auth.uid
+            && request.resource.data.status == 'removed' && request.resource.data.requestedBy == resource.data.requestedBy)
+        );
+      allow delete: if isAdmin() || (signedIn() && inPair(resource.data) && (resource.data.status != 'blocked' || resource.data.blockedBy == request.auth.uid));
+    }
+
+    // Registro das ações sociais (para a auditoria do admin). Cada usuário só acrescenta as próprias entradas.
+    match /socialLog/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['at', 'uid', 'action', 'other', 'pairId'])
+        && request.resource.data.uid == request.auth.uid && request.resource.data.at is string
+        && request.resource.data.action in ['pedir', 'aceitar', 'recusar', 'cancelar', 'remover', 'bloquear', 'desbloquear', 'entrar-ranking', 'sair-ranking']
+        && request.resource.data.get('other', '') is string && request.resource.data.get('pairId', '') is string;
       allow update, delete: if false;
     }
 

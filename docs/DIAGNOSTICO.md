@@ -256,3 +256,14 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - Encerrar o vínculo revoga o acesso do treinador a dados novos; fichas atribuídas e histórico não são apagados.
 - **Modais em portal:** o modal base passou a renderizar em `document.body` (um modal dentro do `<form>` do perfil enviava o formulário de fora).
 - Fora desta etapa: QR Code, limite/validade de convite, múltiplos treinadores, ligação com `adminLog` das ações do aluno/treinador (o admin só lê).
+
+## Atualização — amigos e ranking de consistência (MVP social)
+- **Perfil social** (`publicProfiles/{uid}`): nome público, @usuário, foto, meta semanal e duas chaves de privacidade (`discoverable`: aparece na busca por nome; `shareRanking`: participa do ranking). Separado de `users`; nunca contém peso, medidas, e-mail ou check-ins. `@usuário` e código de amigo são reservados em `handles/` e `friendCodes/` no mesmo lote (unicidade garantida por regra).
+- **Amizades** (`friendships/{menorUid_maiorUid}`, `pending | active | blocked | removed`): só os dois lados e o admin leem. Pedir, aceitar (só quem recebeu), recusar, cancelar, remover e bloquear; só quem bloqueou desbloqueia, e bloqueio impede novo pedido (testado nas regras e em produção). Pedido cruzado vira amizade.
+- **Ranking semanal** ("Consistência registrada", não é competição oficial): treinos da semana, dias ativos, sequência e meta cumprida, vindos de `userStats` (campos semanais gravados na mesma transação do check-in; as regras limitam +1 por check-in). Um amigo só lê o `userStats` do outro se a amizade está ativa e **os dois** participam. Sair do ranking não desfaz a amizade.
+- **Auditoria:** `socialLog` (pedir, aceitar, recusar, cancelar, remover, bloquear, entrar/sair do ranking) aparece na aba "Social" do admin, junto com perfis e amizades.
+- **Exclusão de conta** apaga perfil, @usuário, código e amizades do usuário.
+- **Backfill:** `scripts/backfill-user-stats.cjs` também reconcilia os campos semanais (aplicado: 9 alunos, 0 diferenças).
+- **Bugs de regras achados só em produção** (o emulador acusava aprovado nos testes antigos): `get` de documento inexistente em `friendships` (negado quando não há `resource`) e `list` com `in [userA, userB]` não é provado pela consulta; ambos corrigidos e cobertos por testes que reproduzem as leituras exatas do app.
+- **Limites:** o contador pode subestimar (cliente adulterado deixa de atualizar), nunca inflar além de +1 por treino; perfis ocultos aparecem como "Usuário" até existir relação; documentos de amizade bloqueada sobram após exclusão de conta do outro lado; `socialLog` guarda uid e ação.
+- **Fora desta etapa:** moedas, conquistas, desafios com prêmio, ranking global, QR Code.

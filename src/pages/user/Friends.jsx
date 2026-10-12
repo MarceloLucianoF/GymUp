@@ -1,0 +1,246 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Check, Copy, Search, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import PageHeader from '../../components/ui/PageHeader';
+import Tabs from '../../components/coach/Tabs';
+import EmptyState from '../../components/common/EmptyState';
+import PageSkeleton from '../../components/coach/PageSkeleton';
+import ErrorState from '../../components/common/ErrorState';
+import { btnGhost, btnPrimary, inputCls, labelCls, pageCls } from '../../components/coach/styles';
+import { useAuthContext } from '../../hooks/AuthContext';
+import { useConfirm } from '../../hooks/useConfirm';
+import useSocial from '../../hooks/useSocial';
+import usePageMeta from '../../hooks/usePageMeta';
+import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, searchByName, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
+
+const TABS = [['ranking', 'Ranking'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
+const medal = (pos) => (pos === 1 ? 'bg-amber-400 text-black' : pos === 2 ? 'bg-gray-300 text-black' : pos === 3 ? 'bg-orange-300 text-black' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200');
+const smallBtn = 'pressable inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 text-xs font-bold';
+const Person = ({ p, fallback = 'Usuário' }) => (
+  <div className="min-w-0"><p className="truncate font-bold text-gray-900 dark:text-white">{p?.displayName || fallback}</p>{p?.handle && <p className="text-xs text-gray-600 dark:text-gray-400">@{p.handle}</p>}</div>
+);
+
+function RankingTab({ social, onGo, onJoin }) {
+  const { ranking, profile } = social;
+  if (!profile) return <EmptyState icon={Users} title="Crie seu perfil social" description="Escolha um @usuário para convidar amigos e entrar no ranking de consistência." action={<button type="button" onClick={() => onGo('profile')} className={btnPrimary}>Criar perfil</button>} />;
+  if (!ranking.participating) {
+    return (
+      <div className="surface space-y-3 p-5">
+        <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Participar do ranking</h2>
+        <p className="text-sm text-gray-700 dark:text-gray-300">Você e seus amigos que também participam veem treinos da semana, dias ativos e sequência. Nenhum peso, medida ou carga é compartilhado. Você pode sair quando quiser, sem desfazer amizades.</p>
+        <button type="button" onClick={onJoin} className={btnPrimary}>Participar do ranking</button>
+      </div>
+    );
+  }
+  if (ranking.rows.length <= 1) {
+    return <EmptyState icon={Users} title="Seu ranking está esperando amigos" description="Adicione amigos que também participam do ranking. Enquanto isso, seus treinos da semana aparecem aqui." action={<button type="button" onClick={() => onGo('search')} className={btnPrimary}>Buscar amigos</button>} />;
+  }
+  return (
+    <section className="surface p-4" aria-labelledby="rank-title">
+      <h2 id="rank-title" className="font-display text-lg font-black text-gray-900 dark:text-white">Ranking dos seus amigos — esta semana</h2>
+      <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">Consistência registrada. Não é uma competição oficial: quem não registra um treino no app não aparece com ele.</p>
+      <ol className="space-y-2">
+        {ranking.rows.map((r) => (
+          <li key={r.uid} className={`flex items-center gap-3 rounded-2xl p-3 ${r.me ? 'bg-brand/15 ring-1 ring-brand/40' : 'bg-gray-50 dark:bg-white/5'}`}>
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${medal(r.position)}`} aria-label={`${r.position}º lugar`}>{r.position}</span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-bold text-gray-900 dark:text-white">{r.name}{r.me ? ' (você)' : ''}</p>
+              <p className="text-xs text-gray-700 dark:text-gray-300">{r.workouts} treino{r.workouts === 1 ? '' : 's'} · {r.activeDays} dia{r.activeDays === 1 ? '' : 's'} ativo{r.activeDays === 1 ? '' : 's'}{r.streak > 1 ? ` · sequência de ${r.streak} dias` : ''}</p>
+            </div>
+            {r.goalMet && <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-black text-emerald-800 dark:text-emerald-300">Meta cumprida</span>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function FriendsTab({ social, uid, act, onGo }) {
+  const { friendships, people } = social;
+  const byStatus = (fn) => friendships.filter(fn);
+  const incoming = byStatus((f) => relationOf(f, uid) === 'pending-in');
+  const outgoing = byStatus((f) => relationOf(f, uid) === 'pending-out');
+  const active = byStatus((f) => f.status === 'active');
+  const blocked = byStatus((f) => relationOf(f, uid) === 'blocked-by-me');
+  const row = (f, buttons) => {
+    const other = otherOf(f, uid);
+    return (
+      <li key={f.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
+        <Person p={people[other]} /><div className="ml-auto flex flex-wrap gap-2">{buttons(other)}</div>
+      </li>
+    );
+  };
+  const empty = incoming.length + outgoing.length + active.length + blocked.length === 0;
+  if (empty) return <EmptyState icon={Users} title="Você ainda não tem amigos no app" description="Busque por nome, @usuário ou código de um amigo." action={<button type="button" onClick={() => onGo('search')} className={btnPrimary}>Buscar amigos</button>} />;
+  const Section = ({ title, items, children }) => items.length ? (<section className="surface space-y-2 p-4"><h2 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">{title} ({items.length})</h2><ul className="space-y-2">{children}</ul></section>) : null;
+  return (
+    <div className="space-y-4">
+      <Section title="Pedidos recebidos" items={incoming}>{incoming.map((f) => row(f, (o) => (<>
+        <button type="button" onClick={() => act(o, 'accept')} className={`${smallBtn} bg-gradient-to-r from-brand to-[#FF9800] text-black`}><Check className="h-4 w-4" aria-hidden="true" /> Aceitar</button>
+        <button type="button" onClick={() => act(o, 'decline')} className={`${smallBtn} bg-gray-200 text-gray-800 dark:bg-white/10 dark:text-gray-100`}><X className="h-4 w-4" aria-hidden="true" /> Recusar</button></>)))}</Section>
+      <Section title="Pedidos enviados" items={outgoing}>{outgoing.map((f) => row(f, (o) => (
+        <button type="button" onClick={() => act(o, 'cancel')} className={`${smallBtn} bg-gray-200 text-gray-800 dark:bg-white/10 dark:text-gray-100`}>Cancelar pedido</button>)))}</Section>
+      <Section title="Amigos" items={active}>{active.map((f) => row(f, (o) => (<>
+        <button type="button" onClick={() => act(o, 'remove')} className={`${smallBtn} bg-gray-200 text-gray-800 dark:bg-white/10 dark:text-gray-100`}><UserMinus className="h-4 w-4" aria-hidden="true" /> Remover</button>
+        <button type="button" onClick={() => act(o, 'block')} className={`${smallBtn} bg-rose-500/10 text-rose-700 dark:text-rose-400`}><Shield className="h-4 w-4" aria-hidden="true" /> Bloquear</button></>)))}</Section>
+      <Section title="Bloqueados" items={blocked}>{blocked.map((f) => row(f, (o) => (
+        <button type="button" onClick={() => act(o, 'unblock')} className={`${smallBtn} bg-gray-200 text-gray-800 dark:bg-white/10 dark:text-gray-100`}>Desbloquear</button>)))}</Section>
+    </div>
+  );
+}
+
+function SearchTab({ social, uid, initialQuery, reload }) {
+  const [term, setTerm] = useState(initialQuery);
+  const [results, setResults] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const relFor = (id) => relationOf(social.friendships.find((f) => otherOf(f, uid) === id), uid);
+
+  const run = async (e) => {
+    e?.preventDefault();
+    if (!term.trim()) return;
+    setBusy(true);
+    try {
+      const direct = await findByHandleOrCode(term);
+      const byName = direct ? [] : await searchByName(term);
+      setResults(direct ? [direct] : byName);
+    } catch (error) { console.error(error); toast.error('Não foi possível buscar agora.'); setResults([]); }
+    finally { setBusy(false); }
+  };
+
+  useEffect(() => { if (initialQuery) run(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const add = async (id) => {
+    try {
+      const r = await sendRequest(uid, id);
+      toast.success(r === 'accepted' ? 'Vocês agora são amigos!' : 'Pedido enviado.');
+      await reload();
+    } catch (error) { toast.error(error.message || 'Não foi possível enviar o pedido.'); }
+  };
+
+  if (!social.profile) return <EmptyState icon={Users} title="Crie seu perfil social primeiro" description="Para pedir amizade, você precisa de um @usuário." />;
+  return (
+    <div className="space-y-4">
+      <form onSubmit={run} className="surface flex flex-col gap-3 p-4 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-600 dark:text-gray-400" aria-hidden="true" />
+          <input type="search" aria-label="Buscar por nome, @usuário ou código" placeholder="Nome, @usuário ou código do amigo" value={term} onChange={(e) => setTerm(e.target.value)} className={`${inputCls} !pl-11`} />
+        </div>
+        <button type="submit" disabled={busy || !term.trim()} className={btnPrimary}>{busy ? 'Buscando...' : 'Buscar'}</button>
+      </form>
+      {results && results.length === 0 && <EmptyState icon={Search} title="Ninguém encontrado" description="Perfis só aparecem na busca por nome se a pessoa permitiu. Peça o @usuário ou o código dela." />}
+      {results && results.length > 0 && (
+        <ul className="space-y-2">
+          {results.filter((p) => p.uid !== uid).map((p) => {
+            const rel = relFor(p.uid);
+            return (
+              <li key={p.uid} className="surface flex items-center gap-3 p-3">
+                <Person p={p} />
+                <div className="ml-auto">
+                  {rel === 'none' && <button type="button" onClick={() => add(p.uid)} className={`${smallBtn} bg-gradient-to-r from-brand to-[#FF9800] text-black`}><UserPlus className="h-4 w-4" aria-hidden="true" /> Adicionar</button>}
+                  {rel === 'pending-out' && <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Pedido enviado</span>}
+                  {rel === 'pending-in' && <button type="button" onClick={() => add(p.uid)} className={`${smallBtn} bg-gradient-to-r from-brand to-[#FF9800] text-black`}>Aceitar pedido</button>}
+                  {rel === 'active' && <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Já são amigos</span>}
+                  {(rel === 'blocked' || rel === 'blocked-by-me') && <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Indisponível</span>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ProfileTab({ social, user, profile: studentProfile, reload }) {
+  const { profile } = social;
+  const suggested = normalizeHandle((user.displayName || 'aluno').split(' ')[0]).replace(/[^a-z0-9_]/g, '');
+  const [form, setForm] = useState({
+    displayName: profile?.displayName || user.displayName || '',
+    handle: profile?.handle || (suggested.length >= 3 ? suggested : `${suggested}_${Math.floor(Math.random() * 90 + 10)}`),
+    discoverable: profile?.discoverable ?? false,
+    shareRanking: profile?.shareRanking ?? false,
+    weeklyGoal: profile?.weeklyGoal || studentProfile?.weeklyGoal || 4
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const problem = validateHandle(normalizeHandle(form.handle));
+    if (problem) { setError(problem); return; }
+    setError(''); setSaving(true);
+    try { await saveSocialProfile(user, form, profile); toast.success('Perfil social salvo.'); await reload(); }
+    catch (err) { setError(err.message || 'Não foi possível salvar.'); }
+    finally { setSaving(false); }
+  };
+
+  const copy = (text, msg) => navigator.clipboard?.writeText(text).then(() => toast.success(msg)).catch(() => toast.error('Não foi possível copiar.'));
+  return (
+    <form onSubmit={submit} noValidate className="surface space-y-5 p-5">
+      <p className="text-sm text-gray-700 dark:text-gray-300">Só estas informações ficam visíveis para outras pessoas. Peso, medidas, treinos detalhados e histórico <b>nunca</b> são compartilhados por aqui.</p>
+      <div><label htmlFor="sp-name" className={labelCls}>Nome público</label><input id="sp-name" value={form.displayName} onChange={set('displayName')} className={inputCls} maxLength={60} /></div>
+      <div>
+        <label htmlFor="sp-handle" className={labelCls}>@usuário</label>
+        <input id="sp-handle" value={form.handle} onChange={set('handle')} className={`${inputCls} font-mono`} autoCapitalize="none" spellCheck={false} aria-describedby="sp-handle-hint" />
+        <p id="sp-handle-hint" className="mt-1 text-xs text-gray-600 dark:text-gray-400">De 3 a 20 letras minúsculas, números ou _. Único no app.</p>
+      </div>
+      <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.discoverable} onChange={set('discoverable')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Aparecer na busca por nome</span><span className="text-xs text-gray-600 dark:text-gray-400">Desligado, só quem tem seu @usuário ou código encontra você.</span></span></label>
+      <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.shareRanking} onChange={set('shareRanking')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Participar do ranking entre amigos</span><span className="text-xs text-gray-600 dark:text-gray-400">Amigos que também participam veem seus treinos da semana, dias ativos e sequência.</span></span></label>
+      <div><label htmlFor="sp-goal" className={labelCls}>Meta semanal (treinos)</label><input id="sp-goal" type="number" min={2} max={7} value={form.weeklyGoal} onChange={set('weeklyGoal')} className={`${inputCls} sm:w-40`} /></div>
+      {profile && (
+        <div className="rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Seu código de amigo</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2"><code className="font-mono text-xl font-black tracking-widest text-gray-900 dark:text-white">{profile.friendCode}</code>
+            <button type="button" onClick={() => copy(profile.friendCode, 'Código copiado!')} className={btnGhost}><Copy className="h-4 w-4" aria-hidden="true" /> Copiar</button>
+            <button type="button" onClick={() => copy(`${window.location.origin}/amigos?buscar=${profile.friendCode}`, 'Link copiado!')} className={btnGhost}>Copiar link</button></div>
+        </div>
+      )}
+      {error && <p role="alert" className="text-sm font-bold text-rose-700 dark:text-rose-400">{error}</p>}
+      <button type="submit" disabled={saving} className={btnPrimary}>{saving ? 'Salvando...' : profile ? 'Salvar alterações' : 'Criar perfil social'}</button>
+    </form>
+  );
+}
+
+export default function Friends() {
+  usePageMeta('Amigos', 'Amigos e ranking de consistência.', { noindex: true });
+  const { user, userProfile } = useAuthContext();
+  const { confirm, dialog } = useConfirm();
+  const [params] = useSearchParams();
+  const social = useSocial(user?.uid);
+  const [tab, setTab] = useState(params.get('buscar') ? 'search' : 'ranking');
+  const uid = user?.uid;
+  const pendingIn = useMemo(() => social.friendships.filter((f) => relationOf(f, uid) === 'pending-in').length, [social.friendships, uid]);
+
+  const act = async (other, action) => {
+    if (action === 'block' || action === 'remove') {
+      const ok = await confirm({ title: action === 'block' ? 'Bloquear esta pessoa?' : 'Remover amigo?', message: action === 'block' ? 'Ela não consegue mais pedir amizade e some do seu ranking.' : 'Vocês saem do ranking um do outro.', confirmLabel: action === 'block' ? 'Bloquear' : 'Remover', danger: true });
+      if (!ok) return;
+    }
+    try { await respond(uid, other, action); await social.reload(); toast.success('Pronto.'); }
+    catch (error) { console.error(error); toast.error('Não foi possível concluir. Tente de novo.'); }
+  };
+
+  const join = async () => {
+    try { await saveSocialProfile(user, { ...social.profile, shareRanking: true }, social.profile); toast.success('Você entrou no ranking.'); await social.reload(); }
+    catch (error) { console.error(error); toast.error('Não foi possível entrar no ranking.'); }
+  };
+
+  if (social.loading) return <div className={pageCls}><div className="mx-auto max-w-3xl"><PageSkeleton cards={3} /></div></div>;
+  if (social.error) return <div className={pageCls}><ErrorState onRetry={() => social.reload()} /></div>;
+
+  return (
+    <div className={pageCls}>
+      {dialog}
+      <div className="mx-auto max-w-3xl space-y-5">
+        <PageHeader eyebrow="Social" title="Amigos" subtitle="Compare consistência com quem treina com você, sem expor seus dados de saúde." />
+        <Tabs tabs={TABS.map(([id, label]) => ({ id, label: id === 'friends' && pendingIn ? `${label} (${pendingIn})` : label }))} value={tab} onChange={setTab} />
+        {tab === 'ranking' && <RankingTab social={social} onGo={setTab} onJoin={join} />}
+        {tab === 'friends' && <FriendsTab social={social} uid={uid} act={act} onGo={setTab} />}
+        {tab === 'search' && <SearchTab social={social} uid={uid} initialQuery={params.get('buscar') || ''} reload={social.reload} />}
+        {tab === 'profile' && <ProfileTab key={social.profile?.updatedAt || 'novo'} social={social} user={user} profile={userProfile} reload={social.reload} />}
+      </div>
+    </div>
+  );
+}

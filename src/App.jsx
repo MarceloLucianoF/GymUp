@@ -14,6 +14,7 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const AuthAction = lazy(() => import('./pages/auth/AuthAction'));
 const InviteRedirect = lazy(() => import('./pages/public/InviteRedirect'));
+const Friends = lazy(() => import('./pages/user/Friends'));
 
 // --- PÁGINAS: USER (ALUNO) ---
 const Home = lazy(() => import('./pages/user/Home'));
@@ -65,6 +66,7 @@ const ROUTE_META = [
   ['/measurements', 'Medidas', 'Evolução das suas medidas.', true],
   ['/profile', 'Meu perfil', 'Dados, medidas e preferências.', true],
   ['/chat', 'Chat', 'Conversa com seu treinador.', true],
+  ['/amigos', 'Amigos', 'Amigos e ranking de consistência.', true],
   ['/ferramentas', 'Ferramentas', 'Calculadoras e ferramentas de treino.', true],
   ['/onboarding', 'Bem-vindo', 'Configure seu perfil.', true],
   ['/coach', 'Painel do treinador', 'Gestão de alunos e fichas.', true],
@@ -224,6 +226,7 @@ function AppRoutes() {
           {/* --- ROTAS PÚBLICAS --- */}
           <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
           <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+          <Route path="/amigos" element={<ProtectedRoute allowedRoles={['user']}><Friends /></ProtectedRoute>} />
           <Route path="/convite/:code" element={<InviteRedirect />} />
           <Route path="/auth/action" element={<main id="main-content" tabIndex={-1} className="outline-none"><AuthAction /></main>} />
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />

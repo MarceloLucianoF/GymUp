@@ -107,3 +107,14 @@ describe('linkOverview', () => {
     expect(linkOverview(users, links)).toEqual({ students: 3, coaches: 2, active: 2, withoutCoach: 1, coachesWithoutStudents: 1, pending: 2, rejected: 0, revoked: 1 });
   });
 });
+
+import { socialOverview } from './adminUtils';
+describe('socialOverview', () => {
+  it('conta perfis, participantes do ranking e estados das amizades', () => {
+    const r = socialOverview(
+      [{ discoverable: true, shareRanking: true }, { discoverable: false, shareRanking: true }, { discoverable: true, shareRanking: false }],
+      [{ status: 'active' }, { status: 'active' }, { status: 'pending' }, { status: 'blocked' }, { status: 'removed' }]
+    );
+    expect(r).toEqual({ profiles: 3, discoverable: 2, ranking: 2, friends: 2, pending: 1, blocked: 1 });
+  });
+});

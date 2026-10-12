@@ -155,3 +155,15 @@ export function linkOverview(users, links) {
     revoked: links.filter((l) => l.status === 'revoked').length
   };
 }
+
+// ---- social ----
+export function socialOverview(profiles, friendships) {
+  return {
+    profiles: profiles.length,
+    discoverable: profiles.filter((p) => p.discoverable).length,
+    ranking: profiles.filter((p) => p.shareRanking).length,
+    friends: friendships.filter((f) => f.status === 'active').length,
+    pending: friendships.filter((f) => f.status === 'pending').length,
+    blocked: friendships.filter((f) => f.status === 'blocked').length
+  };
+}
