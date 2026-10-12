@@ -84,6 +84,19 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const [activeSession, setActiveSession] = useState(null);
+  const [showStickyCta, setShowStickyCta] = useState(false);
+
+  // CTA fixo no celular: aparece depois do início e some perto do fim da página (onde já há outro CTA).
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      const nearEnd = y + window.innerHeight > document.documentElement.scrollHeight - 700;
+      setShowStickyCta(y > 600 && !nearEnd);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (user?.uid) {
@@ -250,6 +263,14 @@ export default function LandingPage() {
           </Reveal>
         </section>
       </main>
+
+      {showStickyCta && !user && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200/70 bg-white/90 px-4 pt-3 backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-[#0B0F19]/90" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          <Link to="/register" className="pressable flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] px-5 text-base font-black text-black shadow-lg shadow-brand/25">
+            Criar conta grátis <ArrowRight className="h-5 w-5" aria-hidden="true" />
+          </Link>
+        </div>
+      )}
 
       <footer className="border-t border-gray-200/70 py-8 text-center text-xs text-gray-600 dark:border-white/10 dark:text-gray-300">
         <p className="flex items-center justify-center gap-1.5"><Smartphone className="h-4 w-4" aria-hidden="true" /> Instale na tela inicial do celular para a melhor experiência.</p>
