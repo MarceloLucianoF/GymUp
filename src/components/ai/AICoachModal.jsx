@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { aiService } from '../../services/aiService';
-import { modelLabel } from '../../services/aiMeta';
+import { modelLabel, failureMessage } from '../../services/aiMeta';
 import Markdown from '../common/Markdown';
 import { db } from '../../firebase/config';
 import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore';
@@ -32,6 +32,17 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
   ]);
   const [inputPrompt, setInputPrompt] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState(0);
+  const requestRef = useRef(0); // identifica o pedido em andamento: respostas de pedidos cancelados são ignoradas
+
+  // Contador de espera (alimenta o aviso por etapas).
+  useEffect(() => {
+    if (!isTyping) { setWaitSeconds(0); return undefined; }
+    const started = Date.now();
+    const id = setInterval(() => setWaitSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [isTyping]);
+
   const chatEndRef = useRef(null);
 
   // Generator State
@@ -97,37 +108,63 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     toast.success('Conversa reiniciada.');
   };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputPrompt.trim() || isTyping) return;
-
-    const userText = inputPrompt.trim();
-    setInputPrompt('');
-    const userMsg = { id: Date.now().toString(), sender: 'user', text: userText };
-    setMessages(prev => [...prev, userMsg]);
+  const sendQuestion = async (userText, { addUserMessage = true } = {}) => {
+    if (!userText || isTyping) return;
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    if (addUserMessage) setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user', text: userText }]);
     setIsTyping(true);
 
+    let metaSeen = null;
+    const failMessage = (text, retry = true) => ({ id: `${Date.now()}-e`, sender: 'ai', text, retryText: retry ? userText : null });
     try {
-      const responseText = await aiService.askAICoach({
-        prompt: userText,
-        userProfile,
-        historyDocs,
-        conversationHistory: messages,
-        customExercises,
-        onMeta: setAiMeta,
-        onWorkout: (workout) => {
-          setGeneratedWorkout(workout);
-          toast.success('Treino gerado! Veja na aba Treino.');
-        }
-      });
-      const aiMsg = { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText };
-      setMessages(prev => [...prev, aiMsg]);
+      // Teto de espera: além dele o pedido é tratado como lento (a resposta tardia é descartada).
+      const responseText = await Promise.race([
+        aiService.askAICoach({
+          prompt: userText,
+          userProfile,
+          historyDocs,
+          conversationHistory: messages,
+          customExercises,
+          onMeta: (meta) => { metaSeen = meta; if (requestRef.current === requestId) setAiMeta(meta); },
+          onWorkout: (workout) => {
+            if (requestRef.current !== requestId) return;
+            setGeneratedWorkout(workout);
+            toast.success('Treino gerado! Veja na aba Treino.');
+          }
+        }),
+        new Promise((resolve) => setTimeout(() => resolve({ timeout: true }), 45000))
+      ]);
+      if (requestRef.current !== requestId) return; // cancelado
+      if (responseText?.timeout) {
+        setAiMeta({ provider: 'local', reason: 'lento' });
+        setMessages(prev => [...prev, failMessage(failureMessage('lento'))]);
+      } else {
+        setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText, retryText: metaSeen?.provider === 'local' ? userText : null }]);
+      }
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao conectar com o Coach IA.');
+      if (requestRef.current === requestId) setMessages(prev => [...prev, failMessage(failureMessage('indisponivel'))]);
     } finally {
-      setIsTyping(false);
+      if (requestRef.current === requestId) setIsTyping(false);
     }
+  };
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    const userText = inputPrompt.trim();
+    if (!userText || isTyping) return;
+    setInputPrompt('');
+    sendQuestion(userText);
+  };
+
+  // Cancela a espera: a resposta que chegar depois é ignorada e a pergunta volta ao campo para reenviar.
+  const cancelWaiting = () => {
+    const last = [...messages].reverse().find((m) => m.sender === 'user');
+    requestRef.current += 1;
+    setIsTyping(false);
+    if (last) setInputPrompt(last.text);
+    toast('Pedido cancelado. A pergunta voltou ao campo para você reenviar.');
   };
 
   const handleGenerateWorkout = async () => {
@@ -240,13 +277,25 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                       {msg.sender === 'user'
                         ? <p className="whitespace-pre-wrap text-left">{msg.text}</p>
                         : <Markdown text={msg.text} />}
+                      {msg.retryText && (
+                        <button type="button" onClick={() => sendQuestion(msg.retryText, { addUserMessage: false })} disabled={isTyping}
+                          className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] px-3 text-xs font-black text-black disabled:opacity-50">
+                          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Tentar novamente
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
                 {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="card-premium-glass p-3 rounded-2xl text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-800 dark:text-brand" /> Coach IA digitando...
+                  <div className="flex justify-start" role="status" aria-live="polite">
+                    <div className="card-premium-glass flex flex-col gap-2 rounded-2xl p-3 text-sm text-gray-700 dark:text-gray-300">
+                      <span className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin text-amber-800 dark:text-brand" aria-hidden="true" />
+                        {waitSeconds < 5 ? 'Preparando resposta...' : waitSeconds < 15 ? 'O Coach está analisando sua pergunta...' : 'Esta resposta está demorando mais que o normal.'}
+                      </span>
+                      {waitSeconds >= 5 && (
+                        <button type="button" onClick={cancelWaiting} className="self-start rounded-xl bg-gray-100 px-3 py-2 text-xs font-bold text-gray-800 dark:bg-white/10 dark:text-gray-100">Cancelar e reenviar depois</button>
+                      )}
                     </div>
                   </div>
                 )}
