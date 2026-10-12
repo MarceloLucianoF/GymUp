@@ -14,7 +14,7 @@ O plano gratuito do Firebase não tem Cloud Functions. Para pontos e ranking con
 2. **Worker da Cloudflare com credencial de serviço** (secret): cálculo de ranking, temporadas e conquistas fora do cliente. Exige guardar uma chave de serviço no Worker (decisão de segurança a tomar).
 
 ## MVP (ordem)
-1. Amizade: `friendRequests/{id}` e `friendships/{id}` (`pending | active | blocked | removed`), por nome público, código ou link.
+1. Amizade: `friendRequests/{id}` e `friendships/{id}` (`pending | active | blocked | removed`), por @usuário ou código (busca por nome adiada; ver DIAGNOSTICO).
 2. Perfil social com privacidade (`public | friends | private`) e `publicProfiles/{uid}` só com nome, foto e métricas de consistência.
 3. Ranking entre amigos da semana: treinos concluídos, dias ativos, sequência (derivados de `userStats`).
 4. Pontos por treino concluído (limite diário), meta semanal e sequência de 3 e 7 dias; histórico imutável `pointsLedger`.
