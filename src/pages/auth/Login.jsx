@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AuthField from './AuthField';
 import { BrandWordmark } from '../../components/brand/Brand';
+import GoogleButton, { OrDivider } from '../../components/auth/GoogleButton';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -76,7 +77,10 @@ export default function Login() {
             <p className="mt-2 text-gray-600 dark:text-gray-400">Digite suas credenciais para acessar sua ficha.</p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <GoogleButton />
+          <OrDivider />
+
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-5">
               
               <AuthField

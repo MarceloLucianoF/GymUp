@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { cachedLoad } from '../services/ttlCache';
 
 const BATCH = 30; // limite de valores em "in"
 export const DEFAULT_FEE = 120;
@@ -13,10 +14,13 @@ export const useCoachRoster = (user, { checkInLimit = 150 } = {}) => {
     const [error, setError] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
     const uid = user?.uid;
+    const forceRef = useRef(false);
 
     useEffect(() => {
         if (!uid) return undefined;
         let cancelled = false;
+        const force = forceRef.current;
+        forceRef.current = false;
         const load = async () => {
             setError(false);
             try {
@@ -33,14 +37,21 @@ export const useCoachRoster = (user, { checkInLimit = 150 } = {}) => {
                 const ids = students.map(s => s.uid);
                 const batches = [];
                 for (let i = 0; i < ids.length; i += BATCH) batches.push(ids.slice(i, i + BATCH));
-                const snaps = await Promise.all(batches.map(b => getDocs(query(
-                    collection(db, 'checkIns'),
-                    where('userId', 'in', b),
-                    orderBy('date', 'desc'),
-                    limit(checkInLimit)
-                ))));
+                // Rosters grandes precisam de mais check-ins para a aderência de 4 semanas não ficar subestimada.
+                const perBatchLimit = (size) => Math.min(400, Math.max(checkInLimit, size * 10));
+                // Home e Alunos usam os mesmos check-ins: a leitura é reaproveitada por 3 minutos.
+                const snaps = await Promise.all(batches.map(b => cachedLoad(
+                    `roster:${uid}:${b.join(',')}:${perBatchLimit(b.length)}`,
+                    async () => (await getDocs(query(
+                        collection(db, 'checkIns'),
+                        where('userId', 'in', b),
+                        orderBy('date', 'desc'),
+                        limit(perBatchLimit(b.length))
+                    ))).docs.map(d => ({ id: d.id, ...d.data() })),
+                    { force }
+                )));
                 const checkIns = snaps
-                    .flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
+                    .flat()
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
                 if (!cancelled) setState({ students, trainings, checkIns });
@@ -55,7 +66,7 @@ export const useCoachRoster = (user, { checkInLimit = 150 } = {}) => {
         return () => { cancelled = true; };
     }, [uid, reloadKey, checkInLimit]);
 
-    const reload = useCallback(() => { setLoading(true); setReloadKey(k => k + 1); }, []);
+    const reload = useCallback(() => { forceRef.current = true; setLoading(true); setReloadKey(k => k + 1); }, []);
     const setStudents = useCallback((updater) => setState(prev => ({
         ...prev,
         students: typeof updater === 'function' ? updater(prev.students) : updater

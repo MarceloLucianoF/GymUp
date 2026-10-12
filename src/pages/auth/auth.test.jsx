@@ -63,7 +63,7 @@ describe('Register', () => {
     await userEvent.type(screen.getByLabelText('Confirmar'), '123');
     await userEvent.click(screen.getByRole('button', { name: 'Cadastrar Gratuitamente' }));
     expect(screen.getByLabelText('Senha')).toHaveFocus();
-    expect(screen.getByText('Senha muito curta (mínimo 6).', { selector: 'p' })).toHaveAttribute('role', 'alert');
+    expect(screen.getByText('Senha muito curta (mínimo 8).', { selector: 'p' })).toHaveAttribute('role', 'alert');
     expect(screen.getByLabelText('Senha')).toHaveAttribute('autocomplete', 'new-password');
   });
 });

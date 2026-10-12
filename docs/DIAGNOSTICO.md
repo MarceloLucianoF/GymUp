@@ -209,3 +209,10 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Leituras do Firestore:** histórico do aluno compartilhado por 5 minutos entre Home, Treinos, Evolução e Detalhes (`checkInsCache`), invalidado ao gravar/apagar treino ou sincronizar offline. Antes cada tela relia o histórico inteiro.
 - **Worker:** limite por usuário (20/min, em memória), corpo ≤ 64 KB, `max_tokens` ≤ 1200, tempo limite de 25 s, origem validada. No plano gratuito os arquivos estáticos não contam como invocação; só `/api/*`.
 - **Pendente (console):** proteção contra enumeração de e-mail, política de senha mínima, nome público do app, idioma/nome do remetente dos modelos de e-mail, App Check enforce (após métricas).
+
+## Atualização — login com Google, página de ação própria e lista de alunos
+- **Login/cadastro com Google** (`GoogleButton`, `loginWithGoogle`): o primeiro acesso cria o perfil de aluno (`role: user`) com aceite dos termos registrado; o clique é o aceite e o aviso está visível. Treinadores continuam cadastrados à parte. Requer o provedor Google ativo no Firebase (já abre a janela do Google em produção) e o domínio autorizado.
+- **Página própria `/auth/action`** (redefinir senha, confirmar e restaurar e-mail) no visual do app. Para usá-la: Firebase Console > Authentication > Modelos > "Personalizar URL de ação" = `https://bohtreinar.marcelo-labs.workers.dev/auth/action`.
+- **Política de senha** (console: 8+, maiúscula, número, símbolo, modo "notificar") refletida no cadastro e na redefinição (`src/utils/password.js`).
+- **Lista de alunos do treinador:** check-ins reaproveitados por 3 minutos entre Painel e Alunos (`ttlCache`) e limite proporcional ao tamanho da carteira (150 a 400 por lote de 30 alunos), para a aderência de 4 semanas não ficar subestimada.
+- **App Check:** requisições do Firebase AI Logic (Gemini) já saem com o token (verificado em produção); exigência obrigatória a partir de 2/11/2026.

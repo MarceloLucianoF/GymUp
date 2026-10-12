@@ -22,8 +22,8 @@ const Register = require('./Register').default;
 const fill = async () => {
   await userEvent.type(screen.getByLabelText('Nome Completo'), 'Ana');
   await userEvent.type(screen.getByLabelText('Email'), 'ana@b.com');
-  await userEvent.type(screen.getByLabelText('Senha'), '123456');
-  await userEvent.type(screen.getByLabelText('Confirmar'), '123456');
+  await userEvent.type(screen.getByLabelText('Senha'), 'Treino#2026');
+  await userEvent.type(screen.getByLabelText('Confirmar'), 'Treino#2026');
 };
 
 describe('Register - aceite dos termos', () => {
@@ -40,8 +40,8 @@ describe('Register - aceite dos termos', () => {
 
   it('envia depois de marcar o aceite e expõe links legais', async () => {
     render(<MemoryRouter><Register /></MemoryRouter>);
-    expect(screen.getByRole('link', { name: 'Termos de Uso' })).toHaveAttribute('href', '/termos');
-    expect(screen.getByRole('link', { name: 'Política de Privacidade' })).toHaveAttribute('href', '/privacidade');
+    screen.getAllByRole('link', { name: 'Termos de Uso' }).forEach((l) => expect(l).toHaveAttribute('href', '/termos'));
+    screen.getAllByRole('link', { name: 'Política de Privacidade' }).forEach((l) => expect(l).toHaveAttribute('href', '/privacidade'));
     await fill();
     await userEvent.click(screen.getByRole('checkbox'));
     await userEvent.click(screen.getByRole('button', { name: 'Cadastrar Gratuitamente' }));
