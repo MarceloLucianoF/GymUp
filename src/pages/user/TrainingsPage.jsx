@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import { useAdmin } from '../../hooks/useAdmin';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search } from 'lucide-react';
@@ -11,6 +11,7 @@ import { formatDate } from '../../utils/format';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import ChipRow from '../../components/dashboard/ChipRow';
+import { fetchStudentCheckIns } from '../../services/checkInsCache';
 
 // --- COMPONENTES VISUAIS ---
 
@@ -52,15 +53,9 @@ export default function TrainingsPage() {
     const fetchUserHistory = async () => {
       if (!user) return;
       try {
-        const q = query(
-            collection(db, 'checkIns'), 
-            where('userId', '==', user.uid),
-            orderBy('date', 'desc')
-        );
-        const snapshot = await getDocs(q);
+        const rows = await fetchStudentCheckIns(user.uid);
         const history = {};
-        snapshot.docs.forEach(doc => {
-            const data = doc.data();
+        rows.forEach((data) => {
             if (data.trainingId && !history[data.trainingId]) {
                 history[data.trainingId] = new Date(data.date);
             }
