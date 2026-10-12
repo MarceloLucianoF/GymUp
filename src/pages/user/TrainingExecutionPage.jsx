@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
@@ -24,6 +24,7 @@ import {
     adjustValue, getLastSessionSets, buildCopyFromLast, noteKey, NOTE_MAX, formatDuration
 } from '../../utils/training';
 import { invalidateCheckIns } from '../../services/checkInsCache';
+import { saveCheckIn } from '../../services/checkInService';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
 export default function TrainingExecutionPage() {
@@ -338,7 +339,7 @@ export default function TrainingExecutionPage() {
 
             if (navigator.onLine) {
                 try {
-                    await setDoc(doc(db, 'checkIns', clientId), checkInPayload);
+                    await saveCheckIn(db, user.uid, clientId, checkInPayload);
                     invalidateCheckIns(user.uid);
                     await updateDoc(doc(db, 'users', user.uid), { lastWorkoutDate: new Date().toISOString() });
                 } catch (err) {

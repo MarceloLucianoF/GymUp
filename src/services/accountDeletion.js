@@ -60,7 +60,12 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     onStep(id, 'done');
   };
 
-  await run('checkIns', async () => deleteRefs((await refsOf(deps, 'checkIns', deps.where('userId', '==', uid))).map((d) => d.ref), deps));
+  await run('checkIns', async () => {
+    const removed = await deleteRefs((await refsOf(deps, 'checkIns', deps.where('userId', '==', uid))).map((d) => d.ref), deps);
+    // O contador de check-ins (userStats) também é dado do aluno.
+    try { await deps.deleteDoc(deps.doc(deps.db, 'userStats', uid)); } catch (_) { /* inexistente */ }
+    return removed;
+  });
   await run('measurements', async () => deleteRefs((await refsOf(deps, 'measurements', deps.where('userId', '==', uid))).map((d) => d.ref), deps));
 
   const knownCoachIds = new Set(); // treinadores que podem ter notas sobre o aluno

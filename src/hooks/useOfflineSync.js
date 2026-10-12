@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { db } from '../firebase/config';
 import { activeWorkoutService } from '../services/activeWorkoutService';
 import { invalidateCheckIns } from '../services/checkInsCache';
+import { saveCheckIn } from '../services/checkInService';
 
 // Acompanha a conectividade e sincroniza check-ins enfileirados offline ao voltar a rede.
 export function useOfflineSync(user) {
@@ -13,7 +14,7 @@ export function useOfflineSync(user) {
         if (!user) return;
         if (activeWorkoutService.getOfflineCheckIns(user.uid).length === 0) return;
         try {
-            const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, setDoc, doc);
+            const synced = await activeWorkoutService.syncPendingCheckIns(user.uid, db, setDoc, doc, (id, data) => saveCheckIn(db, user.uid, id, data));
             if (synced > 0) { invalidateCheckIns(user.uid); toast.success("Treinos offline sincronizados com sucesso!"); }
         } catch (err) {
             console.error("Erro ao sincronizar treinos offline:", err);

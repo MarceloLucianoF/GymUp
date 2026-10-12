@@ -5,7 +5,7 @@ const path = require('path');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds
 } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, query, where } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, query, where, writeBatch } = require('firebase/firestore');
 
 let env;
 const cache = new Map();
@@ -102,10 +102,11 @@ test('checkIns: dono e treinador vinculado leem; outros não; treinador não esc
   await assertSucceeds(setDoc(doc(db('stu1'), 'checkIns/novo'), { userId: 'stu1', workoutName: 'B' }));
 });
 
-test('checkIns: admin lista sem filtro; treinador e aluno não',async () => {
-  await assertSucceeds(getDocs(collection(db('admin1'), 'checkIns')));
+test('checkIns: nem o admin lista sem filtro; ler ID inexistente é permitido ao logado', async () => {
+  await assertFails(getDocs(collection(db('admin1'), 'checkIns')));
   await assertFails(getDocs(collection(db('coach1'), 'checkIns')));
-  await assertFails(getDocs(collection(db('stu1'), 'checkIns')));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'checkIns/nao-existe')));
+  await assertFails(getDoc(doc(anonDb(), 'checkIns/nao-existe')));
 });
 
 test('checkIns: listagem filtrada pelo dono funciona, a de outro falha', async () => {
@@ -182,4 +183,60 @@ test('adminLog: só admin lê e acrescenta; ninguém edita ou apaga', async () =
   await assertFails(getDoc(doc(db('coach1'), 'adminLog/l1')));
   await assertFails(updateDoc(doc(db('admin1'), 'adminLog/l1'), { name: 'x' }));
   await assertFails(deleteDoc(doc(db('admin1'), 'adminLog/l1')));
+});
+
+// ---- contador de check-ins (userStats) ----
+const ci = (id) => ({ userId: 'stu1', workoutName: 'A', date: '2026-10-12T10:00:00.000Z' });
+const stats = (n, last, extra = {}) => ({ uid: 'stu1', checkInCount: n, lastCheckInAt: '2026-10-12T10:00:00.000Z', lastCheckInId: last, ...extra });
+
+test('userStats: primeiro check-in cria o contador em 1, no mesmo lote', async () => {
+  const d = db('stu1');
+  const b = writeBatch(d);
+  b.set(doc(d, 'checkIns/n1'), ci('n1'));
+  b.set(doc(d, 'userStats/stu1'), stats(1, 'n1'));
+  await assertSucceeds(b.commit());
+  await assertSucceeds(getDoc(doc(d, 'userStats/stu1')));
+});
+
+test('userStats: não dá para criar/inflar o contador sozinho', async () => {
+  const d = db('stu1');
+  await assertFails(setDoc(doc(d, 'userStats/stu1'), stats(1, 'fantasma')));
+  const b = writeBatch(d);
+  b.set(doc(d, 'checkIns/n2'), ci('n2'));
+  b.set(doc(d, 'userStats/stu1'), stats(50, 'n2'));
+  await assertFails(b.commit());
+  await assertFails(setDoc(doc(db('stu2'), 'userStats/stu1'), stats(1, 'x')));
+});
+
+test('userStats: incremento exige check-in novo no mesmo lote; remoção exige exclusão no mesmo lote', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'userStats/stu1'), stats(1, 'c1'));
+  });
+  const d = db('stu1');
+  await assertFails(setDoc(doc(d, 'userStats/stu1'), stats(2, 'c9')));
+  const up = writeBatch(d);
+  up.set(doc(d, 'checkIns/n3'), ci('n3'));
+  up.set(doc(d, 'userStats/stu1'), stats(2, 'n3'));
+  await assertSucceeds(up.commit());
+  await assertFails(setDoc(doc(d, 'userStats/stu1'), stats(1, 'n3', { lastRemovedId: 'c1' })));
+  const down = writeBatch(d);
+  down.delete(doc(d, 'checkIns/c1'));
+  down.set(doc(d, 'userStats/stu1'), stats(1, 'n3', { lastRemovedId: 'c1' }));
+  await assertSucceeds(down.commit());
+  const bad = writeBatch(d);
+  bad.delete(doc(d, 'checkIns/n3'));
+  bad.set(doc(d, 'userStats/stu1'), stats(0, 'n3', { lastRemovedId: 'c1' }));
+  await assertFails(bad.commit());
+});
+
+test('userStats: leitura só do dono e do admin; lista só do admin; admin reconcilia; dono exclui', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'userStats/stu1'), stats(3, 'c1')); });
+  await assertSucceeds(getDoc(doc(db('stu1'), 'userStats/stu1')));
+  await assertFails(getDoc(doc(db('stu2'), 'userStats/stu1')));
+  await assertFails(getDoc(doc(db('coach1'), 'userStats/stu1')));
+  await assertSucceeds(getDocs(collection(db('admin1'), 'userStats')));
+  await assertFails(getDocs(collection(db('coach1'), 'userStats')));
+  await assertFails(getDocs(collection(db('stu1'), 'userStats')));
+  await assertSucceeds(setDoc(doc(db('admin1'), 'userStats/stu1'), stats(7, 'c1', { uid: 'stu1' })));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'userStats/stu1')));
 });

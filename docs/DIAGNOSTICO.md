@@ -238,3 +238,11 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - Exercícios arquivados saem das listas de escolha (editor de fichas e biblioteca do treinador), mas continuam nas fichas já montadas.
 - Testado em produção com sessão de admin: criar, validar, arquivar, filtrar, restaurar, excluir e histórico; axe sem achados (corrigido um aviso de ordem de títulos nas fichas). O exercício e o histórico do teste foram removidos.
 - Não incluído: desfazer alterações, tela de usuários e rascunhos.
+
+## Atualização — contador de check-ins (sem listar dados de saúde)
+- **`userStats/{uid}`**: `checkInCount`, `lastCheckInAt`, `lastCheckInId` (e `lastRemovedId` ao apagar). Gravado numa transação junto do check-in (`checkInService`: criar, reenviar do offline sem contar duas vezes, apagar). Como o plano gratuito não tem Cloud Functions, a integridade vem das regras: o contador só muda se o check-in correspondente for criado/removido no mesmo lote (`existsAfter`/`getAfter`). Não dá para inflar, zerar ou alterar o número sozinho (testado no emulador, 22 casos).
+- **Regras de `checkIns`:** voltou a não haver listagem ampla (nem para admin); ler um ID inexistente é permitido ao logado (gravação idempotente).
+- **Painel admin:** "Alunos ativos (7 dias)" e total de treinos vêm de `userStats`, sem tocar em check-ins.
+- **Backfill/reconciliação:** `node scripts/backfill-user-stats.cjs [apply]` compara com a contagem real (9 alunos: 0 diferenças após aplicar e após gravar/apagar em produção) e registra no `adminLog`.
+- Excluir a conta do aluno também apaga o `userStats`.
+- **Limite:** um cliente adulterado pode deixar de atualizar o contador (não de inflá-lo); o script de reconciliação corrige.

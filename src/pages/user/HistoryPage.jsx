@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from '../../components/ui/PageHeader';
-import { collection, query, where, orderBy, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ import EmptyState from '../../components/common/EmptyState';
 import { formatDate as formatLocaleDate, formatTonnage } from '../../utils/format';
 import ChipRow from '../../components/dashboard/ChipRow';
 import { invalidateCheckIns } from '../../services/checkInsCache';
+import { removeCheckIn } from '../../services/checkInService';
 
 export default function HistoryPage() {
   const { user } = useAuthContext();
@@ -140,7 +141,7 @@ export default function HistoryPage() {
 
   const deleteItem = async (itemId) => {
       try {
-          await deleteDoc(doc(db, 'checkIns', itemId));
+          await removeCheckIn(db, user.uid, itemId);
           invalidateCheckIns(user.uid);
           toast.success('Registro apagado.');
       } catch (error) {

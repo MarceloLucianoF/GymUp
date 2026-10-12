@@ -166,9 +166,57 @@ service cloud.firestore {
       allow delete: if ownerOrAdmin(resource.data.userId);
     }
 
+    // Contador de check-ins por aluno (sem dados de saúde). O cliente só o altera junto da criação ou remoção de um
+    // check-in no mesmo lote/transação: as regras conferem o estado "depois" (existsAfter/getAfter), então não dá para
+    // inflar ou zerar o número sozinho. O admin lê a lista e pode reconciliar.
+    function ciPath(id) {
+      return /databases/$(database)/documents/checkIns/$(id);
+    }
+
+    function statsShape(d) {
+      return d.keys().hasOnly(['uid', 'checkInCount', 'lastCheckInAt', 'lastCheckInId', 'lastRemovedId'])
+        && d.uid == request.auth.uid
+        && d.checkInCount is int && d.checkInCount >= 0
+        && d.lastCheckInAt is string && d.lastCheckInId is string;
+    }
+
+    function createdNow(id) {
+      return id is string && id.size() > 0
+        && !exists(ciPath(id)) && existsAfter(ciPath(id))
+        && getAfter(ciPath(id)).data.userId == request.auth.uid;
+    }
+
+    function removedNow(id) {
+      return id is string && id.size() > 0
+        && exists(ciPath(id)) && !existsAfter(ciPath(id))
+        && get(ciPath(id)).data.userId == request.auth.uid;
+    }
+
+    match /userStats/{statsId} {
+      allow get: if signedIn() && (request.auth.uid == statsId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == statsId && statsShape(request.resource.data)
+        && request.resource.data.checkInCount == 1
+        && !('lastRemovedId' in request.resource.data)
+        && createdNow(request.resource.data.lastCheckInId);
+      allow update: if (signedIn() && request.auth.uid == statsId && statsShape(request.resource.data) && (
+          (request.resource.data.checkInCount == resource.data.checkInCount + 1
+            && !('lastRemovedId' in request.resource.data)
+            && request.resource.data.lastCheckInId != resource.data.lastCheckInId
+            && createdNow(request.resource.data.lastCheckInId))
+          || (request.resource.data.checkInCount == resource.data.checkInCount - 1
+            && request.resource.data.lastCheckInId == resource.data.lastCheckInId
+            && removedNow(request.resource.data.get('lastRemovedId', null)))
+        )) || isAdmin();
+      allow create: if isAdmin();
+      allow delete: if (signedIn() && request.auth.uid == statsId) || isAdmin();
+    }
+
     match /checkIns/{docId} {
-      // O admin lista sem filtro por aluno (métricas do painel); os demais só por userId permitido.
-      allow get, list: if isAdmin() || canAccessUserData(resource.data.userId);
+      // Sem listagem ampla (nem para admin): métricas vêm de userStats. Ler um ID inexistente é permitido
+      // (a gravação idempotente precisa saber se o check-in já existe).
+      allow get: if signedIn() && (resource == null || canAccessUserData(resource.data.userId));
+      allow list: if canAccessUserData(resource.data.userId);
       allow create: if validUserOwnedData(request.resource.data)
         && ownerOrAdmin(request.resource.data.userId);
       allow update: if validUserOwnedData(request.resource.data)

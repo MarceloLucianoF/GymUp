@@ -56,7 +56,7 @@ describe('deleteUserData', () => {
     const steps = [];
     const counts = await deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) });
     expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, notes: 1, profile: 1 });
-    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:users/u1']);
+    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:users/u1']);
     expect(steps.slice(0, 2)).toEqual(['checkIns:running', 'checkIns:done']);
     expect(steps[steps.length - 1]).toBe('profile:done');
   });

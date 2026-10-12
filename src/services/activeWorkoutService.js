@@ -137,8 +137,8 @@ export const activeWorkoutService = {
    * (falha no meio da fila, duas abas, evento online repetido) sobrescreve o mesmo documento.
    * Cada item enviado sai da fila na hora, antes de tentar o próximo.
    */
-  async syncPendingCheckIns(userId, db, setDoc, doc) {
-    if (!userId || !db || !setDoc || !doc) return 0;
+  async syncPendingCheckIns(userId, db, setDoc, doc, saver = null) {
+    if (!userId || !db || (!saver && (!setDoc || !doc))) return 0;
     if (this.syncing?.[userId]) return 0; // evita duas sincronizações simultâneas do mesmo usuário
     this.syncing = { ...(this.syncing || {}), [userId]: true };
 
@@ -150,7 +150,9 @@ export const activeWorkoutService = {
         try {
           const { queuedAt, ...payload } = item;
           const id = this.checkInDocId(userId, item);
-          await setDoc(doc(db, 'checkIns', id), { ...payload, clientId: id, syncedAt: new Date().toISOString() });
+          const data = { ...payload, clientId: id, syncedAt: new Date().toISOString() };
+          if (saver) await saver(id, data); // grava e atualiza o contador (checkInService)
+          else await setDoc(doc(db, 'checkIns', id), data);
           syncedCount++;
           pending = pending.filter((entry) => entry !== item && this.checkInDocId(userId, entry) !== id);
           if (pending.length === 0) localStorage.removeItem(key);
