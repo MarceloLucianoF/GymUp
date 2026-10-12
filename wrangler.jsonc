@@ -11,6 +11,10 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
+  "ratelimits": [
+    { "name": "AI_USER_LIMIT", "namespace_id": "41001", "simple": { "limit": 20, "period": 60 } },
+    { "name": "AI_IP_LIMIT", "namespace_id": "41002", "simple": { "limit": 60, "period": 60 } }
+  ],
   "vars": {
     "FIREBASE_PROJECT_ID": "workout-tracker-app-20e43",
     "ALLOWED_ORIGINS": "https://bohtreinar.marcelo-labs.workers.dev"
