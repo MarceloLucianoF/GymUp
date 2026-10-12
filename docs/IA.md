@@ -27,3 +27,8 @@ O proxy roda no Worker (`worker/src/nvidiaProxy.js`): confere o token do Firebas
 - Teste real pelo Worker: `google/gemma-4-31b-it` estourou o prazo (antes respondia em ~2 s), `openai/gpt-oss-20b` respondeu em 7–10 s e `nvidia/nemotron-3-super-120b-a12b` devolveu resposta vazia com `max_tokens` 300 (modelo de raciocínio: precisa de mais tokens).
 - Cada modelo tem prazo próprio de 12 s (total 28 s): se um trava, o modo `auto` passa ao próximo e esquece o modelo lembrado.
 - A variável `NVIDIA_MODEL` do Worker (em `wrangler.jsonc` > `vars`) coloca um modelo permitido na frente da fila, sem alterar código.
+
+## Ordem dos modelos e tokens (12/10/2026, após falha no celular)
+- No celular o Coach IA caiu no modo offline: o proxy NVIDIA devolvia 504/502 (Gemma e GLM travam; modelos de raciocínio esgotavam `max_tokens` e voltavam vazios) e o Gemini respondia 429 (cota gratuita excedida).
+- Correção: `nemotron-3-super-120b-a12b` e `gpt-oss-20b` (2-4 s em teste curto) vão primeiro; Gemma-4 e GLM por último; limite de tokens sobe para 1800 (teto do proxy 2400). Respostas longas ainda levam 15-25 s: modelos de raciocínio são lentos.
+- A cota do Gemini (Firebase AI Logic, plano gratuito) não é ajustável pelo código. Se voltar a dar 429, aguarde o reset diário ou ative o faturamento (Blaze) com orçamento.
