@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
-  addDoc, collection, deleteDoc, doc, getCountFromServer, getDocs, limit, orderBy, query, updateDoc, where, writeBatch
+  addDoc, collection, deleteDoc, doc, getDocs, limit, orderBy, query, updateDoc, writeBatch
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { FileJson } from 'lucide-react';
@@ -37,7 +37,7 @@ export default function AdminPanel() {
   const [exercises, setExercises] = useState([]);
   const [trainings, setTrainings] = useState([]);
   const [users, setUsers] = useState([]);
-  const [checkins7, setCheckins7] = useState(null);
+  const [statsRows, setStatsRows] = useState(null);
   const [log, setLog] = useState([]);
   const [logError, setLogError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -60,12 +60,11 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-    // Métricas e histórico não impedem o uso do painel se falharem.
+    // Métricas e histórico não impedem o uso do painel se falharem. Os números vêm de userStats (só contadores).
     try {
-      const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
-      const count = await getCountFromServer(query(collection(db, 'checkIns'), where('date', '>=', since)));
-      setCheckins7(count.data().count);
-    } catch (error) { console.error(error); setCheckins7(null); }
+      const snap = await getDocs(collection(db, 'userStats'));
+      setStatsRows(snap.docs.map((d) => d.data()));
+    } catch (error) { console.error(error); setStatsRows(null); }
     try {
       const snap = await getDocs(query(collection(db, 'adminLog'), orderBy('at', 'desc'), limit(8)));
       setLog(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); setLogError(false);
@@ -85,8 +84,9 @@ export default function AdminPanel() {
     globalTrainings: trainings.filter((t) => !t.coachId).length,
     students: users.filter((u) => u.role === 'user').length,
     coaches: users.filter((u) => u.role === 'coach' || u.role === 'admin').length,
-    checkins7
-  }), [exercises, trainings, users, checkins7]);
+    checkinsTotal: statsRows ? statsRows.reduce((sum, r) => sum + (Number(r.checkInCount) || 0), 0) : null,
+    activeStudents7: statsRows ? statsRows.filter((r) => Date.now() - new Date(r.lastCheckInAt).getTime() < 7 * 86_400_000).length : null
+  }), [exercises, trainings, users, statsRows]);
 
   const issues = useMemo(() => {
     const out = { 'sem-imagem': 0, 'sem-video': 0, 'sem-execucao': 0, 'sem-descricao': 0 };

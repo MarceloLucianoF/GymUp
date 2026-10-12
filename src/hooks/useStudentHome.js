@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { db } from '../firebase/config';
 import { activeWorkoutService } from '../services/activeWorkoutService';
 import { fetchStudentCheckIns, invalidateCheckIns } from '../services/checkInsCache';
+import { saveCheckIn } from '../services/checkInService';
 
 // --- Metas semanais (localStorage por usuário) ---
 export const GOAL_MIN = 2;
@@ -120,7 +121,7 @@ export function useStudentHome(user, userProfile) {
   }, []);
 
   const syncPending = useCallback(async () => {
-    const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, setDoc, doc);
+    const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, setDoc, doc, (id, data) => saveCheckIn(db, uid, id, data));
     if (synced > 0) invalidateCheckIns(uid);
     if (synced > 0 && mounted.current) toast.success(`${synced} treino(s) pendente(s) sincronizado(s)!`);
     return synced;

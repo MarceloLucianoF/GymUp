@@ -37,7 +37,7 @@ export default function OverviewTab({ stats, issues, trainingAlerts, log, logErr
         <Kpi icon={Layers} label="Fichas" value={stats.trainings} hint={`${stats.globalTrainings} globais`} tone="blue" />
         <Kpi icon={Users} label="Alunos" value={stats.students} tone="green" />
         <Kpi icon={UserCheck} label="Treinadores" value={stats.coaches} tone="green" />
-        <Kpi icon={Activity} label="Treinos em 7 dias" value={stats.checkins7 ?? '—'} hint="Check-ins de todos os alunos" tone="rose" />
+        <Kpi icon={Activity} label="Alunos ativos (7 dias)" value={stats.activeStudents7 ?? '—'} hint={stats.checkinsTotal == null ? '' : `${stats.checkinsTotal} treinos registrados no total`} tone="rose" />
       </section>
 
       <div className="grid gap-5 lg:grid-cols-2">
