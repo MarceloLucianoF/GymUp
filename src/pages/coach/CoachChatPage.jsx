@@ -122,7 +122,7 @@ export default function CoachChatPage() {
                       <p className="py-2 text-center text-[11px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">{toDate(msg.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</p>
                     )}
                     <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`animate-scale-in max-w-[82%] rounded-3xl px-4 py-2.5 text-sm shadow-sm md:max-w-[65%] ${isMe ? 'rounded-br-lg bg-brand text-black' : 'rounded-bl-lg border border-gray-200 bg-white text-gray-800 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100'}`}>
+                      <div className={`animate-scale-in max-w-[82%] rounded-3xl px-4 py-2.5 text-sm shadow-sm md:max-w-[65%] ${isMe ? 'rounded-br-lg bg-gradient-to-r from-brand to-[#FF9800] text-black' : 'rounded-bl-lg border border-gray-200 bg-white text-gray-800 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100'}`}>
                         <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
                         <p className={`mt-1 text-right text-[10px] ${isMe ? 'text-black/60' : 'text-gray-600 dark:text-gray-400'}`}>{formatTime(msg.createdAt)}</p>
                       </div>
@@ -136,7 +136,7 @@ export default function CoachChatPage() {
             <QuickReplies studentName={active.name} onPick={setInputText} />
             <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-gray-200 bg-white/80 p-3 dark:border-white/10 dark:bg-white/[0.03]">
               <input type="text" aria-label="Mensagem" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Digite sua mensagem..." maxLength={2000} className={`${inputCls} flex-1 rounded-full px-5`} />
-              <button type="submit" aria-label="Enviar mensagem" disabled={!inputText.trim()} className="pressable inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-black shadow-lg shadow-brand/30 disabled:opacity-40"><Send className="h-5 w-5" /></button>
+              <button type="submit" aria-label="Enviar mensagem" disabled={!inputText.trim()} className="pressable inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand to-[#FF9800] text-black shadow-lg shadow-brand/30 disabled:opacity-40"><Send className="h-5 w-5" /></button>
             </form>
           </>
         ) : (

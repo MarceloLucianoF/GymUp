@@ -210,7 +210,7 @@ export default function TrainingPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-6 text-center text-white">
         <Wrench className="mx-auto mb-4 h-10 w-10 text-brand" aria-hidden="true" />
         <p className="mb-4 text-red-300">{errorDebug}</p>
-        <button onClick={() => navigate('/trainings')} className="bg-brand text-black px-6 py-3 rounded-xl font-bold">Voltar</button>
+        <button onClick={() => navigate('/trainings')} className="bg-gradient-to-r from-brand to-[#FF9800] text-black px-6 py-3 rounded-xl font-bold">Voltar</button>
     </div>
   );
 

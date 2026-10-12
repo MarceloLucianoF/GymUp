@@ -14,7 +14,7 @@ export default function InstallPrompt() {
         {canInstall ? (
           <>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Acesso rápido e treinos mesmo sem internet.</p>
-            <button type="button" onClick={install} className="mt-2 min-h-[44px] px-4 rounded-xl bg-brand text-black text-sm font-black">Instalar</button>
+            <button type="button" onClick={install} className="mt-2 min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] text-black text-sm font-black">Instalar</button>
           </>
         ) : (
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
