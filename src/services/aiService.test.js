@@ -30,13 +30,13 @@ describe('calcNutrition', () => {
   });
 
   it('força usa superávit de 250 kcal', () => {
-    const base = calcNutrition({ weight: 70, height: 175, age: 25, goal: 'x' });
+    const base = calcNutrition({ weight: 70, height: 180, age: 25, goal: 'x' });
     expect(calcNutrition({ goal: 'Força' }).targetCalories).toBe(base.tdee + 250);
   });
 
   it('usa defaults para valores inválidos e calcula hidratação', () => {
     const r = calcNutrition({ weight: 'abc', height: '', age: 'x' });
-    expect(r.bmr).toBe(Math.round(10 * 70 + 6.25 * 175 - 5 * 25 + 5));
+    expect(r.bmr).toBe(Math.round(10 * 70 + 6.25 * 180 - 5 * 25 + 5));
     expect(r.mealSuggestions.hydrationWaterMl).toBe(2800);
   });
 
