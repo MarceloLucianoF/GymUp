@@ -2,7 +2,7 @@ import {
   collection, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc
 } from 'firebase/firestore';
 import {
-  EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, deleteUser
+  EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, deleteUser, browserPopupRedirectResolver
 } from 'firebase/auth';
 import { db } from '../firebase/config';
 
@@ -135,7 +135,7 @@ export async function reauthenticate(user, { password } = {}) {
     if (!password) throw Object.assign(new Error('Informe sua senha.'), { code: 'app/missing-password' });
     return reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
   }
-  if (provider === 'google') return reauthenticateWithPopup(user, new GoogleAuthProvider());
+  if (provider === 'google') return reauthenticateWithPopup(user, new GoogleAuthProvider(), browserPopupRedirectResolver);
   throw Object.assign(new Error('Método de login não suportado para exclusão automática.'), { code: 'app/unsupported-provider' });
 }
 

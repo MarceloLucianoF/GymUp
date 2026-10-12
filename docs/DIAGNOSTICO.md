@@ -220,3 +220,8 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 ## Atualização — modelos de e-mail do Firebase
 - O Firebase bloqueia a edição dos modelos de e-mail deste projeto (`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`: assunto, corpo, "responder para" e URL acionável). Só o nome do remetente (`senderDisplayName`) aceitou alteração, feita pela API (Identity Toolkit admin v2).
 - Por isso a página própria `/auth/action` está pronta, mas só será usada se o suporte do Firebase liberar a URL acionável personalizada. Enquanto isso, o e-mail de recuperação envia `url` de continuação para o login do app (botão "Continuar" na página padrão).
+
+## Atualização — desempenho de carregamento (Lighthouse mobile, 4G lenta)
+- **Início:** nota 29 para 88; FCP 8,6 s para 1,2 s; peso 875 para 327 KiB. **Login:** 52 para 81; **Cadastro:** 83.
+- Causas e correções: fontes do Google (CSS externo bloqueante) agora em `public/fonts` com `@font-face` inline e preload; reCAPTCHA do App Check (~350 KB, ~3 s de CPU) só entra depois do carregamento nas telas públicas, ou na hora com sessão/login (`ensureAppCheck`); iframe de login do Firebase (~90 KB) só ao entrar com Google (`initializeAuth` sem resolver; resolver passado na chamada do popup).
+- Medido sem sessão. Telas autenticadas não foram medidas com Lighthouse (carregam Firestore e App Check desde o início).
