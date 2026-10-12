@@ -1,6 +1,7 @@
 import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
+import { failureMessage } from './aiMeta';
 
 // O SDK `firebase/ai` é pesado: carregado sob demanda, só quando o Coach IA é usado.
 let aiSdkPromise = null;
@@ -204,6 +205,15 @@ export const looksLikeToolCall = (text) => {
   return /^[[{]/.test(t) && /"(action|function|tool|name|parameters|arguments)"\s*:/.test(t);
 };
 
+// Classifica falhas dos provedores para o aluno ver uma mensagem útil (cota, lentidão, instabilidade).
+export const classifyFailure = (error) => {
+  const text = `${error?.name || ''} ${error?.message || ''}`;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'sem-internet';
+  if (/429|quota|RESOURCE_EXHAUSTED/i.test(text)) return 'cota';
+  if (/504|AbortError|timeout|tempo/i.test(text)) return 'lento';
+  return 'indisponivel';
+};
+
 const askNvidiaProxy = async (messages) => {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('Sessão expirada.');
@@ -275,6 +285,7 @@ export const aiService = {
       return { erro: 'Função desconhecida.' };
     };
 
+    const failures = [];
     // NVIDIA via Worker/Function (/api/nvidia): só conversa; funções e fichas seguem no Gemini.
     const tryNvidia = async () => {
       if (needsTools(safePrompt)) return null;
@@ -290,6 +301,7 @@ export const aiService = {
         return text;
       } catch (error) {
         console.error('NVIDIA indisponível:', error?.message || error);
+        failures.push(classifyFailure(error));
         return null;
       }
     };
@@ -337,6 +349,7 @@ export const aiService = {
       return reply;
     } catch (error) {
       console.error('Gemini indisponível no Coach IA:', error?.message || error);
+      failures.push(classifyFailure(error));
     }
 
     if (USE_NVIDIA_PROXY && !NVIDIA_FIRST) {
@@ -344,9 +357,11 @@ export const aiService = {
       if (reply) return reply;
     }
 
-    onMeta?.({ provider: 'local' });
+    // Prioridade do motivo mostrado: sem internet > cota > lentidão > instabilidade.
+    const reason = ['sem-internet', 'cota', 'lento', 'indisponivel'].find((r) => failures.includes(r)) || 'indisponivel';
+    onMeta?.({ provider: 'local', reason });
     const nutrition = calcNutrition({ weight: weightNum, height: heightNum, age: userProfile?.age, goal });
-    return `Estou sem acesso ao modelo de IA neste momento, mas com base no seu perfil (${goal}, ${weightNum} kg) o ponto de partida é:\n\n- **Calorias:** ~${nutrition.targetCalories} kcal/dia\n- **Proteína:** ${nutrition.macros.protein.grams} g · **Carboidratos:** ${nutrition.macros.carbs.grams} g · **Gorduras:** ${nutrition.macros.fats.grams} g\n- **Água:** ~${(nutrition.mealSuggestions.hydrationWaterMl / 1000).toFixed(1)} L/dia\n\nTente sua pergunta novamente em instantes.`;
+    return `${failureMessage(reason)}\n\nEnquanto isso, com base no seu perfil (${goal}, ${weightNum} kg) o ponto de partida é:\n\n- **Calorias:** ~${nutrition.targetCalories} kcal/dia\n- **Proteína:** ${nutrition.macros.protein.grams} g · **Carboidratos:** ${nutrition.macros.carbs.grams} g · **Gorduras:** ${nutrition.macros.fats.grams} g\n- **Água:** ~${(nutrition.mealSuggestions.hydrationWaterMl / 1000).toFixed(1)} L/dia`;
   },
 
   /**
