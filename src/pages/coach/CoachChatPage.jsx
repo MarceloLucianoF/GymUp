@@ -85,7 +85,7 @@ export default function CoachChatPage() {
                       <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{student.name || 'Aluno'}</span>
                       <span className="shrink-0 text-[11px] text-gray-600 dark:text-gray-400">{chat.updatedAt ? timeAgo(chat.updatedAt) : ''}</span>
                     </span>
-                    <span className="block truncate text-xs text-gray-600 dark:text-gray-400">{chat.lastMessage || <i className="opacity-60">Nova conversa</i>}</span>
+                    <span className="block truncate text-xs text-gray-600 dark:text-gray-400">{chat.lastMessage || <i>Nova conversa</i>}</span>
                   </span>
                 </button>
               </li>

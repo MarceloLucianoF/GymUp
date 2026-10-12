@@ -352,3 +352,16 @@ Medido em produção com a conta demo, só leitura. Lighthouse 12 (simulação: 
 - **Correção:** `src/firebase/appCheckProvider.js` dá 5 s ao token e, depois de uma falha, as chamadas seguintes falham na hora por 60 s (senão cada serviço esperaria 5 s um depois do outro). Validado em produção: com o reCAPTCHA bloqueado a tela aparece em ~6 s (antes: nunca); sem bloqueio, a troca do token continua dando 200 e o fluxo social completo passa (15 verificações).
 - **Atenção:** o invólucro usa a interface interna do provedor (`initialize`, `getToken`, `isEqual`); conferir ao atualizar o `firebase` (hoje 12.9.0). Quem tem o script bloqueado fica sem token: com o **enforce ligado, essas pessoas perdem acesso** (limitação já descrita no roteiro do App Check).
 - **Verificações pendentes citadas na revisão:** `firebase-admin` em `devDependencies` é seguro porque nada em `src/` nem em `worker/` o importa (conferido por busca); o MCP segue sem teste de ponta a ponta além da leitura no Firestore.
+
+## Atualização — revisão do painel do treinador (12/10/2026)
+Conta de treinador do ambiente, produção, só leitura; celular (390 px) e desktop (1366 px); axe, tamanhos de alvo, estouro horizontal, console e rede por tela (`/coach/dashboard`, `/coach/students`, detalhe do aluno, `/coach/chat`, `/coach/financial`, `/coach/settings`, `/admin/trainings`, `/admin/exercises`).
+- **Sem problemas:** nenhuma tela com rolagem horizontal, erro de console ou requisição falha (4xx/5xx); axe sem violações sérias nem críticas, exceto o contraste abaixo; visual coerente em claro nos dois tamanhos.
+- **Números conferem entre telas:** Ativos 7, Em risco 1, Retenção 88% (7/8), Previsto R$ 1.060 e Recebido R$ 550 batem entre Painel, Alunos e Financeiro.
+- **Lista de alunos (funcional):** filtros (Todos 8, Ativos 7, Em risco 1, Sem ficha 0) devolvem a contagem do chip; busca por nome/e-mail e estado vazio ok; as 5 ordenações ordenam como o nome diz; CSV baixa 8 alunos + cabeçalho; "Selecionar todos" abre a barra de ação em lote (não executada).
+- **Corrigido:**
+  1. **Dois `<h1>` em todas as telas do treinador** (o título da rota para leitores de tela somava-se ao título da página). Agora o título da rota só aparece quando a página não tem o próprio h1 (`RouteTitle`); conferido: exatamente um h1 em cada uma das 9 telas de aluno e nas do treinador.
+  2. **Contraste** do texto "Nova conversa" na lista de conversas (2,84:1 por `opacity-60`).
+  3. **Alvo de toque** das caixas de seleção de alunos (20 a 24 px): a área tocável passou a 44 px no celular e 36 px no desktop (a caixa visível não mudou).
+  4. **Configurações:** o "Código de convite" mostrava só o UID do treinador; agora há **Copiar link** (`/convite/<código>`, que abre o cadastro ou o pedido de vínculo já preenchidos) além de **Copiar código**, com o aviso de que o vínculo só vale após o aceite.
+- **Não executado (gravam dados; exigem conta e dados de teste dedicados):** Marcar pago, Cobrar, Atribuir ficha em lote, Trocar ficha, Encerrar vínculo, Convidar, salvar Configurações, editar ficha e exercício. O isolamento (treinador só vê os próprios alunos) segue coberto pelos testes de regras (46 casos).
+- **Dado de demonstração, não bug:** a lista de conversas mostra uma conversa "Super Admin — Nova conversa" de julho.

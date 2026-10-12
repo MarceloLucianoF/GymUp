@@ -181,7 +181,9 @@ export default function CoachStudentsPage() {
                 <Reveal as="li" key={s.id} delay={Math.min(i, 6) * 40}>
                   <div className={`surface p-4 ${selected.has(s.id) ? 'ring-2 ring-brand' : ''}`}>
                     <div className="flex items-center gap-3">
-                    <input type="checkbox" aria-label={`Selecionar ${s.displayName || 'aluno'}`} checked={selected.has(s.id)} onChange={() => toggle(s.id)} className="h-6 w-6 shrink-0 accent-brand" />
+                    <label className="-m-2.5 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
+                      <input type="checkbox" aria-label={`Selecionar ${s.displayName || 'aluno'}`} checked={selected.has(s.id)} onChange={() => toggle(s.id)} className="h-6 w-6 accent-brand" />
+                    </label>
                     <button type="button" onClick={() => navigate(`/coach/students/${s.id}`)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                       <Avatar name={s.displayName} src={s.photoURL} size="lg" />
                       <span className="min-w-0 flex-1">
@@ -230,7 +232,7 @@ export default function CoachStudentsPage() {
                   <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                     {visible.map((s) => (
                       <tr key={s.id} className={`transition-colors hover:bg-brand/5 ${selected.has(s.id) ? 'bg-brand/10' : ''}`}>
-                        <td className="p-4"><input type="checkbox" aria-label={`Selecionar ${s.displayName || 'aluno'}`} checked={selected.has(s.id)} onChange={() => toggle(s.id)} className="h-5 w-5 accent-brand" /></td>
+                        <td className="p-4"><label className="-m-2 flex h-9 w-9 cursor-pointer items-center justify-center"><input type="checkbox" aria-label={`Selecionar ${s.displayName || 'aluno'}`} checked={selected.has(s.id)} onChange={() => toggle(s.id)} className="h-5 w-5 accent-brand" /></label></td>
                         <td className="p-4">
                           <button type="button" onClick={() => navigate(`/coach/students/${s.id}`)} className="flex items-center gap-3 text-left">
                             <Avatar name={s.displayName} src={s.photoURL} />

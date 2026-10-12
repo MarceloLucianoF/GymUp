@@ -77,14 +77,16 @@ export default function CoachSettings() {
     }
   };
 
-  const copyCode = async () => {
+  const copyText = async (text, ok) => {
     try {
-      await navigator.clipboard.writeText(user.uid);
-      toast.success('Código copiado!');
+      await navigator.clipboard.writeText(text);
+      toast.success(ok);
     } catch (err) {
       toast.error('Não foi possível copiar.');
     }
   };
+  const copyCode = () => copyText(user.uid, 'Código copiado!');
+  const copyLink = () => copyText(`${window.location.origin}/convite/${user.uid}`, 'Link copiado!');
 
   if (loading) return <div className={pageCls}><div className="mx-auto max-w-2xl space-y-4" role="status" aria-label="Carregando"><div className="skeleton-shimmer h-10 w-2/3 rounded-2xl" /><div className="skeleton-shimmer h-96 rounded-3xl" /></div></div>;
   if (error) return <div className={pageCls}><ErrorState message="Não foi possível carregar seu perfil." onRetry={() => { setLoading(true); loadProfile(); }} /></div>;
@@ -134,10 +136,11 @@ export default function CoachSettings() {
 
           <section className="surface animate-fade-up p-5 sm:p-6" style={{ animationDelay: '80ms' }}>
             <h2 className="font-display text-base font-black text-gray-900 dark:text-white">Código de convite</h2>
-            <p className="mb-3 mt-1 text-xs text-gray-600 dark:text-gray-400">Seus alunos informam este código no cadastro para se vincular a você.</p>
+            <p className="mb-3 mt-1 text-xs text-gray-600 dark:text-gray-400">Mande o link ao aluno (abre o cadastro ou o pedido de vínculo já preenchido) ou peça que informe o código. O vínculo só vale depois do seu aceite.</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <code className="min-h-[48px] flex-1 select-all break-all rounded-2xl bg-gray-100 px-4 py-3 font-mono text-sm text-gray-800 dark:bg-white/5 dark:text-gray-100">{user.uid}</code>
-              <button type="button" onClick={copyCode} className={btnGhost}><Copy className="h-4 w-4" /> Copiar</button>
+              <button type="button" onClick={copyLink} className={btnGhost}><Copy className="h-4 w-4" /> Copiar link</button>
+              <button type="button" onClick={copyCode} className={btnGhost}><Copy className="h-4 w-4" /> Copiar código</button>
             </div>
           </section>
 
