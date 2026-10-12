@@ -13,6 +13,7 @@ import InviteModal from '../../components/coach/InviteModal';
 import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
 import BulkAssignModal from '../../components/coach/BulkAssignModal';
 import AdherenceHeatmap from '../../components/coach/AdherenceHeatmap';
+import CoachRequests from '../../components/coach/CoachRequests';
 import { adherenceByStudent } from '../../utils/coachInsights';
 import { studentsCsv, downloadCsv } from '../../utils/coachCsv';
 import PageSkeleton from '../../components/coach/PageSkeleton';
@@ -135,6 +136,8 @@ export default function CoachStudentsPage() {
             </div>
           )}
         />
+
+        <CoachRequests coachId={user.uid} onAccepted={reload} />
 
         <div className="surface space-y-3 p-3 sm:p-4">
           <div className="flex flex-col gap-3 sm:flex-row">

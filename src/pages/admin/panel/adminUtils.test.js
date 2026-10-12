@@ -95,3 +95,15 @@ describe('parseImport', () => {
     expect(parseImport(null, 'exercises', []).total).toBe(0);
   });
 });
+
+import { linkOverview } from './adminUtils';
+describe('linkOverview', () => {
+  it('conta alunos sem treinador, treinadores sem alunos e solicitações', () => {
+    const users = [
+      { uid: 'c1', role: 'coach' }, { uid: 'c2', role: 'coach' }, { uid: 'a', role: 'admin' },
+      { uid: 's1', role: 'user', coachId: 'c1' }, { uid: 's2', role: 'user' }, { uid: 's3', role: 'user', coachId: 'c1' }
+    ];
+    const links = [{ status: 'pending' }, { status: 'pending' }, { status: 'revoked' }, { status: 'active' }];
+    expect(linkOverview(users, links)).toEqual({ students: 3, coaches: 2, active: 2, withoutCoach: 1, coachesWithoutStudents: 1, pending: 2, rejected: 0, revoked: 1 });
+  });
+});

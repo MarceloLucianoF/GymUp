@@ -67,9 +67,8 @@ export function AuthProvider({ children }) {
 
             // Somente campos de vínculo conhecidos podem vir do formulário.
             // Campos de autorização, identidade e auditoria nunca são sobrescritos pelo cliente.
-            if (typeof additionalData.coachId === 'string' && additionalData.coachId.trim()) {
-                initialData.coachId = additionalData.coachId.trim();
-            }
+            // Convite de treinador: vira uma SOLICITAÇÃO (coachLinks). O vínculo só vale depois do aceite dele.
+            const inviteCoachId = typeof additionalData.coachId === 'string' ? additionalData.coachId.trim() : '';
             // Aceite dos termos (a tela de cadastro só envia com o checkbox marcado).
             if (additionalData.acceptedTerms === true) {
                 initialData.termsAcceptedAt = new Date().toISOString();
@@ -80,6 +79,17 @@ export function AuthProvider({ children }) {
             }
 
             await setDoc(doc(db, "users", res.user.uid), initialData);
+            if (inviteCoachId) {
+                const stamp = new Date().toISOString();
+                try {
+                    await setDoc(doc(db, "coachLinks", res.user.uid), {
+                        studentId: res.user.uid, studentName: String(displayName || 'Aluno').slice(0, 100), coachId: inviteCoachId,
+                        status: 'pending', requestedBy: 'student', createdAt: stamp, updatedAt: stamp
+                    });
+                } catch (linkError) {
+                    console.error('Convite não registrado (a conta foi criada):', linkError);
+                }
+            }
 
             setUser({ ...res.user, displayName }); 
             setUserProfile(initialData); 

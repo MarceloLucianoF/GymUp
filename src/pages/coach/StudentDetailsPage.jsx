@@ -20,6 +20,8 @@ import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import AdherenceHeatmap from '../../components/coach/AdherenceHeatmap';
 import { adherenceGrid, adherencePct } from '../../utils/coachInsights';
+import { useConfirm } from '../../hooks/useConfirm';
+import { endStudentLink } from '../../services/coachLinkService';
 import { chatState, studentStatus, timeAgo, startOfDay, toDate, DAY_MS } from '../../components/coach/helpers';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
@@ -56,8 +58,20 @@ function Delta({ value, unit = 'kg' }) {
 }
 
 export default function StudentDetailsPage() {
+  const { confirm, dialog } = useConfirm();
   const { studentId } = useParams();
   const navigate = useNavigate();
+
+  const endLink = async () => {
+    const ok = await confirm({
+      title: 'Encerrar vínculo?',
+      message: `Você deixa de ver os dados de ${student?.displayName || 'este aluno'}. Fichas já atribuídas e o histórico dele não são apagados.`,
+      confirmLabel: 'Encerrar vínculo', danger: true
+    });
+    if (!ok) return;
+    try { await endStudentLink(studentId); toast.success('Vínculo encerrado.'); navigate('/coach/students'); }
+    catch (error) { console.error(error); toast.error('Não foi possível encerrar.'); }
+  };
   const { user } = useAuthContext();
 
   const [student, setStudent] = useState(null);
@@ -161,6 +175,7 @@ export default function StudentDetailsPage() {
 
   return (
     <div className={pageCls}>
+      {dialog}
       <div className="mx-auto max-w-5xl space-y-5">
         <button type="button" onClick={() => navigate('/coach/students')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-brand">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Alunos
@@ -182,6 +197,7 @@ export default function StudentDetailsPage() {
             <div className="grid grid-cols-2 gap-2 sm:flex">
               <button type="button" onClick={() => navigate('/coach/chat', { state: chatState({ ...student, uid: student.id }) })} className={btnPrimary}><MessageSquare className="h-4 w-4" /> Mensagem</button>
               <button type="button" onClick={() => setAssigning(true)} className={btnGhost}><ClipboardList className="h-4 w-4" /> Ficha</button>
+              <button type="button" onClick={endLink} className={btnGhost}>Encerrar vínculo</button>
             </div>
           </div>
         </header>

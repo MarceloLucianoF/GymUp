@@ -13,6 +13,7 @@ const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const AuthAction = lazy(() => import('./pages/auth/AuthAction'));
+const InviteRedirect = lazy(() => import('./pages/public/InviteRedirect'));
 
 // --- PÁGINAS: USER (ALUNO) ---
 const Home = lazy(() => import('./pages/user/Home'));
@@ -69,7 +70,7 @@ const ROUTE_META = [
   ['/coach', 'Painel do treinador', 'Gestão de alunos e fichas.', true],
   ['/admin', 'Administração', 'Área administrativa.', true]
 ];
-const SELF_META = ['/privacidade', '/termos', '/auth/action'];
+const SELF_META = ['/privacidade', '/termos', '/auth/action', '/convite'];
 
 export const metaForPath = (pathname) => {
   if (pathname === '/') return null; // Landing usa o título do index.html
@@ -223,6 +224,7 @@ function AppRoutes() {
           {/* --- ROTAS PÚBLICAS --- */}
           <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
           <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+          <Route path="/convite/:code" element={<InviteRedirect />} />
           <Route path="/auth/action" element={<main id="main-content" tabIndex={-1} className="outline-none"><AuthAction /></main>} />
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           
