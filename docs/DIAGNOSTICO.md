@@ -365,3 +365,16 @@ Conta de treinador do ambiente, produção, só leitura; celular (390 px) e desk
   4. **Configurações:** o "Código de convite" mostrava só o UID do treinador; agora há **Copiar link** (`/convite/<código>`, que abre o cadastro ou o pedido de vínculo já preenchidos) além de **Copiar código**, com o aviso de que o vínculo só vale após o aceite.
 - **Não executado (gravam dados; exigem conta e dados de teste dedicados):** Marcar pago, Cobrar, Atribuir ficha em lote, Trocar ficha, Encerrar vínculo, Convidar, salvar Configurações, editar ficha e exercício. O isolamento (treinador só vê os próprios alunos) segue coberto pelos testes de regras (46 casos).
 - **Dado de demonstração, não bug:** a lista de conversas mostra uma conversa "Super Admin — Nova conversa" de julho.
+
+## Atualização — fluxos de escrita do treinador testados em produção (12/10/2026)
+Treinador e alunos fictícios dedicados (nada do treinador real foi tocado), pela interface; cada passo conferido no Firestore; dados removidos ao final. **20 de 20 verificações aprovadas.**
+- **Painel:** Marcar pago na fila de ação grava `paymentStatus=paid` e `paymentDate`.
+- **Financeiro:** Marcar pago e Desfazer; editar mensalidade (vazio e negativo recusados sem gravar; valor válido grava).
+- **Alunos:** atribuir ficha a um aluno (`currentTrainingId`); atribuição em lote (3 alunos, tela de resultado correta; quem tem só pedido pendente não é tocado).
+- **Vínculo:** aceitar (`coachId` + link `active`) e recusar (`rejected`, sem `coachId`); encerrar vínculo (`coachId` nulo, link `revoked`, check-ins do aluno preservados).
+- **Notas privadas:** gravam em `coachNotes/{coach}_{aluno}` e voltam depois de recarregar.
+- **Fichas:** criar (com `coachId`/`createdBy` do treinador), duplicar e excluir (preserva as outras).
+- **Configurações:** grava nome, bio, telefone e `defaultMonthlyFee`; o papel não muda. (A mensalidade padrão é `defaultMonthlyFee`, não `monthlyFee`; ela ainda não preenche a mensalidade de alunos novos.)
+- **Autorização na produção (REST com o token do treinador):** aluno vinculado aceita `paymentStatus` (200); aluno com vínculo encerrado, pedido recusado, troca de `role` e de `email` retornam 403.
+- **Falsos alarmes da própria automação (não são bugs):** campo numérico não aceita texto (o navegador impede); a tela de resultado do lote fica aberta até "Concluir" e cobre a página.
+- **Não coberto:** Cobrar e Parabenizar (abrem o chat com rascunho), convite por link com cadastro novo (já testado no PR do vínculo), exclusão de ficha em uso por alunos.
