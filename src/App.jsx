@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuthContext } from './hooks/AuthContext';
 import { ThemeProvider } from './hooks/ThemeContext';
@@ -158,6 +158,22 @@ const ProfileAccessError = () => {
 // Aluno novo (sem objetivo definido e sem onboarding concluído/pulado) passa pelo onboarding.
 const needsOnboarding = (profile) => profile?.role === 'user' && !profile.onboardedAt && !profile.goal;
 
+// Título da rota só para leitores de tela, e só quando a página não traz o próprio h1 (senão a página fica com dois h1).
+function RouteTitle({ pathname }) {
+  const [own, setOwn] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const check = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => setOwn(!!document.querySelector('h1:not([data-route-title])'))); };
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [pathname]);
+  const title = metaForPath(pathname)?.title;
+  if (own || !title) return null;
+  return <h1 data-route-title className="sr-only">{title}</h1>;
+}
+
 const ProtectedRoute = ({ children, allowedRoles = VALID_ROLES }) => {
   const { user, userProfile, authLoading } = useAuthContext();
   const { pathname } = useLocation();
@@ -174,8 +190,7 @@ const ProtectedRoute = ({ children, allowedRoles = VALID_ROLES }) => {
     <>
       <Navbar />
       <main id="main-content" tabIndex={-1} className="outline-none">
-        {/* Título da rota para leitores de tela; a Home já tem o próprio h1. */}
-        {pathname !== '/dashboard' && metaForPath(pathname)?.title && <h1 className="sr-only">{metaForPath(pathname).title}</h1>}
+        <RouteTitle pathname={pathname} />
         {children}
       </main>
     </>
