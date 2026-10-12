@@ -102,6 +102,12 @@ test('checkIns: dono e treinador vinculado leem; outros não; treinador não esc
   await assertSucceeds(setDoc(doc(db('stu1'), 'checkIns/novo'), { userId: 'stu1', workoutName: 'B' }));
 });
 
+test('checkIns: admin lista sem filtro; treinador e aluno não',async () => {
+  await assertSucceeds(getDocs(collection(db('admin1'), 'checkIns')));
+  await assertFails(getDocs(collection(db('coach1'), 'checkIns')));
+  await assertFails(getDocs(collection(db('stu1'), 'checkIns')));
+});
+
 test('checkIns: listagem filtrada pelo dono funciona, a de outro falha', async () => {
   await assertSucceeds(getDocs(query(collection(db('stu1'), 'checkIns'), where('userId', '==', 'stu1'))));
   await assertFails(getDocs(query(collection(db('stu2'), 'checkIns'), where('userId', '==', 'stu1'))));
@@ -163,4 +169,17 @@ test('exercises e coleções não mapeadas', async () => {
   await assertSucceeds(setDoc(doc(db('coach1'), 'exercises/e1'), { name: 'x' }));
   await assertFails(getDoc(doc(anonDb(), 'exercises/e1')));
   await assertFails(setDoc(doc(db('admin1'), 'qualquer/coisa'), { a: 1 }));
+});
+
+test('adminLog: só admin lê e acrescenta; ninguém edita ou apaga', async () => {
+  const entry = { at: '2026-10-12T10:00:00Z', uid: 'admin1', action: 'arquivar', target: 'exercises', targetId: 'e1', name: 'Supino', detail: '' };
+  await assertSucceeds(setDoc(doc(db('admin1'), 'adminLog/l1'), entry));
+  await assertSucceeds(getDoc(doc(db('admin1'), 'adminLog/l1')));
+  await assertFails(setDoc(doc(db('admin1'), 'adminLog/l2'), { ...entry, uid: 'coach1' }));
+  await assertFails(setDoc(doc(db('admin1'), 'adminLog/l3'), { ...entry, extra: 1 }));
+  await assertFails(setDoc(doc(db('coach1'), 'adminLog/l4'), { ...entry, uid: 'coach1' }));
+  await assertFails(setDoc(doc(db('stu1'), 'adminLog/l5'), { ...entry, uid: 'stu1' }));
+  await assertFails(getDoc(doc(db('coach1'), 'adminLog/l1')));
+  await assertFails(updateDoc(doc(db('admin1'), 'adminLog/l1'), { name: 'x' }));
+  await assertFails(deleteDoc(doc(db('admin1'), 'adminLog/l1')));
 });

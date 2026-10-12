@@ -367,7 +367,7 @@ export default function WorkoutEditor() {
         </section>
       </div>
 
-      {showAdd && <AddExerciseModal library={library} onAdd={addExercise} onClose={() => setShowAdd(false)} onGoLibrary={() => navigate('/admin/exercises')} />}
+      {showAdd && <AddExerciseModal library={library.filter((l) => !l.archived)} onAdd={addExercise} onClose={() => setShowAdd(false)} onGoLibrary={() => navigate('/admin/exercises')} />}
     </div>
   );
 }

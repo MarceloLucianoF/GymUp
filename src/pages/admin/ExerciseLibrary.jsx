@@ -39,7 +39,7 @@ export default function ExerciseLibrary() {
       setError(false);
       try {
         const snap = await getDocs(query(collection(db, 'exercises'), orderBy('name')));
-        if (!cancelled) setExercises(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        if (!cancelled) setExercises(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => !e.archived));
       } catch (err) {
         console.error(err);
         if (!cancelled) { setError(true); toast.error('Erro ao carregar biblioteca.'); }

@@ -167,7 +167,8 @@ service cloud.firestore {
     }
 
     match /checkIns/{docId} {
-      allow get, list: if canAccessUserData(resource.data.userId);
+      // O admin lista sem filtro por aluno (métricas do painel); os demais só por userId permitido.
+      allow get, list: if isAdmin() || canAccessUserData(resource.data.userId);
       allow create: if validUserOwnedData(request.resource.data)
         && ownerOrAdmin(request.resource.data.userId);
       allow update: if validUserOwnedData(request.resource.data)
@@ -300,6 +301,19 @@ service cloud.firestore {
         isAdmin() || noteId.matches(request.auth.uid + '_.*') || resource.data.studentId == request.auth.uid
       );
       allow list: if false;
+    }
+
+    // Histórico de alterações do painel administrativo: só o admin lê e acrescenta; nunca edita nem apaga.
+    match /adminLog/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['at', 'uid', 'action', 'target', 'targetId', 'name', 'detail'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at is string
+        && request.resource.data.action is string && request.resource.data.action.size() <= 40
+        && request.resource.data.get('name', '') is string && request.resource.data.get('name', '').size() <= 200
+        && request.resource.data.get('detail', '') is string && request.resource.data.get('detail', '').size() <= 500;
+      allow update, delete: if false;
     }
 
     match /exercises/{docId} {
