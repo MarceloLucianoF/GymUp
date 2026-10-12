@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { db } from '../firebase/config';
 import { activeWorkoutService } from '../services/activeWorkoutService';
+import { fetchStudentCheckIns, invalidateCheckIns } from '../services/checkInsCache';
 
 // --- Metas semanais (localStorage por usuário) ---
 export const GOAL_MIN = 2;
@@ -120,6 +121,7 @@ export function useStudentHome(user, userProfile) {
 
   const syncPending = useCallback(async () => {
     const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, setDoc, doc);
+    if (synced > 0) invalidateCheckIns(uid);
     if (synced > 0 && mounted.current) toast.success(`${synced} treino(s) pendente(s) sincronizado(s)!`);
     return synced;
   }, [uid]);
@@ -135,7 +137,7 @@ export function useStudentHome(user, userProfile) {
 
     const [pRes, hRes, tRes] = await Promise.allSettled([
       getDoc(doc(db, 'users', uid)),
-      getDocs(query(collection(db, 'checkIns'), where('userId', '==', uid), orderBy('date', 'desc'))),
+      fetchStudentCheckIns(uid),
       getDocs(query(collection(db, 'trainings'), orderBy('name', 'asc'))),
     ]);
     if (!fresh()) return;
@@ -145,7 +147,7 @@ export function useStudentHome(user, userProfile) {
       if (pRes.value.exists()) setProfile(pRes.value.data());
     } else { console.error('Erro Home (perfil):', pRes.reason); next.profile = pRes.reason; }
     if (hRes.status === 'fulfilled') {
-      setHistory(hRes.value.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setHistory(hRes.value);
     } else { console.error('Erro Home (histórico):', hRes.reason); next.history = hRes.reason; }
     if (tRes.status === 'fulfilled') {
       setTrainings(tRes.value.docs.map((d) => ({ firestoreId: d.id, ...d.data() })));
@@ -181,8 +183,9 @@ export function useStudentHome(user, userProfile) {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
+    invalidateCheckIns(uid);
     try { await load(); } finally { if (mounted.current) setRefreshing(false); }
-  }, [load]);
+  }, [load, uid]);
 
   const discardActiveSession = useCallback(() => {
     if (!uid) return;

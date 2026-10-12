@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../firebase/config';
 import { useAuthContext } from './AuthContext';
+import { fetchStudentCheckIns } from '../services/checkInsCache';
 
 // Check-ins do próprio aluno (userId == uid), ordem cronológica.
 export default function useExerciseHistory() {
@@ -13,9 +12,9 @@ export default function useExerciseHistory() {
     if (!uid) { setState({ checkIns: [], loading: false, error: null }); return undefined; }
     let cancelled = false;
     setState((s) => ({ ...s, loading: true, error: null }));
-    getDocs(query(collection(db, 'checkIns'), where('userId', '==', uid), orderBy('date', 'asc')))
-      .then((snap) => {
-        if (!cancelled) setState({ checkIns: snap.docs.map((d) => ({ id: d.id, ...d.data() })), loading: false, error: null });
+    fetchStudentCheckIns(uid)
+      .then((rows) => {
+        if (!cancelled) setState({ checkIns: rows.reverse(), loading: false, error: null });
       })
       .catch((error) => {
         console.error('Erro analytics:', error);

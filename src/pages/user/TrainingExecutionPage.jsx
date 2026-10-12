@@ -23,6 +23,7 @@ import {
     hydrateExercises, buildLoadMap, buildExerciseLoadLogs, summarizeSession, detectNewPRs,
     adjustValue, getLastSessionSets, buildCopyFromLast, noteKey, NOTE_MAX, formatDuration
 } from '../../utils/training';
+import { invalidateCheckIns } from '../../services/checkInsCache';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
 export default function TrainingExecutionPage() {
@@ -338,6 +339,7 @@ export default function TrainingExecutionPage() {
             if (navigator.onLine) {
                 try {
                     await setDoc(doc(db, 'checkIns', clientId), checkInPayload);
+                    invalidateCheckIns(user.uid);
                     await updateDoc(doc(db, 'users', user.uid), { lastWorkoutDate: new Date().toISOString() });
                 } catch (err) {
                     console.warn("Sem rede no Firestore, enfileirando offline:", err);

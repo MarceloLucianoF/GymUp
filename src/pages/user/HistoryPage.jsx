@@ -12,6 +12,7 @@ import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import { formatDate as formatLocaleDate, formatTonnage } from '../../utils/format';
 import ChipRow from '../../components/dashboard/ChipRow';
+import { invalidateCheckIns } from '../../services/checkInsCache';
 
 export default function HistoryPage() {
   const { user } = useAuthContext();
@@ -140,6 +141,7 @@ export default function HistoryPage() {
   const deleteItem = async (itemId) => {
       try {
           await deleteDoc(doc(db, 'checkIns', itemId));
+          invalidateCheckIns(user.uid);
           toast.success('Registro apagado.');
       } catch (error) {
           toast.error('Erro ao apagar.');

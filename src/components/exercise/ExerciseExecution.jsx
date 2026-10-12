@@ -1,3 +1,4 @@
+import { safeHttpUrl } from '../../utils/safeUrl';
 import React from 'react';
 import { PlayCircle } from 'lucide-react';
 
@@ -40,9 +41,9 @@ function ExerciseExecution({ exercise }) {
         </ul>
       </div>
 
-      {exercise.videoUrl && (
+      {safeHttpUrl(exercise.videoUrl) && (
         <a
-          href={exercise.videoUrl}
+          href={safeHttpUrl(exercise.videoUrl)}
           target="_blank"
           rel="noopener noreferrer"
           className="btn-primary-gradient pressable inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-black focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"

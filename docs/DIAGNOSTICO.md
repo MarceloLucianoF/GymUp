@@ -202,3 +202,10 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - Removidos: `functions/` (proxy antigo, substituído pelo Worker), alvos `deploy-hosting`/`deploy-functions`/`deploy-all` do Makefile, testes de functions no CI, pastas vazias (`fuctions/`, `wsl.localhost/`), `.firebase/` do git.
 - Firebase Hosting desativado (`firebase hosting:disable`). `/__/auth/handler` e `/__/auth/action` seguem 200 e o link de redefinição de senha abre a página de nova senha (testado).
 - Domínio `bohtreinar.marcelo-labs.workers.dev` autorizado no Authentication; domínio antigo removido.
+
+## Atualização — uso do servidor e proteção contra phishing/injeção
+- **Cabeçalhos (Cloudflare `public/_headers`):** `Content-Security-Policy` aplicada (script/estilo/fonte/conexão/frame em lista de permissão; `frame-ancestors 'none'`, `object-src 'none'`, `base-uri`/`form-action` 'self'), `Strict-Transport-Security`, `X-Frame-Options: DENY`. Validada em modo só-relatório nas 17 telas principais (0 violações) antes de aplicar.
+- **Links de dados editáveis:** `safeHttpUrl`/`youtubeId` (`src/utils/safeUrl.js`) bloqueiam `javascript:`/`data:` no link de vídeo da ficha e no player; `rel="noopener noreferrer"` nos `_blank`.
+- **Leituras do Firestore:** histórico do aluno compartilhado por 5 minutos entre Home, Treinos, Evolução e Detalhes (`checkInsCache`), invalidado ao gravar/apagar treino ou sincronizar offline. Antes cada tela relia o histórico inteiro.
+- **Worker:** limite por usuário (20/min, em memória), corpo ≤ 64 KB, `max_tokens` ≤ 1200, tempo limite de 25 s, origem validada. No plano gratuito os arquivos estáticos não contam como invocação; só `/api/*`.
+- **Pendente (console):** proteção contra enumeração de e-mail, política de senha mínima, nome público do app, idioma/nome do remetente dos modelos de e-mail, App Check enforce (após métricas).

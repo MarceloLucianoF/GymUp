@@ -232,8 +232,8 @@ export default function Register() {
                   className="mt-1 h-5 w-5 shrink-0 accent-[#FFC107]"
                 />
                 <span>
-                  Li e aceito os <Link to="/termos" target="_blank" className="font-bold text-amber-700 underline dark:text-brand">Termos de Uso</Link> e a{' '}
-                  <Link to="/privacidade" target="_blank" className="font-bold text-amber-700 underline dark:text-brand">Política de Privacidade</Link>,
+                  Li e aceito os <Link to="/termos" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-700 underline dark:text-brand">Termos de Uso</Link> e a{' '}
+                  <Link to="/privacidade" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-700 underline dark:text-brand">Política de Privacidade</Link>,
                   inclusive o tratamento dos meus dados de saúde para acompanhar meus treinos.
                 </span>
               </label>

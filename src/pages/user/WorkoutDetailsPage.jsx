@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { db } from '../../firebase/config';
 import { Clock, Scale, CheckCircle2, Dumbbell, FileText, XCircle, ArrowLeft, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
+import { fetchStudentCheckIns } from '../../services/checkInsCache';
 
 export default function WorkoutDetailsPage() {
   const { checkInId } = useParams();
@@ -39,8 +40,8 @@ export default function WorkoutDetailsPage() {
   useEffect(() => {
     if (!user?.uid || !workout || workout.userId !== user.uid) return undefined;
     let cancelled = false;
-    getDocs(query(collection(db, 'checkIns'), where('userId', '==', user.uid), orderBy('date', 'desc')))
-      .then((snap) => { if (!cancelled) setPast(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); })
+    fetchStudentCheckIns(user.uid)
+      .then((rows) => { if (!cancelled) setPast(rows); })
       .catch((err) => console.error('Erro ao buscar histórico para comparação:', err));
     return () => { cancelled = true; };
   }, [user?.uid, workout]);
