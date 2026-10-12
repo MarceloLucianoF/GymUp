@@ -1,11 +1,15 @@
 {
   "hosting": {
     "public": "hosting-redirect",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
     "redirects": [
       {
-        "source": "/:path*",
-        "destination": "https://bohtreinar.marcelo-labs.workers.dev/:path*",
+        "regex": "^/(?P<rest>(?:[^_].*|_[^_].*)?)$",
+        "destination": "https://bohtreinar.marcelo-labs.workers.dev/:rest",
         "type": 301
       }
     ]
