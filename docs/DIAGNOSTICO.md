@@ -298,3 +298,15 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - Agora: dois bindings de rate limit da Cloudflare (`wrangler.jsonc`): `AI_USER_LIMIT` (20/min por usuário, depois de verificar o token) e `AI_IP_LIMIT` (60/min por IP, antes de verificar o token). Se o binding falhar ou não existir (dev, testes), vale o contador em memória; a IA não cai por causa do limitador.
 - Validado em produção: rajada de 400 chamadas com token inválido, 218 receberam 429. A contagem da Cloudflare é por local e aproximada (rajadas pequenas podem passar); é um freio, não uma cota exata.
 - Teste novo no Worker (21 aprovados). Segue pendente a parte de identidade madura citada para uma futura busca por nome (credencial de serviço, filtros no servidor).
+
+## Atualização — sincronização offline de check-ins
+- **O que já estava certo:** cada treino concluído tem `clientId` fixo, e `saveCheckIn` grava check-in, `userStats` e `publicStats` numa transação; reenviar o mesmo ID não conta de novo (e as regras recusam novo incremento para um check-in que já existe).
+- **Lacunas encontradas e corrigidas:**
+  1. A fila só era enviada com a tela de treino aberta (evento `online`) ou ao abrir a Home; reabrir o app em outra tela deixava o treino parado. Agora há um gerenciador global (`useOfflineSync` no `PwaLayer`): envia ao abrir, ao voltar a rede, ao voltar para a aba e a cada minuto enquanto houver pendência.
+  2. Duas abas: uma aba podia regravar a fila com uma cópia velha e **perder um treino enfileirado pela outra**. Agora cada remoção relê a fila e há uma trava entre abas (30 s) — a idempotência do ID continua sendo a garantia final.
+  3. Se o check-in era salvo mas a atualização de `lastWorkoutDate` falhava, o treino ia para a fila de novo. Agora só entra na fila se o check-in não foi salvo.
+  4. Reenvio regravava o documento do check-in (mudava `syncedAt`); agora o primeiro envio vale e nada é regravado.
+  5. Falhas eram silenciosas. Agora o item guarda tentativas e motivo; erro que repetir não resolve (permissão, dado inválido) vira "não enviado" com botão **Tentar de novo**; erro de rede segue pendente.
+- **Estados no aviso do topo:** sem conexão com N treinos aguardando; sincronizando; aguardando sincronização; falha com botão. Depois do sucesso o item sai da fila e a Home recarrega.
+- **Validado em produção** (navegador real, usuário de teste): concluir sem rede (1 item na fila, nada no Firestore), fechar e reabrir offline (fila mantida), reconectar (1 check-in, `userStats` e `publicStats` +1, fila vazia), reenvio do mesmo ID 3 vezes em 2 abas (continua 1), queda de rede durante o envio (item pendente com 1 tentativa, nada pela metade) e retomada (enviado uma vez); histórico com uma entrada por check-in.
+- **Limite:** o localStorage é por navegador; limpar os dados do site com treino pendente perde o treino. Não há fila em segundo plano com o app fechado (exigiria Background Sync do service worker).
