@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Aplicação React em `src/`, com Firebase Auth/Firestore e proxy HTTP em `functions/`.
+Aplicação React em `src/`, com Firebase Auth/Firestore e proxy de IA no Worker da Cloudflare (`worker/`).
 Leia `package.json`, `firebase.json` e os arquivos da área antes de implementar.
 O diagnóstico inicial e suas limitações estão em `docs/DIAGNOSTICO.md`.
 As instruções existentes em `.gemini/` continuam preservadas.
@@ -12,7 +12,7 @@ As instruções existentes em `.gemini/` continuam preservadas.
 | Frente | Instruções | Responsabilidade |
 | --- | --- | --- |
 | Frontend | [frontend](docs/agents/frontend.md) | Páginas, componentes, navegação, estilos e experiência de uso |
-| Backend | [backend](docs/agents/backend.md) | Firebase, autorização, dados, serviços e Cloud Functions |
+| Backend | [backend](docs/agents/backend.md) | Firebase (Auth/Firestore), autorização, dados, serviços e Worker |
 | Documentação | [documentação](docs/agents/documentacao.md) | Guias, contratos documentados e estado das funcionalidades |
 | Git | [Git](docs/agents/git.md) | Diff, dependências, branches, commits e integração contínua |
 | Validação | [validação](docs/agents/validacao.md) | Evidências independentes de build, testes e comportamento |

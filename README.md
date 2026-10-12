@@ -98,5 +98,5 @@ service cloud.firestore {
   }
 ]
 Executando um TreinoVá até a aba Treinos.Selecione "Iniciar Treino".Marque os exercícios conforme realiza.Clique em "Finalizar" para salvar no histórico.🐛 TroubleshootingErroSolução ProvávelMissing permissionsVerifique as Regras de Segurança no Firestore.Query requires indexClique no link do erro no console para criar o índice automático ou crie manualmente conforme guia acima.Firebase not initializedVerifique se o arquivo .env.local está na raiz e com os dados corretos.🚀 DeployO projeto está configurado para deploy fácil no Firebase Hosting.Instale a CLI: npm install -g firebase-toolsLogin: firebase loginInicialize: firebase init (Selecione Hosting, pasta build, SPA Yes)Deploy:Bashnpm run build
-firebase deploy
+make deploy
 📄 LicençaEste projeto está sob a licença MIT. Sinta-se livre para usar e modificar.Última atualização: 07/02/2026

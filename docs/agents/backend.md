@@ -2,7 +2,7 @@
 
 ## Escopo exclusivo de implementação
 
-- `functions/**`, `firestore.rules`, `src/firebase/**` e `scripts/**`.
+- `worker/**`, `firestore.rules`, `src/firebase/**` e `scripts/**`.
 - `src/services/**` e hooks de autenticação/dados em `src/hooks/**` (exceto `ThemeContext.js`).
 - Contratos de coleções, índices, emuladores e configuração Firebase, coordenando `firebase.json` com Git.
 

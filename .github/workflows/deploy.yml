@@ -22,10 +22,6 @@ jobs:
       - run: npm test -- --watchAll=false --passWithNoTests
         env:
           CI: 'true'
-      - run: npm ci
-        working-directory: functions
-      - run: node --test test/*.test.js
-        working-directory: functions
       - run: node --test test/*.test.js
         working-directory: worker
       - uses: actions/setup-java@v4
