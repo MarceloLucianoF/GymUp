@@ -216,3 +216,7 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Política de senha** (console: 8+, maiúscula, número, símbolo, modo "notificar") refletida no cadastro e na redefinição (`src/utils/password.js`).
 - **Lista de alunos do treinador:** check-ins reaproveitados por 3 minutos entre Painel e Alunos (`ttlCache`) e limite proporcional ao tamanho da carteira (150 a 400 por lote de 30 alunos), para a aderência de 4 semanas não ficar subestimada.
 - **App Check:** requisições do Firebase AI Logic (Gemini) já saem com o token (verificado em produção); exigência obrigatória a partir de 2/11/2026.
+
+## Atualização — modelos de e-mail do Firebase
+- O Firebase bloqueia a edição dos modelos de e-mail deste projeto (`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`: assunto, corpo, "responder para" e URL acionável). Só o nome do remetente (`senderDisplayName`) aceitou alteração, feita pela API (Identity Toolkit admin v2).
+- Por isso a página própria `/auth/action` está pronta, mas só será usada se o suporte do Firebase liberar a URL acionável personalizada. Enquanto isso, o e-mail de recuperação envia `url` de continuação para o login do app (botão "Continuar" na página padrão).
