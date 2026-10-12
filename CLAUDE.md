@@ -58,7 +58,7 @@ Só quando o usuário pedir ("sobe", "deploy"). O app roda na Cloudflare (https:
 1. Validações acima aprovadas e árvore commitada/pushada.
 2. App + proxy de IA: `make deploy` (build com `REACT_APP_NVIDIA_PROXY=true REACT_APP_AI_PRIMARY=nvidia` + `wrangler deploy`). Segredos do Worker via `wrangler secret put`, nunca em arquivo versionado.
 3. Regras e índices do Firestore: `make deploy-rules` (mostrar o diff das regras antes). Regras primeiro quando o front depende delas.
-4. Firebase Hosting só redireciona para o endereço novo (`hosting-redirect/`): não publicar o app lá. Não excluir o site (o `authDomain` serve `/__/auth/handler`).
+4. Firebase Hosting está **desativado** (`firebase hosting:disable`); não publicar o app lá. As páginas reservadas de login (`/__/auth/handler`, `/__/auth/action`, usadas por recuperação de senha) continuam servidas pelo Firebase mesmo assim (testado em 12/10/2026).
 5. Pós-deploy: informar a URL e o resultado de cada alvo (aprovada/reprovada/não executada) e conferir login e papéis; o deploy sozinho não comprova autorização.
 
 Deploy é irreversível para os usuários: sem pedido explícito, apenas preparar e descrever.
