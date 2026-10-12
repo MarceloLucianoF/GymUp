@@ -35,9 +35,11 @@ describe('saveCheckIn', () => {
     const m = memory({ 'userStats/u1': { uid: 'u1', checkInCount: 4, lastCheckInAt: 'x', lastCheckInId: 'a' } });
     await saveCheckIn({}, 'u1', 'c2', { userId: 'u1', date: 'd' }, m.run);
     expect(m.store.get('userStats/u1').checkInCount).toBe(5);
+    const statsBefore = m.store.get('publicStats/u1').updatedAt;
     expect(await saveCheckIn({}, 'u1', 'c2', { userId: 'u1', date: 'd2' }, m.run)).toBe(false);
     expect(m.store.get('userStats/u1').checkInCount).toBe(5);
-    expect(m.store.get('checkIns/c2').date).toBe('d2'); // atualização do mesmo documento
+    expect(m.store.get('checkIns/c2').date).toBe('d'); // o primeiro envio vale: reenvio não regrava o documento
+    expect(m.store.get('publicStats/u1').updatedAt).toBe(statsBefore);   // nem o espelho público
   });
 });
 

@@ -5,6 +5,12 @@
 const ACTIVE_WORKOUT_PREFIX = 'academyup_active_workout_';
 const OFFLINE_CHECKINS_PREFIX = 'academyup_pending_checkins_';
 
+const QUEUE_EVENT = 'offline-queue-updated';
+const SYNC_LOCK_PREFIX = 'academyup_sync_lock_';
+const LOCK_TTL_MS = 30_000;
+// Erros que repetir não resolve (regras negaram, dado inválido): o item fica marcado como falho até o usuário pedir de novo.
+const PERMANENT_CODES = new Set(['permission-denied', 'invalid-argument', 'failed-precondition', 'unauthenticated']);
+
 export const activeWorkoutService = {
   /**
    * Salva o estado atual do treino em andamento no localStorage.
@@ -98,9 +104,40 @@ export const activeWorkoutService = {
         queuedAt: Date.now()
       });
       localStorage.setItem(key, JSON.stringify(existing));
+      this.notifyQueue(userId);
     } catch (err) {
       console.error('Erro ao armazenar check-in offline:', err);
     }
+  },
+
+  notifyQueue(userId) {
+    try { window.dispatchEvent(new CustomEvent(QUEUE_EVENT, { detail: { userId } })); } catch (e) { /* sem window */ }
+  },
+
+  writeQueue(userId, list) {
+    const key = `${OFFLINE_CHECKINS_PREFIX}${userId}`;
+    if (list.length === 0) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(list));
+    this.notifyQueue(userId);
+  },
+
+  /** Tira um item da fila relendo o armazenamento: outra aba pode ter enfileirado treinos novos desde a leitura anterior. */
+  dropFromQueue(userId, id) {
+    this.writeQueue(userId, this.getOfflineCheckIns(userId).filter((entry) => this.checkInDocId(userId, entry) !== id));
+  },
+
+  /** Registra a falha no próprio item (tentativas e motivo) sem perder o treino. */
+  noteFailure(userId, id, err) {
+    const code = String(err?.code || '').replace(/^firestore\//, '');
+    const list = this.getOfflineCheckIns(userId).map((entry) => (this.checkInDocId(userId, entry) !== id ? entry
+      : { ...entry, attempts: (entry.attempts || 0) + 1, lastError: code || 'unknown', failedAt: Date.now(), permanent: PERMANENT_CODES.has(code) }));
+    this.writeQueue(userId, list);
+  },
+
+  /** { total, failed }: failed são itens que a rede não resolve (precisam de ação do usuário). */
+  queueStatus(userId) {
+    const list = this.getOfflineCheckIns(userId);
+    return { total: list.length, failed: list.filter((entry) => entry.permanent).length };
   },
 
   /**
@@ -135,36 +172,53 @@ export const activeWorkoutService = {
    * Sincroniza a fila de check-ins pendentes com o Firestore quando a rede é restabelecida.
    * Idempotente: cada item vai para o documento `checkIns/{clientId}` via setDoc, então um reenvio
    * (falha no meio da fila, duas abas, evento online repetido) sobrescreve o mesmo documento.
-   * Cada item enviado sai da fila na hora, antes de tentar o próximo.
+   * Cada item enviado sai da fila na hora, antes de tentar o próximo; falhas ficam no item (tentativas, motivo).
    */
-  async syncPendingCheckIns(userId, db, setDoc, doc, saver = null) {
+  async syncPendingCheckIns(userId, db, setDoc, doc, saver = null, { force = false } = {}) {
     if (!userId || !db || (!saver && (!setDoc || !doc))) return 0;
     if (this.syncing?.[userId]) return 0; // evita duas sincronizações simultâneas do mesmo usuário
+    if (!this.takeLock(userId)) return 0; // outra aba já está enviando
     this.syncing = { ...(this.syncing || {}), [userId]: true };
+    this.notifyQueue(userId);
 
-    const key = `${OFFLINE_CHECKINS_PREFIX}${userId}`;
     let syncedCount = 0;
     try {
-      let pending = this.getOfflineCheckIns(userId);
-      for (const item of pending) {
+      for (const item of this.getOfflineCheckIns(userId)) {
+        if (item.permanent && !force) continue; // falha definitiva: só volta a tentar quando o usuário pedir
+        const id = this.checkInDocId(userId, item);
         try {
-          const { queuedAt, ...payload } = item;
-          const id = this.checkInDocId(userId, item);
+          const { queuedAt, attempts, lastError, failedAt, permanent, ...payload } = item;
           const data = { ...payload, clientId: id, syncedAt: new Date().toISOString() };
           if (saver) await saver(id, data); // grava e atualiza o contador (checkInService)
           else await setDoc(doc(db, 'checkIns', id), data);
           syncedCount++;
-          pending = pending.filter((entry) => entry !== item && this.checkInDocId(userId, entry) !== id);
-          if (pending.length === 0) localStorage.removeItem(key);
-          else localStorage.setItem(key, JSON.stringify(pending));
+          this.dropFromQueue(userId, id);
         } catch (err) {
           console.error('Falha ao enviar check-in offline pendente:', err);
+          this.noteFailure(userId, id, err);
         }
       }
     } finally {
+      this.releaseLock(userId);
       this.syncing = { ...(this.syncing || {}), [userId]: false };
+      this.notifyQueue(userId);
     }
     return syncedCount;
+  },
+
+  // Trava entre abas (localStorage, com validade): reduz envios em dobro; a idempotência do ID garante a correção mesmo assim.
+  takeLock(userId) {
+    try {
+      const key = `${SYNC_LOCK_PREFIX}${userId}`;
+      const held = Number(localStorage.getItem(key)) || 0;
+      if (held && Date.now() - held < LOCK_TTL_MS) return false;
+      localStorage.setItem(key, String(Date.now()));
+    } catch (e) { /* sem localStorage: segue sem trava */ }
+    return true;
+  },
+
+  releaseLock(userId) {
+    try { localStorage.removeItem(`${SYNC_LOCK_PREFIX}${userId}`); } catch (e) { /* ignora */ }
   },
 
   /**

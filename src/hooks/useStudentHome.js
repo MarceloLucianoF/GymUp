@@ -123,7 +123,7 @@ export function useStudentHome(user, userProfile) {
   const syncPending = useCallback(async () => {
     const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, setDoc, doc, (id, data) => saveCheckIn(db, uid, id, data));
     if (synced > 0) invalidateCheckIns(uid);
-    if (synced > 0 && mounted.current) toast.success(`${synced} treino(s) pendente(s) sincronizado(s)!`);
+    if (synced > 0 && mounted.current) toast.success(`${synced} treino(s) pendente(s) sincronizado(s)!`, { id: 'offline-synced' });
     return synced;
   }, [uid]);
 
@@ -168,16 +168,12 @@ export function useStudentHome(user, userProfile) {
   useEffect(() => {
     if (!uid) return undefined;
     const onWorkoutUpdate = () => setActiveSession(activeWorkoutService.getActiveSession(uid));
-    const onOnline = async () => {
-      try {
-        const synced = await syncPending();
-        if (synced > 0 && mounted.current) await load();
-      } catch (e) { console.error('Erro ao sincronizar online:', e); }
-    };
-    window.addEventListener('online', onOnline);
+    // A fila é sincronizada pelo gerenciador global (useOfflineSync); aqui só recarrega quando ele terminar.
+    const onOnline = async () => { if (mounted.current) await load(); };
+    window.addEventListener('offline-queue-synced', onOnline);
     window.addEventListener('active-workout-updated', onWorkoutUpdate);
     return () => {
-      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline-queue-synced', onOnline);
       window.removeEventListener('active-workout-updated', onWorkoutUpdate);
     };
   }, [uid, load, syncPending]);

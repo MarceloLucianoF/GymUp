@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { useOfflineSync } from '../../hooks/useOfflineSync';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useActiveWorkoutAutosave } from '../../hooks/useActiveWorkoutAutosave';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
 import toast from 'react-hot-toast';
@@ -66,7 +66,7 @@ export default function TrainingExecutionPage() {
     useWakeLock(!!training && !showCelebration);
 
     // Conectividade e Sync Offline
-    const { isOnline } = useOfflineSync(user);
+    const isOnline = useOnlineStatus();
 
     // Auto-Save do Treino em Andamento
     useActiveWorkoutAutosave({ enabled: !showCelebration, user, training, sessionData, activeExerciseIndex, viewMode, elapsedTime, restTimerObj, startedAtRef });
@@ -337,15 +337,20 @@ export default function TrainingExecutionPage() {
                 createdAt: new Date().toISOString()
             };
 
+            // Um treino concluído vira no máximo um check-in: o ID é fixo, então qualquer reenvio (fila, outra aba) é ignorado.
+            let saved = false;
             if (navigator.onLine) {
                 try {
                     await saveCheckIn(db, user.uid, clientId, checkInPayload);
+                    saved = true;
                     invalidateCheckIns(user.uid);
-                    await updateDoc(doc(db, 'users', user.uid), { lastWorkoutDate: new Date().toISOString() });
                 } catch (err) {
                     console.warn("Sem rede no Firestore, enfileirando offline:", err);
-                    activeWorkoutService.saveOfflineCheckIn(user.uid, checkInPayload);
                 }
+            }
+            if (saved) {
+                // Só um detalhe de conveniência: se falhar, o check-in já está salvo e não vai para a fila.
+                updateDoc(doc(db, 'users', user.uid), { lastWorkoutDate: new Date().toISOString() }).catch(() => {});
             } else {
                 activeWorkoutService.saveOfflineCheckIn(user.uid, checkInPayload);
             }

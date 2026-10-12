@@ -551,3 +551,23 @@ test('userStats: remover o único check-in com sequência igual ao total funcion
   down.set(doc(d, 'userStats/stu1'), { ...stats(0, 'c1', { lastRemovedId: 'c1' }), weekKey: '2026-W42', weekCount: 0, weekDays: ['2026-10-12'], streak: 1, lastActiveDay: '2026-10-12' });
   await assertSucceeds(down.commit());
 });
+
+test('retry idempotente: reenviar o mesmo check-in não aceita novo incremento nem muda o publicStats', async () => {
+  await seedSocial();
+  const d = db('stu1');
+  const base = { uid: 'stu1', checkInCount: 6, lastCheckInAt: '2026-10-13T10:00:00Z', weekKey: '2026-W42', weekDays: ['2026-10-12', '2026-10-13'], lastActiveDay: '2026-10-13' };
+  const first = writeBatch(d);
+  first.set(doc(d, 'checkIns/dup1'), { userId: 'stu1', date: '2026-10-13T10:00:00Z' });
+  first.set(doc(d, 'userStats/stu1'), { ...base, lastCheckInId: 'dup1', weekCount: 4, streak: 3 });
+  first.set(doc(d, 'publicStats/stu1'), { uid: 'stu1', weekKey: '2026-W42', weekWorkouts: 4, activeDays: 2, streak: 3, lastActiveDay: '2026-10-13', updatedAt: 'x' });
+  await assertSucceeds(first.commit());
+  const replay = writeBatch(d);                                   // mesmo ID de novo, contador +1
+  replay.set(doc(d, 'checkIns/dup1'), { userId: 'stu1', date: '2026-10-13T10:00:00Z' });
+  replay.set(doc(d, 'userStats/stu1'), { ...base, checkInCount: 7, lastCheckInId: 'dup2', weekCount: 5, streak: 3 });
+  await assertFails(replay.commit());
+  const replay2 = writeBatch(d);                                  // outro ID, mas o documento do check-in já existia
+  replay2.set(doc(d, 'checkIns/dup1'), { userId: 'stu1', date: '2026-10-13T10:00:00Z' });
+  replay2.set(doc(d, 'userStats/stu1'), { ...base, checkInCount: 7, lastCheckInId: 'dup1', weekCount: 5, streak: 3 });
+  await assertFails(replay2.commit());
+  await assertFails(setDoc(doc(d, 'publicStats/stu1'), { uid: 'stu1', weekKey: '2026-W42', weekWorkouts: 9, activeDays: 2, streak: 3, lastActiveDay: '2026-10-13', updatedAt: 'x' }));
+});

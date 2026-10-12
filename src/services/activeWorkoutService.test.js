@@ -77,3 +77,73 @@ describe('fila offline de check-ins (idempotente)', () => {
     expect(setDoc).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('fila offline: concorrência, recarga e falhas', () => {
+  beforeEach(() => { localStorage.clear(); svc.syncing = {}; });
+  const net = (code = 'unavailable') => Object.assign(new Error('rede'), { code });
+
+  test('treino enfileirado por outra aba durante o envio não se perde', async () => {
+    svc.saveOfflineCheckIn(UID, item(1, { clientId: 'a' }));
+    const saver = jest.fn(async (id) => {
+      if (id === 'a') svc.saveOfflineCheckIn(UID, item(2, { clientId: 'novo' })); // outra aba termina um treino agora
+    });
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver)).toBe(1);
+    expect(svc.getOfflineCheckIns(UID).map((i) => i.clientId)).toEqual(['novo']);
+  });
+
+  test('recarregar a página mantém a fila; reenviar muitas vezes grava cada ID uma só vez', async () => {
+    svc.saveOfflineCheckIn(UID, item(1, { clientId: 'a' }));
+    const stored = new Map();
+    const saver = jest.fn(async (id, data) => { stored.set(id, data); });
+    const offline = jest.fn(async () => { throw net(); });
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, offline)).toBe(0);
+    svc.syncing = {}; // "recarregou": memória zerada, localStorage permanece
+    expect(svc.getOfflineCheckIns(UID)).toHaveLength(1);
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver)).toBe(1);
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver)).toBe(0);
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver)).toBe(0);
+    expect([...stored.keys()]).toEqual(['a']);
+    expect(svc.getOfflineCheckIns(UID)).toEqual([]);
+  });
+
+  test('perda de rede no envio: o item continua na fila com tentativas e motivo, e não vira falha definitiva', async () => {
+    svc.saveOfflineCheckIn(UID, item(1, { clientId: 'a' }));
+    await svc.syncPendingCheckIns(UID, {}, null, null, async () => { throw net(); });
+    const [it] = svc.getOfflineCheckIns(UID);
+    expect(it).toMatchObject({ clientId: 'a', attempts: 1, lastError: 'unavailable', permanent: false });
+    expect(svc.queueStatus(UID)).toEqual({ total: 1, failed: 0 });
+  });
+
+  test('erro que repetir não resolve vira falha: não reenvia sozinho, só quando o usuário pede', async () => {
+    svc.saveOfflineCheckIn(UID, item(1, { clientId: 'a' }));
+    await svc.syncPendingCheckIns(UID, {}, null, null, async () => { throw net('permission-denied'); });
+    expect(svc.queueStatus(UID)).toEqual({ total: 1, failed: 1 });
+    const saver = jest.fn(async () => {});
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver)).toBe(0);
+    expect(saver).not.toHaveBeenCalled();
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver, { force: true })).toBe(1);
+    expect(svc.queueStatus(UID)).toEqual({ total: 0, failed: 0 });
+  });
+
+  test('os campos de controle da fila não vão para o documento do check-in', async () => {
+    svc.saveOfflineCheckIn(UID, item(1, { clientId: 'a' }));
+    await svc.syncPendingCheckIns(UID, {}, null, null, async () => { throw net(); });
+    const sent = [];
+    await svc.syncPendingCheckIns(UID, {}, null, null, async (id, data) => { sent.push(data); });
+    expect(Object.keys(sent[0])).not.toEqual(expect.arrayContaining(['attempts']));
+    expect(sent[0]).not.toHaveProperty('lastError');
+    expect(sent[0]).not.toHaveProperty('permanent');
+    expect(sent[0]).not.toHaveProperty('queuedAt');
+  });
+
+  test('outra aba com a trava ativa: não envia; trava vencida não bloqueia', async () => {
+    svc.saveOfflineCheckIn(UID, item(1, { clientId: 'a' }));
+    localStorage.setItem('academyup_sync_lock_u1', String(Date.now()));
+    const saver = jest.fn(async () => {});
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver)).toBe(0);
+    localStorage.setItem('academyup_sync_lock_u1', String(Date.now() - 60_000));
+    expect(await svc.syncPendingCheckIns(UID, {}, null, null, saver)).toBe(1);
+    expect(localStorage.getItem('academyup_sync_lock_u1')).toBeNull();
+  });
+});
+

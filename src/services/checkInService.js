@@ -5,14 +5,14 @@ import { afterCheckIn, afterRemoval, publicStatsOf } from '../utils/consistency'
 // Tudo acontece numa transação: as regras do Firestore só aceitam mudar o contador junto da criação/remoção
 // de um check-in no mesmo lote, então o número nunca depende de confiança no cliente.
 
-/** Grava o check-in (idempotente: reenvio do mesmo ID só atualiza o documento). Devolve true se criou um novo. */
+/** Grava o check-in (idempotente: reenvio do mesmo ID não muda nada). Devolve true se criou um novo. */
 export async function saveCheckIn(db, uid, id, data, run = runTransaction) {
   return run(db, async (tx) => {
     const checkInRef = doc(db, 'checkIns', id);
     const statsRef = doc(db, 'userStats', uid);
     const [existing, stats] = await Promise.all([tx.get(checkInRef), tx.get(statsRef)]);
+    if (existing.exists()) return false; // reenvio do mesmo ID: o primeiro envio vale, nada é regravado nem contado de novo
     tx.set(checkInRef, data);
-    if (existing.exists()) return false;
     const prev = stats.exists() ? stats.data() : null;
     const date = String(data.date || new Date().toISOString());
     // Contagem total + consistência semanal (treinos, dias ativos, sequência): só datas, nenhum dado de saúde.
