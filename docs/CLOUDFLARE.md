@@ -16,7 +16,7 @@ Cabeçalhos de segurança e cache vêm de `public/_headers` (arquivos estáticos
 
 ## Depois de publicar
 1. Firebase Console → Authentication → Configurações → **Domínios autorizados**: adicione o domínio do Worker (necessário para login com Google).
-2. App Check (reCAPTCHA v3): adicione o domínio do Worker na lista de domínios da chave.
+2. App Check (reCAPTCHA Enterprise): adicione o domínio do Worker na lista de domínios da chave.
 3. Em `wrangler.jsonc`, ajuste `ALLOWED_ORIGINS` se usar outro domínio (domínio próprio, por exemplo).
 
 ## Como a rota é protegida
