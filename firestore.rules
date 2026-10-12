@@ -518,7 +518,8 @@ service cloud.firestore {
             && get(friendPath(request.auth.uid, profileId)).data.blockedBy != request.auth.uid)
           && (resource.data.discoverable == true
             || (exists(friendPath(request.auth.uid, profileId)) && get(friendPath(request.auth.uid, profileId)).data.status in ['active', 'pending']))));
-      allow list: if signedIn() && (isAdmin() || resource.data.discoverable == true);
+      // Sem listagem para usuários: a busca por nome não existe (as regras não filtram bloqueios em listas). Só get por @usuário/código.
+      allow list: if isAdmin();
       allow create: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)
         && claims(profileId, request.resource.data);
       allow update: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)

@@ -15,7 +15,7 @@ export default function SocialTab({ users, profiles, friendships, log, error }) 
     <div className="space-y-5" role="tabpanel" id="panel-social" aria-labelledby="tab-social">
       <section aria-label="Resumo social" className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi label="Perfis sociais" value={o.profiles} />
-        <Kpi label="Na busca" value={o.discoverable} />
+        <Kpi label="Nome visível" value={o.discoverable} />
         <Kpi label="No ranking" value={o.ranking} />
         <Kpi label="Amizades ativas" value={o.friends} />
         <Kpi label="Pedidos pendentes" value={o.pending} />

@@ -20,6 +20,7 @@ O plano gratuito do Firebase (Spark) não tem Cloud Functions: por isso o códig
 
 - **Aluno:** onboarding, painel com meta semanal, fichas, execução (séries, carga, repetições, RPE, descanso, tela sempre acesa), histórico com detalhes, evolução por exercício (1RM, volume, recordes), medidas, ferramentas (1RM, anilhas, conversões, timer), Coach IA e nutrição, exportar e excluir os próprios dados (LGPD).
 - **Meu treinador:** o aluno pede o vínculo (busca por nome, código ou link `/convite/<código>`) e o treinador aceita antes de ver qualquer dado. O aluno pode cancelar ou encerrar quando quiser.
+- **Amigos e ranking:** pedido de amizade por @usuário ou código de amigo (sem busca por nome, de propósito: as regras do Firestore não conseguem esconder quem bloqueou); ranking semanal opcional de "Consistência registrada" (treinos, dias ativos, sequência), sem peso, medidas ou check-ins.
 - **Treinador:** fila de ação do dia, alunos com aderência, solicitações de vínculo, atribuição de fichas, financeiro (cobrança por WhatsApp), chat com respostas rápidas, biblioteca e editor de fichas.
 - **Admin:** visão geral com pendências de conteúdo, exercícios (filtros, edição em painel lateral, arquivar, importação com prévia), fichas com avisos, vínculos e histórico de alterações (`adminLog`).
 

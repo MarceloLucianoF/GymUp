@@ -342,10 +342,12 @@ test('social: perfil público só nasce junto das reservas de @usuário e códig
   await assertFails(setDoc(doc(db('stu2'), 'publicProfiles/stu1'), p));        // não é dele
 });
 
-test('social: busca só lista perfis descobríveis; perfil privado só para dono, admin e amigo ativo', async () => {
+test('social: sem listagem de perfis (só admin); perfil privado só para dono, admin e amigo ativo; get de descobrível por @usuário/código', async () => {
   await seedSocial();
-  await assertSucceeds(getDocs(query(collection(db('coach1'), 'publicProfiles'), where('discoverable', '==', true))));
+  await assertFails(getDocs(query(collection(db('coach1'), 'publicProfiles'), where('discoverable', '==', true))));   // sem busca por nome
   await assertFails(getDocs(collection(db('coach1'), 'publicProfiles')));
+  await assertSucceeds(getDocs(collection(db('admin1'), 'publicProfiles')));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'publicProfiles/stu2')));        // descobrível: get por @usuário/código
   await assertFails(getDoc(doc(db('stu1'), 'publicProfiles/stu3')));           // stu3 não é descobrível
   await assertSucceeds(getDoc(doc(db('stu3'), 'publicProfiles/stu3')));
   await assertSucceeds(getDoc(doc(db('stu1'), 'publicProfiles/stu2')));
@@ -430,7 +432,6 @@ test('social: listas do próprio usuário funcionam (amizades por userA/userB e 
   await assertFails(getDocs(query(collection(a, 'friendships'), where('userA', '==', 'stu2'))));
   await assertFails(getDocs(collection(a, 'friendships')));
   await assertSucceeds(getDoc(doc(db('stu9'), 'publicProfiles/stu9')));            // próprio, ainda não existe
-  await assertSucceeds(getDocs(query(collection(a, 'publicProfiles'), where('discoverable', '==', true), where('displayNameLower', '>=', 'pes'), where('displayNameLower', '<=', 'pes\uf8ff'))));
 });
 
 test('social: ler amizade inexistente do próprio par funciona; de outro par não', async () => {

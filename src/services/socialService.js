@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteField, doc, getDoc, getDocs, limit, query, setDoc, Timestamp, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteField, doc, getDoc, getDocs, query, setDoc, Timestamp, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { consistency, publicStatsOf, rankRows } from '../utils/consistency';
 
@@ -76,14 +76,7 @@ export async function saveSocialProfile(user, input, existing) {
   if (existing && existing.shareRanking !== !!input.shareRanking) log(user.uid, input.shareRanking ? 'entrar-ranking' : 'sair-ranking');
 }
 
-// ---- busca ----
-export async function searchByName(term, max = 12) {
-  const t = lowerName(term);
-  if (t.length < 2) return [];
-  const snap = await getDocs(query(collection(db, 'publicProfiles'), where('discoverable', '==', true), where('displayNameLower', '>=', t), where('displayNameLower', '<=', `${t}`), limit(max)));
-  return snap.docs.map((d) => d.data());
-}
-
+// ---- busca (só por @usuário ou código: a busca por nome fica para quando o servidor puder filtrar bloqueios) ----
 /** Busca por @usuário ou por código de amigo (8 caracteres). Devolve o perfil, ou só o uid se o perfil for privado. */
 export async function findByHandleOrCode(raw) {
   const text = String(raw || '').trim();
