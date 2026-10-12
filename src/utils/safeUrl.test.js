@@ -5,11 +5,16 @@ describe('safeHttpUrl', () => {
     expect(safeHttpUrl('https://exemplo.com/a?b=1')).toBe('https://exemplo.com/a?b=1');
     expect(safeHttpUrl(' http://exemplo.com ')).toBe('http://exemplo.com/');
   });
+  it('aceita caminho do próprio site', () => {
+    expect(safeHttpUrl('/exercicios/supino-maquina.jpg')).toBe('/exercicios/supino-maquina.jpg');
+  });
   it('bloqueia esquemas perigosos e entradas inválidas', () => {
     expect(safeHttpUrl('javascript:alert(1)')).toBe('');
     expect(safeHttpUrl('JaVaScRiPt:alert(1)')).toBe('');
     expect(safeHttpUrl('data:text/html,<script>1</script>')).toBe('');
     expect(safeHttpUrl('//exemplo.com')).toBe('');
+    expect(safeHttpUrl('/exercicios/../segredo.jpg')).toBe('');
+    expect(safeHttpUrl('/ex icio.jpg')).toBe('');
     expect(safeHttpUrl('')).toBe('');
     expect(safeHttpUrl(null)).toBe('');
     expect(safeHttpUrl(42)).toBe('');
