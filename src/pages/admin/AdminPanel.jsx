@@ -17,13 +17,14 @@ import OverviewTab from './panel/OverviewTab';
 import ExercisesTab from './panel/ExercisesTab';
 import TrainingsTab from './panel/TrainingsTab';
 import LinksTab from './panel/LinksTab';
+import SocialTab from './panel/SocialTab';
 import ExerciseEditor from './panel/ExerciseEditor';
 import TrainingEditor from './panel/TrainingEditor';
 import ImportModal from './panel/ImportModal';
 import { logAdminAction } from './panel/adminLog';
 import { exerciseIssues, trainingIssues, usageByTraining } from './panel/adminUtils';
 
-const TABS = [['overview', 'Visão geral'], ['exercises', 'Exercícios'], ['trainings', 'Fichas'], ['links', 'Vínculos']];
+const TABS = [['overview', 'Visão geral'], ['exercises', 'Exercícios'], ['trainings', 'Fichas'], ['links', 'Vínculos'], ['social', 'Social']];
 const withId = (d) => ({ firestoreId: d.id, ...d.data() });
 const stamp = () => new Date().toISOString();
 
@@ -41,6 +42,7 @@ export default function AdminPanel() {
   const [statsRows, setStatsRows] = useState(null);
   const [links, setLinks] = useState([]);
   const [linksError, setLinksError] = useState(false);
+  const [social, setSocial] = useState({ profiles: [], friendships: [], log: [], error: false });
   const [log, setLog] = useState([]);
   const [logError, setLogError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,13 @@ export default function AdminPanel() {
       const snap = await getDocs(collection(db, 'coachLinks'));
       setLinks(snap.docs.map((d) => ({ studentId: d.id, ...d.data() }))); setLinksError(false);
     } catch (error) { console.error(error); setLinksError(true); }
+    try {
+      const [p, f, l] = await Promise.all([
+        getDocs(collection(db, 'publicProfiles')), getDocs(collection(db, 'friendships')),
+        getDocs(query(collection(db, 'socialLog'), orderBy('at', 'desc'), limit(15)))
+      ]);
+      setSocial({ profiles: p.docs.map((d) => d.data()), friendships: f.docs.map((d) => ({ id: d.id, ...d.data() })), log: l.docs.map((d) => ({ id: d.id, ...d.data() })), error: false });
+    } catch (error) { console.error(error); setSocial((s) => ({ ...s, error: true })); }
     try {
       const snap = await getDocs(query(collection(db, 'adminLog'), orderBy('at', 'desc'), limit(8)));
       setLog(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); setLogError(false);
@@ -258,6 +267,7 @@ export default function AdminPanel() {
                 onDuplicate={duplicateExercise} onArchive={archiveExercise} onDelete={deleteExercise}
               />
             )}
+            {tab === 'social' && <SocialTab users={users} profiles={social.profiles} friendships={social.friendships} log={social.log} error={social.error} />}
             {tab === 'links' && <LinksTab users={users} links={links} error={linksError} />}
             {tab === 'trainings' && (
               <TrainingsTab

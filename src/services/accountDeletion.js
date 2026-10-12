@@ -16,6 +16,7 @@ export const DELETION_STEPS = [
   { id: 'chats', label: 'Apagando conversas' },
   { id: 'trainings', label: 'Apagando fichas criadas por IA' },
   { id: 'notes', label: 'Apagando anotações do treinador sobre você' },
+  { id: 'social', label: 'Apagando perfil social e amizades' },
   { id: 'profile', label: 'Apagando perfil' },
   { id: 'login', label: 'Encerrando o login' }
 ];
@@ -107,6 +108,29 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
       } catch (error) {
         if (error?.code !== 'permission-denied') throw error;
       }
+    }
+    return removed;
+  });
+
+  // Perfil social, @usuário, código de amigo e amizades. Bloqueios feitos POR OUTRA pessoa não podem ser apagados por quem foi
+  // bloqueado (permission-denied): ficam só como um par de IDs, sem nome nem dados.
+  await run('social', async () => {
+    let removed = 0;
+    const tryDelete = async (ref) => {
+      try { await deps.deleteDoc(ref); removed += 1; } catch (error) { if (error?.code !== 'permission-denied') throw error; }
+    };
+    try {
+      const profile = await deps.getDoc(deps.doc(deps.db, 'publicProfiles', uid));
+      if (profile?.exists?.()) {
+        const data = profile.data() || {};
+        await tryDelete(deps.doc(deps.db, 'publicProfiles', uid));
+        if (data.handle) await tryDelete(deps.doc(deps.db, 'handles', data.handle));
+        if (data.friendCode) await tryDelete(deps.doc(deps.db, 'friendCodes', data.friendCode));
+      }
+    } catch (error) { if (error?.code !== 'permission-denied') throw error; }
+    for (const field of ['userA', 'userB']) {
+      const docs = await refsOf(deps, 'friendships', deps.where(field, '==', uid));
+      for (const d of docs) await tryDelete(d.ref);
     }
     return removed;
   });

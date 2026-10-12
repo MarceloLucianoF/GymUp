@@ -1,4 +1,5 @@
 import { doc, runTransaction } from 'firebase/firestore';
+import { afterCheckIn, afterRemoval } from '../utils/consistency';
 
 // Gravação e remoção de check-ins mantendo o contador `userStats/{uid}` consistente.
 // Tudo acontece numa transação: as regras do Firestore só aceitam mudar o contador junto da criação/remoção
@@ -12,8 +13,10 @@ export async function saveCheckIn(db, uid, id, data, run = runTransaction) {
     const [existing, stats] = await Promise.all([tx.get(checkInRef), tx.get(statsRef)]);
     tx.set(checkInRef, data);
     if (existing.exists()) return false;
-    const previous = stats.exists() ? Number(stats.data().checkInCount) || 0 : 0;
-    tx.set(statsRef, { uid, checkInCount: previous + 1, lastCheckInAt: String(data.date || new Date().toISOString()), lastCheckInId: id });
+    const prev = stats.exists() ? stats.data() : null;
+    const date = String(data.date || new Date().toISOString());
+    // Contagem total + consistência semanal (treinos, dias ativos, sequência): só datas, nenhum dado de saúde.
+    tx.set(statsRef, { uid, checkInCount: (Number(prev?.checkInCount) || 0) + 1, lastCheckInAt: date, lastCheckInId: id, ...afterCheckIn(prev, date) });
     return true;
   });
 }
@@ -29,7 +32,7 @@ export async function removeCheckIn(db, uid, id, run = runTransaction) {
     if (stats.exists()) {
       const current = Number(stats.data().checkInCount) || 0;
       const data = stats.data();
-      tx.set(statsRef, { uid, checkInCount: Math.max(0, current - 1), lastCheckInAt: data.lastCheckInAt, lastCheckInId: data.lastCheckInId, lastRemovedId: id });
+      tx.set(statsRef, { uid, checkInCount: Math.max(0, current - 1), lastCheckInAt: data.lastCheckInAt, lastCheckInId: data.lastCheckInId, lastRemovedId: id, ...afterRemoval(data, existing.data().date) });
     }
     return true;
   });
