@@ -184,3 +184,7 @@ html:not(.dark) .text-gradient-brand {
 
 /* Brilhos decorativos (aurora) passam da borda: não podem alargar a página no celular. */
 html, body { overflow-x: clip; }
+
+/* No escuro, o brilho amarelo sobre fundo azul-escuro ficava lamacento (oliva): mais sutil. */
+.dark .aurora-bg::before { opacity: 0.2; }
+.dark .aurora-bg::after { opacity: 0.12; }
