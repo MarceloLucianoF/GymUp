@@ -56,7 +56,7 @@ function Step({ step, data, setField, bmi, plan, coachError, onContinueWithoutCo
           <div className="grid grid-cols-3 gap-3">
             <NumberField id="ob-age" label="Idade" unit="anos" value={data.age} onChange={(v) => setField('age', v)} placeholder="25" />
             <NumberField id="ob-weight" label="Peso" unit="kg" inputMode="decimal" value={data.weight} onChange={(v) => setField('weight', v)} placeholder="70" />
-            <NumberField id="ob-height" label="Altura" unit="cm" value={data.height} onChange={(v) => setField('height', v)} placeholder="175" />
+            <NumberField id="ob-height" label="Altura" unit="cm" value={data.height} onChange={(v) => setField('height', v)} placeholder="180" />
           </div>
           <div className="rounded-2xl bg-brand/10 p-4" aria-live="polite">
             <p className="text-sm text-gray-600 dark:text-gray-300">IMC estimado</p>
