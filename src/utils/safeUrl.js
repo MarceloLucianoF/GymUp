@@ -1,8 +1,10 @@
-// Links vindos de dados editáveis (ex.: vídeo da ficha): só http(s). Bloqueia javascript:, data:, etc.
+// Links vindos de dados editáveis (ex.: vídeo da ficha): só http(s) ou caminho do próprio site. Bloqueia javascript:, data:, etc.
 export function safeHttpUrl(value) {
   if (typeof value !== 'string') return '';
   const text = value.trim();
   if (!text) return '';
+  // Caminho do próprio site (ex.: /exercicios/supino.jpg). "//host" (protocolo relativo) não vale.
+  if (/^\/(?!\/)[\w\-./%]+$/.test(text) && !text.includes('..')) return text;
   try {
     const url = new URL(text);
     return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : '';
