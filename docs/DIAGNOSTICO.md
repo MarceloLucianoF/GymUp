@@ -225,3 +225,8 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Início:** nota 29 para 88; FCP 8,6 s para 1,2 s; peso 875 para 327 KiB. **Login:** 52 para 81; **Cadastro:** 83.
 - Causas e correções: fontes do Google (CSS externo bloqueante) agora em `public/fonts` com `@font-face` inline e preload; reCAPTCHA do App Check (~350 KB, ~3 s de CPU) só entra depois do carregamento nas telas públicas, ou na hora com sessão/login (`ensureAppCheck`); iframe de login do Firebase (~90 KB) só ao entrar com Google (`initializeAuth` sem resolver; resolver passado na chamada do popup).
 - Medido sem sessão. Telas autenticadas não foram medidas com Lighthouse (carregam Firestore e App Check desde o início).
+
+## Atualização — biblioteca de exercícios
+- Biblioteca de 22 para 51 exercícios (máquinas, polias e pernas), grupos `peito/costas/ombros/braços/pernas/core`, sem imagens. Vídeos só quando conferidos (oEmbed): Supino Máquina, Puxada Aberta Máquina, Remada Neutra Máquina, Elevação Lateral Máquina e Cadeira Extensora.
+- Removido o vídeo placeholder (`dQw4w9WgXcQ`) de 20 exercícios, de uma ficha com exercícios embutidos e de `src/data/exercises.js` e `scripts/seed.cjs`.
+- Treino A (Peitoral + Dorsal + CORE) do usuário: removidos Barra Fixa, Extensão Lombar e Abdominal; incluídos Supino Máquina e Puxada Aberta Máquina.
