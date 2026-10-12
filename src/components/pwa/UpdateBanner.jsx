@@ -22,7 +22,7 @@ export default function UpdateBanner() {
   return (
     <div role="alert" className="fixed bottom-24 inset-x-4 z-[90] mx-auto max-w-md flex items-center justify-between gap-3 rounded-2xl bg-gray-900 text-white px-4 py-3 shadow-xl border border-white/10">
       <span className="text-sm font-bold">Nova versão disponível</span>
-      <button type="button" onClick={update} className="min-h-[44px] px-4 rounded-xl bg-brand text-black text-sm font-black flex items-center gap-1.5">
+      <button type="button" onClick={update} className="min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] text-black text-sm font-black flex items-center gap-1.5">
         <RefreshCw className="w-4 h-4" aria-hidden="true" /> Atualizar
       </button>
     </div>

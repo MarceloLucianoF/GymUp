@@ -142,7 +142,7 @@ const FreeTimer = () => {
                     <div className="flex gap-3 items-end">
                         <div className="flex-1"><Field label="Personalizado (segundos)" value={custom} onChange={setCustom} step="1" /></div>
                         <button type="button" onClick={() => start(Math.floor(Number(custom)))} disabled={!(Number(custom) > 0)}
-                            className="min-h-[48px] px-5 rounded-xl bg-brand text-black font-black disabled:opacity-40">Iniciar</button>
+                            className="min-h-[48px] px-5 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] text-black font-black disabled:opacity-40">Iniciar</button>
                     </div>
                 </>
             )}

@@ -157,7 +157,7 @@ export default function Onboarding() {
           <PartyPopper aria-hidden="true" className="w-14 h-14 text-brand mx-auto mb-4" />
           <h1 ref={headingRef} tabIndex={-1} className="font-display text-3xl font-bold text-gray-900 dark:text-white outline-none">Tudo pronto{data.displayName ? `, ${data.displayName.trim().split(' ')[0]}` : ''}!</h1>
           <p className="mt-3 text-gray-600 dark:text-gray-300">{ob.plan.quote}</p>
-          <button type="button" onClick={goToDashboard} className="mt-8 min-h-[52px] w-full rounded-2xl bg-brand text-black font-bold">
+          <button type="button" onClick={goToDashboard} className="mt-8 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] text-black font-bold">
             Ver meu primeiro treino
           </button>
         </div>

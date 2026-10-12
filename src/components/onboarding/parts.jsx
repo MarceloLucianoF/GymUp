@@ -109,7 +109,7 @@ export function FooterBar({ step, saving, onBack, onNext, nextLabel, children })
           type="button"
           onClick={onNext}
           disabled={saving}
-          className="flex-1 min-h-[48px] rounded-2xl font-bold bg-brand text-black hover:brightness-95 disabled:opacity-60 flex items-center justify-center gap-2"
+          className="flex-1 min-h-[48px] rounded-2xl font-bold bg-gradient-to-r from-brand to-[#FF9800] text-black shadow-lg shadow-brand/20 hover:brightness-95 disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {saving ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : null}
           {nextLabel}

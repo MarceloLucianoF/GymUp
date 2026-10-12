@@ -35,7 +35,7 @@ export default function NotificationSettings({ uid }) {
       <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
         {permission === 'unsupported' && 'Este navegador não suporta notificações.'}
         {permission === 'default' && (
-          <button type="button" onClick={enable} className="min-h-[44px] px-4 rounded-xl bg-brand text-black text-sm font-black">Permitir notificações</button>
+          <button type="button" onClick={enable} className="min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] text-black text-sm font-black">Permitir notificações</button>
         )}
         {permission === 'granted' && 'Permissão concedida.'}
         {permission === 'denied' && 'Permissão negada. Libere nas configurações do navegador/app (ícone de cadeado ou Configurações do site > Notificações) e recarregue.'}
