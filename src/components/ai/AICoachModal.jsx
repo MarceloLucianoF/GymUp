@@ -70,7 +70,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     if (isOpen && userProfile) {
       const data = aiService.calculateNutritionAndMacros({
         weight: userProfile.weight || 70,
-        height: userProfile.height || 175,
+        height: userProfile.height || 180,
         age: userProfile.age || 25,
         goal: userProfile.goal || 'Hipertrofia'
       });

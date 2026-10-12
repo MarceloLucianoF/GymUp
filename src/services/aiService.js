@@ -59,9 +59,9 @@ const withModelFallback = async (run) => {
   throw lastError || new Error('Nenhum modelo de IA disponível.');
 };
 
-export const calcNutrition = ({ weight = 70, height = 175, age = 25, goal = 'Hipertrofia' }) => {
+export const calcNutrition = ({ weight = 70, height = 180, age = 25, goal = 'Hipertrofia' }) => {
   const w = parseFloat(weight) || 70;
-  const h = parseFloat(height) || 175;
+  const h = parseFloat(height) || 180;
   const a = parseInt(age, 10) || 25;
 
   const bmr = 10 * w + 6.25 * h - 5 * a + 5;
@@ -243,7 +243,7 @@ export const aiService = {
     const name = userProfile?.displayName || 'Atleta';
     const goal = userProfile?.goal || 'Emagrecimento';
     const weightNum = parseFloat(userProfile?.weight) || 75;
-    const heightNum = parseFloat(userProfile?.height) || 175;
+    const heightNum = parseFloat(userProfile?.height) || 180;
     const targetProteinGrams = Math.round(weightNum * 2.0);
     const safePrompt = String(prompt || '').slice(0, MAX_PROMPT_LENGTH);
     const systemText = buildSystemInstruction({ name, goal, weightNum, heightNum, targetProteinGrams });
