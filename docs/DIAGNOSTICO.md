@@ -320,3 +320,12 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - Console: Firestore 46% verificadas, AI Logic 23%, Auth 32%; reCAPTCHA com 44 solicitações em 7 dias. Domínios da chave e proteção contra enumeração de e-mail conferidos.
 - Causa provável do baixo percentual: tráfego dos meus testes automatizados e a primeira chamada de renovação do Auth saindo antes do App Check iniciar. Ajuste: quem já tem sessão inicia o App Check imediatamente (`bt_has_session`).
 - Decisão: **sem enforce por enquanto**; reler em 19/10 com uso real, mínimo de 200 solicitações por produto e fora o tráfego de teste; Authentication fica sem enforce. Detalhes em `docs/APPCHECK.md`.
+
+## Atualização — auditoria de dependências (12/10/2026)
+- **Antes (`npm audit --omit=dev`):** app 15 (1 crítica, 4 altas); MCP 9 (2 altas); Worker 0. **Depois:** app 6 (0 críticas, 4 altas, 2 moderadas); MCP 0; Worker 0.
+- **O que mudou:** `firebase-admin` e `ajv` passaram para `devDependencies` (só scripts e testes usam; não vão para o navegador nem para o Worker) — isso tirou a crítica (`websocket-driver`) da lista de produção; `react-router-dom` 6.30.3 → 6.30.6; `npm audit fix` sem `--force`; MCP atualizado de `firebase-admin` 12 para 14 (leitura no Firestore testada; sintaxe do servidor ok).
+- **Restam e por quê:**
+  - `@grpc/grpc-js` (via `firebase`/`@firebase/firestore`, 4 altas): é código de servidor Node; o pacote para navegador não o inclui, então não está no bundle. O "conserto" sugerido pelo `npm audit` é um downgrade absurdo do `firebase`; ignorado. Reavaliar a cada atualização do `firebase`.
+  - `react-router` (2 moderadas, só corrige na 7.18): redirecionamento aberto via `Link`/`useNavigate` com destino controlado por quem ataca. O app só navega para caminhos fixos ou montados com IDs (nenhum destino vem de parâmetro de URL), então não é explorável aqui. Migrar para a v7 tem risco com o Jest do CRA 5; deixar para quando o CRA sair.
+  - Ferramentas de build/teste (`react-scripts`, emulador): 105 avisos no total contando as de desenvolvimento; não entram no que é publicado.
+- Rotina sugerida: rodar `npm audit --omit=dev` em `.`, `worker` e `mcp` uma vez por mês e antes de cada deploy grande.
