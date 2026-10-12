@@ -26,7 +26,8 @@ export default function ForgotPassword() {
     setSent(false);
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      // Depois de trocar a senha na página do Firebase, o botão "Continuar" leva de volta ao login do app.
+      await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
       toast.success('Email de recuperação enviado! Verifique sua caixa de entrada.');
       setEmail('');
       setSent(true);
