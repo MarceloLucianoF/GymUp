@@ -240,3 +240,72 @@ test('userStats: leitura só do dono e do admin; lista só do admin; admin recon
   await assertSucceeds(setDoc(doc(db('admin1'), 'userStats/stu1'), stats(7, 'c1', { uid: 'stu1' })));
   await assertSucceeds(deleteDoc(doc(db('stu1'), 'userStats/stu1')));
 });
+
+// ---- vínculo aluno-treinador (coachLinks) ----
+const link = (over = {}) => ({ studentId: 'stu3', studentName: 'Aluno 3', coachId: 'coach1', status: 'pending', requestedBy: 'student', createdAt: '2026-10-12T10:00:00Z', updatedAt: '2026-10-12T10:00:00Z', ...over });
+
+async function seedStu3() {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'users/stu3'), { uid: 'stu3', role: 'user', displayName: 'Aluno 3' }); });
+}
+
+test('vínculo: aluno pede, só para si, só a treinador; treinador não pede por ele', async () => {
+  await seedStu3();
+  await assertSucceeds(setDoc(doc(db('stu3'), 'coachLinks/stu3'), link()));
+  await assertFails(setDoc(doc(db('stu3'), 'coachLinks/stu3'), link({ coachId: 'stu1' })));      // não é treinador
+  await assertFails(setDoc(doc(db('stu3'), 'coachLinks/stu3'), link({ status: 'active' })));     // não se auto-aprova
+  await assertFails(setDoc(doc(db('stu1'), 'coachLinks/stu3'), link()));                          // outro aluno
+  await assertFails(setDoc(doc(db('coach1'), 'coachLinks/stu3'), link()));                        // treinador não pede
+});
+
+test('vínculo: só participantes e admin leem; lista só pelo próprio filtro', async () => {
+  await seedStu3();
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'coachLinks/stu3'), link()); });
+  await assertSucceeds(getDoc(doc(db('stu3'), 'coachLinks/stu3')));
+  await assertSucceeds(getDoc(doc(db('coach1'), 'coachLinks/stu3')));
+  await assertSucceeds(getDoc(doc(db('admin1'), 'coachLinks/stu3')));
+  await assertFails(getDoc(doc(db('coach2'), 'coachLinks/stu3')));
+  await assertFails(getDoc(doc(db('stu1'), 'coachLinks/stu3')));
+  await assertSucceeds(getDocs(query(collection(db('coach1'), 'coachLinks'), where('coachId', '==', 'coach1'))));
+  await assertFails(getDocs(collection(db('coach1'), 'coachLinks')));
+});
+
+test('vínculo: treinador aceita junto do coachId do aluno (mesmo lote); sem o lote falha', async () => {
+  await seedStu3();
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'coachLinks/stu3'), link()); });
+  const c = db('coach1');
+  await assertFails(updateDoc(doc(c, 'coachLinks/stu3'), { status: 'active', updatedAt: 'x' }));
+  await assertFails(updateDoc(doc(c, 'users/stu3'), { coachId: 'coach1', updatedAt: 'x' }));
+  const b = writeBatch(c);
+  b.update(doc(c, 'coachLinks/stu3'), { status: 'active', updatedAt: '2026-10-12T11:00:00Z' });
+  b.update(doc(c, 'users/stu3'), { coachId: 'coach1', updatedAt: '2026-10-12T11:00:00Z' });
+  await assertSucceeds(b.commit());
+  await assertSucceeds(getDoc(doc(c, 'users/stu3'))); // agora é aluno vinculado
+});
+
+test('vínculo: outro treinador não aceita; treinador não muda outros campos; recusa não vincula', async () => {
+  await seedStu3();
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'coachLinks/stu3'), link()); });
+  const c2 = db('coach2');
+  const bad = writeBatch(c2);
+  bad.update(doc(c2, 'coachLinks/stu3'), { status: 'active', updatedAt: 'x' });
+  bad.update(doc(c2, 'users/stu3'), { coachId: 'coach2', updatedAt: 'x' });
+  await assertFails(bad.commit());
+  await assertFails(updateDoc(doc(db('coach1'), 'coachLinks/stu3'), { status: 'rejected', studentName: 'Outro', updatedAt: 'x' }));
+  await assertSucceeds(updateDoc(doc(db('coach1'), 'coachLinks/stu3'), { status: 'rejected', updatedAt: 'x' }));
+});
+
+test('vínculo: aluno só desfaz (coachId null); não se vincula sozinho; treinador encerra', async () => {
+  // stu1 já tem coach1
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { coachId: 'coach2' }));
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'users/stu1'), { coachId: null }));
+  await assertSucceeds(updateDoc(doc(db('coach2'), 'users/stu2'), { coachId: null, updatedAt: 'x' }));
+  await assertFails(updateDoc(doc(db('coach1'), 'users/stu2'), { coachId: null }));  // não é dele
+});
+
+test('vínculo: pedido novo só sem treinador atual; cancelar vira revoked', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'coachLinks/stu1'), link({ studentId: 'stu1', studentName: 'Aluno 1', status: 'active' })); });
+  await assertFails(setDoc(doc(db('stu1'), 'coachLinks/stu1'), link({ studentId: 'stu1', coachId: 'coach2' }))); // stu1 tem coach1
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'coachLinks/stu1'), { status: 'revoked', updatedAt: 'x' }));
+  await assertFails(deleteDoc(doc(db('stu1'), 'coachLinks/stu1')));
+  await assertSucceeds(deleteDoc(doc(db('admin1'), 'coachLinks/stu1')));
+});

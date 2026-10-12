@@ -73,11 +73,13 @@ service cloud.firestore {
 
     function ownProfileChanges() {
       let fields = request.resource.data.diff(resource.data).affectedKeys();
+      // coachId: o aluno só pode DESFAZER o vínculo (null). Vincular passa por coachLinks e o aceite do treinador.
       return (fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
         'updatedAt', 'lastWorkoutDate', 'coachId',
         'experience', 'weeklyGoal', 'onboardedAt', 'phone'
-      ]) && validProfileExtras(request.resource.data)) || (isCoach() && fields.hasOnly([
+      ]) && validProfileExtras(request.resource.data)
+        && (!fields.hasAny(['coachId']) || request.resource.data.get('coachId', null) == null)) || (isCoach() && fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
         'updatedAt', 'lastWorkoutDate', 'bio', 'phone', 'pixKey', 'defaultMonthlyFee'
       ]));
@@ -89,6 +91,23 @@ service cloud.firestore {
         || nextId == null
         || (nextId is string
           && ownsCoachTraining(get(/databases/$(database)/documents/trainings/$(nextId)).data));
+    }
+
+    // Vínculo aluno-treinador: o treinador aceita (coachLinks pending -> active) e, no mesmo lote, grava coachId no aluno.
+    function coachAcceptsLink(studentId) {
+      let link = get(/databases/$(database)/documents/coachLinks/$(studentId)).data;
+      return isCoach()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coachId', 'updatedAt'])
+        && resource.data.role == 'user' && resource.data.get('coachId', null) == null
+        && request.resource.data.coachId == request.auth.uid
+        && link.coachId == request.auth.uid && link.status == 'pending'
+        && getAfter(/databases/$(database)/documents/coachLinks/$(studentId)).data.status == 'active';
+    }
+
+    // O treinador pode encerrar o vínculo dos próprios alunos (coachId vira null).
+    function coachEndsLink() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coachId', 'updatedAt'])
+        && request.resource.data.get('coachId', null) == null;
     }
 
     match /users/{userId} {
@@ -121,6 +140,8 @@ service cloud.firestore {
                   'currentTrainingId', 'monthlyFee', 'paymentStatus',
                   'paymentDate', 'lastPaymentUpdate', 'updatedAt'
                 ]))
+              || coachAcceptsLink(userId)
+              || (linkedStudent(resource.data) && coachEndsLink())
             )
           )
         );
@@ -154,6 +175,43 @@ service cloud.firestore {
     // para que o treinador não forje nem apague dados do aluno.
     function ownerOrAdmin(uid) {
       return signedIn() && uid is string && (request.auth.uid == uid || isAdmin());
+    }
+
+    // Solicitações de vínculo (1 por aluno: o ID é o do aluno). Só participantes leem; o aluno pede/cancela,
+    // o treinador aceita (junto de users.coachId, no mesmo lote), recusa ou encerra.
+    function coachLinkShape(d) {
+      return d.keys().hasOnly(['studentId', 'studentName', 'coachId', 'status', 'requestedBy', 'createdAt', 'updatedAt'])
+        && d.studentId is string && d.coachId is string
+        && d.status in ['pending', 'active', 'rejected', 'revoked']
+        && d.createdAt is string && d.updatedAt is string
+        && d.get('studentName', '') is string && d.get('studentName', '').size() <= 100;
+    }
+
+    match /coachLinks/{studentId} {
+      allow get: if signedIn() && (request.auth.uid == studentId || isAdmin() || (resource != null && resource.data.coachId == request.auth.uid));
+      allow list: if signedIn() && (resource.data.coachId == request.auth.uid || resource.data.studentId == request.auth.uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == studentId && coachLinkShape(request.resource.data)
+        && request.resource.data.studentId == studentId && request.resource.data.status == 'pending'
+        && request.resource.data.requestedBy == 'student'
+        && request.resource.data.coachId != studentId && isTrainerId(request.resource.data.coachId)
+        && get(/databases/$(database)/documents/users/$(studentId)).data.get('coachId', null) == null;
+      allow update: if signedIn() && coachLinkShape(request.resource.data) && request.resource.data.studentId == studentId && (
+        // aluno: pedir de novo (sem treinador ativo) ou cancelar/encerrar
+        (request.auth.uid == studentId && (
+          (request.resource.data.status == 'pending' && request.resource.data.requestedBy == 'student'
+            && request.resource.data.coachId != studentId && isTrainerId(request.resource.data.coachId)
+            && get(/databases/$(database)/documents/users/$(studentId)).data.get('coachId', null) == null)
+          || (request.resource.data.status == 'revoked' && request.resource.data.coachId == resource.data.coachId)))
+        // treinador: aceitar, recusar ou encerrar; nada além do status muda
+        || (resource.data.coachId == request.auth.uid && request.resource.data.coachId == resource.data.coachId
+          && request.resource.data.requestedBy == resource.data.requestedBy
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.get('studentName', '') == resource.data.get('studentName', '')
+          && request.resource.data.status in ['active', 'rejected', 'revoked']
+          && (request.resource.data.status != 'active' || (resource.data.status == 'pending'
+            && getAfter(/databases/$(database)/documents/users/$(studentId)).data.get('coachId', null) == request.auth.uid)))
+      );
+      allow delete: if isAdmin();
     }
 
     match /measurements/{docId} {

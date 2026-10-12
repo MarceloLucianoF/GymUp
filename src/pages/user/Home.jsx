@@ -10,7 +10,8 @@ import StudentChatWidget from '../../components/chat/StudentChatWidget';
 import AICoachModal from '../../components/ai/AICoachModal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import ActiveWorkoutBanner from '../../components/dashboard/ActiveWorkoutBanner';
-import LinkCoachModal from '../../components/dashboard/LinkCoachModal';
+import CoachLinkModal from '../../components/coach/CoachLinkModal';
+import useMyCoach from '../../hooks/useMyCoach';
 import RecommendedWorkoutCard from '../../components/dashboard/RecommendedWorkoutCard';
 import WeeklyGoalCard from '../../components/dashboard/WeeklyGoalCard';
 import VolumeTrend from '../../components/dashboard/VolumeTrend';
@@ -46,6 +47,7 @@ export default function Home() {
   const [goal, setGoal] = useWeeklyGoal(user?.uid);
 
   const [showLinkCoach, setShowLinkCoach] = useState(false);
+  const mine = useMyCoach(user?.uid, userProfile);
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
@@ -102,13 +104,13 @@ export default function Home() {
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 dark:text-brand">{stats.level}</span>
-                  {!loading && !userProfile?.coachId && (
+                  {!loading && !mine.loading && mine.state !== 'active' && (
                     <button
                       type="button"
                       onClick={() => setShowLinkCoach(true)}
-                      className="pressable flex min-h-[28px] items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:border-white/15 dark:bg-white/5 dark:text-gray-300"
+                      className="pressable flex min-h-[28px] items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:border-white/15 dark:bg-white/10 dark:text-gray-200"
                     >
-                      <Link2 className="h-3 w-3" aria-hidden="true" /> Vincular Treinador
+                      <Link2 className="h-3 w-3" aria-hidden="true" /> {mine.state === 'pending' ? 'Solicitação enviada' : 'Meu treinador'}
                     </button>
                   )}
                 </div>
@@ -347,12 +349,9 @@ export default function Home() {
           onConfirm={handleDiscardActiveWorkout}
         />
 
-        <LinkCoachModal
-          isOpen={showLinkCoach}
-          onClose={() => setShowLinkCoach(false)}
-          currentUserId={user.uid}
-          onSuccess={refresh}
-        />
+        {showLinkCoach && (
+          <CoachLinkModal user={user} profile={userProfile} mine={mine} onClose={() => setShowLinkCoach(false)} onChanged={refresh} />
+        )}
 
         <AICoachModal
           isOpen={isAIModalOpen}

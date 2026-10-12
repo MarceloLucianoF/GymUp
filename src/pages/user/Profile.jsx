@@ -5,18 +5,20 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { useConfirm } from '../../hooks/useConfirm';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import usePageMeta from '../../hooks/usePageMeta';
 import { exportMyData, deletionMailto } from '../../utils/exportData';
 import PageHeader from '../../components/ui/PageHeader';
-import { Download, Trash2, ArrowLeft, AlertTriangle, User, Camera, MessageSquare, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
-import { getPublicCoach } from '../../services/coachProfile';
+import { Download, Trash2, ArrowLeft, AlertTriangle, User, Camera, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
+import MyCoachCard from '../../components/coach/MyCoachCard';
 import NotificationSettings from '../../components/pwa/NotificationSettings';
 import DeleteAccountModal from '../../components/account/DeleteAccountModal';
 
 export default function Profile() {
   const { confirm, dialog } = useConfirm();
   const { user, userProfile, logout } = useAuthContext();
+  const [searchParams] = useSearchParams();
+  const initialCoachCode = searchParams.get('coach') || '';
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   usePageMeta('Meu perfil', 'Dados, medidas e preferências.', { noindex: true });
@@ -39,7 +41,6 @@ export default function Profile() {
   
   const [loading, setLoading] = useState(true);
   const [originalData, setOriginalData] = useState({}); 
-  const [coachData, setCoachData] = useState(null); // Dados do Coach
   const [formData, setFormData] = useState({
     displayName: '',
     goal: 'Hipertrofia',
@@ -74,11 +75,6 @@ export default function Profile() {
           setFormData(initialData);
           setOriginalData(initialData);
 
-          // Busca dados do Coach se existir vínculo
-          if (data.coachId) {
-              const coach = await getPublicCoach(data.coachId);
-              if (coach) setCoachData(coach);
-          }
         }
       } catch (error) {
         console.error("Erro perfil:", error);
@@ -286,30 +282,8 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    {/* --- CARD DO TREINADOR --- */}
-                    {coachData && (
-                        <div className="bg-brand/10 border border-brand/20 rounded-2xl p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] font-bold text-amber-700 dark:text-brand uppercase mb-1">Seu Treinador</p>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-brand/20 dark:bg-brand/10 flex items-center justify-center text-brand dark:text-brand-dark font-bold text-sm">
-                                        {coachData.displayName?.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-gray-800 dark:text-white text-sm">{coachData.displayName}</p>
-                                        <p className="text-xs text-gray-600 dark:text-gray-300">Acompanhando sua evolução</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <button 
-                                type="button"
-                                onClick={() => navigate('/chat')}
-                                className="pressable min-h-[44px] bg-white dark:bg-white/10 text-amber-800 dark:text-amber-400 dark:text-brand px-4 rounded-2xl shadow-sm font-bold text-xs border border-brand/25 flex items-center gap-1.5"
-                            >
-                                <MessageSquare className="w-3.5 h-3.5" /> Chat
-                            </button>
-                        </div>
-                    )}
+                    {/* --- MEU TREINADOR: estados, pedido por busca/código e encerramento --- */}
+                    <MyCoachCard user={user} profile={{ ...userProfile, ...formData, coachId: userProfile?.coachId }} initialOpen={!!initialCoachCode} initialCode={initialCoachCode} />
 
                     <div className="border-t border-gray-100 dark:border-gray-700 my-6"></div>
 

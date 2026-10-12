@@ -246,3 +246,13 @@ Nome e marca centralizados em `src/config/brand.js` e `src/components/brand/Bran
 - **Backfill/reconciliação:** `node scripts/backfill-user-stats.cjs [apply]` compara com a contagem real (9 alunos: 0 diferenças após aplicar e após gravar/apagar em produção) e registra no `adminLog`.
 - Excluir a conta do aluno também apaga o `userStats`.
 - **Limite:** um cliente adulterado pode deixar de atualizar o contador (não de inflá-lo); o script de reconciliação corrige.
+
+## Atualização — vínculo aluno-treinador (solicitação e aceite)
+- Antes: o botão "Vincular treinador" tentava ler o perfil privado do treinador (negado pelas regras) e gravava `coachId` direto. Agora o fluxo é **pedido do aluno → aceite do treinador**.
+- **`coachLinks/{studentId}`** (`pending | active | rejected | revoked`, com `studentName`): só os dois lados e o admin leem. O aluno pede (só para si e só a treinador), cancela ou encerra; o treinador aceita (no mesmo lote grava `users.coachId`), recusa ou encerra. O aluno **não consegue mais se vincular sozinho** (só desfazer: `coachId: null`). Testado no emulador (28 casos).
+- **Aluno:** "Meu treinador" no perfil e no painel (estados nenhum, pendente, ativo, recusado, encerrado), busca por nome (perfis públicos) ou código/link `/convite/<código>`; cadastro com convite vira solicitação.
+- **Treinador:** painel "Solicitações de alunos" (aceitar/recusar) e "Encerrar vínculo" no detalhe do aluno. Convite agora é o link `/convite/<código>`.
+- **Admin:** aba "Vínculos" (ativos, alunos sem treinador, treinadores sem alunos, pendentes, lista com datas).
+- Encerrar o vínculo revoga o acesso do treinador a dados novos; fichas atribuídas e histórico não são apagados.
+- **Modais em portal:** o modal base passou a renderizar em `document.body` (um modal dentro do `<form>` do perfil enviava o formulário de fora).
+- Fora desta etapa: QR Code, limite/validade de convite, múltiplos treinadores, ligação com `adminLog` das ações do aluno/treinador (o admin só lê).

@@ -138,3 +138,20 @@ export function parseImport(json, kind, existing) {
 }
 
 export const entryId = idOf;
+
+// ---- vínculos aluno-treinador ----
+export function linkOverview(users, links) {
+  const students = users.filter((u) => u.role === 'user');
+  const coaches = users.filter((u) => u.role === 'coach');
+  const withCoach = new Set(students.filter((s) => s.coachId).map((s) => s.coachId));
+  return {
+    students: students.length,
+    coaches: coaches.length,
+    active: students.filter((s) => s.coachId).length,
+    withoutCoach: students.filter((s) => !s.coachId).length,
+    coachesWithoutStudents: coaches.filter((c) => !withCoach.has(c.uid)).length,
+    pending: links.filter((l) => l.status === 'pending').length,
+    rejected: links.filter((l) => l.status === 'rejected').length,
+    revoked: links.filter((l) => l.status === 'revoked').length
+  };
+}

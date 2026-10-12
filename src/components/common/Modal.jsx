@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 // Modal base acessível: role="dialog", fecha com Esc/clique fora, devolve o foco ao fechar.
 export default function Modal({ onClose, label, children, className = '' }) {
@@ -19,7 +20,8 @@ export default function Modal({ onClose, label, children, className = '' }) {
     };
   }, []);
 
-  return (
+  // Portal: o modal nunca fica dentro de um <form> da página (formulários aninhados enviariam o formulário de fora).
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade-in">
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
       <div
@@ -33,5 +35,5 @@ export default function Modal({ onClose, label, children, className = '' }) {
         {children}
       </div>
     </div>
-  );
+  , document.body);
 }
