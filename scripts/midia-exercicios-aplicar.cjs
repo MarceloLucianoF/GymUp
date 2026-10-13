@@ -10,6 +10,8 @@ initializeApp({ credential: cert(JSON.parse(fs.readFileSync('serviceAccountKey.j
 const db = getFirestore();
 const ATTRIBUTION = 'Imagens: Free Exercise DB (domínio público) — github.com/yuhonas/free-exercise-db. GIF montado a partir das duas fotos do exercício.';
 const apply = process.argv[2] === 'apply';
+// Onde o banco não tem a máquina exata, a imagem mostra o movimento equivalente: marcado para o treinador revisar.
+const APPROX = new Set(['Glúteo Máquina', 'Pullover Máquina', 'Elevação Lateral Máquina', 'Hip Thrust Máquina']);
 
 (async () => {
   const plan = JSON.parse(fs.readFileSync(path.join(__dirname, 'midia-exercicios.json'), 'utf8'));
@@ -21,10 +23,12 @@ const apply = process.argv[2] === 'apply';
     const gif = path.join('public/exercises', `${item.slug}.gif`); const jpg = path.join('public/exercicios', `${item.slug}.jpg`);
     if (!fs.existsSync(gif) || !fs.existsSync(jpg)) { faltando.push(`${d.name} (arquivo)`); continue; }
     backup[doc.id] = { machineImage: d.machineImage || null, imageStill: d.imageStill || null, imageAttribution: d.imageAttribution || null };
-    if (apply) await doc.ref.update({ machineImage: `/exercises/${item.slug}.gif`, imageStill: `/exercicios/${item.slug}.jpg`, imageAttribution: ATTRIBUTION, updatedAt: new Date().toISOString() });
+    if (apply) await doc.ref.update({ machineImage: `/exercises/${item.slug}.gif`, imageStill: `/exercicios/${item.slug}.jpg`, imageAttribution: ATTRIBUTION, mediaApprox: APPROX.has(d.name), updatedAt: new Date().toISOString() });
     ok += 1;
   }
-  if (apply) fs.writeFileSync(path.join(__dirname, 'midia-exercicios-backup.json'), JSON.stringify(backup, null, 1));
+  // O backup guarda os valores de ANTES da primeira aplicação: nunca é sobrescrito (reaplicar não pode perder o original).
+  const backupFile = path.join(__dirname, 'midia-exercicios-backup.json');
+  if (apply && !fs.existsSync(backupFile)) fs.writeFileSync(backupFile, JSON.stringify(backup, null, 1));
   console.log(`${apply ? 'gravados' : 'plano'}: ${ok} de ${snap.size}; sem mídia: ${faltando.length ? faltando.join(', ') : 'nenhum'}`);
   process.exit(0);
 })();

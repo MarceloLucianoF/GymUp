@@ -7,6 +7,7 @@ import { Clock, Scale, CheckCircle2, Dumbbell, FileText, XCircle, ArrowLeft, Tro
 import { formatDate, formatTonnage } from '../../utils/format';
 import { fetchStudentCheckIns } from '../../services/checkInsCache';
 
+import { stillSrc } from '../../utils/exerciseMedia';
 export default function WorkoutDetailsPage() {
   const { checkInId } = useParams();
   const navigate = useNavigate();
@@ -149,7 +150,7 @@ export default function WorkoutDetailsPage() {
                     <div className="flex items-center gap-4 mb-4 border-b border-gray-100 dark:border-white/10 pb-3">
                         <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden flex items-center justify-center">
                              {ex.machineImage ? (
-                                <img src={ex.machineImage} className="w-full h-full object-cover" alt="" loading="lazy" />
+                                <img src={stillSrc(ex.machineImage)} className="w-full h-full object-cover" alt="" loading="lazy" />
                              ) : (
                                 <Dumbbell className="w-6 h-6 text-gray-600 dark:text-gray-500" />
                              )}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Dumbbell } from 'lucide-react';
+import { stillSrc } from '../../utils/exerciseMedia';
 
 // Miniatura do exercício com ícone quando não há imagem ou o link está quebrado.
 export default function ExerciseThumb({ src, className = 'h-full w-full', iconClassName = 'h-7 w-7' }) {
@@ -13,5 +14,5 @@ export default function ExerciseThumb({ src, className = 'h-full w-full', iconCl
       </span>
     );
   }
-  return <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} className={`${className} object-cover`} />;
+  return <img src={stillSrc(src)} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} className={`${className} object-cover`} />;
 }

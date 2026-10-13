@@ -5,6 +5,7 @@ import { btnPrimary, inputCls } from '../../../components/coach/styles';
 import { DIFFICULTIES, GROUP_LABEL, MUSCLE_GROUPS, exerciseIssues, filterExercises, hasImage, hasVideo, ISSUE_LABEL, updatedAtOf } from './adminUtils';
 import { safeHttpUrl } from '../../../utils/safeUrl';
 
+import { stillSrc } from '../../../utils/exerciseMedia';
 const selectCls = `${inputCls} min-h-[44px] cursor-pointer text-sm`;
 const fmtDate = (ms) => (ms ? new Date(ms).toLocaleDateString('pt-BR') : '—');
 const DIFF_CLS = {
@@ -14,7 +15,7 @@ const DIFF_CLS = {
 };
 
 const Thumb = ({ ex }) => {
-  const image = safeHttpUrl(ex.machineImage);
+  const image = stillSrc(safeHttpUrl(ex.machineImage));
   return (
     <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 dark:bg-white/10" aria-hidden="true">
       {image ? <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-5 w-5 text-gray-500 dark:text-gray-400" />}
@@ -25,7 +26,7 @@ const Thumb = ({ ex }) => {
 const MediaBadges = ({ ex, compact = false }) => (
   <span className="inline-flex items-center gap-1.5">
     <span title={hasImage(ex) ? 'Tem imagem' : 'Sem imagem'} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${hasImage(ex) ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300' : 'bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-400'}`}>
-      <ImageIcon className="h-3 w-3" aria-hidden="true" /><span className={compact ? 'sr-only' : ''}>{hasImage(ex) ? 'Imagem' : 'Sem imagem'}</span>
+      <ImageIcon className="h-3 w-3" aria-hidden="true" /><span className={compact ? 'sr-only' : ''}>{hasImage(ex) ? (ex.mediaApprox ? 'Imagem de referência' : 'Imagem') : 'Sem imagem'}</span>
     </span>
     <span title={hasVideo(ex) ? 'Tem vídeo' : 'Sem vídeo'} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${hasVideo(ex) ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300' : 'bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-400'}`}>
       <Film className="h-3 w-3" aria-hidden="true" /><span className={compact ? 'sr-only' : ''}>{hasVideo(ex) ? 'Vídeo' : 'Sem vídeo'}</span>
