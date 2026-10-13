@@ -244,13 +244,15 @@ const normalize = (value) => String(value || '').trim().toLowerCase();
  */
 export const aiService = {
   /**
-   * Reescreve fatos já calculados em texto (resumo semanal). Só usa o proxy da NVIDIA, com prazo curto, e devolve null em qualquer
-   * falha (lento, vazio, 429, 5xx, sem sessão, recurso desligado): quem chama usa o texto local.
+   * Reescreve fatos já calculados em texto (resumo semanal). Só usa o proxy da NVIDIA e devolve null em qualquer
+   * falha (lento, vazio, 429, 5xx, sem sessão, recurso desligado): quem chama usa o texto local. O orçamento é de 1200 tokens
+   * porque os modelos de raciocínio da NVIDIA gastam parte dele pensando (com 260 voltavam vazios); o texto sai em segundo plano,
+   * depois de a tela já estar pronta, então esperar até 25 s não atrasa nada.
    */
   async summarizeFacts(messages) {
     if (!USE_NVIDIA_PROXY || !auth.currentUser) return null;
     try {
-      const { text } = await askNvidiaProxy(messages, { timeoutMs: 8000, maxTokens: 260, temperature: 0.3 });
+      const { text } = await askNvidiaProxy(messages, { timeoutMs: 25000, maxTokens: 1200, temperature: 0.3 });
       return text;
     } catch (error) {
       console.warn('Resumo por IA indisponível:', error?.message || error);

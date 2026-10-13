@@ -6,20 +6,16 @@ const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 // Estar no catálogo NÃO garante que a chave consegue chamar o modelo (404): por isso existe o modo 'auto'.
 const AUTO = 'auto';
 const AUTO_ORDER = [
-  // Medidos em 12/10/2026 com a chave do projeto: respondem em 2-4 s.
+  // Verificados em 13/10/2026 pelo próprio Worker: estes respondem. nemotron-3-super e gpt-oss-20b são modelos de RACIOCÍNIO
+  // (gastam parte de max_tokens pensando; com orçamento curto devolvem conteúdo vazio) e o Gemma-4 responde direto.
   'nvidia/nemotron-3-super-120b-a12b',
   'openai/gpt-oss-20b',
-  // Respondiam antes e podem voltar; os que dão 404/502 falham em menos de 1 s.
-  'nvidia/llama-3.1-nemotron-70b-instruct',
-  'nvidia/llama-3.1-nemotron-51b-instruct',
-  'nv-mistralai/mistral-nemo-12b-instruct',
-  'google/gemma-3-12b-it',
-  'mistralai/mistral-large-2-instruct',
-  'nvidia/nemotron-nano-3-30b-a3b',
-  'nvidia/llama-3.1-nemotron-ultra-253b-v1',
-  // Travam até o prazo (12 s): por último.
   'google/gemma-4-31b-it',
+  // Trava até o prazo em alguns dias: por último.
   'z-ai/glm-5.3-flash'
+  // Aposentados pela NVIDIA (HTTP 404 em 13/10/2026) e retirados daqui: llama-3.1-nemotron-70b/51b/ultra-253b, mistral-nemo-12b,
+  // gemma-3-12b, mistral-large-2 e nemotron-nano-3-30b. Eles gastavam as 8 tentativas e o Gemma-4 nunca era alcançado.
+  // Para conferir a lista, rode `node scripts/check-nvidia-models.mjs`.
 ];
 const DEFAULT_MODEL = AUTO;
 const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER]);
@@ -27,6 +23,7 @@ const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER]);
 const SKIP_STATUS = new Set([400, 404, 410, 422]);
 const MAX_ATTEMPTS = 8;
 const ATTEMPT_TIMEOUT_MS = 12_000;
+const MAX_TOKENS_CAP = 2400;
 const TOTAL_TIMEOUT_MS = 28_000;
 let lastWorkingModel = null;
 export const resetModelCache = () => { lastWorkingModel = null; };
@@ -142,7 +139,9 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
   const startedAt = Date.now();
   let lastStatus = null;
   try {
-    for (const candidate of candidates) {
+    const budgets = new Map();                                  // modelo -> max_tokens reforçado (uma vez)
+    for (let index = 0; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
       const remaining = TOTAL_TIMEOUT_MS - (Date.now() - startedAt);
       if (remaining < 3_000) break;
       const controller = new AbortController();
@@ -152,7 +151,7 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
           method: 'POST',
           headers: { Authorization: `Bearer ${env.NVIDIA_API_KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' },
           signal: controller.signal,
-          body: JSON.stringify({ model: candidate, messages, temperature, max_tokens: maxTokens })
+          body: JSON.stringify({ model: candidate, messages, temperature, max_tokens: budgets.get(candidate) || maxTokens })
         });
         if (!upstream.ok) {
           lastStatus = upstream.status;
@@ -164,7 +163,13 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
         const content = data?.choices?.[0]?.message?.content;
         if (typeof content !== 'string' || !content.trim()) {
           lastStatus = 200;
-          if (model === AUTO) continue; // modelo de raciocínio sem texto final: tenta o próximo
+          // Modelo de raciocínio que gastou o orçamento pensando (finish_reason 'length'): uma nova tentativa, com mais tokens.
+          if (data?.choices?.[0]?.finish_reason === 'length' && !budgets.has(candidate) && maxTokens < MAX_TOKENS_CAP) {
+            budgets.set(candidate, Math.min(MAX_TOKENS_CAP, maxTokens * 4));
+            index -= 1;
+            continue;
+          }
+          if (model === AUTO) continue; // sem texto final: tenta o próximo
           return json(502, { error: 'Resposta inválida do provedor de IA.' }, cors);
         }
         lastWorkingModel = candidate;

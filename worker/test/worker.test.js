@@ -175,7 +175,7 @@ test('auto: resposta vazia (modelo de raciocínio) passa para o próximo', async
 test('modelo explícito: 404 não tenta outros modelos', async () => {
   resetRateLimit(); resetModelCache();
   let count = 0;
-  const res = await handleNvidiaRequest(request({ ...valid, model: 'google/gemma-3-12b-it' }), env, { verify: okVerify, fetchImpl: async () => { count += 1; return statusOf(404); } });
+  const res = await handleNvidiaRequest(request({ ...valid, model: 'google/gemma-4-31b-it' }), env, { verify: okVerify, fetchImpl: async () => { count += 1; return statusOf(404); } });
   assert.equal(res.status, 502);
   assert.equal(count, 1);
 });
@@ -220,7 +220,7 @@ test('modelo explícito que trava → 504 sem tentar outro', async () => {
   const original = global.setTimeout;
   global.setTimeout = (fn, ms, ...a) => original(fn, ms >= 10_000 ? 20 : ms, ...a);
   try {
-    const res = await handleNvidiaRequest(request({ ...valid, model: 'google/gemma-3-12b-it' }), env, { verify: okVerify, fetchImpl });
+    const res = await handleNvidiaRequest(request({ ...valid, model: 'google/gemma-4-31b-it' }), env, { verify: okVerify, fetchImpl });
     assert.equal(res.status, 504);
   } finally { global.setTimeout = original; }
 });
@@ -236,4 +236,59 @@ test('limite durável: por usuário e por IP; falha do binding não derruba a IA
   assert.equal((await handleNvidiaRequest(withIp(), { ...env, AI_USER_LIMIT: limiter(true), AI_IP_LIMIT: limiter(true) }, deps)).status, 200);
   const broken = { limit: async () => { throw new Error('indisponível'); } };
   assert.equal((await handleNvidiaRequest(withIp(), { ...env, AI_USER_LIMIT: broken, AI_IP_LIMIT: broken }, deps)).status, 200);
+});
+
+// ---- modelos de raciocínio: reforço de orçamento e lista enxuta ----
+test('auto: modelo de raciocínio que esgotou o orçamento (finish_reason length) é tentado de novo, uma vez, com mais tokens', async () => {
+  resetRateLimit(); resetModelCache();
+  const seen = [];
+  const lengthEmpty = () => new Response(JSON.stringify({ choices: [{ message: { content: null }, finish_reason: 'length' }] }), { status: 200 });
+  const fetchImpl = async (url, init) => {
+    const body = JSON.parse(init.body);
+    seen.push([body.model, body.max_tokens]);
+    return seen.length === 1 ? lengthEmpty() : okBody('texto final');
+  };
+  const res = await handleNvidiaRequest(request({ ...valid, max_tokens: 300 }), env, { verify: okVerify, fetchImpl });
+  const data = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(data.choices[0].message.content, 'texto final');
+  assert.equal(seen.length, 2);
+  assert.equal(seen[0][0], seen[1][0]);                       // mesmo modelo
+  assert.equal(seen[0][1], 300);
+  assert.equal(seen[1][1], 1200);                             // 4x, limitado a 2400
+});
+
+test('auto: o reforço só acontece uma vez por modelo; depois passa ao próximo', async () => {
+  resetRateLimit(); resetModelCache();
+  const models = [];
+  const lengthEmpty = () => new Response(JSON.stringify({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }), { status: 200 });
+  let n = 0;
+  const fetchImpl = async (url, init) => { models.push(JSON.parse(init.body).model); n += 1; return n <= 2 ? lengthEmpty() : okBody('ok'); };
+  const res = await handleNvidiaRequest(request({ ...valid, max_tokens: 300 }), env, { verify: okVerify, fetchImpl });
+  assert.equal(res.status, 200);
+  assert.equal(models[0], models[1]);
+  assert.notEqual(models[2], models[1]);                      // o segundo vazio não repete: vai ao próximo modelo
+});
+
+test('sem reforço quando o orçamento já está no teto ou o vazio não foi por tamanho', async () => {
+  resetRateLimit(); resetModelCache();
+  const bodies = [];
+  const lengthEmpty = () => new Response(JSON.stringify({ choices: [{ message: { content: null }, finish_reason: 'length' }] }), { status: 200 });
+  await handleNvidiaRequest(request({ ...valid, max_tokens: 2400 }), env, { verify: okVerify, fetchImpl: async (u, init) => { bodies.push(JSON.parse(init.body)); return bodies.length === 1 ? lengthEmpty() : okBody('ok'); } });
+  assert.equal(bodies[0].model === bodies[1].model, false);   // no teto: troca de modelo em vez de repetir
+  resetRateLimit(); resetModelCache();
+  const stop = [];
+  const emptyStop = () => new Response(JSON.stringify({ choices: [{ message: { content: null }, finish_reason: 'stop' }] }), { status: 200 });
+  await handleNvidiaRequest(request({ ...valid, max_tokens: 300 }), env, { verify: okVerify, fetchImpl: async (u, init) => { stop.push(JSON.parse(init.body).model); return stop.length === 1 ? emptyStop() : okBody('ok'); } });
+  assert.notEqual(stop[0], stop[1]);
+});
+
+test('lista enxuta: modelos aposentados não são aceitos e nenhuma tentativa em modo auto passa dos modelos vivos', async () => {
+  resetRateLimit(); resetModelCache();
+  const dead = await handleNvidiaRequest(request({ ...valid, model: 'nvidia/llama-3.1-nemotron-70b-instruct' }), env, { verify: okVerify, fetchImpl: async () => okBody() });
+  assert.equal(dead.status, 400);
+  const tried = [];
+  await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async (u, init) => { tried.push(JSON.parse(init.body).model); return statusOf(404); } });
+  assert.ok(tried.length <= 4);
+  assert.deepEqual(new Set(tried), new Set(['nvidia/nemotron-3-super-120b-a12b', 'openai/gpt-oss-20b', 'google/gemma-4-31b-it', 'z-ai/glm-5.3-flash']));
 });
