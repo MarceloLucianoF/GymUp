@@ -499,3 +499,8 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Causa:** a conversa existia, mas o nome do outro participante é gravado em `chats.participantData` só na criação (aqui, um nome antigo de teste) e nunca atualizado; a lista e o cabeçalho mostravam esse nome velho.
 - **Correção:** `useChat` mostra o perfil atual do outro participante (aluno vinculado em `users`, treinador em `publicCoachProfiles`), com cache e fallback para o nome gravado quando não há acesso. O documento do chat não é alterado. Teste de unidade (2) e verificação no navegador com a conta do treinador (lista e Alunos > Chat mostram "Marcelo Luciano Filho"), sem enviar mensagens.
 - **Limite conhecido:** a busca "Buscar aluno" filtra só conversas existentes; para começar uma nova use Alunos > Chat.
+
+## Atualização — chat do aluno caía no Coach IA (13/10/2026)
+- **Sintoma:** o treinador via a conversa, mas o aluno vinculado só via "Treine com o Coach IA" e "Meu treinador: Treinador".
+- **Causa:** o perfil público do treinador (`publicCoachProfiles/{uid}`) nunca foi criado para a conta admin. A sincronização lia o documento antes de gravar, e as regras negam a leitura de um perfil público que não existe; o erro era engolido e a gravação nunca acontecia. Sem o perfil, o chat do aluno achava que não havia treinador.
+- **Correção:** `syncPublicCoachProfile` trata a leitura negada como "não existe" e cria o perfil; `getPublicCoach` devolve `null` em vez de falhar; o chat do aluno (página e widget) abre a conversa mesmo sem perfil público, usando um nome genérico. Testes: 4 novos; navegador: o app cria o perfil ao abrir como treinador e o aluno vê a conversa e a mensagem do treinador (sem enviar nada).

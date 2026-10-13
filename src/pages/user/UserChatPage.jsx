@@ -33,8 +33,9 @@ export default function UserChatPage() {
               if (userDoc.exists()) {
                   const userData = userDoc.data();
                   if (userData.coachId) {
-                      const coachData = await getPublicCoach(userData.coachId);
-                      if (coachData && isMounted) {
+                      // Sem perfil público (treinador ainda não sincronizou) o vínculo continua valendo: abre o chat mesmo assim.
+                      const coachData = (await getPublicCoach(userData.coachId)) || { uid: userData.coachId, displayName: 'Treinador' };
+                      if (isMounted) {
                           setCoach(coachData);
                           openChatWithUser(coachData); 
                       }
