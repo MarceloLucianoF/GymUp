@@ -57,6 +57,18 @@ export async function loadExerciseLibrary() {
   return [...fromDb, ...extra].sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR'));
 }
 
+/** Modelos oficiais globais (criados pela conta admin). A academia copia; nunca altera o original. */
+export async function listOfficialTemplates() {
+  const snap = await getDocs(query(collection(db, 'trainingTemplates'), where('scope', '==', 'official')));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
+/** Copia o modelo oficial para um rascunho próprio da academia (ficha versionada independente). */
+export async function copyTemplateToAcademy(user, academyId, template) {
+  const exercises = (template.exercises || []).slice(0, MAX_EXERCISES).map((e) => toDraftExercise(e, e));
+  return createDraft(user, academyId, template.name, exercises, template.id);
+}
+
 export async function listSeries(academyId) {
   const snap = await getDocs(query(collection(db, 'trainingSeries'), where('academyId', '==', academyId)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
@@ -74,13 +86,14 @@ export async function listAssignedForAcademy(academyId, { isStaff, userId }) {
   return snap.docs.map((d) => d.data());
 }
 
-export async function createDraft(user, academyId, name, exercises = []) {
+export async function createDraft(user, academyId, name, exercises = [], sourceTemplateId = '') {
   const ref = doc(collection(db, 'trainingSeries'));
   const auditId = newAuditId();
   const batch = writeBatch(db);
   const clean = String(name).trim();
   batch.set(ref, {
     academyId, name: clean, currentVersion: 0, status: 'active', draft: { name: clean, exercises: exercises.slice(0, MAX_EXERCISES) },
+    ...(sourceTemplateId ? { sourceTemplateId } : {}),
     createdBy: user.uid, createdAt: now(), updatedAt: now(), auditId
   });
   audit(batch, user, academyId, auditId, 'training.created', ref.id);

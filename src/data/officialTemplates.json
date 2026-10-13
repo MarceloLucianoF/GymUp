@@ -1,0 +1,68 @@
+[
+  {
+    "id": "pernas-a-quadriceps",
+    "scope": "official",
+    "order": 1,
+    "focus": "quadriceps",
+    "name": "Pernas A — foco em quadríceps",
+    "description": "Ênfase em quadríceps com compostos primeiro, isoladores depois e panturrilha no final.",
+    "exercises": [
+      { "name": "Hack Squat", "sets": "4", "reps": "8-10", "rest": 90 },
+      { "name": "Leg Press", "sets": "4", "reps": "10-12", "rest": 90 },
+      { "name": "Agachamento com Halteres", "sets": "3", "reps": "10-12", "rest": 75 },
+      { "name": "Afundo Livre com Halteres", "sets": "3", "reps": "10 por perna", "rest": 60 },
+      { "name": "Cadeira Extensora", "sets": "3", "reps": "12-15", "rest": 45 },
+      { "name": "Panturrilha Sentado Máquina", "sets": "4", "reps": "15", "rest": 45 }
+    ]
+  },
+  {
+    "id": "pernas-b-posterior-gluteos",
+    "scope": "official",
+    "order": 2,
+    "focus": "posterior",
+    "name": "Pernas B — foco em posterior e glúteos",
+    "description": "Posterior de coxa e glúteos em primeiro plano, com um composto de quadríceps para equilibrar.",
+    "exercises": [
+      { "name": "Mesa Flexora", "sets": "4", "reps": "10-12", "rest": 75 },
+      { "name": "Hip Thrust Máquina", "sets": "4", "reps": "8-10", "rest": 90 },
+      { "name": "Cadeira Flexora", "sets": "3", "reps": "12", "rest": 60 },
+      { "name": "Glúteo Máquina", "sets": "3", "reps": "12-15", "rest": 60 },
+      { "name": "Afundo Livre com Halteres", "sets": "3", "reps": "10 por perna", "rest": 60 },
+      { "name": "Panturrilha em pé com Halteres", "sets": "4", "reps": "12-15", "rest": 45 }
+    ]
+  },
+  {
+    "id": "pernas-c-gluteos-estabilidade",
+    "scope": "official",
+    "order": 3,
+    "focus": "gluteos",
+    "name": "Pernas C — foco em glúteos e estabilidade",
+    "description": "Glúteos, abdutores e adutores para estabilidade do quadril, com panturrilha.",
+    "exercises": [
+      { "name": "Hip Thrust Máquina", "sets": "4", "reps": "10", "rest": 75 },
+      { "name": "Afundo Livre com Halteres", "sets": "3", "reps": "10 por perna", "rest": 60 },
+      { "name": "Glúteo Máquina", "sets": "3", "reps": "12-15", "rest": 60 },
+      { "name": "Cadeira Abdutora", "sets": "3", "reps": "15", "rest": 45 },
+      { "name": "Cadeira Adutora", "sets": "3", "reps": "15", "rest": 45 },
+      { "name": "Panturrilha Sentado Máquina", "sets": "3", "reps": "15", "rest": 45 }
+    ]
+  },
+  {
+    "id": "pernas-completas",
+    "scope": "official",
+    "order": 4,
+    "focus": "completo",
+    "name": "Pernas completas",
+    "description": "Quadríceps, posterior, glúteos, adutores e panturrilhas em uma única sessão.",
+    "exercises": [
+      { "name": "Leg Press", "sets": "4", "reps": "10-12", "rest": 90 },
+      { "name": "Hack Squat", "sets": "3", "reps": "10", "rest": 90 },
+      { "name": "Mesa Flexora", "sets": "3", "reps": "10-12", "rest": 75 },
+      { "name": "Hip Thrust Máquina", "sets": "3", "reps": "10", "rest": 75 },
+      { "name": "Cadeira Extensora", "sets": "3", "reps": "12", "rest": 45 },
+      { "name": "Cadeira Adutora", "sets": "3", "reps": "15", "rest": 45 },
+      { "name": "Cadeira Abdutora", "sets": "3", "reps": "15", "rest": 45 },
+      { "name": "Panturrilha Sentado Máquina", "sets": "4", "reps": "15", "rest": 45 }
+    ]
+  }
+]

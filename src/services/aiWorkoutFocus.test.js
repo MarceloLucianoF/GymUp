@@ -62,3 +62,57 @@ test('fallback local de perna com a biblioteca real (arrays de braço e costas n
   expect(w.exercises.every((e) => canonicalGroup(e.muscleGroup) === 'pernas')).toBe(true);
   expect(w.name).toMatch(/Pernas/);
 });
+
+// ---- gerador completo (aiService.generateAIWorkout) com a IA indisponível: a ficha precisa sair válida e só da biblioteca ----
+import { InsufficientExercisesError, canonicalGroup as cg } from './aiService';
+import { exercises as defaultLib } from '../data/exercises';
+
+const LEGS = ['Hack Squat', 'Agachamento com Halteres', 'Afundo Livre com Halteres', 'Cadeira Extensora', 'Mesa Flexora', 'Cadeira Flexora', 'Hip Thrust Máquina', 'Glúteo Máquina', 'Cadeira Abdutora', 'Cadeira Adutora', 'Panturrilha Sentado Máquina', 'Panturrilha em pé com Halteres'];
+const OTHERS = [['Rosca Alternada Máquina', 'braços'], ['Remada Articulada', 'costas'], ['Supino Máquina', 'peito'], ['Elevação Lateral Máquina', 'ombros'], ['Desenvolvimento Máquina', 'ombros'], ['Abdominal Máquina', 'core']];
+const FULL = [...OTHERS.map(([name, muscleGroup]) => ({ name, muscleGroup })), ...LEGS.map((name) => ({ name, muscleGroup: 'pernas' }))];
+const allowed = new Set([...FULL.map((e) => e.name), ...defaultLib.map((e) => e.name)]);
+const grp = (w, g) => w.exercises.filter((e) => cg(e.muscleGroup) === g).length;
+
+test.each([
+  ['perna', 'monte um treino de perna', 'Pernas completas'],
+  ['quadríceps', 'treino de quadríceps', 'Quadríceps'],
+  ['posterior', 'treino de posterior', 'Posterior e glúteos'],
+  ['glúteos', 'treino de glúteos', 'Glúteos']
+])('gerador com IA fora do ar (%s): ficha válida, só de pernas e com o foco na composição', async (_n, request, label) => {
+  const w = await aiService.generateAIWorkout({ goal: 'Hipertrofia', muscleFocus: 'Peito e Tríceps', durationMinutes: 60, customExercises: FULL, userRequest: request });
+  expect(w.exercises).toHaveLength(6);
+  expect(w.exercises.every((e) => allowed.has(e.name))).toBe(true);
+  expect(grp(w, 'pernas')).toBe(6);
+  expect(w.composition).toMatchObject({ focus: label, source: 'local' });
+});
+
+test('gerador: pernas + ombros informa a divisão 4 de pernas e 2 de ombros', async () => {
+  const w = await aiService.generateAIWorkout({ goal: 'Hipertrofia', durationMinutes: 60, customExercises: FULL, userRequest: 'quero pernas + ombros' });
+  expect(grp(w, 'pernas')).toBe(4);
+  expect(grp(w, 'ombros')).toBe(2);
+  expect(w.composition.division).toBe('4 de pernas e 2 de ombros');
+  expect(w.description).toMatch(/Divisão: 4 de pernas e 2 de ombros/);
+});
+
+test('gerador: pedido ambíguo usa o foco escolhido na tela, nunca outro grupo', async () => {
+  const w = await aiService.generateAIWorkout({ goal: 'Hipertrofia', muscleFocus: 'Quadríceps', durationMinutes: 45, customExercises: FULL, userRequest: 'um treino bem legal de agachamento' });
+  expect(w.composition.focus).toBe('Quadríceps');
+  expect(grp(w, 'pernas')).toBe(5);
+});
+
+test('gerador: sem exercícios suficientes do grupo, erro claro e nenhuma ficha de outro grupo', async () => {
+  const noLegs = FULL.filter((e) => e.muscleGroup !== 'pernas');
+  const original = defaultLib.splice(0, defaultLib.length, ...defaultLib.filter((e) => cg(e.muscleGroup) !== 'pernas'));
+  try {
+    await expect(aiService.generateAIWorkout({ goal: 'Hipertrofia', durationMinutes: 45, customExercises: noLegs, userRequest: 'treino de panturrilhas' })).rejects.toBeInstanceOf(InsufficientExercisesError);
+  } finally { defaultLib.push(...original); }
+});
+
+test('modelos oficiais entram como referência no pedido à IA (só nome e IDs), sem imagens', async () => {
+  const { generatePlan: gp, normalizeLibrary: nl, parseRequest: pr } = await import('../utils/workoutComposer');
+  let prompt = '';
+  await gp({ spec: pr('perna'), library: nl(FULL), total: 6, goal: 'Hipertrofia', durationMinutes: 60, references: [{ name: 'Pernas completas', exercises: ['leg_press', 'hack_squat'] }], askModel: async (p) => { prompt = p; return '{}'; } });
+  expect(prompt).toMatch(/Modelos oficiais de referência/);
+  expect(prompt).toMatch(/Pernas completas/);
+  expect(prompt).not.toMatch(/machineImage|\/exercises\//);
+});

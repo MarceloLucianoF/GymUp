@@ -1142,7 +1142,8 @@ service cloud.firestore {
       // O documento carrega o RASCUNHO: o aluno não lê a série (só a versão atribuída, em trainingVersions).
       allow get: if signedIn() && (isAdmin() || (resource != null && acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
       allow list: if signedIn() && (isAdmin() || (acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
-      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'name', 'currentVersion', 'status', 'draft', 'createdBy', 'auditId', 'createdAt', 'updatedAt'])
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'name', 'currentVersion', 'status', 'draft', 'sourceTemplateId', 'createdBy', 'auditId', 'createdAt', 'updatedAt'])
+        && request.resource.data.get('sourceTemplateId', '') is string && request.resource.data.get('sourceTemplateId', '').size() <= 60
         && acCanAuthor(request.resource.data.academyId) && request.resource.data.createdBy == request.auth.uid
         && validDraft(request.resource.data.draft) && request.resource.data.name == request.resource.data.draft.name
         && request.resource.data.currentVersion == 0 && request.resource.data.status == 'active'
@@ -1170,6 +1171,21 @@ service cloud.firestore {
       // Só rascunho nunca publicado (sem versões, logo sem uso). A auditoria usa o ID fixo del_<fichaId>.
       allow delete: if signedIn() && acCanAuthor(resource.data.academyId) && resource.data.currentVersion == 0
         && acLogged(resource.data.academyId, 'del_' + seriesId, 'training.deleted', seriesId);
+    }
+
+    // Modelos OFICIAIS globais (scope 'official'): só o admin da plataforma cria e mantém; qualquer usuário logado lê.
+    // A academia copia o modelo para uma ficha própria (trainingSeries, rascunho versionado) e nunca altera o original.
+    match /trainingTemplates/{templateId} {
+      allow get, list: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['scope', 'order', 'focus', 'name', 'description', 'exercises', 'updatedAt', 'updatedBy'])
+        && request.resource.data.scope == 'official'
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 80
+        && request.resource.data.description is string && request.resource.data.description.size() <= 300
+        && request.resource.data.focus in ['quadriceps', 'posterior', 'gluteos', 'panturrilhas', 'completo']
+        && request.resource.data.order is int
+        && validExercises(request.resource.data.exercises) && request.resource.data.exercises.size() >= 1;
+      allow delete: if isAdmin();
     }
 
     match /trainingVersions/{versionId} {

@@ -14,7 +14,7 @@ import { useConfirm } from '../../hooks/useConfirm';
 import usePageMeta from '../../hooks/usePageMeta';
 import { getMemberName, listAcademyAssignments, listAcademyMembers, listMyAssignments, listMyMemberships } from '../../services/academyService';
 import {
-  assignVersion, canAuthorTrainings, countByVersion, createDraft, deleteDraft, draftChanged, listAssignedForAcademy, listSeries, listVersions,
+  assignVersion, canAuthorTrainings, copyTemplateToAcademy, listOfficialTemplates, countByVersion, createDraft, deleteDraft, draftChanged, listAssignedForAcademy, listSeries, listVersions,
   loadExerciseLibrary, MAX_EXERCISES, publishDraft, saveDraft, toDraftExercise, versionIdOf
 } from '../../services/academyTrainingService';
 
@@ -88,6 +88,28 @@ function DraftEditor({ series, library, onClose, onSave, busy }) {
   );
 }
 
+function TemplateModal({ templates, onClose, onPick, busy }) {
+  return (
+    <Modal onClose={onClose} label="Modelos oficiais" className="w-full max-w-md">
+      <div className="surface relative max-h-[90dvh] overflow-y-auto bg-white p-5 dark:bg-gray-900">
+        <button type="button" aria-label="Fechar" onClick={onClose} className="absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+        <h2 className="font-display text-xl font-black text-gray-900 dark:text-white">Modelos oficiais</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">A cópia vira uma ficha própria da sua academia (rascunho), versionada e editável. O modelo original não muda.</p>
+        <ul className="mt-4 space-y-2">
+          {templates.length === 0 && <li className="text-sm text-gray-600 dark:text-gray-400">Nenhum modelo oficial disponível.</li>}
+          {templates.map((t) => (
+            <li key={t.id} className="rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
+              <p className="font-bold text-gray-900 dark:text-white">{t.name}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t.exercises?.length || 0} exercícios · {t.description}</p>
+              <button type="button" disabled={busy} onClick={() => onPick(t)} className={`${btnPrimary} mt-2 text-xs`}>Copiar para minha academia</button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Modal>
+  );
+}
+
 function AssignModal({ series, versions, students, onClose, onAssign, busy }) {
   const published = versions.filter((v) => v.seriesId === series.id).sort((a, b) => b.version - a.version);
   const [version, setVersion] = useState(published[0]?.version || '');
@@ -132,6 +154,7 @@ export default function AcademyTrainingsPage() {
   const [error, setError] = useState(false);
   const [editor, setEditor] = useState(null);       // null | 'new' | série
   const [assigning, setAssigning] = useState(null); // série
+  const [templates, setTemplates] = useState(null); // null = fechado; lista = modal de modelos oficiais
   const [busy, setBusy] = useState('');
 
   const isStaff = membership && ['owner', 'admin'].includes(membership.role);
@@ -183,6 +206,13 @@ export default function AcademyTrainingsPage() {
     if (!(await confirm({ title: `Excluir o rascunho ${s.name}?`, message: 'Só rascunhos nunca publicados podem ser excluídos.', confirmLabel: 'Excluir', danger: true }))) return;
     await run(`del-${s.id}`, () => deleteDraft(actor, s), 'Rascunho excluído.');
   };
+  const openTemplates = async () => {
+    try { setTemplates(await listOfficialTemplates()); } catch (e) { console.error(e); toast.error('Não foi possível carregar os modelos oficiais.'); }
+  };
+  const copyTemplate = async (t) => {
+    const ok = await run('copy', () => copyTemplateToAcademy(actor, academyId, t), `Modelo "${t.name}" copiado como rascunho.`);
+    if (ok) setTemplates(null);
+  };
   const assign = async (studentId, version) => {
     const student = students.find((x) => x.userId === studentId);
     const ok = await run('assign', () => assignVersion(actor, { academyId, studentId, seriesId: assigning.id, version, teacherId: student?.teacherId || '' }), 'Ficha atribuída.');
@@ -201,7 +231,7 @@ export default function AcademyTrainingsPage() {
       <div className="mx-auto max-w-3xl space-y-4">
         <Link to="/academia" className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Minha academia</Link>
         <PageHeader eyebrow="Academia" title="Fichas" subtitle="Cada ficha tem um rascunho e versões publicadas que nunca mudam. O aluno fica com a versão que você atribuiu."
-          actions={canAuthor && <button type="button" onClick={() => setEditor('new')} className={btnPrimary}><Plus className="h-4 w-4" aria-hidden="true" />Nova ficha</button>} />
+          actions={canAuthor && <><button type="button" onClick={openTemplates} className={btnGhost}>Usar modelo oficial</button><button type="button" onClick={() => setEditor('new')} className={btnPrimary}><Plus className="h-4 w-4" aria-hidden="true" />Nova ficha</button></>} />
         {!canAuthor && <p className="rounded-2xl bg-amber-500/10 p-3 text-sm text-gray-800 dark:text-gray-200">Você pode ver as fichas e atribuir versões aos seus alunos. Para criar ou editar, peça a permissão ao proprietário.</p>}
         {series.length === 0 && <EmptyState title="Nenhuma ficha ainda" description={canAuthor ? 'Crie a primeira ficha como rascunho e publique quando estiver pronta.' : 'A equipe ainda não criou fichas.'} />}
         {series.map((s) => {
@@ -214,7 +244,7 @@ export default function AcademyTrainingsPage() {
                 <div>
                   <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">{s.name}</h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {s.currentVersion === 0 ? 'Rascunho (nunca publicada)' : `Publicada: versão ${s.currentVersion}`}
+                    {s.sourceTemplateId ? 'Copiada de modelo oficial · ' : ''}{s.currentVersion === 0 ? 'Rascunho (nunca publicada)' : `Publicada: versão ${s.currentVersion}`}
                     {s.currentVersion > 0 && changed ? ' · rascunho com alterações' : ''}
                     {` · ${s.draft?.exercises?.length || 0} exercícios no rascunho`}
                   </p>
@@ -245,6 +275,7 @@ export default function AcademyTrainingsPage() {
         {!isStaff && <p className="text-xs text-gray-600 dark:text-gray-400">As contagens mostram apenas os alunos sob a sua responsabilidade.</p>}
       </div>
       {editor && <DraftEditor series={editor === 'new' ? null : editor} library={library} busy={busy === 'save'} onClose={() => setEditor(null)} onSave={save} />}
+      {templates && <TemplateModal templates={templates} busy={busy === 'copy'} onClose={() => setTemplates(null)} onPick={copyTemplate} />}
       {assigning && <AssignModal series={assigning} versions={versions} students={students} busy={busy === 'assign'} onClose={() => setAssigning(null)} onAssign={assign} />}
     </div>
   );
