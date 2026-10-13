@@ -1,8 +1,8 @@
 import { recentRecords, daysAgoLabel } from './records';
 
-const day = (n) => new Date(Date.UTC(2026, 9, 12 - n, 12)).toISOString();
+const day = (n) => new Date(2026, 9, 12 - n, 12).toISOString();
 const ci = (n, name, weight) => ({ date: day(n), exercises: [{ name, sets: [{ weight, reps: 8 }, { weight: weight - 5, reps: 8 }] }] });
-const NOW = new Date(Date.UTC(2026, 9, 12, 15));
+const NOW = new Date(2026, 9, 12, 15);
 
 describe('recordes recentes', () => {
   it('só conta quando passa de uma marca anterior, dentro da janela', () => {
@@ -19,6 +19,13 @@ describe('recordes recentes', () => {
     const h = [ci(9, 'A', 10), ci(8, 'B', 10), ci(7, 'C', 10), ci(6, 'D', 10), ci(3, 'A', 20), ci(2, 'B', 20), ci(1, 'C', 20), ci(0, 'D', 20)];
     expect(recentRecords(h, NOW).map((r) => r.exercise)).toEqual(['D', 'C', 'B']);
     expect(recentRecords(h, NOW, { max: 1 })).toHaveLength(1);
+  });
+
+  it('séries não concluídas não contam; ontem vale pelo dia do calendário, mesmo com menos de 24 h', () => {
+    const h = [ci(10, 'Supino', 60), { date: new Date(2026, 9, 11, 23, 55).toISOString(), exercises: [{ name: 'Supino', sets: [{ weight: 90, completed: false }, { weight: 70, completed: true }] }] }];
+    const r = recentRecords(h, new Date(2026, 9, 12, 0, 10));
+    expect(r[0].weight).toBe(70);                                  // o 90 não concluído foi ignorado
+    expect(daysAgoLabel(new Date(2026, 9, 11, 23, 55), new Date(2026, 9, 12, 0, 10))).toBe('ontem');
   });
 
   it('ignora dados quebrados e rotula a data', () => {

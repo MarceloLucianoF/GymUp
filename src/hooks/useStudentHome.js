@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { collection, query, getDocs, orderBy, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { db } from '../firebase/config';
 import { activeWorkoutService } from '../services/activeWorkoutService';
 import { fetchStudentCheckIns, invalidateCheckIns } from '../services/checkInsCache';
 import { saveCheckIn } from '../services/checkInService';
+import { saveWeeklyGoal, reconcileWeeklyGoal } from '../services/goalService';
 
 // --- Metas semanais (localStorage por usuário) ---
 export const GOAL_MIN = 2;
@@ -41,9 +42,7 @@ export function useWeeklyGoal(uid, profileGoal, profileReady = false) {
     if (!uid) return;
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
-      const stamp = new Date().toISOString();
-      try { await updateDoc(doc(db, 'users', uid), { weeklyGoal: v, updatedAt: stamp }); } catch (e) { console.warn('Meta semanal não gravada:', e?.code || e); }
-      try { await updateDoc(doc(db, 'publicProfiles', uid), { weeklyGoal: v, updatedAt: stamp }); } catch (e) { /* sem perfil social: nada a atualizar */ }
+      try { await saveWeeklyGoal(uid, v); } catch (e) { console.warn('Meta semanal não gravada:', e?.code || e); }
     }, 700);
   }, [uid]);
 
@@ -53,6 +52,7 @@ export function useWeeklyGoal(uid, profileGoal, profileReady = false) {
       const v = clampGoal(profileGoal);
       setGoalState(v);
       try { localStorage.setItem(goalKey(uid), String(v)); } catch { /* storage indisponível */ }
+      if (profileReady && uid) reconcileWeeklyGoal(uid, v).catch(() => {});   // perfil social divergente: alinha
       return;
     }
     const local = read();
