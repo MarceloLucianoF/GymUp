@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { collection, query, getDocs, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { db } from '../firebase/config';
 import { activeWorkoutService } from '../services/activeWorkoutService';
@@ -18,7 +18,13 @@ const clampGoal = (n) => {
   return Math.min(GOAL_MAX, Math.max(GOAL_MIN, v));
 };
 
-export function useWeeklyGoal(uid) {
+/**
+ * Meta semanal do aluno. A fonte da verdade é `users.weeklyGoal` (o treinador usa para a aderência e o ranking de amigos
+ * usa o perfil público); o localStorage é só cópia para abrir sem espera e para quem ainda não tinha a meta gravada.
+ * Alterar grava no perfil e, se existir, no perfil social (com atraso para juntar os cliques de + e -).
+ */
+export function useWeeklyGoal(uid, profileGoal, profileReady = false) {
+  const hasServerGoal = profileGoal !== undefined && profileGoal !== null && Number.isFinite(Number(profileGoal));
   const read = useCallback(() => {
     if (!uid) return GOAL_DEFAULT;
     try {
@@ -28,13 +34,42 @@ export function useWeeklyGoal(uid) {
       return GOAL_DEFAULT;
     }
   }, [uid]);
-  const [goal, setGoalState] = useState(read);
-  useEffect(() => { setGoalState(read()); }, [read]);
+  const [goal, setGoalState] = useState(() => (hasServerGoal ? clampGoal(profileGoal) : read()));
+  const timer = useRef(null);
+
+  const persist = useCallback((v) => {
+    if (!uid) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
+      const stamp = new Date().toISOString();
+      try { await updateDoc(doc(db, 'users', uid), { weeklyGoal: v, updatedAt: stamp }); } catch (e) { console.warn('Meta semanal não gravada:', e?.code || e); }
+      try { await updateDoc(doc(db, 'publicProfiles', uid), { weeklyGoal: v, updatedAt: stamp }); } catch (e) { /* sem perfil social: nada a atualizar */ }
+    }, 700);
+  }, [uid]);
+
+  // O valor gravado no perfil manda; sem ele, usa a cópia local e a grava uma vez (migração de quem só tinha o localStorage).
+  useEffect(() => {
+    if (hasServerGoal) {
+      const v = clampGoal(profileGoal);
+      setGoalState(v);
+      try { localStorage.setItem(goalKey(uid), String(v)); } catch { /* storage indisponível */ }
+      return;
+    }
+    const local = read();
+    setGoalState(local);
+    let hasLocal = false;
+    try { hasLocal = localStorage.getItem(goalKey(uid)) !== null; } catch { hasLocal = false; }
+    // Só migra depois que o perfil verdadeiro foi lido (senão o valor padrão sobrescreveria o que está gravado).
+    if (profileReady && !hasServerGoal && hasLocal && uid) persist(local);
+  }, [uid, profileGoal, hasServerGoal, profileReady, read, persist]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
   const setGoal = useCallback((n) => {
     const v = clampGoal(n);
     setGoalState(v);
     try { localStorage.setItem(goalKey(uid), String(v)); } catch { /* storage indisponível */ }
-  }, [uid]);
+    persist(v);
+  }, [uid, persist]);
   return [goal, setGoal];
 }
 

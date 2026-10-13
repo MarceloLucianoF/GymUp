@@ -437,3 +437,12 @@ Treinador e alunos fictícios, produção, **22 de 22 verificações aprovadas**
 - **Causa:** a regra de criação de `coachInvites` exigia o papel `coach`; a conta de quem usa o app como treinador aqui é **admin** (o admin atua como treinador em todo o restante: `isTrainerId` aceita os dois papéis). Resultado: "Não foi possível criar o convite." Os testes automatizados usaram um treinador de papel `coach`, por isso não pegaram.
 - **Correção:** admin também cria o **próprio** convite (continua sem criar em nome de outro); o aluno pede o vínculo por convite de admin normalmente (testado nas regras: 65 casos); verificado em produção criando um convite pela interface com uma conta admin. A mensagem de erro agora diz quando é falta de permissão.
 - **Lição para os próximos testes de treinador:** incluir também uma conta admin.
+
+## Atualização — painel do aluno (12/10/2026)
+O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há treinador, chat, amigos e estatísticas. Melhorias aplicadas e validadas em produção (8 verificações, conta fictícia):
+1. **Meta semanal sincronizada (bug de consistência):** a meta do botão +/- vivia só no navegador, enquanto o treinador calcula a aderência com `users.weeklyGoal` e o ranking de amigos usa `publicProfiles.weeklyGoal`. Agora o valor vem do perfil e alterar grava nos dois (com atraso de 0,7 s para juntar cliques); em outro aparelho a meta aparece igual; quem só tinha a meta no navegador tem a cópia gravada uma única vez, e só depois de o perfil real ser lido (para não sobrescrever o que já estava gravado).
+2. **Mensagem do treinador ainda não vista:** cartão no topo (nome, trecho da mensagem, leva ao chat) e ponto no atalho flutuante do chat; some ao abrir o chat.
+3. **Novos recordes:** até 3 recordes de carga dos últimos 14 dias (exercício, carga, marca anterior, quando), a partir do histórico já carregado; só conta quando havia marca anterior.
+4. **Amigos e ranking com a semana:** com amigos participando, mostra "Você está em Xº entre N esta semana" e o pódio (3 primeiros); sem amigos, convida; carregado depois do conteúdo principal e sem derrubar a tela se falhar.
+- Dados extras só leem o que o aluno já podia ler (`publicStats` de amigos ativos que participam, o próprio chat). Testes: 304 (recordes, meta sincronizada com migração, cartões); fluxo social 15/15 sem regressão.
+- **Ideias não feitas:** próxima ficha sugerida por rotação, comparação de peso com a meta do objetivo, e resumo semanal (domingo) com variação de volume.
