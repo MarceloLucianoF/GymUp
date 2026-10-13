@@ -40,7 +40,7 @@ export default function InviteModal({ onClose, coachCode }) {
       await load();
     } catch (error) {
       console.error(error);
-      toast.error('Não foi possível criar o convite.');
+      toast.error(error?.code === 'permission-denied' ? 'Sua conta não tem permissão para criar convites.' : 'Não foi possível criar o convite.');
     } finally { setBusy(false); }
   };
 
