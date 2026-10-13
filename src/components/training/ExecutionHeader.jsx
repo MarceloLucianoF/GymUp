@@ -4,11 +4,11 @@ import { List, Search, Wifi, WifiOff } from 'lucide-react';
 // Cabeçalho fixo da execução: nome, conectividade, cronômetro, progresso e modo de visualização.
 const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCount, totalSetsInTraining, progressPercent, viewMode, onChangeViewMode }) => (
     <div className="fixed top-0 md:top-20 left-0 right-0 bg-white/85 dark:bg-[#0B0F19]/85 backdrop-blur-xl z-40 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-3">
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                     <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight truncate">{trainingName}</h2>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${isOnline ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse'}`}>
+                    <span className={`shrink-0 whitespace-nowrap text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${isOnline ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse'}`}>
                         {isOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
                         {isOnline ? 'Sincronizado' : 'Offline'}
                     </span>
@@ -25,7 +25,7 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
             </div>
 
             {/* Barra de Progresso */}
-            <div className="hidden sm:flex items-center gap-2 mx-4">
+            <div className="hidden sm:flex shrink-0 items-center gap-2 mx-1">
                 <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
                         className="h-full bg-green-500 rounded-full transition-all duration-500"
@@ -36,7 +36,7 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
             </div>
 
             {/* Toggle de Modo */}
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-transparent dark:border-gray-700">
+            <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-transparent dark:border-gray-700">
                 <button
                     onClick={() => onChangeViewMode('list')}
                     aria-pressed={viewMode === 'list'}
