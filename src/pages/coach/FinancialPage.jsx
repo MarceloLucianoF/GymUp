@@ -19,28 +19,22 @@ import PageSkeleton from '../../components/coach/PageSkeleton';
 import { brl, toDate, MONTHS_SHORT } from '../../components/coach/helpers';
 import { financeCsv, downloadCsv } from '../../utils/coachCsv';
 import { loadTemplates, fillTemplate, firstName, whatsappLink } from '../../utils/coachTemplates';
-import { DEFAULT_FEE } from '../../hooks/useCoachRoster';
+import { feeOf, computeStats, statusTotals, feeUpdate, isExempt } from '../../utils/billing';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
 const FILTERS = [
   { id: 'all', label: 'Todos' },
   { id: 'overdue', label: 'Atrasados' },
   { id: 'pending', label: 'Pendentes' },
-  { id: 'paid', label: 'Pagos' }
+  { id: 'paid', label: 'Pagos' },
+  { id: 'exempt', label: 'Isentos' }
 ];
 
 const PAY_META = {
   paid: { label: 'Pago', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
   pending: { label: 'Pendente', cls: 'bg-amber-500/15 text-amber-800 dark:text-amber-400' },
-  overdue: { label: 'Atrasado', cls: 'bg-rose-500/15 text-rose-700 dark:text-rose-400' }
-};
-
-const computeStats = (list) => {
-  const sum = (arr) => arr.reduce((acc, s) => acc + s.monthlyFee, 0);
-  const total = sum(list);
-  const received = sum(list.filter((s) => s.paymentStatus === 'paid'));
-  const overdue = list.filter((s) => s.paymentStatus === 'overdue');
-  return { total, received, pending: total - received, overdueCount: overdue.length, overdueTotal: sum(overdue), pct: total ? Math.round((received / total) * 100) : 0 };
+  overdue: { label: 'Atrasado', cls: 'bg-rose-500/15 text-rose-700 dark:text-rose-400' },
+  exempt: { label: 'Isento', cls: 'bg-sky-500/15 text-sky-800 dark:text-sky-300' }
 };
 
 // Receita dos últimos 6 meses a partir da data do último pagamento de cada aluno pago.
@@ -58,11 +52,6 @@ const monthlyRevenue = (list, months = 6) => {
   });
   return buckets;
 };
-
-const statusTotals = (list) => ['paid', 'pending', 'overdue'].map((id) => {
-  const items = list.filter((s) => s.paymentStatus === id);
-  return { id, count: items.length, total: items.reduce((acc, s) => acc + s.monthlyFee, 0) };
-});
 
 // Movimentações do mês corrente a partir de lastPaymentUpdate (só a última alteração de cada aluno é guardada).
 const monthHistory = (list, now = new Date()) => list
@@ -90,7 +79,7 @@ export default function FinancialPage() {
         return {
           id: d.id,
           ...data,
-          monthlyFee: Number(data.monthlyFee) || DEFAULT_FEE,
+          monthlyFee: feeOf(data),
           paymentStatus: data.paymentStatus || 'pending',
           paymentDate: data.paymentDate || null
         };
@@ -156,23 +145,29 @@ export default function FinancialPage() {
     }
   };
 
-  const handleSaveValue = async (e) => {
-    e.preventDefault();
-    const { student, value } = editing;
-    const fee = parseFee(value, { allowZero: true });
-    if (fee === null) {
-      toast.error('Informe um valor válido (0 para isento).');
-      return;
-    }
+  const saveFee = async (fee) => {
+    const { student } = editing;
+    const update = feeUpdate(student, fee);
     try {
-      await updateDoc(doc(db, 'users', student.id), { monthlyFee: fee });
-      setStudents((prev) => prev.map((s) => (s.id === student.id ? { ...s, monthlyFee: fee } : s)));
+      await updateDoc(doc(db, 'users', student.id), update);
+      setStudents((prev) => prev.map((s) => (s.id === student.id ? { ...s, ...update } : s)));
       setEditing(null);
-      toast.success('Valor atualizado.');
+      toast.success(fee === 0 ? `${student.displayName || 'Aluno'} agora é aluno isento.` : isExempt(student) ? 'Valor definido; o aluno volta a ser cobrado.' : 'Valor atualizado.');
     } catch (err) {
       console.error(err);
       toast.error('Erro ao salvar valor.');
     }
+  };
+
+  const handleSaveValue = async (e) => {
+    e.preventDefault();
+    const fee = parseFee(editing.value, { allowZero: true });
+    if (fee === null) {
+      toast.error('Informe um valor válido. Para isentar o aluno, use "Marcar como isento".');
+      return;
+    }
+    if (fee === 0) { toast.error('Valor zero é só para isentar: use "Marcar como isento".'); return; }
+    await saveFee(fee);
   };
 
   if (loading) return <div className={pageCls}><div className="mx-auto max-w-5xl"><PageSkeleton cards={4} /></div></div>;
@@ -183,7 +178,12 @@ export default function FinancialPage() {
     const small = 'pressable inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl px-4 text-sm font-bold disabled:opacity-50';
     return (
       <div className="flex flex-wrap gap-2">
-        {s.paymentStatus === 'paid' ? (
+        {isExempt(s) ? (
+          <>
+            <span className="inline-flex min-h-[44px] items-center rounded-2xl bg-sky-500/10 px-4 text-sm font-bold text-sky-800 dark:text-sky-300">Aluno isento: sem cobrança</span>
+            <button type="button" onClick={() => setEditing({ student: s, value: '' })} className={`${small} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100`}>Voltar a cobrar</button>
+          </>
+        ) : s.paymentStatus === 'paid' ? (
           <button type="button" disabled={busy} onClick={() => handleStatusChange(s, 'pending')} className={`${small} bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300`}><Undo2 className="h-4 w-4" /> Desfazer</button>
         ) : (
           <>
@@ -212,6 +212,7 @@ export default function FinancialPage() {
             </div>
           </Reveal>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {stats.exemptCount > 0 && <p className="col-span-2 text-xs text-gray-600 dark:text-gray-400 md:col-span-3">{stats.exemptCount} aluno{stats.exemptCount === 1 ? ' isento' : 's isentos'}: fora do previsto e da cobrança.</p>}
             <StatCard icon={Wallet} label="Previsto" value={stats.total} prefix="R$ " accent="brand" />
             <StatCard icon={PiggyBank} label="Recebido" value={stats.received} prefix="R$ " accent="green" />
             <StatCard icon={Clock} label="A receber" value={stats.pending} prefix="R$ " accent="blue" className="col-span-2 md:col-span-1" />
@@ -239,11 +240,11 @@ export default function FinancialPage() {
           </Reveal>
         )}
 
-        <section className="grid grid-cols-3 gap-3" aria-label="Total por status">
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Total por status">
           {totals.map((t) => (
             <div key={t.id} className="surface p-3 text-center">
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${PAY_META[t.id].cls}`}>{PAY_META[t.id].label}</span>
-              <p className="mt-2 font-display text-lg font-black text-gray-900 dark:text-white">{brl(t.total)}</p>
+              <p className="mt-2 font-display text-lg font-black text-gray-900 dark:text-white">{t.id === 'exempt' ? '—' : brl(t.total)}</p>
               <p className="text-xs text-gray-600 dark:text-gray-400">{t.count} aluno{t.count === 1 ? '' : 's'}</p>
             </div>
           ))}
@@ -286,8 +287,8 @@ export default function FinancialPage() {
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${(PAY_META[s.paymentStatus] || PAY_META.pending).cls}`}>{(PAY_META[s.paymentStatus] || PAY_META.pending).label}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <button type="button" onClick={() => setEditing({ student: s, value: String(s.monthlyFee) })} aria-label={`Editar mensalidade de ${s.displayName || 'aluno'}`} className={`${btnGhost} font-mono`}>
-                      {brl(s.monthlyFee)} <Pencil className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+                    <button type="button" onClick={() => setEditing({ student: s, value: isExempt(s) ? '' : String(s.monthlyFee) })} aria-label={`Editar mensalidade de ${s.displayName || 'aluno'}`} className={`${btnGhost} font-mono`}>
+                      {isExempt(s) ? 'Isento' : brl(s.monthlyFee)} <Pencil className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
                     </button>
                     {renderActions(s)}
                   </div>
@@ -323,8 +324,12 @@ export default function FinancialPage() {
             <h3 className="font-display text-lg font-black text-gray-900 dark:text-white">Mensalidade de {editing.student.displayName}</h3>
             <div>
               <label htmlFor="monthlyFee" className={labelCls}>Valor (R$)</label>
-              <input id="monthlyFee" type="number" min="0" step="0.01" inputMode="decimal" autoFocus value={editing.value} onChange={(e) => setEditing({ ...editing, value: e.target.value })} className={inputCls} />
+              <input id="monthlyFee" type="number" min="0.01" step="0.01" inputMode="decimal" autoFocus value={editing.value} onChange={(e) => setEditing({ ...editing, value: e.target.value })} className={inputCls} placeholder={isExempt(editing.student) ? 'Valor para voltar a cobrar' : ''} />
+              {isExempt(editing.student) && <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400">Este aluno está isento (sem cobrança). Informe um valor para voltar a cobrar.</p>}
             </div>
+            {!isExempt(editing.student) && (
+              <button type="button" onClick={() => saveFee(0)} className={`${btnGhost} w-full`}>Marcar como isento (sem cobrança)</button>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setEditing(null)} className={btnGhost}>Cancelar</button>
               <button type="submit" className={btnPrimary}>Salvar</button>

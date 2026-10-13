@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useCoachRoster, lastWorkoutMap, DEFAULT_FEE } from './useCoachRoster';
+import { useCoachRoster, lastWorkoutMap } from './useCoachRoster';
+import { feeOf } from '../utils/billing';
 import { buildActionQueue } from '../utils/coachInsights';
 import { countByDay, daysSince, studentStatus, startOfDay, DAY_MS } from '../components/coach/helpers';
 
@@ -36,7 +37,7 @@ export const useCoachDashboard = (user) => {
             .sort((a, b) => b.workouts30 - a.workouts30)
             .slice(0, 5);
 
-        const fee = (s) => Number(s.monthlyFee) || DEFAULT_FEE;
+        const fee = (s) => feeOf(s);
         const expected = students.reduce((acc, s) => acc + fee(s), 0);
         const received = students.filter(s => s.paymentStatus === 'paid').reduce((acc, s) => acc + fee(s), 0);
 

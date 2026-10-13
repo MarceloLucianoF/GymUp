@@ -1,3 +1,4 @@
+import { isExempt } from './billing';
 // Métricas puras do treinador: aderência (4 semanas), recordes recentes e fila de ação do dia.
 import { toDate, startOfDay, daysSince, DAY_MS } from '../components/coach/helpers';
 
@@ -85,7 +86,7 @@ export const buildActionQueue = ({ students = [], lastWorkouts = {}, checkIns = 
     const uid = s.uid || s.id;
     const last = lastWorkouts[uid] || null;
     const days = last ? daysSince(last, now) : null;
-    if (s.paymentStatus === 'overdue') {
+    if (s.paymentStatus === 'overdue' && !isExempt(s)) {
       items.push({ id: `overdue-${uid}`, type: 'overdue', student: s, detail: 'Mensalidade atrasada', weight: Number(s.monthlyFee) || 0 });
     }
     if (s.currentTrainingId && (days === null || days >= inactiveDays)) {

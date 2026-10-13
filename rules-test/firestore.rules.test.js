@@ -681,12 +681,12 @@ test('aceite com mensalidade: valor positivo e paymentStatus pending; zero, nega
   assert.equal(u.coachId, 'coach1');
 });
 
-test('mensalidade do aluno vinculado: coach edita com valor válido (0 = isento); negativo e texto são recusados', async () => {
+test('mensalidade do aluno vinculado: coach edita com valor válido; negativo e texto são recusados; isento exige exempt junto', async () => {
   await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: 99.9 }));
-  await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: 0 }));                  // isento é permitido fora do aceite
   await assertFails(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: -1 }));
   await assertFails(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: 'x' }));
   await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { paymentStatus: 'paid', paymentDate: 'd', lastPaymentUpdate: 'd' })); // marcar pago continua
+  await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { monthlyFee: 0, paymentStatus: 'exempt' }));                          // isento (0 vem junto)
 });
 
 test('chat: primeira conversa do par — participante pelo ID consulta o chat inexistente e cria; terceiros não', async () => {
@@ -740,4 +740,24 @@ test('chat: ninguém cria conversa com o ID de outro par', async () => {
   await assertFails(mk('coach1', 'stu1', 'stu1_stu2'));                                        // ID de outro par
   await assertFails(mk('coach1', 'stu1', 'qualquer'));
   await assertSucceeds(mk('coach1', 'stu1', 'coach1_stu1'));
+});
+
+test('aluno isento: exempt e mensalidade 0 andam juntos; situação inválida é recusada; marcar pago continua para quem paga', async () => {
+  const c = db('coach1');
+  const up = (data) => updateDoc(doc(c, 'users/stu1'), data);
+  await assertFails(up({ monthlyFee: 0 }));                                              // zero sem isentar
+  await assertFails(up({ paymentStatus: 'exempt' }));                                    // isentar sem zerar
+  await assertFails(up({ paymentStatus: 'exempt', monthlyFee: 100 }));
+  await assertFails(up({ paymentStatus: 'talvez', monthlyFee: 100 }));                   // situação inválida
+  await assertSucceeds(up({ monthlyFee: 0, paymentStatus: 'exempt', lastPaymentUpdate: 'x' }));
+  await assertFails(up({ paymentStatus: 'paid', paymentDate: 'x' }));                    // isento não "paga" sem valor
+  await assertFails(up({ monthlyFee: 90 }));                                             // voltar a cobrar exige sair do isento junto
+  await assertSucceeds(up({ monthlyFee: 90, paymentStatus: 'pending', lastPaymentUpdate: 'y' }));
+  await assertSucceeds(up({ paymentStatus: 'paid', paymentDate: 'z', lastPaymentUpdate: 'z' }));
+  await assertSucceeds(up({ paymentStatus: 'pending', lastPaymentUpdate: 'w' }));        // desfazer
+});
+
+test('aluno isento: o aluno não se isenta sozinho e outro treinador não mexe', async () => {
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { monthlyFee: 0, paymentStatus: 'exempt' }));
+  await assertFails(updateDoc(doc(db('coach2'), 'users/stu1'), { monthlyFee: 0, paymentStatus: 'exempt' }));
 });
