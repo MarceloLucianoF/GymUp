@@ -310,17 +310,17 @@ export default function TrainingsPage() {
                     className="pressable w-full min-h-[64px] bg-gradient-to-r from-gray-900 to-[#1F2937] border border-white/10 rounded-3xl p-4 sm:p-5 shadow-lg hover:border-brand/45 transition-all text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-brand/10 border border-brand/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-12 h-12 shrink-0 bg-brand/10 border border-brand/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
                           <Package className="w-6 h-6 text-brand" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <h2 className="text-lg font-black text-white leading-tight">{pkg.name}</h2>
                           <p className="text-gray-300 text-sm mt-0.5 line-clamp-1">{pkg.description}</p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 shrink-0">
                         <div className="hidden sm:flex items-center gap-2">
                           {pkg.tags?.slice(0, 2).map(tag => (
                             <span key={tag} className="text-[10px] font-bold text-white/80 bg-white/10 px-2.5 py-1 rounded-full backdrop-blur-sm">
@@ -329,7 +329,7 @@ export default function TrainingsPage() {
                           ))}
                         </div>
                         <div className="flex items-center gap-2 text-white/80">
-                          <span className="text-sm font-bold">{pkgTrainings.length} treinos</span>
+                          <span className="text-sm font-bold whitespace-nowrap">{pkgTrainings.length} treinos</span>
                           <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`} />
                         </div>
                       </div>
