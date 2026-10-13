@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Users, Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell, RefreshCw } from 'lucide-react';
+import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell, RefreshCw } from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useRole } from '../../hooks/useRole';
 import { useStudentHome, useWeeklyGoal } from '../../hooks/useStudentHome';
@@ -14,6 +14,11 @@ import CoachLinkModal from '../../components/coach/CoachLinkModal';
 import useMyCoach from '../../hooks/useMyCoach';
 import RecommendedWorkoutCard from '../../components/dashboard/RecommendedWorkoutCard';
 import WeeklyGoalCard from '../../components/dashboard/WeeklyGoalCard';
+import RecordsCard from '../../components/dashboard/RecordsCard';
+import FriendsWeekCard from '../../components/dashboard/FriendsWeekCard';
+import CoachMessageCard from '../../components/dashboard/CoachMessageCard';
+import { useFriendsPreview, useCoachMessage } from '../../hooks/useHomeExtras';
+import { recentRecords } from '../../utils/records';
 import VolumeTrend from '../../components/dashboard/VolumeTrend';
 import AchievementBadges from '../../components/dashboard/AchievementBadges';
 import { getWeekDays } from '../../components/dashboard/WeekStrip';
@@ -44,10 +49,14 @@ export default function Home() {
   const { isCoach } = useRole();
   const { data, loading, error, refresh } = useStudentHome(user, ctxProfile);
   const { profile: userProfile, history, trainings, activeSession, stats, achievements, refreshing, errors, discardActiveSession } = data;
-  const [goal, setGoal] = useWeeklyGoal(user?.uid);
+  const profileReady = !loading && !errors.profile && !!userProfile;
+  const [goal, setGoal] = useWeeklyGoal(user?.uid, userProfile?.weeklyGoal, profileReady);
 
   const [showLinkCoach, setShowLinkCoach] = useState(false);
   const mine = useMyCoach(user?.uid, userProfile);
+  const friends = useFriendsPreview(user?.uid);
+  const coachMsg = useCoachMessage(user?.uid, userProfile?.coachId);
+  const records = useMemo(() => recentRecords(history), [history]);
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
@@ -173,6 +182,9 @@ export default function Home() {
           </Reveal>
         )}
 
+        {/* MENSAGEM DO TREINADOR (não lida) */}
+        <CoachMessageCard message={coachMsg} coachName={mine.coach?.displayName} />
+
         {/* META SEMANAL */}
         {loading ? <Skeleton className="h-44 w-full !rounded-3xl" /> : errors.history ? (
           <BlockError label="seu histórico" onRetry={refresh} />
@@ -193,6 +205,9 @@ export default function Home() {
             <Reveal delay={240}><StatCard icon={Trophy} label="Maior carga (PR)" value={stats.maxGlobalLoad} suffix=" kg" className="h-full" /></Reveal>
           </section>
         )}
+
+        {/* NOVOS RECORDES */}
+        {!loading && !errors.history && records.length > 0 && <Reveal><RecordsCard records={records} /></Reveal>}
 
         {/* VOLUME + CONQUISTAS */}
         {loading ? (
@@ -216,14 +231,7 @@ export default function Home() {
             </span>
             <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
           </Link>
-          <Link to="/amigos" className="surface surface-hover pressable mt-3 flex items-center gap-4 p-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-amber-800 dark:text-brand"><Users className="h-6 w-6" aria-hidden="true" /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-display text-base font-black text-gray-900 dark:text-white">Amigos e ranking</span>
-              <span className="block text-xs text-gray-600 dark:text-gray-400">Compare a consistência da semana com quem treina com você.</span>
-            </span>
-            <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
-          </Link>
+          <FriendsWeekCard preview={friends} />
         </Reveal>
 
         {/* PRÓXIMO NÍVEL + PESO */}
@@ -378,8 +386,9 @@ export default function Home() {
           className="fixed right-4 z-40 flex flex-col items-end gap-3 md:bottom-24"
           style={{ bottom: `calc(${activeSession ? '8.5rem' : '5.5rem'} + env(safe-area-inset-bottom, 0px))` }}
         >
-          <Link to="/chat" aria-label="Abrir chat com o treinador" className="pressable flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-800 shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:text-white md:hidden">
+          <Link to="/chat" aria-label="Abrir chat com o treinador" className="pressable relative flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-800 shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:text-white md:hidden">
             <MessageSquare className="h-5 w-5" aria-hidden="true" />
+            {coachMsg?.unread && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-rose-500 ring-2 ring-white dark:ring-gray-900" aria-label="Mensagem nova" />}
           </Link>
           <button
             type="button"

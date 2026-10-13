@@ -9,6 +9,7 @@ import AICoachModal from '../../components/ai/AICoachModal';
 import ChatMessages from '../../components/chat/ChatMessages';
 import ChatComposer from '../../components/chat/ChatComposer';
 import { getPublicCoach } from '../../services/coachProfile';
+import { markChatSeen } from '../../hooks/useHomeExtras';
 
 export default function UserChatPage() {
   const { user, userProfile } = useAuthContext();
@@ -16,6 +17,9 @@ export default function UserChatPage() {
   const { messages, sendMessage, openChatWithUser, loading } = useChat(user);
   
   const [coach, setCoach] = useState(null);
+
+  // Mensagem do treinador vista: o painel deixa de avisar.
+  useEffect(() => { if (user?.uid) markChatSeen(user.uid); }, [user?.uid, messages.length]);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   // 1. Identificar o Coach do aluno e abrir o chat
