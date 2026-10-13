@@ -866,7 +866,7 @@ service cloud.firestore {
         || (d.action == 'member.consent' && d.targetId == request.auth.uid
           && d.get('detail', '') == (getAfter(acMemberPath(d.academyId, request.auth.uid)).data.consent.adherence ? 'concedido' : 'revogado'))
         || (d.action == 'assignment.ended' && acActive(d.academyId))
-        || (d.action in ['training.created', 'training.updated', 'training.published'] && acCanAuthor(d.academyId)
+        || (d.action in ['training.created', 'training.updated', 'training.published', 'training.archived', 'training.restored'] && acCanAuthor(d.academyId)
           && existsAfter(acSeriesPath(d.targetId)) && getAfter(acSeriesPath(d.targetId)).data.academyId == d.academyId
           && getAfter(acSeriesPath(d.targetId)).data.auditId == logId)
         // excluir: só autor, e a ficha não pode existir depois do lote (o ID del_<ficha> não é "queimável" por um registro solto)
@@ -886,7 +886,7 @@ service cloud.firestore {
         && request.resource.data.at == request.time
         && request.resource.data.action in ['academy.created', 'academy.updated', 'member.joined', 'member.left', 'member.updated',
           'member.consent', 'invite.created', 'invite.revoked', 'assignment.proposed', 'assignment.accepted', 'assignment.ended',
-          'assignment.transferred', 'training.created', 'training.updated', 'training.published', 'training.deleted', 'training.assigned', 'training.unassigned']
+          'assignment.transferred', 'training.created', 'training.updated', 'training.published', 'training.archived', 'training.restored', 'training.deleted', 'training.assigned', 'training.unassigned']
         && request.resource.data.targetType in ['academy', 'member', 'invite', 'assignment', 'training']
         && request.resource.data.targetId is string && request.resource.data.targetId.size() > 0 && request.resource.data.targetId.size() <= 120
         && request.resource.data.get('detail', '') is string && request.resource.data.get('detail', '').size() <= 200
@@ -1126,8 +1126,9 @@ service cloud.firestore {
         && exAt(l, 10) && exAt(l, 11) && exAt(l, 12) && exAt(l, 13) && exAt(l, 14) && exAt(l, 15) && exAt(l, 16) && exAt(l, 17) && exAt(l, 18) && exAt(l, 19);
     }
     function validDraft(d) {
-      return d is map && d.keys().hasOnly(['name', 'exercises'])
-        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80 && validExercises(d.exercises);
+      return d is map && d.keys().hasOnly(['name', 'exercises', 'description'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80 && validExercises(d.exercises)
+        && d.get('description', '') is string && d.get('description', '').size() <= 300;
     }
     // O aluno só lê a VERSÃO que lhe foi atribuída (publicar uma versão nova não muda nem expõe nada para ele).
     function acReadsVersion(aid, versionId) {
@@ -1142,31 +1143,45 @@ service cloud.firestore {
       // O documento carrega o RASCUNHO: o aluno não lê a série (só a versão atribuída, em trainingVersions).
       allow get: if signedIn() && (isAdmin() || (resource != null && acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
       allow list: if signedIn() && (isAdmin() || (acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
-      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'name', 'currentVersion', 'status', 'draft', 'sourceTemplateId', 'createdBy', 'auditId', 'createdAt', 'updatedAt'])
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'name', 'currentVersion', 'status', 'draft', 'sourceTemplateId', 'sourceSeriesId', 'createdBy', 'auditId', 'createdAt', 'updatedAt'])
         && request.resource.data.get('sourceTemplateId', '') is string && request.resource.data.get('sourceTemplateId', '').size() <= 60
+        // duplicada de outra ficha: a origem precisa ser da MESMA academia (a ficha de outra academia nem pode ser lida)
+        && request.resource.data.get('sourceSeriesId', '') is string && request.resource.data.get('sourceSeriesId', '').matches('^[A-Za-z0-9_]{0,40}$')
+        && (request.resource.data.get('sourceSeriesId', '') == ''
+          || get(/databases/$(database)/documents/trainingSeries/$(request.resource.data.get('sourceSeriesId', ''))).data.academyId == request.resource.data.academyId)
         && acCanAuthor(request.resource.data.academyId) && request.resource.data.createdBy == request.auth.uid
         && validDraft(request.resource.data.draft) && request.resource.data.name == request.resource.data.draft.name
         && request.resource.data.currentVersion == 0 && request.resource.data.status == 'active'
         && request.resource.data.createdAt is string && request.resource.data.updatedAt is string
         && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'training.created', seriesId);
       allow update: if signedIn() && acCanAuthor(resource.data.academyId) && request.resource.data.academyId == resource.data.academyId
-        && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.status == resource.data.status
+        && request.resource.data.createdBy == resource.data.createdBy
         && (
-          // editar o rascunho
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['draft', 'name', 'updatedAt', 'auditId'])
+          // editar o rascunho (ficha arquivada não se edita: restaure antes)
+          (resource.data.status == 'active'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['draft', 'name', 'updatedAt', 'auditId'])
             && request.resource.data.updatedAt is string
             && request.resource.data.currentVersion == resource.data.currentVersion
             && validDraft(request.resource.data.draft) && request.resource.data.name == request.resource.data.draft.name
             && acLogged(resource.data.academyId, request.resource.data.auditId, 'training.updated', seriesId))
           // publicar: a versão nova é exatamente o rascunho
-          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentVersion', 'updatedAt', 'auditId'])
+          || (resource.data.status == 'active'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentVersion', 'updatedAt', 'auditId'])
             && request.resource.data.updatedAt is string
             && request.resource.data.currentVersion == resource.data.currentVersion + 1
             && resource.data.draft.exercises.size() >= 1
             && existsAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion))
             && getAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion)).data.exercises == resource.data.draft.exercises
             && getAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion)).data.name == resource.data.draft.name
+            && getAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion)).data.get('description', '') == resource.data.draft.get('description', '')
             && acLogged(resource.data.academyId, request.resource.data.auditId, 'training.published', seriesId))
+          // arquivar / restaurar: só troca o status. Versões e atribuições existentes não mudam (o aluno segue com a versão que usa).
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'auditId'])
+            && request.resource.data.updatedAt is string
+            && ((resource.data.status == 'active' && request.resource.data.status == 'archived')
+              || (resource.data.status == 'archived' && request.resource.data.status == 'active'))
+            && acLogged(resource.data.academyId, request.resource.data.auditId,
+              request.resource.data.status == 'archived' ? 'training.archived' : 'training.restored', seriesId))
         );
       // Só rascunho nunca publicado (sem versões, logo sem uso). A auditoria usa o ID fixo del_<fichaId>.
       allow delete: if signedIn() && acCanAuthor(resource.data.academyId) && resource.data.currentVersion == 0
@@ -1192,7 +1207,8 @@ service cloud.firestore {
       allow get: if signedIn() && (isAdmin() || (resource != null && acReadsVersion(resource.data.academyId, versionId)));
       allow list: if signedIn() && (isAdmin() || (acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
       // Versão imutável: só nasce junto da publicação da série e nunca muda nem some.
-      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'seriesId', 'version', 'name', 'exercises', 'createdBy', 'createdAt'])
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'seriesId', 'version', 'name', 'description', 'exercises', 'createdBy', 'createdAt'])
+        && request.resource.data.get('description', '') is string && request.resource.data.get('description', '').size() <= 300
         && request.resource.data.seriesId is string
         && versionId == request.resource.data.seriesId + '_' + string(request.resource.data.version)
         && request.resource.data.version is int && request.resource.data.version >= 1
@@ -1203,7 +1219,8 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.academyId == request.resource.data.academyId
         && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.currentVersion == request.resource.data.version
         && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.draft.exercises == request.resource.data.exercises
-        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.draft.name == request.resource.data.name;
+        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.draft.name == request.resource.data.name
+        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.draft.get('description', '') == request.resource.data.get('description', '');
       allow update, delete: if false;
     }
 
@@ -1222,6 +1239,8 @@ service cloud.firestore {
         && request.resource.data.seriesId is string && request.resource.data.version is int
         && request.resource.data.versionId == request.resource.data.seriesId + '_' + string(request.resource.data.version)
         && get(acTrainingVersionPath(request.resource.data.seriesId, request.resource.data.version)).data.academyId == request.resource.data.academyId
+        // ficha arquivada não recebe novas atribuições (quem já usa a versão continua com ela)
+        && get(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.status == 'active'
         && request.resource.data.teacherId is string
         && (!exists(acAssignPath(request.resource.data.academyId, request.resource.data.studentId))
           || get(acAssignPath(request.resource.data.academyId, request.resource.data.studentId)).data.status != 'active'

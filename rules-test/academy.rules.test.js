@@ -827,3 +827,158 @@ test('modelos oficiais: a academia copia para uma ficha própria e o original co
   await assertFails(mkSeries('ateacher', A, 'copia2', { sourceTemplateId: 'pernas-completas' }).commit());
   await assertFails(mkSeries('bowner', A, 'copia3', { sourceTemplateId: 'pernas-completas' }).commit());
 });
+
+// ---------- SEGUNDO CORTE DAS FICHAS: duplicar, arquivar, descrição, lote ----------
+const archive = (uid, aid, id, to, logId, extra = {}, action) => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.update(doc(d, `trainingSeries/${id}`), { status: to, updatedAt: NOW, auditId: logId, ...extra });
+  b.set(...logDoc(d, logId, aid, uid, action || (to === 'archived' ? 'training.archived' : 'training.restored'), 'training', id));
+  return b;
+};
+const addStudent = async (aid, uid, { teacherId = '' } = {}) => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await setDoc(doc(d, `users/${uid}`), { uid, role: 'user', displayName: uid });
+    await setDoc(doc(d, `academyMembers/${aid}_${uid}`), member(aid, uid, 'student'));
+    if (teacherId) await setDoc(doc(d, `academyAssignments/${aid}_${uid}`), { academyId: aid, studentId: uid, teacherId, status: 'active', requestedBy: 'x', createdAt: NOW, updatedAt: NOW });
+  });
+};
+
+test('duplicar: vira rascunho novo, com origem registrada, sem atribuir ninguém e sem tocar na original', async () => {
+  const before = await getDoc(doc(db('aowner'), 'trainingSeries/s_a'));
+  const cp = mkSeries('aowner', A, 'dup1', { draft: { name: 'Série (cópia)', exercises: [EX] }, sourceSeriesId: 's_a' });
+  await assertSucceeds(cp.commit());
+  const c = (await getDoc(doc(db('aowner'), 'trainingSeries/dup1'))).data();
+  if (c.currentVersion !== 0 || c.sourceSeriesId !== 's_a') throw new Error('a cópia deveria ser rascunho com origem');
+  const asg = await getDocs(query(collection(db('aowner'), 'academyAssigned'), where('academyId', '==', A)));
+  if (asg.size !== 1) throw new Error('duplicar não pode atribuir ninguém');
+  const after = await getDoc(doc(db('aowner'), 'trainingSeries/s_a'));
+  if (JSON.stringify(before.data()) !== JSON.stringify(after.data())) throw new Error('a original mudou');
+  // quem não pode criar ficha não duplica
+  await assertFails(mkSeries('ateacher', A, 'dup2', { sourceSeriesId: 's_a' }).commit());
+  await assertFails(mkSeries('arecep', A, 'dup3', { sourceSeriesId: 's_a' }).commit());
+  await assertFails(mkSeries('astu', A, 'dup4', { sourceSeriesId: 's_a' }).commit());
+  await withPerm('aprof', A);
+  await assertSucceeds(mkSeries('aprof', A, 'dup5', { sourceSeriesId: 's_a' }).commit());   // professor COM permissão
+  // não duplica ficha de outra academia, nem de ficha inexistente, nem com origem enorme
+  await assertFails(mkSeries('bowner', B, 'dup6', { sourceSeriesId: 's_a' }).commit());
+  await assertFails(mkSeries('aowner', A, 'dup7', { sourceSeriesId: 'nao_existe' }).commit());
+  await assertFails(mkSeries('aowner', A, 'dup8', { sourceSeriesId: 'x'.repeat(41) }).commit());
+  await assertSucceeds(mkSeries('bowner', B, 'dup9', { sourceSeriesId: 's_b' }).commit());
+});
+
+test('descrição: opcional, até 300, e a versão publicada guarda exatamente a do rascunho', async () => {
+  const exs = [EX];
+  await assertSucceeds(mkSeries('aowner', A, 'ds1', { draft: { name: 'Com texto', description: 'Foco em quadríceps', exercises: exs } }).commit());
+  await assertFails(mkSeries('aowner', A, 'ds2', { draft: { name: 'Texto grande', description: 'x'.repeat(301), exercises: exs } }).commit());
+  await assertFails(mkSeries('aowner', A, 'ds3', { draft: { name: 'Texto errado', description: 5, exercises: exs } }).commit());
+  const pub = (id, description, logId) => {
+    const d = db('aowner');
+    const b = writeBatch(d);
+    b.update(doc(d, `trainingSeries/${id}`), { currentVersion: 1, updatedAt: NOW, auditId: logId });
+    b.set(doc(d, `trainingVersions/${id}_1`), { academyId: A, seriesId: id, version: 1, name: 'Com texto', exercises: exs, createdBy: 'aowner', createdAt: NOW, ...(description === undefined ? {} : { description }) });
+    b.set(...logDoc(d, logId, A, 'aowner', 'training.published', 'training', id));
+    return b;
+  };
+  await assertFails(pub('ds1', 'Outro texto', 'pds1a').commit());   // diferente do rascunho
+  await assertFails(pub('ds1', undefined, 'pds1b').commit());       // omitida, mas o rascunho tem
+  await assertSucceeds(pub('ds1', 'Foco em quadríceps', 'pds1c').commit());
+});
+
+test('arquivar: auditado, só autor, preserva versão e atribuição de quem já usa; bloqueia novas atribuições; restaurar é auditado', async () => {
+  await addStudent(A, 'astu2');
+  // autorização e auditoria
+  await assertFails(archive('ateacher', A, 's_a', 'archived', 'ar1').commit());           // professor sem permissão
+  await assertFails(archive('arecep', A, 's_a', 'archived', 'ar2').commit());
+  await assertFails(archive('astu', A, 's_a', 'archived', 'ar3').commit());
+  await assertFails(archive('bowner', A, 's_a', 'archived', 'ar4').commit());              // outra academia
+  await assertFails(archive('aowner', A, 's_a', 'archived', 'ar5', {}, 'training.updated').commit());   // ação errada na auditoria
+  await assertFails(archive('aowner', A, 's_a', 'archived', 'ar6', { currentVersion: 5 }).commit());    // mexe em outro campo
+  await assertFails(archive('aowner', A, 's_a', 'archived', 'ar7', { name: 'Outro' }).commit());
+  await assertFails(archive('aowner', A, 's_a', 'apagada', 'ar8').commit());               // status inventado
+  const semLog = writeBatch(db('aowner'));
+  semLog.update(doc(db('aowner'), 'trainingSeries/s_a'), { status: 'archived', updatedAt: NOW, auditId: 'sem_log' });
+  await assertFails(semLog.commit());
+  await assertSucceeds(archive('aowner', A, 's_a', 'archived', 'ar9').commit());
+  // quem já usa a versão continua lendo e a atribuição segue intacta
+  const a = await getDoc(doc(db('astu'), `academyAssigned/${A}_astu`));
+  if (a.data().versionId !== 's_a_1') throw new Error('a atribuição mudou');
+  await assertSucceeds(getDoc(doc(db('astu'), 'trainingVersions/s_a_1')));
+  await assertSucceeds(getDoc(doc(db('ateacher'), 'trainingVersions/s_a_1')));
+  // nenhuma nova atribuição (nem a mesma versão para outro aluno, nem a quem já usa)
+  await assertFails(assignTo('aowner', A, 'astu2', 's_a', 1, '', 'ar10').commit());
+  await assertFails(assignTo('ateacher', A, 'astu', 's_a', 1, 'ateacher', 'ar11').commit());
+  // ficha arquivada não se edita nem publica; a versão publicada continua imutável
+  await assertFails(editDraft('aowner', A, 's_a', { name: 'Série', exercises: [EX, EX] }, 'ar12').commit());
+  await assertFails(publish('aowner', A, 's_a', 2, [EX], 'ar13', 'Série').commit());
+  await assertFails(updateDoc(doc(db('aowner'), 'trainingVersions/s_a_1'), { name: 'Adulterada' }));
+  await assertFails(deleteDoc(doc(db('aowner'), 'trainingVersions/s_a_1')));
+  await assertFails(archive('aowner', A, 's_a', 'archived', 'ar14').commit());             // já arquivada
+  // restaurar: só autor, auditado; depois volta a atribuir e editar
+  await assertFails(archive('ateacher', A, 's_a', 'active', 'ar15').commit());
+  await assertFails(archive('bowner', A, 's_a', 'active', 'ar16').commit());
+  await assertFails(archive('aowner', A, 's_a', 'active', 'ar17', {}, 'training.archived').commit());
+  await assertSucceeds(archive('aowner', A, 's_a', 'active', 'ar18').commit());
+  await assertSucceeds(assignTo('aowner', A, 'astu2', 's_a', 1, '', 'ar19').commit());
+  await assertSucceeds(editDraft('aowner', A, 's_a', { name: 'Série', exercises: [EX, EX] }, 'ar20').commit());
+});
+
+test('arquivar: dono e admin arquivam; professor com permissão também; a auditoria registra o autor', async () => {
+  await assertSucceeds(archive('aadmin', A, 's_a', 'archived', 'ab1').commit());
+  await assertSucceeds(archive('aadmin', A, 's_a', 'active', 'ab2').commit());
+  await withPerm('aprof', A);
+  await assertSucceeds(archive('aprof', A, 's_a', 'archived', 'ab3').commit());
+  const log = await getDoc(doc(db('aowner'), 'academyAuditLog/ab3'));
+  if (log.data().actorId !== 'aprof' || log.data().action !== 'training.archived') throw new Error('auditoria incorreta');
+  // a outra academia não é afetada
+  const s = await getDoc(doc(db('bowner'), 'trainingSeries/s_b'));
+  if (s.data().status !== 'active') throw new Error('a academia B foi afetada');
+});
+
+test('lote: atribuição em lote parcial; aluno sem vínculo só pela equipe; ficha de outra academia nunca', async () => {
+  await addStudent(A, 'astu2', { teacherId: 'ateacher' });   // aluno do professor
+  await addStudent(A, 'astu3');                               // sem professor ativo
+  await addStudent(A, 'astu4', { teacherId: 'aprof' });      // aluno de OUTRO professor
+  await withPerm('aprof', A, {});
+  // o professor atribui: os dele passam, o sem vínculo e o de outro professor falham (resultado parcial)
+  const porProf = [
+    ['astu2', 'ateacher', 'lt1', true], ['astu3', '', 'lt2', false], ['astu4', 'aprof', 'lt3', false], ['astu', 'ateacher', 'lt4', true]
+  ];
+  for (const [sid, tid, log, ok] of porProf) {
+    const b = assignTo('ateacher', A, sid, 's_a', 1, tid, log);
+    await (ok ? assertSucceeds(b.commit()) : assertFails(b.commit()));
+  }
+  // a equipe atribui os que sobraram, incluindo quem não tem professor (teacherId vazio)
+  await assertSucceeds(assignTo('aowner', A, 'astu3', 's_a', 1, '', 'lt5').commit());
+  await assertSucceeds(assignTo('aadmin', A, 'astu4', 's_a', 1, 'aprof', 'lt6').commit());
+  // teacherId errado para o aluno sem vínculo ou com vínculo é recusado
+  await assertFails(assignTo('aowner', A, 'astu3', 's_a', 1, 'ateacher', 'lt7').commit());
+  await assertFails(assignTo('aowner', A, 'astu4', 's_a', 1, '', 'lt8').commit());
+  // academia B não atribui ficha da A nem aluno da A
+  await assertFails(assignTo('bowner', A, 'astu3', 's_a', 1, '', 'lt9').commit());
+  await assertFails(assignTo('bowner', B, 'bstu', 's_a', 1, 'bteacher', 'lt10').commit());
+  // cada atribuição do lote ficou auditada, com o ator e o aluno-alvo
+  const logs = await getDocs(query(collection(db('aowner'), 'academyAuditLog'), where('academyId', '==', A), where('action', '==', 'training.assigned')));
+  if (logs.size !== 4) throw new Error(`esperava 4 registros de atribuição, vieram ${logs.size}`);
+});
+
+test('lote: a atribuição só troca a versão do aluno; histórico e execuções ficam como estão', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'checkIns/c9'), { userId: 'astu', trainingId: 'ac~x~s_a_1', academyId: A, versionId: 's_a_1', source: 'academy', completedAt: NOW });
+  });
+  await assertSucceeds(mkSeries('aowner', A, 'lh1').commit());
+  await assertSucceeds(publish('aowner', A, 'lh1', 1, [EX], 'plh1').commit());
+  await assertSucceeds(assignTo('aowner', A, 'astu', 'lh1', 1, 'ateacher', 'alh1').commit());
+  const ci = await getDoc(doc(db('astu'), 'checkIns/c9'));
+  if (!ci.exists() || ci.data().versionId !== 's_a_1') throw new Error('o histórico mudou');
+  // o aluno continua lendo a versão antiga? Não: só a atribuída; o app guarda a sessão em andamento (testado na tela)
+  await assertSucceeds(getDoc(doc(db('astu'), 'trainingVersions/lh1_1')));
+  await assertFails(getDoc(doc(db('astu'), 'trainingVersions/s_a_1')));
+});
+
+test('duplicar: o ID de origem só aceita letras, números e sublinhado (nada de caminho)', async () => {
+  await assertFails(mkSeries('aowner', A, 'dp1', { sourceSeriesId: 's_a/../x' }).commit());
+  await assertFails(mkSeries('aowner', A, 'dp2', { sourceSeriesId: 's_a/versions' }).commit());
+  await assertSucceeds(mkSeries('aowner', A, 'dp3', { sourceSeriesId: 's_a' }).commit());
+});

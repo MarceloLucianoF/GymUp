@@ -8,20 +8,22 @@ import EmptyState from '../../components/common/EmptyState';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import ErrorState from '../../components/common/ErrorState';
 import { btnDanger, btnGhost, btnPrimary, inputCls, labelCls, pageCls } from '../../components/coach/styles';
+import { BatchModal, CompareModal } from './TrainingModals';
 import ExerciseThumb from '../../components/ui/ExerciseThumb';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import usePageMeta from '../../hooks/usePageMeta';
 import { getMemberName, listAcademyAssignments, listAcademyMembers, listMyAssignments, listMyMemberships } from '../../services/academyService';
 import {
-  assignVersion, canAuthorTrainings, copyTemplateToAcademy, listOfficialTemplates, countByVersion, createDraft, deleteDraft, draftChanged, listAssignedForAcademy, listSeries, listVersions,
-  loadExerciseLibrary, MAX_EXERCISES, publishDraft, saveDraft, toDraftExercise, versionIdOf
+  applyBatch, assignVersion, canAuthorTrainings, copyTemplateToAcademy, listOfficialTemplates, countByVersion, createDraft, deleteDraft, draftChanged, duplicateSeries, listAssignedForAcademy, listSeries, listVersions,
+  loadExerciseLibrary, MAX_EXERCISES, publishDraft, saveDraft, setArchived, toDraftExercise, versionIdOf
 } from '../../services/academyTrainingService';
 
 const norm = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 function DraftEditor({ series, library, onClose, onSave, busy }) {
   const [name, setName] = useState(series?.draft?.name || '');
+  const [description, setDescription] = useState(series?.draft?.description || '');
   const [exercises, setExercises] = useState(series?.draft?.exercises || []);
   const [term, setTerm] = useState('');
   const results = useMemo(() => {
@@ -43,6 +45,8 @@ function DraftEditor({ series, library, onClose, onSave, busy }) {
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">O rascunho só vira ficha de uso quando você publica uma versão. Versões publicadas nunca mudam.</p>
         <label htmlFor="draft-name" className={`${labelCls} mt-4`}>Nome da ficha</label>
         <input id="draft-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className={inputCls} />
+        <label htmlFor="draft-desc" className={`${labelCls} mt-3`}>Descrição (opcional)</label>
+        <textarea id="draft-desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={300} rows={2} className={inputCls} placeholder="Ex.: foco em quadríceps, para alunos iniciantes" />
 
         <h3 className="mt-5 font-bold text-gray-900 dark:text-white">Exercícios ({exercises.length})</h3>
         <ul className="mt-2 space-y-2">
@@ -81,7 +85,7 @@ function DraftEditor({ series, library, onClose, onSave, busy }) {
 
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-          <button type="button" disabled={!valid || busy} onClick={() => onSave({ name, exercises })} className={btnPrimary}>{busy ? 'Salvando...' : 'Salvar rascunho'}</button>
+          <button type="button" disabled={!valid || busy} onClick={() => onSave({ name, exercises, description })} className={btnPrimary}>{busy ? 'Salvando...' : 'Salvar rascunho'}</button>
         </div>
       </div>
     </Modal>
@@ -155,6 +159,9 @@ export default function AcademyTrainingsPage() {
   const [editor, setEditor] = useState(null);       // null | 'new' | série
   const [assigning, setAssigning] = useState(null); // série
   const [templates, setTemplates] = useState(null); // null = fechado; lista = modal de modelos oficiais
+  const [comparing, setComparing] = useState(null); // série
+  const [batching, setBatching] = useState(null);   // série
+  const [showArchived, setShowArchived] = useState(false);
   const [busy, setBusy] = useState('');
 
   const isStaff = membership && ['owner', 'admin'].includes(membership.role);
@@ -184,6 +191,9 @@ export default function AcademyTrainingsPage() {
   useEffect(() => { if (canAuthor && library.length === 0) loadExerciseLibrary().then(setLibrary).catch((e) => console.error(e)); }, [canAuthor, library.length]);
 
   const counts = useMemo(() => countByVersion(assigned), [assigned]);
+  const seriesNames = useMemo(() => Object.fromEntries(series.map((x) => [x.id, x.name])), [series]);
+  const activeSeries = series.filter((x) => (x.status || 'active') !== 'archived');
+  const archivedSeries = series.filter((x) => x.status === 'archived');
   const versionsOf = (id) => versions.filter((v) => v.seriesId === id).sort((a, b) => b.version - a.version);
 
   const run = async (key, fn, okMsg) => {
@@ -193,8 +203,8 @@ export default function AcademyTrainingsPage() {
     finally { setBusy(''); }
   };
 
-  const save = async ({ name, exercises }) => {
-    const ok = await run('save', () => (editor === 'new' ? createDraft(actor, academyId, name, exercises) : saveDraft(actor, editor, { name, exercises })), 'Rascunho salvo.');
+  const save = async ({ name, exercises, description }) => {
+    const ok = await run('save', () => (editor === 'new' ? createDraft(actor, academyId, name, exercises, '', { description }) : saveDraft(actor, editor, { name, exercises, description })), 'Rascunho salvo.');
     if (ok) setEditor(null);
   };
   const publish = async (s) => {
@@ -205,6 +215,20 @@ export default function AcademyTrainingsPage() {
   const remove = async (s) => {
     if (!(await confirm({ title: `Excluir o rascunho ${s.name}?`, message: 'Só rascunhos nunca publicados podem ser excluídos.', confirmLabel: 'Excluir', danger: true }))) return;
     await run(`del-${s.id}`, () => deleteDraft(actor, s), 'Rascunho excluído.');
+  };
+  const duplicate = async (s) => {
+    await run(`dup-${s.id}`, () => duplicateSeries(actor, s), 'Cópia criada como rascunho. Nenhum aluno foi atribuído.');
+  };
+  const archive = async (s) => {
+    const using = (assigned || []).filter((a) => a.seriesId === s.id).length;
+    const message = using > 0
+      ? `${using} ${using === 1 ? 'aluno usa' : 'alunos usam'} esta ficha. ${using === 1 ? 'Ele continua treinando' : 'Eles continuam treinando'} com a versão que ${using === 1 ? 'tem' : 'têm'} e o histórico não muda, mas a ficha não poderá ser atribuída a novos alunos nem editada até ser restaurada.`
+      : 'Ninguém usa esta ficha. Ela sai da lista principal e não poderá ser atribuída nem editada até ser restaurada.';
+    if (!(await confirm({ title: `Arquivar ${s.name}?`, message, confirmLabel: 'Arquivar' }))) return;
+    await run(`arc-${s.id}`, () => setArchived(actor, s, true), 'Ficha arquivada.');
+  };
+  const restore = async (s) => {
+    await run(`arc-${s.id}`, () => setArchived(actor, s, false), 'Ficha restaurada.');
   };
   const openTemplates = async () => {
     try { setTemplates(await listOfficialTemplates()); } catch (e) { console.error(e); toast.error('Não foi possível carregar os modelos oficiais.'); }
@@ -217,6 +241,54 @@ export default function AcademyTrainingsPage() {
     const student = students.find((x) => x.userId === studentId);
     const ok = await run('assign', () => assignVersion(actor, { academyId, studentId, seriesId: assigning.id, version, teacherId: student?.teacherId || '' }), 'Ficha atribuída.');
     if (ok) setAssigning(null);
+  };
+
+  const renderCard = (s, archived) => {
+    const vs = versionsOf(s.id);
+    const latest = vs[0] || null;
+    const changed = draftChanged(s, latest);
+    const using = (assigned || []).filter((a) => a.seriesId === s.id).length;
+    const origin = s.sourceSeriesId ? (seriesNames[s.sourceSeriesId] ? `Duplicada de ${seriesNames[s.sourceSeriesId]}` : 'Duplicada de outra ficha') : s.sourceTemplateId ? 'Copiada de modelo oficial' : '';
+    return (
+      <article key={s.id} className={`surface bg-white p-5 dark:bg-gray-900 ${archived ? 'opacity-90' : ''}`} aria-label={`Ficha ${s.name}`}>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">{s.name}</h2>
+            {s.draft?.description && <p className="text-sm text-gray-700 dark:text-gray-300">{s.draft.description}</p>}
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {archived ? `Arquivada · ${using} ${using === 1 ? 'aluno ainda usa' : 'alunos ainda usam'} · ` : ''}
+              {origin ? `${origin} · ` : ''}{s.currentVersion === 0 ? 'Rascunho (nunca publicada)' : `Publicada: versão ${s.currentVersion}`}
+              {!archived && s.currentVersion > 0 && changed ? ' · rascunho com alterações' : ''}
+              {` · ${s.draft?.exercises?.length || 0} exercícios no rascunho`}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {canAuthor && !archived && <button type="button" onClick={() => setEditor(s)} className={btnGhost}>Editar rascunho</button>}
+            {canAuthor && !archived && changed && (s.draft?.exercises?.length || 0) >= 1 && <button type="button" disabled={busy === `pub-${s.id}`} onClick={() => publish(s)} className={btnPrimary}>Publicar versão {(s.currentVersion || 0) + 1}</button>}
+            {canAuthor && <button type="button" disabled={busy === `dup-${s.id}`} onClick={() => duplicate(s)} className={btnGhost}>Duplicar</button>}
+            {(vs.length >= 2 || (vs.length === 1 && changed)) && <button type="button" onClick={() => setComparing(s)} className={btnGhost}>Comparar versões</button>}
+            {!archived && vs.length > 0 && <button type="button" onClick={() => setAssigning(s)} className={btnGhost}>Atribuir</button>}
+            {!archived && vs.length > 0 && <button type="button" onClick={() => setBatching(s)} className={btnGhost}>Aplicar em lote</button>}
+            {canAuthor && !archived && <button type="button" disabled={busy === `arc-${s.id}`} onClick={() => archive(s)} className={btnGhost}>Arquivar</button>}
+            {canAuthor && archived && <button type="button" disabled={busy === `arc-${s.id}`} onClick={() => restore(s)} className={btnPrimary}>Restaurar</button>}
+            {canAuthor && s.currentVersion === 0 && <button type="button" onClick={() => remove(s)} className={btnDanger}><Trash2 className="h-4 w-4" aria-hidden="true" />Excluir</button>}
+          </div>
+        </div>
+        {vs.length > 0 && (
+          <ul className="mt-3 space-y-1.5" aria-label="Versões publicadas">
+            {vs.map((v) => {
+              const n = counts[versionIdOf(s.id, v.version)] || 0;
+              return (
+                <li key={v.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm dark:bg-white/5">
+                  <span className="font-semibold text-gray-900 dark:text-white">Versão {v.version} · {v.exercises?.length || 0} exercícios</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400" data-testid={`uso-${v.id}`}>{n} {n === 1 ? 'aluno usa' : 'alunos usam'}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </article>
+    );
   };
 
   if (error) return <div className={pageCls}><ErrorState onRetry={load} /></div>;
@@ -234,48 +306,23 @@ export default function AcademyTrainingsPage() {
           actions={canAuthor && <><button type="button" onClick={openTemplates} className={btnGhost}>Usar modelo oficial</button><button type="button" onClick={() => setEditor('new')} className={btnPrimary}><Plus className="h-4 w-4" aria-hidden="true" />Nova ficha</button></>} />
         {!canAuthor && <p className="rounded-2xl bg-amber-500/10 p-3 text-sm text-gray-800 dark:text-gray-200">Você pode ver as fichas e atribuir versões aos seus alunos. Para criar ou editar, peça a permissão ao proprietário.</p>}
         {series.length === 0 && <EmptyState title="Nenhuma ficha ainda" description={canAuthor ? 'Crie a primeira ficha como rascunho e publique quando estiver pronta.' : 'A equipe ainda não criou fichas.'} />}
-        {series.map((s) => {
-          const vs = versionsOf(s.id);
-          const latest = vs[0] || null;
-          const changed = draftChanged(s, latest);
-          return (
-            <article key={s.id} className="surface bg-white p-5 dark:bg-gray-900" aria-label={`Ficha ${s.name}`}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">{s.name}</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {s.sourceTemplateId ? 'Copiada de modelo oficial · ' : ''}{s.currentVersion === 0 ? 'Rascunho (nunca publicada)' : `Publicada: versão ${s.currentVersion}`}
-                    {s.currentVersion > 0 && changed ? ' · rascunho com alterações' : ''}
-                    {` · ${s.draft?.exercises?.length || 0} exercícios no rascunho`}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {canAuthor && <button type="button" onClick={() => setEditor(s)} className={btnGhost}>Editar rascunho</button>}
-                  {canAuthor && changed && (s.draft?.exercises?.length || 0) >= 1 && <button type="button" disabled={busy === `pub-${s.id}`} onClick={() => publish(s)} className={btnPrimary}>Publicar versão {(s.currentVersion || 0) + 1}</button>}
-                  {canAuthor && s.currentVersion === 0 && <button type="button" onClick={() => remove(s)} className={btnDanger}><Trash2 className="h-4 w-4" aria-hidden="true" />Excluir</button>}
-                  {vs.length > 0 && <button type="button" onClick={() => setAssigning(s)} className={btnGhost}>Atribuir</button>}
-                </div>
-              </div>
-              {vs.length > 0 && (
-                <ul className="mt-3 space-y-1.5" aria-label="Versões publicadas">
-                  {vs.map((v) => {
-                    const n = counts[versionIdOf(s.id, v.version)] || 0;
-                    return (
-                      <li key={v.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm dark:bg-white/5">
-                        <span className="font-semibold text-gray-900 dark:text-white">Versão {v.version} · {v.exercises?.length || 0} exercícios</span>
-                        <span className="text-xs text-gray-600 dark:text-gray-400" data-testid={`uso-${v.id}`}>{n} {n === 1 ? 'aluno usa' : 'alunos usam'}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </article>
-          );
-        })}
+        {series.length > 0 && activeSeries.length === 0 && <EmptyState title="Todas as fichas estão arquivadas" description="Restaure uma ficha abaixo ou crie uma nova." />}
+        {activeSeries.map((s) => renderCard(s, false))}
+        {archivedSeries.length > 0 && (
+          <section aria-label="Fichas arquivadas">
+            <button type="button" onClick={() => setShowArchived((v) => !v)} aria-expanded={showArchived} className={`${btnGhost} w-full justify-between`}>
+              <span>Arquivadas ({archivedSeries.length})</span><span aria-hidden="true">{showArchived ? 'Ocultar' : 'Mostrar'}</span>
+            </button>
+            {showArchived && <div className="mt-3 space-y-4">{archivedSeries.map((s) => renderCard(s, true))}</div>}
+          </section>
+        )}
         {!isStaff && <p className="text-xs text-gray-600 dark:text-gray-400">As contagens mostram apenas os alunos sob a sua responsabilidade.</p>}
       </div>
       {editor && <DraftEditor series={editor === 'new' ? null : editor} library={library} busy={busy === 'save'} onClose={() => setEditor(null)} onSave={save} />}
       {templates && <TemplateModal templates={templates} busy={busy === 'copy'} onClose={() => setTemplates(null)} onPick={copyTemplate} />}
+      {comparing && <CompareModal series={comparing} versions={versionsOf(comparing.id)} assigned={assigned} students={students} seriesNames={seriesNames} onClose={() => setComparing(null)} />}
+      {batching && <BatchModal series={batching} versions={versions} assigned={assigned} students={students} seriesNames={seriesNames} isStaff={!!isStaff}
+        onApply={(args) => applyBatch(actor, { academyId, seriesId: batching.id, ...args })} onClose={() => { setBatching(null); load(); }} />}
       {assigning && <AssignModal series={assigning} versions={versions} students={students} busy={busy === 'assign'} onClose={() => setAssigning(null)} onAssign={assign} />}
     </div>
   );

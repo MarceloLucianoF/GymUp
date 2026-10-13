@@ -29,7 +29,7 @@ export function draftChanged(series, latestVersion) {
   const draft = series?.draft;
   if (!draft) return false;
   if (!latestVersion) return (draft.exercises || []).length > 0;
-  return stable({ name: draft.name, exercises: draft.exercises }) !== stable({ name: latestVersion.name, exercises: latestVersion.exercises });
+  return stable({ name: draft.name, description: draft.description || '', exercises: draft.exercises }) !== stable({ name: latestVersion.name, description: latestVersion.description || '', exercises: latestVersion.exercises });
 }
 
 /** Quantos alunos usam cada versão: { 'fichaId_1': 3, ... }. */
@@ -43,8 +43,8 @@ export function countByVersion(assignedList) {
 export const canAuthorTrainings = (membership) => !!membership && membership.status === 'active'
   && (['owner', 'admin'].includes(membership.role) || (membership.role === 'teacher' && membership.perms?.createTrainings === true));
 
-function audit(batch, user, academyId, id, action, targetId) {
-  batch.set(doc(db, 'academyAuditLog', id), { academyId, actorId: user.uid, action, targetType: 'training', targetId, at: serverTimestamp() });
+function audit(batch, user, academyId, id, action, targetId, detail = '') {
+  batch.set(doc(db, 'academyAuditLog', id), { academyId, actorId: user.uid, action, targetType: 'training', targetId, at: serverTimestamp(), ...(detail ? { detail: String(detail).slice(0, 200) } : {}) });
 }
 const newAuditId = () => doc(collection(db, 'academyAuditLog')).id;
 
@@ -66,7 +66,24 @@ export async function listOfficialTemplates() {
 /** Copia o modelo oficial para um rascunho próprio da academia (ficha versionada independente). */
 export async function copyTemplateToAcademy(user, academyId, template) {
   const exercises = (template.exercises || []).slice(0, MAX_EXERCISES).map((e) => toDraftExercise(e, e));
-  return createDraft(user, academyId, template.name, exercises, template.id);
+  return createDraft(user, academyId, template.name, exercises, template.id, { description: template.description });
+}
+
+/** Duplica a ficha como rascunho NOVO (nunca atribui ninguém nem toca na original). A origem fica registrada em sourceSeriesId. */
+export async function duplicateSeries(user, series) {
+  const base = String(series.draft?.name || series.name || 'Ficha');
+  const suffix = ' (cópia)';
+  const name = `${base.slice(0, 80 - suffix.length)}${suffix}`;
+  return createDraft(user, series.academyId, name, series.draft?.exercises || [], '', { description: series.draft?.description, sourceSeriesId: series.id });
+}
+
+/** Arquiva (ou restaura) a ficha. Não toca em versões nem atribuições: quem já usa continua treinando com a versão que tem. */
+export async function setArchived(user, series, archived) {
+  const auditId = newAuditId();
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'trainingSeries', series.id), { status: archived ? 'archived' : 'active', updatedAt: now(), auditId });
+  audit(batch, user, series.academyId, auditId, archived ? 'training.archived' : 'training.restored', series.id);
+  await batch.commit();
 }
 
 export async function listSeries(academyId) {
@@ -86,14 +103,18 @@ export async function listAssignedForAcademy(academyId, { isStaff, userId }) {
   return snap.docs.map((d) => d.data());
 }
 
-export async function createDraft(user, academyId, name, exercises = [], sourceTemplateId = '') {
+const cleanDescription = (d) => String(d || '').trim().slice(0, 300);
+const draftOf = (name, exercises, description) => ({ name, exercises: exercises.slice(0, MAX_EXERCISES), ...(cleanDescription(description) ? { description: cleanDescription(description) } : {}) });
+
+export async function createDraft(user, academyId, name, exercises = [], sourceTemplateId = '', { description = '', sourceSeriesId = '' } = {}) {
   const ref = doc(collection(db, 'trainingSeries'));
   const auditId = newAuditId();
   const batch = writeBatch(db);
   const clean = String(name).trim();
   batch.set(ref, {
-    academyId, name: clean, currentVersion: 0, status: 'active', draft: { name: clean, exercises: exercises.slice(0, MAX_EXERCISES) },
+    academyId, name: clean, currentVersion: 0, status: 'active', draft: draftOf(clean, exercises, description),
     ...(sourceTemplateId ? { sourceTemplateId } : {}),
+    ...(sourceSeriesId ? { sourceSeriesId } : {}),
     createdBy: user.uid, createdAt: now(), updatedAt: now(), auditId
   });
   audit(batch, user, academyId, auditId, 'training.created', ref.id);
@@ -101,11 +122,11 @@ export async function createDraft(user, academyId, name, exercises = [], sourceT
   return ref.id;
 }
 
-export async function saveDraft(user, series, { name, exercises }) {
+export async function saveDraft(user, series, { name, exercises, description = '' }) {
   const auditId = newAuditId();
   const batch = writeBatch(db);
   const clean = String(name).trim();
-  batch.update(doc(db, 'trainingSeries', series.id), { draft: { name: clean, exercises: exercises.slice(0, MAX_EXERCISES) }, name: clean, updatedAt: now(), auditId });
+  batch.update(doc(db, 'trainingSeries', series.id), { draft: draftOf(clean, exercises, description), name: clean, updatedAt: now(), auditId });
   audit(batch, user, series.academyId, auditId, 'training.updated', series.id);
   await batch.commit();
 }
@@ -120,7 +141,7 @@ export async function publishDraft(user, series) {
   const batch = writeBatch(db);
   batch.update(fresh.ref, { currentVersion: version, updatedAt: now(), auditId });
   batch.set(doc(db, 'trainingVersions', versionIdOf(series.id, version)), {
-    academyId: cur.academyId, seriesId: series.id, version, name: cur.draft.name, exercises: cur.draft.exercises, createdBy: user.uid, createdAt: now()
+    academyId: cur.academyId, seriesId: series.id, version, name: cur.draft.name, ...(cur.draft.description ? { description: cur.draft.description } : {}), exercises: cur.draft.exercises, createdBy: user.uid, createdAt: now()
   });
   audit(batch, user, cur.academyId, auditId, 'training.published', series.id);
   await batch.commit();
@@ -136,13 +157,13 @@ export async function deleteDraft(user, series) {
 }
 
 /** Atribui uma versão publicada ao aluno. `teacherId` é o professor responsável ativo do aluno, ou '' se não houver. */
-export async function assignVersion(user, { academyId, studentId, seriesId, version, teacherId = '' }) {
+export async function assignVersion(user, { academyId, studentId, seriesId, version, teacherId = '', detail = '' }) {
   const auditId = newAuditId();
   const batch = writeBatch(db);
   batch.set(doc(db, 'academyAssigned', `${academyId}_${studentId}`), {
     academyId, studentId, seriesId, version, versionId: versionIdOf(seriesId, version), teacherId, assignedBy: user.uid, auditId, updatedAt: now()
   });
-  audit(batch, user, academyId, auditId, 'training.assigned', studentId);
+  audit(batch, user, academyId, auditId, 'training.assigned', studentId, detail);
   await batch.commit();
 }
 
@@ -156,4 +177,38 @@ export async function getMyAssignedTraining(academyId, userId) {
 
 export async function removeAssignment(academyId, studentId) {
   await deleteDoc(doc(db, 'academyAssigned', `${academyId}_${studentId}`));
+}
+
+/**
+ * Aplica uma versão a vários alunos. Um lote do Firestore por aluno (atribuição + auditoria): assim uma falha não derruba os demais e
+ * cada aluno recebe seu resultado. Antes de gravar, relê as atribuições: se a do aluno mudou depois da prévia, ele é pulado como conflito.
+ * Não toca em check-ins nem em execuções: só troca a versão que o aluno vai abrir da próxima vez.
+ */
+export async function applyBatch(user, { academyId, seriesId, version, rows, isStaff, onProgress }) {
+  const fresh = new Map((await listAssignedForAcademy(academyId, { isStaff, userId: user.uid })).map((a) => [a.studentId, a]));
+  const todo = rows.filter((r) => r.included);
+  const results = [];
+  let next = 0;
+  const worker = async () => {
+    while (next < todo.length) {
+      const row = todo[next]; next += 1;
+      const now_ = fresh.get(row.studentId) || null;
+      const expected = row.current?.versionId || null;
+      let result;
+      if ((now_?.versionId || null) !== expected) {
+        result = { studentId: row.studentId, name: row.name, status: 'conflict', reason: 'A ficha do aluno mudou depois da prévia. Nada foi alterado.' };
+      } else {
+        try {
+          await assignVersion(user, { academyId, studentId: row.studentId, seriesId, version, teacherId: row.teacherId, detail: `lote ${versionIdOf(seriesId, version)}` });
+          result = { studentId: row.studentId, name: row.name, status: 'ok' };
+        } catch (e) {
+          result = { studentId: row.studentId, name: row.name, status: 'failed', reason: e?.code === 'permission-denied' ? 'Sem permissão para este aluno (vínculo ou ficha mudou).' : 'Não foi possível gravar.' };
+        }
+      }
+      results.push(result);
+      onProgress?.(results.length, todo.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(3, todo.length) }, worker));
+  return results;
 }
