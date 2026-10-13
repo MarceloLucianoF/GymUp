@@ -9,7 +9,7 @@ export const exercises = [
     rest: 90,
     description: "Exercício para peito, ombro e tríceps. Foco na força e hipertrofia do peitoral.",
     execution: "Sente-se na máquina com as costas bem apoiadas. Ajuste a altura do assento para que as alças fiquem na altura do meio do peito. Empurre as alças para frente até estender os braços, contraindo o peitoral. Retorne lentamente controlando o movimento.",
-    machineImage: "https://via.placeholder.com/300x200?text=Supino+Reto+Maquina",
+    machineImage: "/exercises/supino-reto-maquina.gif",
     videoUrl: '',
     muscleGroup: "peito",
     difficulty: "iniciante"
@@ -22,7 +22,7 @@ export const exercises = [
     rest: 90,
     description: "Trabalha a porção superior do peitoral e ombros. Requer mais estabilização.",
     execution: "Deite-se em um banco inclinado (30-45 graus) com um halter em cada mão, palmas para frente. Desça os halteres lateralmente até a altura do peito, mantendo os cotovelos ligeiramente abaixo dos ombros. Empurre os halteres para cima, unindo-os levemente no topo, sem tocar.",
-    machineImage: "https://via.placeholder.com/300x200?text=Supino+Inclinado+Halter",
+    machineImage: "/exercises/supino-inclinado-halter.gif",
     videoUrl: '',
     muscleGroup: "peito",
     difficulty: "intermediário"
@@ -35,7 +35,7 @@ export const exercises = [
     rest: 60,
     description: "Exercício isolador para o peitoral, foca na contração máxima.",
     execution: "Sente-se na máquina com as costas apoiadas. Ajuste os braços da máquina para que fiquem alinhados com o peito. Junte os braços à frente, contraindo o peitoral. Retorne controladamente, sentindo o alongamento.",
-    machineImage: "https://via.placeholder.com/300x200?text=Peck+Deck",
+    machineImage: "/exercises/peck-deck-voador.gif",
     videoUrl: '',
     muscleGroup: "peito",
     difficulty: "iniciante"
@@ -48,7 +48,7 @@ export const exercises = [
     rest: 90,
     description: "Exercício composto para ombros, trabalha deltoides e tríceps.",
     execution: "Sente-se em um banco com encosto, segurando um halter em cada mão na altura dos ombros, palmas para frente. Empurre os halteres para cima até estender os braços, sem travar os cotovelos. Retorne lentamente à posição inicial.",
-    machineImage: "https://via.placeholder.com/300x200?text=Desenvolvimento+Halter",
+    machineImage: "/exercises/desenvolvimento-halter.gif",
     videoUrl: '',
     muscleGroup: "ombro",
     difficulty: "intermediário"
@@ -61,7 +61,7 @@ export const exercises = [
     rest: 60,
     description: "Isola o deltoide lateral, responsável pela largura dos ombros.",
     execution: "Em pé, segure um halter leve em cada mão, braços estendidos ao lado do corpo. Eleve os halteres lateralmente até a altura dos ombros, com os cotovelos ligeiramente flexionados. Mantenha o controle na descida.",
-    machineImage: "https://via.placeholder.com/300x200?text=Elevacao+Lateral",
+    machineImage: "/exercises/elevacao-lateral.gif",
     videoUrl: '',
     muscleGroup: "ombro",
     difficulty: "iniciante"
@@ -74,7 +74,7 @@ export const exercises = [
     rest: 60,
     description: "Trabalha as três cabeças do tríceps, com foco na porção lateral.",
     execution: "Em pé, de frente para a polia alta, segure a corda com as duas mãos. Mantenha os cotovelos próximos ao corpo e empurre a corda para baixo, estendendo os braços. Abra a corda no final do movimento para maior contração.",
-    machineImage: "https://via.placeholder.com/300x200?text=Triceps+Corda",
+    machineImage: "/exercises/triceps-corda.gif",
     videoUrl: '',
     muscleGroup: "triceps",
     difficulty: "iniciante"
@@ -87,7 +87,7 @@ export const exercises = [
     rest: 60,
     description: "Foca na massa muscular do tríceps, usando barra reta ou V.",
     execution: "Em pé, de frente para a polia alta, segure a barra com as mãos na largura dos ombros. Mantenha os cotovelos fixos e empurre a barra para baixo, estendendo os braços. Retorne controladamente.",
-    machineImage: "https://via.placeholder.com/300x200?text=Triceps+Barra",
+    machineImage: "/exercises/triceps-barra-pushdown.gif",
     videoUrl: '',
     muscleGroup: "triceps",
     difficulty: "iniciante"
@@ -101,7 +101,7 @@ export const exercises = [
     rest: 90,
     description: "Exercício fundamental para largura das costas, trabalha o grande dorsal.",
     execution: "Sente-se na máquina, ajuste o apoio de coxa. Segure a barra com pegada aberta, palmas para frente. Puxe a barra em direção ao peito, contraindo as costas. Retorne lentamente, sentindo o alongamento.",
-    machineImage: "https://via.placeholder.com/300x200?text=Puxada+Aberta",
+    machineImage: "/exercises/puxada-aberta-lat-pulldown.gif",
     videoUrl: '',
     muscleGroup: "costas",
     difficulty: "iniciante"
@@ -114,7 +114,7 @@ export const exercises = [
     rest: 90,
     description: "Trabalha a espessura das costas, focando nos músculos do meio das costas.",
     execution: "Sente-se na máquina, com os pés apoiados. Segure a alça (triângulo ou barra reta). Puxe a alça em direção ao abdômen, apertando as escápulas. Retorne controladamente, alongando as costas.",
-    machineImage: "https://via.placeholder.com/300x200?text=Remada+Maquina",
+    machineImage: "/exercises/remada-maquina-sentado.gif",
     videoUrl: '',
     muscleGroup: "costas",
     difficulty: "iniciante"
@@ -127,7 +127,7 @@ export const exercises = [
     rest: 60,
     description: "Foca na porção inferior e central do grande dorsal, dando espessura.",
     execution: "Sente-se na máquina de puxada, use a pegada fechada (triângulo). Puxe a barra em direção ao abdômen inferior, mantendo os cotovelos próximos ao corpo. Contraia as costas e retorne lentamente.",
-    machineImage: "https://via.placeholder.com/300x200?text=Puxada+Triangulo",
+    machineImage: "/exercises/puxada-triangulo-pegada-fechada.gif",
     videoUrl: '',
     muscleGroup: "costas",
     difficulty: "iniciante"
@@ -140,7 +140,7 @@ export const exercises = [
     rest: 60,
     description: "Exercício clássico para bíceps, foca na massa muscular.",
     execution: "Em pé, segure uma barra (reta ou W) com as mãos na largura dos ombros, palmas para cima. Mantenha os cotovelos fixos ao lado do corpo e eleve a barra até a altura dos ombros, contraindo o bíceps. Desça controladamente.",
-    machineImage: "https://via.placeholder.com/300x200?text=Rosca+Direta+Barra",
+    machineImage: "/exercises/rosca-direta-barra.gif",
     videoUrl: '',
     muscleGroup: "biceps",
     difficulty: "iniciante"
@@ -153,7 +153,7 @@ export const exercises = [
     rest: 60,
     description: "Trabalha o bíceps de forma unilateral, permitindo maior foco e amplitude.",
     execution: "Em pé, segure um halter em cada mão, palmas para dentro. Alterne a elevação dos halteres, girando a palma da mão para cima durante a subida. Mantenha o cotovelo fixo e controle a descida.",
-    machineImage: "https://via.placeholder.com/300x200?text=Rosca+Alternada+Halter",
+    machineImage: "/exercises/rosca-alternada-halter.gif",
     videoUrl: '',
     muscleGroup: "biceps",
     difficulty: "iniciante"
@@ -166,7 +166,7 @@ export const exercises = [
     rest: 60,
     description: "Isola o bíceps, ideal para finalizar o treino e focar na contração.",
     execution: "Sente-se em um banco, incline o tronco para frente. Apoie o cotovelo do braço que trabalha na parte interna da coxa. Segure um halter e eleve-o em direção ao ombro, contraindo o bíceps. Desça lentamente.",
-    machineImage: "https://via.placeholder.com/300x200?text=Rosca+Concentrada",
+    machineImage: "/exercises/rosca-concentrada.gif",
     videoUrl: '',
     muscleGroup: "biceps",
     difficulty: "intermediário"
@@ -180,7 +180,7 @@ export const exercises = [
     rest: 120,
     description: "Exercício composto fundamental para pernas e glúteos, grande gasto calórico.",
     execution: "No agachamento livre, posicione a barra nas costas. No Hack, apoie as costas e ombros. Desça controladamente até as coxas ficarem paralelas ao chão (ou mais fundo, se possível), mantendo a coluna reta. Empurre para cima usando a força das pernas e glúteos.",
-    machineImage: "https://via.placeholder.com/300x200?text=Agachamento+Livre+ou+Hack",
+    machineImage: "/exercises/agachamento-livre-ou-hack.gif",
     videoUrl: '',
     muscleGroup: "perna",
     difficulty: "avancado"
@@ -193,7 +193,7 @@ export const exercises = [
     rest: 90,
     description: "Trabalha quadríceps, glúteos e isquiotibiais com menos impacto na coluna.",
     execution: "Sente-se na máquina, apoie os pés na plataforma na largura dos ombros. Empurre a plataforma estendendo as pernas, sem travar os joelhos. Retorne controladamente, flexionando os joelhos até um ângulo de 90 graus.",
-    machineImage: "https://via.placeholder.com/300x200?text=Leg+Press",
+    machineImage: "/exercises/leg-press.gif",
     videoUrl: '',
     muscleGroup: "perna",
     difficulty: "intermediário"
@@ -206,7 +206,7 @@ export const exercises = [
     rest: 60,
     description: "Isola os isquiotibiais (posterior de coxa).",
     execution: "Deite-se de bruços na máquina, com os calcanhares sob o rolo. Flexione os joelhos, puxando o rolo em direção aos glúteos. Contraia os posteriores e retorne lentamente, sentindo o alongamento.",
-    machineImage: "https://via.placeholder.com/300x200?text=Mesa+Flexora",
+    machineImage: "/exercises/mesa-flexora.gif",
     videoUrl: '',
     muscleGroup: "perna",
     difficulty: "iniciante"
@@ -219,7 +219,7 @@ export const exercises = [
     rest: 60,
     description: "Isola o quadríceps (anterior de coxa).",
     execution: "Sente-se na máquina, ajuste o rolo para que fique sobre os tornozelos. Estenda as pernas para cima, contraindo o quadríceps. Retorne lentamente, controlando o movimento.",
-    machineImage: "https://via.placeholder.com/300x200?text=Cadeira+Extensora",
+    machineImage: "/exercises/cadeira-extensora.gif",
     videoUrl: '',
     muscleGroup: "perna",
     difficulty: "iniciante"
@@ -232,7 +232,7 @@ export const exercises = [
     rest: 90,
     description: "Foca na ativação e hipertrofia dos glúteos.",
     execution: "Sente-se no chão com as costas apoiadas em um banco, joelhos flexionados e pés no chão. Coloque uma barra ou halter sobre o quadril. Eleve o quadril até formar uma linha reta dos ombros aos joelhos, contraindo os glúteos. Desça controladamente.",
-    machineImage: "https://via.placeholder.com/300x200?text=Elevacao+Pelvica",
+    machineImage: "/exercises/elevacao-pelvica-gluteo.gif",
     videoUrl: '',
     muscleGroup: "gluteo",
     difficulty: "intermediário"
@@ -245,7 +245,7 @@ export const exercises = [
     rest: 60,
     description: "Trabalha os músculos da panturrilha, importante para força e estética.",
     execution: "Em pé na máquina, apoie a parte da frente dos pés na plataforma e os ombros nos apoios. Eleve os calcanhares o máximo possível, contraindo a panturrilha. Desça lentamente, alongando bem os músculos.",
-    machineImage: "https://via.placeholder.com/300x200?text=Panturrilha+Maquina",
+    machineImage: "/exercises/panturrilha-em-pe-maquina.gif",
     videoUrl: '',
     muscleGroup: "panturrilha",
     difficulty: "iniciante"
@@ -259,7 +259,7 @@ export const exercises = [
     rest: 0, // Não se aplica
     description: "Cardio de baixa a moderada intensidade para queima de gordura e condicionamento.",
     execution: "Escolha sua máquina preferida (esteira, bicicleta ergométrica ou escada). Mantenha um ritmo constante onde você consiga conversar, mas sinta o esforço. Duração de 25 a 40 minutos.",
-    machineImage: "https://via.placeholder.com/300x200?text=Cardio+Machine",
+    machineImage: "/exercises/esteira-bike-escada.gif",
     videoUrl: '',
     muscleGroup: "cardio",
     difficulty: "iniciante"
@@ -272,7 +272,7 @@ export const exercises = [
     rest: 0, // Não se aplica
     description: "Cardio de alta intensidade para queima de gordura e melhora da capacidade cardiovascular.",
     execution: "Alternar períodos curtos de esforço máximo (ex: 30s de sprint) com períodos de recuperação ativa (ex: 60s de caminhada). Repetir por 15-20 minutos. Pode ser feito em esteira, bike ou com exercícios corporais.",
-    machineImage: "https://via.placeholder.com/300x200?text=HIIT+Training",
+    machineImage: "/exercises/hiit-cardio-de-alta-intensidade.gif",
     videoUrl: '',
     muscleGroup: "cardio",
     difficulty: "avancado"
@@ -285,7 +285,7 @@ export const exercises = [
     rest: 60,
     description: "Fortalece o core, abdômen e lombar. Melhora a postura e estabilidade.",
     execution: "Deite-se de bruços, apoie os antebraços e as pontas dos pés no chão. Mantenha o corpo reto, contraindo o abdômen e glúteos. Evite deixar o quadril cair ou subir demais. Mantenha a posição por 30-60 segundos.",
-    machineImage: "https://via.placeholder.com/300x200?text=Prancha+Abdominal",
+    machineImage: "/exercises/prancha-abdominal.gif",
     videoUrl: '',
     muscleGroup: "core",
     difficulty: "iniciante"
@@ -298,7 +298,7 @@ export const exercises = [
     rest: 60,
     description: "Foca na porção inferior do abdômen.",
     execution: "Deite-se de costas, mãos sob o quadril ou ao lado do corpo. Eleve as pernas estendidas ou semi-flexionadas, contraindo o abdômen. Desça lentamente sem tocar os pés no chão. Pode ser feito em banco declinado para maior dificuldade.",
-    machineImage: "https://via.placeholder.com/300x200?text=Abdominal+Infra",
+    machineImage: "/exercises/abdominal-infra.gif",
     videoUrl: '',
     muscleGroup: "core",
     difficulty: "intermediário"
@@ -311,7 +311,7 @@ export const exercises = [
     rest: 60,
     description: "Trabalha os músculos oblíquos, responsáveis pela rotação do tronco.",
     execution: "Deite-se de costas, mãos atrás da cabeça, pernas elevadas e joelhos flexionados. Leve o cotovelo direito em direção ao joelho esquerdo, estendendo a perna direita. Alterne os lados, simulando um movimento de bicicleta.",
-    machineImage: "https://via.placeholder.com/300x200?text=Abdominal+Obliquo",
+    machineImage: "/exercises/abdominal-obliquo-bicicleta.gif",
     videoUrl: '',
     muscleGroup: "core",
     difficulty: "intermediário"
