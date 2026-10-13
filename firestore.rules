@@ -230,7 +230,8 @@ service cloud.firestore {
       // O ID é um segredo não adivinhável (só vale com o link); o documento não tem dado pessoal.
       allow get: if true;
       allow list: if signedIn() && (isAdmin() || resource.data.coachId == request.auth.uid);
-      allow create: if signedIn() && isCoach() && inviteId.matches('^i_[A-Za-z0-9]{20}$')
+      // Admin também atua como treinador (isTrainerId aceita os dois papéis): precisa poder criar convites.
+      allow create: if signedIn() && (isCoach() || isAdmin()) && inviteId.matches('^i_[A-Za-z0-9]{20}$')
         && request.resource.data.keys().hasOnly(['coachId', 'createdAt', 'expiresAt', 'maxUses', 'uses', 'revoked'])
         && request.resource.data.coachId == request.auth.uid
         && request.resource.data.createdAt is string

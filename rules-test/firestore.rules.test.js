@@ -782,3 +782,14 @@ test('chat: vínculo encerrado — o treinador deixa de ler e escrever nas mensa
   await assertFails(updateDoc(doc(db('stu1'), 'chats/' + id), { lastMessage: 'x', updatedAt: serverTimestamp() }));
   await assertSucceeds(getDocs(query(collection(db('coach1'), 'chats'), where('participants', 'array-contains', 'coach1'))));   // a lista de conversas continua consultável
 });
+
+test('convite: admin que atua como treinador também cria o próprio convite (e continua sem criar para outro)', async () => {
+  await assertSucceeds(setDoc(doc(db('admin1'), 'coachInvites/i_AdminCriaConvite1234'), invite({ coachId: 'admin1' })));
+  await assertFails(setDoc(doc(db('admin1'), 'coachInvites/i_AdminCriaConvite1235'), invite({ coachId: 'coach1' })));
+});
+
+test('convite de admin: o aluno pede o vínculo normalmente (admin vale como treinador)', async () => {
+  await seedStu3();
+  await putInvite({ coachId: 'admin1' });
+  await assertSucceeds(useInvite('stu3', { coachId: 'admin1' }));
+});
