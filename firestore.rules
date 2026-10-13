@@ -782,6 +782,9 @@ service cloud.firestore {
     function acStatsPath(aid, uid) {
       return /databases/$(database)/documents/academyMemberStats/$(aid + '_' + uid);
     }
+    function acSeriesPath(seriesId) {
+      return /databases/$(database)/documents/trainingSeries/$(seriesId);
+    }
     function acLogPath(logId) {
       return /databases/$(database)/documents/academyAuditLog/$(logId);
     }
@@ -852,7 +855,7 @@ service cloud.firestore {
     }
 
     // Quem pode registrar cada ação: ações da equipe só pela equipe; ações do próprio membro só sobre si mesmo.
-    function acLogActionAllowed(d) {
+    function acLogActionAllowed(d, logId) {
       return (d.action == 'academy.created' && getAfter(acMemberPath(d.academyId, request.auth.uid)).data.role == 'owner')
         || (d.action in ['academy.updated', 'invite.created', 'invite.revoked', 'assignment.proposed', 'assignment.transferred']
           && acStaff(d.academyId))
@@ -863,8 +866,15 @@ service cloud.firestore {
         || (d.action == 'member.consent' && d.targetId == request.auth.uid
           && d.get('detail', '') == (getAfter(acMemberPath(d.academyId, request.auth.uid)).data.consent.adherence ? 'concedido' : 'revogado'))
         || (d.action == 'assignment.ended' && acActive(d.academyId))
-        || (d.action in ['training.created', 'training.updated', 'training.assigned', 'training.unassigned']
-          && acActive(d.academyId) && acRole(d.academyId) in ['owner', 'admin', 'teacher']);
+        || (d.action in ['training.created', 'training.updated', 'training.published'] && acCanAuthor(d.academyId)
+          && existsAfter(acSeriesPath(d.targetId)) && getAfter(acSeriesPath(d.targetId)).data.academyId == d.academyId
+          && getAfter(acSeriesPath(d.targetId)).data.auditId == logId)
+        // excluir: só autor, e a ficha não pode existir depois do lote (o ID del_<ficha> não é "queimável" por um registro solto)
+        || (d.action == 'training.deleted' && acCanAuthor(d.academyId) && logId == 'del_' + d.targetId && !existsAfter(acSeriesPath(d.targetId)))
+        || (d.action == 'training.assigned' && existsAfter(acAssignedTrainingPath(d.academyId, d.targetId))
+          && getAfter(acAssignedTrainingPath(d.academyId, d.targetId)).data.auditId == logId
+          && (acStaff(d.academyId) || acTeacherOf(d.academyId, d.targetId)))
+        || (d.action == 'training.unassigned' && acActive(d.academyId) && acRole(d.academyId) in ['owner', 'admin', 'teacher']);
     }
 
     match /academyAuditLog/{logId} {
@@ -876,7 +886,7 @@ service cloud.firestore {
         && request.resource.data.at == request.time
         && request.resource.data.action in ['academy.created', 'academy.updated', 'member.joined', 'member.left', 'member.updated',
           'member.consent', 'invite.created', 'invite.revoked', 'assignment.proposed', 'assignment.accepted', 'assignment.ended',
-          'assignment.transferred', 'training.created', 'training.updated', 'training.assigned', 'training.unassigned']
+          'assignment.transferred', 'training.created', 'training.updated', 'training.published', 'training.deleted', 'training.assigned', 'training.unassigned']
         && request.resource.data.targetType in ['academy', 'member', 'invite', 'assignment', 'training']
         && request.resource.data.targetId is string && request.resource.data.targetId.size() > 0 && request.resource.data.targetId.size() <= 120
         && request.resource.data.get('detail', '') is string && request.resource.data.get('detail', '').size() <= 200
@@ -884,7 +894,7 @@ service cloud.firestore {
         && (getAfter(acMemberPath(request.resource.data.academyId, request.auth.uid)).data.status == 'active'
           || (request.resource.data.action == 'member.left'
             && getAfter(acMemberPath(request.resource.data.academyId, request.auth.uid)).data.status == 'left'))
-        && acLogActionAllowed(request.resource.data);
+        && acLogActionAllowed(request.resource.data, logId);
       allow update, delete: if false;
     }
 
@@ -1101,68 +1111,105 @@ service cloud.firestore {
     function acAssignedTrainingPath(aid, sid) {
       return /databases/$(database)/documents/academyAssigned/$(aid + '_' + sid);
     }
-    function acReadsTraining(aid, seriesId) {
+    // Cada exercício da ficha é um mapa com campos permitidos e nome de texto (até 120). Validar mais campos por item estoura o limite de
+    // 1000 expressões das regras já com 8 exercícios; os demais limites ficam na tela e no tamanho máximo do documento (só autores escrevem).
+    function exOk(e) {
+      return e is map && e.keys().hasOnly(['name', 'muscleGroup', 'sets', 'reps', 'rest', 'machineImage']) && e.name is string && e.name.size() <= 120;
+    }
+    function exAt(l, i) {
+      return l.size() <= i || exOk(l[i]);
+    }
+    function validExercises(l) {
+      return l is list && l.size() <= 15
+        && exAt(l, 0) && exAt(l, 1) && exAt(l, 2) && exAt(l, 3) && exAt(l, 4) && exAt(l, 5) && exAt(l, 6) && exAt(l, 7) && exAt(l, 8) && exAt(l, 9)
+        && exAt(l, 10) && exAt(l, 11) && exAt(l, 12) && exAt(l, 13) && exAt(l, 14);
+    }
+    function validDraft(d) {
+      return d is map && d.keys().hasOnly(['name', 'exercises'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80 && validExercises(d.exercises);
+    }
+    // O aluno só lê a VERSÃO que lhe foi atribuída (publicar uma versão nova não muda nem expõe nada para ele).
+    function acReadsVersion(aid, versionId) {
       return acActive(aid) && (acRole(aid) in ['owner', 'admin', 'teacher']
         || (acRole(aid) == 'student' && exists(acAssignedTrainingPath(aid, request.auth.uid))
-          && get(acAssignedTrainingPath(aid, request.auth.uid)).data.seriesId == seriesId));
-    }
-    function validExercises(list) {
-      return list is list && list.size() <= 40;
+          && get(acAssignedTrainingPath(aid, request.auth.uid)).data.versionId == versionId));
     }
 
+    // Ficha da academia: nasce RASCUNHO (currentVersion 0, sem versão). Editar muda só o rascunho. Publicar cria a versão imutável
+    // idêntica ao rascunho e sobe currentVersion em 1. Só rascunho nunca publicado pode ser excluído. Tudo auditado no mesmo lote.
     match /trainingSeries/{seriesId} {
-      allow get: if signedIn() && (isAdmin() || (resource != null && acReadsTraining(resource.data.academyId, seriesId)));
+      // O documento carrega o RASCUNHO: o aluno não lê a série (só a versão atribuída, em trainingVersions).
+      allow get: if signedIn() && (isAdmin() || (resource != null && acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
       allow list: if signedIn() && (isAdmin() || (acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
-      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'name', 'currentVersion', 'status', 'createdBy', 'auditId', 'createdAt', 'updatedAt'])
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'name', 'currentVersion', 'status', 'draft', 'createdBy', 'auditId', 'createdAt', 'updatedAt'])
         && acCanAuthor(request.resource.data.academyId) && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 80
-        && request.resource.data.currentVersion == 1 && request.resource.data.status == 'active'
-        && existsAfter(acTrainingVersionPath(seriesId, 1))
-        && getAfter(acTrainingVersionPath(seriesId, 1)).data.academyId == request.resource.data.academyId
+        && validDraft(request.resource.data.draft) && request.resource.data.name == request.resource.data.draft.name
+        && request.resource.data.currentVersion == 0 && request.resource.data.status == 'active'
+        && request.resource.data.createdAt is string && request.resource.data.updatedAt is string
         && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'training.created', seriesId);
       allow update: if signedIn() && acCanAuthor(resource.data.academyId) && request.resource.data.academyId == resource.data.academyId
-        && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'currentVersion', 'status', 'updatedAt', 'auditId'])
-        && request.resource.data.status in ['active', 'archived']
-        && (request.resource.data.currentVersion == resource.data.currentVersion
-          || (request.resource.data.currentVersion == resource.data.currentVersion + 1
-            && existsAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion))))
-        && acLogged(resource.data.academyId, request.resource.data.auditId, 'training.updated', seriesId);
-      allow delete: if false;
+        && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.status == resource.data.status
+        && (
+          // editar o rascunho
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['draft', 'name', 'updatedAt', 'auditId'])
+            && request.resource.data.updatedAt is string
+            && request.resource.data.currentVersion == resource.data.currentVersion
+            && validDraft(request.resource.data.draft) && request.resource.data.name == request.resource.data.draft.name
+            && acLogged(resource.data.academyId, request.resource.data.auditId, 'training.updated', seriesId))
+          // publicar: a versão nova é exatamente o rascunho
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentVersion', 'updatedAt', 'auditId'])
+            && request.resource.data.updatedAt is string
+            && request.resource.data.currentVersion == resource.data.currentVersion + 1
+            && resource.data.draft.exercises.size() >= 1
+            && existsAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion))
+            && getAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion)).data.exercises == resource.data.draft.exercises
+            && getAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion)).data.name == resource.data.draft.name
+            && acLogged(resource.data.academyId, request.resource.data.auditId, 'training.published', seriesId))
+        );
+      // Só rascunho nunca publicado (sem versões, logo sem uso). A auditoria usa o ID fixo del_<fichaId>.
+      allow delete: if signedIn() && acCanAuthor(resource.data.academyId) && resource.data.currentVersion == 0
+        && acLogged(resource.data.academyId, 'del_' + seriesId, 'training.deleted', seriesId);
     }
 
     match /trainingVersions/{versionId} {
-      allow get: if signedIn() && (isAdmin() || (resource != null && acReadsTraining(resource.data.academyId, resource.data.seriesId)));
+      allow get: if signedIn() && (isAdmin() || (resource != null && acReadsVersion(resource.data.academyId, versionId)));
       allow list: if signedIn() && (isAdmin() || (acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
-      // Versão imutável: só nasce junto da série (ou da sua atualização) e nunca muda.
+      // Versão imutável: só nasce junto da publicação da série e nunca muda nem some.
       allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'seriesId', 'version', 'name', 'exercises', 'createdBy', 'createdAt'])
+        && request.resource.data.seriesId is string
         && versionId == request.resource.data.seriesId + '_' + string(request.resource.data.version)
         && request.resource.data.version is int && request.resource.data.version >= 1
         && acCanAuthor(request.resource.data.academyId) && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 80
-        && validExercises(request.resource.data.exercises)
+        && validExercises(request.resource.data.exercises) && request.resource.data.exercises.size() >= 1
         && existsAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId))
         && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.academyId == request.resource.data.academyId
-        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.currentVersion == request.resource.data.version;
+        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.currentVersion == request.resource.data.version
+        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.draft.exercises == request.resource.data.exercises
+        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.draft.name == request.resource.data.name;
       allow update, delete: if false;
     }
 
+    // Uma ficha por aluno (a nova atribuição substitui a anterior). Guarda a VERSÃO exata (versionId) e só aceita versão publicada.
     match /academyAssigned/{assignedId} {
       allow get: if signedIn() && (isAdmin() || (resource == null
         ? assignedId.matches('^[a-z0-9]{16,28}_' + request.auth.uid + '$')
         : (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid || acStaff(resource.data.academyId))));
       allow list: if signedIn() && (isAdmin() || resource.data.studentId == request.auth.uid
         || resource.data.teacherId == request.auth.uid || acStaff(resource.data.academyId));
-      allow create, update: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'studentId', 'seriesId', 'version', 'teacherId', 'assignedBy', 'auditId', 'updatedAt'])
+      allow create, update: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'studentId', 'seriesId', 'version', 'versionId', 'teacherId', 'assignedBy', 'auditId', 'updatedAt'])
         && assignedId == request.resource.data.academyId + '_' + request.resource.data.studentId
         && request.resource.data.assignedBy == request.auth.uid
         && acIsStudent(request.resource.data.academyId, request.resource.data.studentId)
         && (acStaff(request.resource.data.academyId) || acTeacherOf(request.resource.data.academyId, request.resource.data.studentId))
-        && request.resource.data.version is int
+        && request.resource.data.seriesId is string && request.resource.data.version is int
+        && request.resource.data.versionId == request.resource.data.seriesId + '_' + string(request.resource.data.version)
         && get(acTrainingVersionPath(request.resource.data.seriesId, request.resource.data.version)).data.academyId == request.resource.data.academyId
-        && request.resource.data.seriesId is string
-        && get(acAssignPath(request.resource.data.academyId, request.resource.data.studentId)).data.teacherId == request.resource.data.teacherId
-        && get(acAssignPath(request.resource.data.academyId, request.resource.data.studentId)).data.status == 'active'
+        && request.resource.data.teacherId is string
+        && (!exists(acAssignPath(request.resource.data.academyId, request.resource.data.studentId))
+          || get(acAssignPath(request.resource.data.academyId, request.resource.data.studentId)).data.status != 'active'
+          ? request.resource.data.teacherId == ''
+          : get(acAssignPath(request.resource.data.academyId, request.resource.data.studentId)).data.teacherId == request.resource.data.teacherId)
         && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'training.assigned', request.resource.data.studentId);
       allow delete: if signedIn() && (acStaff(resource.data.academyId) || acTeacherOf(resource.data.academyId, resource.data.studentId));
     }

@@ -15,6 +15,7 @@ import {
   listMyMemberships, revokeAcademyInvite, ROLE_LABEL, setAdherenceConsent, listAcademyAssignments, listMyAssignments,
   proposeAssignment, acceptAssignment, endAssignment, updateMember, getMemberName, ASSIGNMENT_LABEL
 } from '../../services/academyService';
+import { getMyAssignedTraining } from '../../services/academyTrainingService';
 
 const STATUS_LABEL = { ok: 'Ativo', revoked: 'Cancelado', expired: 'Expirado', exhausted: 'Esgotado', missing: '-' };
 const toDate = (v) => (typeof v?.toDate === 'function' ? v.toDate() : new Date(v));
@@ -247,6 +248,27 @@ function StudentAssignmentCard({ membership, actor }) {
   );
 }
 
+/** Ficha atribuída ao aluno: sempre a versão exata que lhe foi dada, mesmo que a academia publique versões novas. */
+function MyTrainingCard({ membership, actor }) {
+  const [data, setData] = useState(undefined);
+  useEffect(() => { getMyAssignedTraining(membership.academyId, actor.uid).then(setData).catch((e) => { console.error(e); setData(null); }); }, [membership.academyId, actor.uid]);
+  if (!data) return null;
+  return (
+    <section aria-label="Minha ficha da academia" className="mt-5 border-t border-gray-100 pt-4 dark:border-white/10">
+      <h3 className="font-bold text-gray-900 dark:text-white">Minha ficha: {data.version.name}</h3>
+      <p className="text-xs text-gray-600 dark:text-gray-400">Versão {data.version.version}. Esta é a versão atribuída a você; publicações novas da academia não mudam sua ficha.</p>
+      <ol className="mt-2 space-y-1.5">
+        {data.version.exercises.map((e, i) => (
+          <li key={`${e.name}-${i}`} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm dark:bg-white/5">
+            <span className="font-semibold text-gray-900 dark:text-white">{i + 1}. {e.name}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{e.sets} x {e.reps} · {e.rest}s</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function TeacherStudents({ membership, actor }) {
   const [list, setList] = useState(null);
   useEffect(() => {
@@ -316,7 +338,8 @@ export default function AcademyPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">Seu papel: {ROLE_LABEL[m.role]}</p></div>
               {m.role !== 'owner' && <button type="button" onClick={() => leave(m)} className={btnDanger}><LogOut className="h-4 w-4" aria-hidden="true" />Sair da academia</button>}
             </div>
-            {m.role === 'student' && <><StudentAssignmentCard membership={m} actor={actor} /><ConsentCard membership={m} actor={actor} onChanged={load} /></>}
+            {m.role === 'student' && <><MyTrainingCard membership={m} actor={actor} /><StudentAssignmentCard membership={m} actor={actor} /><ConsentCard membership={m} actor={actor} onChanged={load} /></>}
+            {['teacher', 'admin', 'owner'].includes(m.role) && <Link to={`/academia/${m.academyId}/fichas`} className={`${btnGhost} mt-4`}>Fichas da academia</Link>}
             {['teacher', 'admin', 'owner'].includes(m.role) && <TeacherStudents membership={m} actor={actor} />}
             {['owner', 'admin'].includes(m.role) && <><InvitesPanel membership={m} user={actor} /><MembersList membership={m} actor={actor} /></>}
           </article>
