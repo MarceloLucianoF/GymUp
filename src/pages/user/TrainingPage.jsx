@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Dumbbell, Flame, Scale, ClipboardList, Wrench } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 
+import { stillSrc } from '../../utils/exerciseMedia';
 export default function TrainingPage() {
   const { trainingId } = useParams();
   const { user } = useAuthContext();
@@ -289,7 +290,7 @@ export default function TrainingPage() {
                         {/* Imagem */}
                         <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden shrink-0 border border-gray-100 dark:border-gray-600 relative">
                             {exercise.machineImage ? (
-                                <img src={exercise.machineImage} alt={exercise.name} className="w-full h-full object-cover" loading="lazy" />
+                                <img src={stillSrc(exercise.machineImage)} alt={exercise.name} className="w-full h-full object-cover" loading="lazy" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
                                     <Dumbbell className="w-6 h-6 text-gray-600 dark:text-gray-500" />

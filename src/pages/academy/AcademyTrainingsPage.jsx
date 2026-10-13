@@ -8,6 +8,7 @@ import EmptyState from '../../components/common/EmptyState';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import ErrorState from '../../components/common/ErrorState';
 import { btnDanger, btnGhost, btnPrimary, inputCls, labelCls, pageCls } from '../../components/coach/styles';
+import ExerciseThumb from '../../components/ui/ExerciseThumb';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import usePageMeta from '../../hooks/usePageMeta';
@@ -49,7 +50,7 @@ function DraftEditor({ series, library, onClose, onSave, busy }) {
           {exercises.map((e, i) => (
             <li key={`${e.name}-${i}`} className="rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{i + 1}. {e.name}</span>
+                <span className="flex min-w-0 items-center gap-2"><span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 dark:bg-white/10"><ExerciseThumb src={e.machineImage} /></span><span className="truncate text-sm font-bold text-gray-900 dark:text-white">{i + 1}. {e.name}</span></span>
                 <span className="flex gap-1">
                   <button type="button" aria-label={`Subir ${e.name}`} disabled={i === 0} onClick={() => move(i, -1)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-gray-600 hover:bg-gray-200 disabled:opacity-30 dark:text-gray-300 dark:hover:bg-white/10"><ArrowUp className="h-4 w-4" /></button>
                   <button type="button" aria-label={`Descer ${e.name}`} disabled={i === exercises.length - 1} onClick={() => move(i, 1)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-gray-600 hover:bg-gray-200 disabled:opacity-30 dark:text-gray-300 dark:hover:bg-white/10"><ArrowDown className="h-4 w-4" /></button>
@@ -71,7 +72,7 @@ function DraftEditor({ series, library, onClose, onSave, busy }) {
           {results.map((l) => (
             <li key={l.id}>
               <button type="button" onClick={() => add(l)} className="flex min-h-[44px] w-full items-center justify-between rounded-xl bg-gray-50 px-3 text-left text-sm hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10">
-                <span className="truncate font-semibold text-gray-900 dark:text-white">{l.name}</span>
+                <span className="flex min-w-0 items-center gap-2"><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-white/10"><ExerciseThumb src={l.machineImage} iconClassName="h-5 w-5" /></span><span className="truncate font-semibold text-gray-900 dark:text-white">{l.name}{l.mediaApprox ? <span className="ml-1 text-[10px] font-normal text-gray-600 dark:text-gray-400">(imagem de referência)</span> : null}</span></span>
                 <span className="flex shrink-0 items-center gap-2 text-xs text-gray-600 dark:text-gray-400">{l.muscleGroup}<Plus className="h-4 w-4" aria-hidden="true" /></span>
               </button>
             </li>

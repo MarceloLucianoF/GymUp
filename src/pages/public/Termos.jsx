@@ -30,7 +30,10 @@ export default function Termos() {
       <Section title="8. Encerramento">
         <p>Você pode pedir a exclusão da conta a qualquer momento. Podemos suspender contas que violem estes Termos.</p>
       </Section>
-      <Section title="9. Alterações e contato">
+      <Section title="9. Créditos das imagens">
+        <p>As fotos e animações dos exercícios vêm do projeto Free Exercise DB (github.com/yuhonas/free-exercise-db), de domínio público. Em alguns exercícios de máquina a imagem mostra o movimento equivalente e está marcada como referência.</p>
+      </Section>
+      <Section title="10. Alterações e contato">
         <p>Podemos atualizar estes Termos; mudanças relevantes serão avisadas no app. Contato: <a className="font-bold text-amber-800 dark:text-amber-400 underline dark:text-brand" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> (a confirmar). Foro: a definir.</p>
       </Section>
     </LegalLayout>

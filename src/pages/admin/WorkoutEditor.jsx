@@ -14,6 +14,7 @@ import { estimateWorkout } from '../../components/coach/helpers';
 import { WORKOUT_PRESETS, getPreset, applyPreset, reorder, formatMinutes } from '../../utils/coachWorkout';
 import { btnPrimary, btnGhost, iconBtn, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
+import { stillSrc } from '../../utils/exerciseMedia';
 const LEVELS = ['Iniciante', 'Intermediário', 'Avançado', 'Elite'];
 const norm = (s) => String(s || '').trim().toLowerCase();
 const cap = (s) => { const t = String(s || '').trim(); return t ? t[0].toUpperCase() + t.slice(1) : 'Outros'; };
@@ -86,7 +87,7 @@ function AddExerciseModal({ library, onAdd, onClose, onGoLibrary }) {
                 <li key={lib.id}>
                   <button type="button" onClick={() => onAdd(lib)} className="pressable flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-gray-200 p-2 text-left transition hover:border-brand dark:border-white/10">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 dark:bg-white/5">
-                      {(lib.machineImage || lib.demoUrl) ? <img src={lib.machineImage || lib.demoUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+                      {(lib.machineImage || lib.demoUrl) ? <img src={stillSrc(lib.machineImage || lib.demoUrl)} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
                     </span>
                     <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-gray-900 dark:text-white">{lib.name}</span><span className="text-xs text-gray-600 dark:text-gray-400">{cap(lib.muscleGroup)}</span></span>
                     <Plus className="h-5 w-5 text-brand" aria-hidden="true" />
@@ -338,7 +339,7 @@ export default function WorkoutEditor() {
                       <button type="button" onClick={() => move(i, 1)} disabled={i === training.exercises.length - 1} aria-label={`Descer ${ex.name}`} className={`${iconBtn} !h-11 !w-11`}><ChevronDown className="h-5 w-5" /></button>
                     </div>
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 dark:bg-white/5">
-                      {ex.machineImage ? <img src={ex.machineImage} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-6 w-6 text-gray-600 dark:text-gray-400" aria-hidden="true" />}
+                      {ex.machineImage ? <img src={stillSrc(ex.machineImage)} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Dumbbell className="h-6 w-6 text-gray-600 dark:text-gray-400" aria-hidden="true" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</h3>
