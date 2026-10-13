@@ -214,18 +214,18 @@ export const classifyFailure = (error) => {
   return 'indisponivel';
 };
 
-const askNvidiaProxy = async (messages) => {
+const askNvidiaProxy = async (messages, { timeoutMs = 30000, maxTokens = 1800, temperature = 0.6 } = {}) => {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('Sessão expirada.');
   const idToken = await currentUser.getIdToken();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch('/api/nvidia', {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
       signal: controller.signal,
-      body: JSON.stringify({ model: NVIDIA_MODEL, messages, temperature: 0.6, max_tokens: 1800 })
+      body: JSON.stringify({ model: NVIDIA_MODEL, messages, temperature, max_tokens: maxTokens })
     });
     if (!response.ok) throw new Error(`NVIDIA proxy ${response.status}`);
     const data = await response.json();
@@ -243,6 +243,21 @@ const normalize = (value) => String(value || '').trim().toLowerCase();
  * Serviço de Inteligência Artificial do BohTreinar
  */
 export const aiService = {
+  /**
+   * Reescreve fatos já calculados em texto (resumo semanal). Só usa o proxy da NVIDIA, com prazo curto, e devolve null em qualquer
+   * falha (lento, vazio, 429, 5xx, sem sessão, recurso desligado): quem chama usa o texto local.
+   */
+  async summarizeFacts(messages) {
+    if (!USE_NVIDIA_PROXY || !auth.currentUser) return null;
+    try {
+      const { text } = await askNvidiaProxy(messages, { timeoutMs: 8000, maxTokens: 260, temperature: 0.3 });
+      return text;
+    } catch (error) {
+      console.warn('Resumo por IA indisponível:', error?.message || error);
+      return null;
+    }
+  },
+
   /**
    * 1. Coach IA conversacional com execução de funções (function calling).
    * onWorkout recebe a ficha quando o modelo chama gerar_treino.

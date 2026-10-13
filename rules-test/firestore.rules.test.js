@@ -793,3 +793,23 @@ test('convite de admin: o aluno pede o vínculo normalmente (admin vale como tre
   await putInvite({ coachId: 'admin1' });
   await assertSucceeds(useInvite('stu3', { coachId: 'admin1' }));
 });
+
+test('resumo semanal: só o dono lê, grava e apaga; id e conteúdo validados', async () => {
+  const ok = { uid: 'stu1', weekKey: '2026-W42', factsHash: 'v1-abc', text: 'Você concluiu 3 de 4 treinos.', source: 'ai', facts: { workouts: 3 }, updatedAt: '2026-10-14T10:00:00Z' };
+  const ref = (who, id) => doc(db(who), 'weeklySummaries/' + id);
+  await assertSucceeds(setDoc(ref('stu1', 'stu1_2026-W42'), ok));
+  await assertSucceeds(setDoc(ref('stu1', 'stu1_2026-W42'), { ...ok, text: 'Novo texto com 4 de 4 treinos.' }));    // atualiza
+  await assertSucceeds(getDoc(ref('stu1', 'stu1_2026-W42')));
+  await assertFails(getDoc(ref('stu2', 'stu1_2026-W42')));                                        // outro aluno
+  await assertFails(getDoc(ref('coach1', 'stu1_2026-W42')));                                      // nem o treinador vinculado
+  await assertSucceeds(getDoc(ref('admin1', 'stu1_2026-W42')));
+  await assertFails(setDoc(ref('stu2', 'stu1_2026-W42'), { ...ok, uid: 'stu2' }));                // id de outro
+  await assertFails(setDoc(ref('stu1', 'stu1_2026-W41'), ok));                                    // id não bate com a semana
+  await assertFails(setDoc(ref('stu1', 'stu1_2026-W42'), { ...ok, extra: 1 }));                   // campo extra
+  await assertFails(setDoc(ref('stu1', 'stu1_2026-W42'), { ...ok, text: 'x'.repeat(801) }));      // texto grande
+  await assertFails(setDoc(ref('stu1', 'stu1_2026-W42'), { ...ok, source: 'gpt' }));              // origem inválida
+  await assertFails(setDoc(ref('stu1', 'stu1_2026-W42'), { ...ok, text: '' }));
+  await assertSucceeds(getDocs(query(collection(db('stu1'), 'weeklySummaries'), where('uid', '==', 'stu1'))));
+  await assertFails(getDocs(collection(db('stu1'), 'weeklySummaries')));
+  await assertSucceeds(deleteDoc(ref('stu1', 'stu1_2026-W42')));
+});
