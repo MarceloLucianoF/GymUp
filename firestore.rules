@@ -1111,18 +1111,19 @@ service cloud.firestore {
     function acAssignedTrainingPath(aid, sid) {
       return /databases/$(database)/documents/academyAssigned/$(aid + '_' + sid);
     }
-    // Cada exercício da ficha é um mapa com campos permitidos e nome de texto (até 120). Validar mais campos por item estoura o limite de
-    // 1000 expressões das regras já com 8 exercícios; os demais limites ficam na tela e no tamanho máximo do documento (só autores escrevem).
+    // Cada exercício da ficha é um mapa com campos permitidos. Validar tipo/tamanho dos campos por item estoura o limite de 1000 expressões
+    // das regras (medido: com o nome já não cabem 20 exercícios); tipos e tamanhos ficam na tela (que trata o conteúdo de forma defensiva)
+    // e no tamanho máximo do documento. Só autores (dono, admin, professor com permissão) escrevem.
     function exOk(e) {
-      return e is map && e.keys().hasOnly(['name', 'muscleGroup', 'sets', 'reps', 'rest', 'machineImage']) && e.name is string && e.name.size() <= 120;
+      return e is map && e.keys().hasOnly(['name', 'muscleGroup', 'sets', 'reps', 'rest', 'machineImage']);
     }
     function exAt(l, i) {
       return l.size() <= i || exOk(l[i]);
     }
     function validExercises(l) {
-      return l is list && l.size() <= 15
+      return l is list && l.size() <= 20
         && exAt(l, 0) && exAt(l, 1) && exAt(l, 2) && exAt(l, 3) && exAt(l, 4) && exAt(l, 5) && exAt(l, 6) && exAt(l, 7) && exAt(l, 8) && exAt(l, 9)
-        && exAt(l, 10) && exAt(l, 11) && exAt(l, 12) && exAt(l, 13) && exAt(l, 14);
+        && exAt(l, 10) && exAt(l, 11) && exAt(l, 12) && exAt(l, 13) && exAt(l, 14) && exAt(l, 15) && exAt(l, 16) && exAt(l, 17) && exAt(l, 18) && exAt(l, 19);
     }
     function validDraft(d) {
       return d is map && d.keys().hasOnly(['name', 'exercises'])

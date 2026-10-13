@@ -260,8 +260,8 @@ function MyTrainingCard({ membership, actor }) {
       <ol className="mt-2 space-y-1.5">
         {data.version.exercises.map((e, i) => (
           <li key={`${e.name}-${i}`} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm dark:bg-white/5">
-            <span className="font-semibold text-gray-900 dark:text-white">{i + 1}. {e.name}</span>
-            <span className="text-xs text-gray-600 dark:text-gray-400">{e.sets} x {e.reps} · {e.rest}s</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{i + 1}. {String(e?.name ?? '').slice(0, 120)}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{String(e?.sets ?? '').slice(0, 10)} x {String(e?.reps ?? '').slice(0, 20)} · {Number(e?.rest) || 0}s</span>
           </li>
         ))}
       </ol>

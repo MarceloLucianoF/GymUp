@@ -14,10 +14,9 @@ import usePageMeta from '../../hooks/usePageMeta';
 import { getMemberName, listAcademyAssignments, listAcademyMembers, listMyAssignments, listMyMemberships } from '../../services/academyService';
 import {
   assignVersion, canAuthorTrainings, countByVersion, createDraft, deleteDraft, draftChanged, listAssignedForAcademy, listSeries, listVersions,
-  loadExerciseLibrary, publishDraft, saveDraft, toDraftExercise, versionIdOf
+  loadExerciseLibrary, MAX_EXERCISES, publishDraft, saveDraft, toDraftExercise, versionIdOf
 } from '../../services/academyTrainingService';
 
-const MAX_EXERCISES = 15;
 const norm = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 function DraftEditor({ series, library, onClose, onSave, busy }) {

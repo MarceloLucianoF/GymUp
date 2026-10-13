@@ -609,7 +609,7 @@ test('fichas: nasce como rascunho; só dono, admin e professor com permissão cr
 test('fichas: não nasce já publicada, nem com lixo no rascunho', async () => {
   await assertFails(mkSeries('aowner', A, 'g1', { currentVersion: 1 }).commit());
   await assertFails(mkSeries('aowner', A, 'g2', { draft: { name: 'x', exercises: [EX] } }).commit());                    // nome curto
-  await assertFails(mkSeries('aowner', A, 'g3', { draft: { name: 'Perna', exercises: Array(16).fill(EX) } }).commit());  // limite de exercícios
+  await assertFails(mkSeries('aowner', A, 'g3', { draft: { name: 'Perna', exercises: Array(21).fill(EX) } }).commit());  // limite de exercícios
   await assertFails(mkSeries('aowner', A, 'g4', { draft: { name: 'Perna', exercises: [EX], extra: 1 } }).commit());
   const d = db('aowner');
   const b = writeBatch(d);
@@ -731,19 +731,17 @@ test('fichas: aluno atribuído NÃO lê a série (carrega o rascunho), só a ver
   await assertSucceeds(getDoc(doc(db('ateacher'), 'trainingSeries/s_a')));
 });
 
-test('fichas: cada exercício é validado (mapa, campos permitidos e nome)', async () => {
+test('fichas: cada exercício é validado (mapa e campos permitidos)', async () => {
   const bad = [
     ['texto solto', 'agachar'],
-    ['campo extra', { ...EX, script: 'x' }],
-    ['nome enorme', { ...EX, name: 'x'.repeat(121) }],
-    ['sem nome', { sets: '3' }]
+    ['campo extra', { ...EX, script: 'x' }]
   ];
   let i = 0;
   for (const [label, item] of bad) {
     i += 1;
     await assertFails(mkSeries('aowner', A, `v${i}`, { draft: { name: 'Perna', exercises: [EX, item] } }).commit()).catch((e) => { throw new Error(`${label}: ${e.message}`); });
   }
-  await assertSucceeds(mkSeries('aowner', A, 'v99', { draft: { name: 'Perna', exercises: Array(15).fill(EX) } }).commit());
+  await assertSucceeds(mkSeries('aowner', A, 'v99', { draft: { name: 'Perna', exercises: Array(20).fill(EX) } }).commit());
 });
 
 test('fichas: professor sem permissão não forja auditoria de ficha nem queima o ID de exclusão', async () => {
@@ -765,4 +763,13 @@ test('fichas: professor sem permissão não forja auditoria de ficha nem queima 
 test('fichas: log de atribuição só com atribuição real; log de ficha de outra academia não passa', async () => {
   await assertFails(setDoc(...logDoc(db('aowner'), 'solto1', A, 'aowner', 'training.assigned', 'training', 'astu')));
   await assertFails(setDoc(...logDoc(db('bowner'), 'solto2', B, 'bowner', 'training.published', 'training', 's_a')));
+});
+
+test('fichas: ficha de 20 exercícios (limite do produto) cria, publica e atribui; 21 não', async () => {
+  const full = Array(20).fill(EX);
+  await assertSucceeds(mkSeries('aowner', A, 'lim1', { draft: { name: 'Completa', exercises: full } }).commit());
+  await assertSucceeds(publish('aowner', A, 'lim1', 1, full, 'plim1', 'Completa').commit());
+  await assertSucceeds(assignTo('aowner', A, 'astu', 'lim1', 1, 'ateacher', 'alim1').commit());
+  await assertSucceeds(editDraft('aowner', A, 'lim1', { name: 'Completa', exercises: [...full].reverse() }, 'elim1').commit());
+  await assertFails(editDraft('aowner', A, 'lim1', { name: 'Completa', exercises: Array(21).fill(EX) }, 'elim2').commit());
 });
