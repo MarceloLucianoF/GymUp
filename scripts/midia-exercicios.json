@@ -1,0 +1,294 @@
+{
+ "Supino Reto Máquina": {
+  "slug": "supino-reto-maquina",
+  "source": "Machine_Bench_Press"
+ },
+ "Supino Inclinado Halter": {
+  "slug": "supino-inclinado-halter",
+  "source": "Incline_Dumbbell_Press"
+ },
+ "Peck Deck (Voador)": {
+  "slug": "peck-deck-voador",
+  "source": "Butterfly"
+ },
+ "Desenvolvimento Halter": {
+  "slug": "desenvolvimento-halter",
+  "source": "Dumbbell_Shoulder_Press"
+ },
+ "Elevação Lateral": {
+  "slug": "elevacao-lateral",
+  "source": "Side_Lateral_Raise"
+ },
+ "Tríceps Corda": {
+  "slug": "triceps-corda",
+  "source": "Triceps_Pushdown_-_Rope_Attachment"
+ },
+ "Tríceps Barra (Pushdown)": {
+  "slug": "triceps-barra-pushdown",
+  "source": "Triceps_Pushdown"
+ },
+ "Puxada Aberta (Lat Pulldown)": {
+  "slug": "puxada-aberta-lat-pulldown",
+  "source": "Wide-Grip_Lat_Pulldown"
+ },
+ "Remada Máquina (Sentado)": {
+  "slug": "remada-maquina-sentado",
+  "source": "Seated_Cable_Rows"
+ },
+ "Puxada Triângulo (Pegada Fechada)": {
+  "slug": "puxada-triangulo-pegada-fechada",
+  "source": "Close-Grip_Front_Lat_Pulldown"
+ },
+ "Rosca Direta Barra": {
+  "slug": "rosca-direta-barra",
+  "source": "Barbell_Curl"
+ },
+ "Rosca Alternada Halter": {
+  "slug": "rosca-alternada-halter",
+  "source": "Dumbbell_Alternate_Bicep_Curl"
+ },
+ "Rosca Concentrada": {
+  "slug": "rosca-concentrada",
+  "source": "Concentration_Curls"
+ },
+ "Agachamento Livre ou Hack": {
+  "slug": "agachamento-livre-ou-hack",
+  "source": "Barbell_Full_Squat"
+ },
+ "Leg Press": {
+  "slug": "leg-press",
+  "source": "Leg_Press"
+ },
+ "Mesa Flexora": {
+  "slug": "mesa-flexora",
+  "source": "Lying_Leg_Curls"
+ },
+ "Cadeira Extensora": {
+  "slug": "cadeira-extensora",
+  "source": "Leg_Extensions"
+ },
+ "Elevação Pélvica (Glúteo)": {
+  "slug": "elevacao-pelvica-gluteo",
+  "source": "Barbell_Hip_Thrust"
+ },
+ "Panturrilha em Pé (Máquina)": {
+  "slug": "panturrilha-em-pe-maquina",
+  "source": "Standing_Calf_Raises"
+ },
+ "Esteira / Bike / Escada": {
+  "slug": "esteira-bike-escada",
+  "source": "Jogging_Treadmill"
+ },
+ "HIIT (Cardio de Alta Intensidade)": {
+  "slug": "hiit-cardio-de-alta-intensidade",
+  "source": "Mountain_Climbers"
+ },
+ "Prancha Abdominal": {
+  "slug": "prancha-abdominal",
+  "source": "Plank"
+ },
+ "Abdominal Infra": {
+  "slug": "abdominal-infra",
+  "source": "Flat_Bench_Lying_Leg_Raise"
+ },
+ "Abdominal Oblíquo (Bicicleta)": {
+  "slug": "abdominal-obliquo-bicicleta",
+  "source": "Air_Bike"
+ },
+ "Supino Máquina": {
+  "slug": "supino-maquina",
+  "source": "Machine_Bench_Press"
+ },
+ "Chest Press Convergente": {
+  "slug": "chest-press-convergente",
+  "source": "Leverage_Chest_Press"
+ },
+ "Supino Inclinado Máquina": {
+  "slug": "supino-inclinado-maquina",
+  "source": "Leverage_Incline_Chest_Press"
+ },
+ "Supino Declinado Máquina": {
+  "slug": "supino-declinado-maquina",
+  "source": "Leverage_Decline_Chest_Press"
+ },
+ "Crossover na Polia": {
+  "slug": "crossover-na-polia",
+  "source": "Cable_Crossover"
+ },
+ "Crucifixo no Cabo": {
+  "slug": "crucifixo-no-cabo",
+  "source": "Flat_Bench_Cable_Flyes"
+ },
+ "Puxada Aberta Máquina": {
+  "slug": "puxada-aberta-maquina",
+  "source": "Wide-Grip_Lat_Pulldown"
+ },
+ "Puxada Neutra Máquina": {
+  "slug": "puxada-neutra-maquina",
+  "source": "Close-Grip_Front_Lat_Pulldown"
+ },
+ "Remada Articulada": {
+  "slug": "remada-articulada",
+  "source": "Leverage_Iso_Row"
+ },
+ "Remada Cavalinho Máquina": {
+  "slug": "remada-cavalinho-maquina",
+  "source": "Lying_T-Bar_Row"
+ },
+ "Remada Neutra Máquina": {
+  "slug": "remada-neutra-maquina",
+  "source": "Leverage_High_Row"
+ },
+ "Face Pull na Polia": {
+  "slug": "face-pull-na-polia",
+  "source": "Face_Pull"
+ },
+ "Desenvolvimento Máquina": {
+  "slug": "desenvolvimento-maquina",
+  "source": "Leverage_Shoulder_Press"
+ },
+ "Crucifixo Inverso Máquina": {
+  "slug": "crucifixo-inverso-maquina",
+  "source": "Reverse_Machine_Flyes"
+ },
+ "Tríceps Máquina": {
+  "slug": "triceps-maquina",
+  "source": "Machine_Triceps_Extension"
+ },
+ "Rosca Scott Máquina": {
+  "slug": "rosca-scott-maquina",
+  "source": "Machine_Preacher_Curls"
+ },
+ "Rosca Martelo na Polia": {
+  "slug": "rosca-martelo-na-polia",
+  "source": "Cable_Hammer_Curls_-_Rope_Attachment"
+ },
+ "Rosca Alternada Máquina": {
+  "slug": "rosca-alternada-maquina",
+  "source": "Machine_Bicep_Curl"
+ },
+ "Hack Squat": {
+  "slug": "hack-squat",
+  "source": "Hack_Squat"
+ },
+ "Cadeira Flexora": {
+  "slug": "cadeira-flexora",
+  "source": "Seated_Leg_Curl"
+ },
+ "Cadeira Adutora": {
+  "slug": "cadeira-adutora",
+  "source": "Thigh_Adductor"
+ },
+ "Cadeira Abdutora": {
+  "slug": "cadeira-abdutora",
+  "source": "Thigh_Abductor"
+ },
+ "Panturrilha Sentado Máquina": {
+  "slug": "panturrilha-sentado-maquina",
+  "source": "Seated_Calf_Raise"
+ },
+ "Abdominal Máquina": {
+  "slug": "abdominal-maquina",
+  "source": "Ab_Crunch_Machine"
+ },
+ "Crunch na Polia": {
+  "slug": "crunch-na-polia",
+  "source": "Cable_Crunch"
+ },
+ "Extensão Lombar Y + W": {
+  "slug": "extensao-lombar-y-w",
+  "source": "Hyperextensions_Back_Extensions"
+ },
+ "Abdominal trocando bola suíça": {
+  "slug": "abdominal-trocando-bola-suica",
+  "source": "Exercise_Ball_Crunch"
+ },
+ "Agachamento com Halteres": {
+  "slug": "agachamento-com-halteres",
+  "source": "Dumbbell_Squat"
+ },
+ "Crucifixo Inverso no Banco Inclinado": {
+  "slug": "crucifixo-inverso-no-banco-inclinado",
+  "source": "Bent_Over_Dumbbell_Rear_Delt_Raise_With_Head_On_Bench"
+ },
+ "Remada Curvada com Halteres (Pegada Neutra)": {
+  "slug": "remada-curvada-com-halteres-pegada-neutra",
+  "source": "Bent_Over_Two-Dumbbell_Row_With_Palms_In"
+ },
+ "Panturrilha em pé com Halteres": {
+  "slug": "panturrilha-em-pe-com-halteres",
+  "source": "Standing_Dumbbell_Calf_Raise"
+ },
+ "Tríceps Supinado com Halteres": {
+  "slug": "triceps-supinado-com-halteres",
+  "source": "Lying_Dumbbell_Tricep_Extension"
+ },
+ "Flexão Nórdica Inversa": {
+  "slug": "flexao-nordica-inversa",
+  "source": "Weighted_Sissy_Squat"
+ },
+ "Rosca Direta Banco Inclinado": {
+  "slug": "rosca-direta-banco-inclinado",
+  "source": "Incline_Dumbbell_Curl"
+ },
+ "Rosca Scott com Barra W": {
+  "slug": "rosca-scott-com-barra-w",
+  "source": "Preacher_Curl"
+ },
+ "Afundo Livre com Halteres": {
+  "slug": "afundo-livre-com-halteres",
+  "source": "Dumbbell_Lunges"
+ },
+ "Supino Inclinado com Halteres": {
+  "slug": "supino-inclinado-com-halteres",
+  "source": "Incline_Dumbbell_Press"
+ },
+ "Barra Fixa (Em pé)": {
+  "slug": "barra-fixa-em-pe",
+  "source": "Pullups"
+ },
+ "Supino Reto com Halteres": {
+  "slug": "supino-reto-com-halteres",
+  "source": "Dumbbell_Bench_Press"
+ },
+ "Abdominal Canivete Alternado": {
+  "slug": "abdominal-canivete-alternado",
+  "source": "Jackknife_Sit-Up"
+ },
+ "Elevação Lateral Sentado com Halteres": {
+  "slug": "elevacao-lateral-sentado-com-halteres",
+  "source": "Seated_Side_Lateral_Raise"
+ },
+ "Desenvolvimento Barra Reta": {
+  "slug": "desenvolvimento-barra-reta",
+  "source": "Barbell_Shoulder_Press"
+ },
+ "Tríceps Barra Encostado na Polia": {
+  "slug": "triceps-barra-encostado-na-polia",
+  "source": "Triceps_Pushdown"
+ },
+ "Rosca Direta na Polia Baixa com Corda": {
+  "slug": "rosca-direta-na-polia-baixa-com-corda",
+  "source": "High_Cable_Curls"
+ },
+ "Tríceps Unilateral na Polia": {
+  "slug": "triceps-unilateral-na-polia",
+  "source": "Cable_One_Arm_Tricep_Extension"
+ },
+ "Elevação Lateral Máquina": {
+  "slug": "elevacao-lateral-maquina",
+  "source": "Side_Lateral_Raise"
+ },
+ "Hip Thrust Máquina": {
+  "slug": "hip-thrust-maquina",
+  "source": "Barbell_Hip_Thrust"
+ },
+ "Glúteo Máquina": {
+  "slug": "gluteo-maquina",
+  "source": "Glute_Kickback"
+ },
+ "Pullover Máquina": {
+  "slug": "pullover-maquina",
+  "source": "Straight-Arm_Pulldown"
+ }
+}
