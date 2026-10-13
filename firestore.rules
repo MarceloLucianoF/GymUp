@@ -455,6 +455,22 @@ service cloud.firestore {
       return isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data);
     }
 
+    // Depois que o vínculo termina, o treinador deixa de ler e de escrever na conversa (o aluno continua dono dela).
+    // A lista de conversas (list) não consegue conferir o vínculo por documento, então ainda mostra a linha da conversa;
+    // as mensagens, que são o conteúdo, ficam protegidas aqui.
+    function chatPairLinked(chatId) {
+      let p = get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      return isStudentCoachPair(p[0], p[1]) || isStudentCoachPair(p[1], p[0]);
+    }
+    // Ler: o aluno sempre (histórico e exclusão de conta); o treinador só enquanto vinculado.
+    function chatAccess(chatId) {
+      return chatParticipant(chatId) && (hasRole('user') || chatPairLinked(chatId));
+    }
+    // Escrever: só com o vínculo ativo, para os dois lados (depois do desvínculo a conversa fica só para leitura do aluno).
+    function chatWrite(chatId) {
+      return chatParticipant(chatId) && chatPairLinked(chatId);
+    }
+
     match /chats/{chatId} {
       // A guessed ID never authorizes reading someone else's chat. Um chat que ainda não existe só pode ser consultado por
       // quem faz parte do ID (menor_maior): sem isso ninguém consegue abrir a primeira conversa de um par (o get de um
@@ -474,7 +490,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
         && request.resource.data.lastMessage == '';
-      allow update: if isParticipant(resource.data)
+      allow update: if chatWrite(chatId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'updatedAt'])
         && request.resource.data.lastMessage is string
         && request.resource.data.lastMessage.size() <= 10000
@@ -484,8 +500,8 @@ service cloud.firestore {
       allow delete: if isParticipant(resource.data) && hasRole('user');
 
       match /messages/{msgId} {
-        allow get, list: if chatParticipant(chatId);
-        allow create: if chatParticipant(chatId)
+        allow get, list: if chatAccess(chatId);
+        allow create: if chatWrite(chatId)
           && request.resource.data.keys().hasOnly(['text', 'senderId', 'createdAt', 'senderName'])
           && request.resource.data.senderId == request.auth.uid
           && request.resource.data.text is string
@@ -493,7 +509,7 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 10000
           && request.resource.data.get('senderName', '') is string
           && request.resource.data.createdAt == request.time;
-        allow update: if chatParticipant(chatId)
+        allow update: if chatWrite(chatId)
           && resource.data.senderId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text'])
           && request.resource.data.text is string

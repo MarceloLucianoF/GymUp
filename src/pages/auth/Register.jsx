@@ -281,6 +281,9 @@ export default function Register() {
                 Fazer Login
               </Link>
             </p>
+            <p className="mt-3 text-center text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+              Protegido pelo reCAPTCHA. Valem a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-brand">Política de Privacidade do Google</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-brand">Termos de Serviço do Google</a>.
+            </p>
           </div>
         </div>
       </div>

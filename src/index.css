@@ -219,3 +219,7 @@ input[type='range'].range-brand::-moz-range-thumb {
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
 }
 input[type='range'].range-brand:focus-visible { box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.5); }
+
+/* O selo do reCAPTCHA (canto inferior direito) cobria o botão Enviar do chat. Escondido, com o aviso exigido pelo Google
+   nas telas de entrada e na Política de Privacidade. */
+.grecaptcha-badge { visibility: hidden !important; }
