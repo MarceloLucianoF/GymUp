@@ -1,6 +1,6 @@
 # BohTreinar Gestão: arquitetura e contratos (Fase 0)
 
-Status: **proposta para aprovação**. Nenhum código da gestão foi escrito. Este documento fecha os contratos antes do código, como pedido na Fase 0.
+Status: **decisões aprovadas (seção 11)**. Este documento fecha os contratos antes do código, como pedido na Fase 0.
 Complementa `docs/V2_ACADEMIAS.md` (desenho do produto e decisões da V2.0) e substitui a ideia de um painel da academia dentro do app do aluno.
 
 ## 1. Decisões assumidas
@@ -13,11 +13,22 @@ Complementa `docs/V2_ACADEMIAS.md` (desenho do produto e decisões da V2.0) e su
 6. Fichas versionadas são a fonte oficial. IA empresarial só lê dados agregados.
 7. Revisão jurídica (LGPD) antes de qualquer uso comercial; migração de treinadores atuais opcional e assistida.
 
-### Ajustes que proponho ao desenho (para você decidir, seção 11)
+### Modelo híbrido: uma única autoridade de escrita por operação (aprovado)
 
-- **Híbrido em vez de "tudo pelo Worker".** Hoje as regras do Firestore já garantem, no próprio banco, papéis, isolamento, auditoria no mesmo lote e versões imutáveis (84 testes). Mover tudo para um Worker com credencial administrativa **desliga essas regras** para esse caminho: a segurança passa a depender só do código do Worker. Proposta: o Worker faz **apenas o que as regras não conseguem** (lote grande, agregados, relatórios, idempotência, rate limit por academia, integrações). O resto continua escrito pelo cliente sob as regras, agora também pelo frontend de Gestão.
-- **Credencial do Worker.** Sem Cloud Functions (plano Spark), o Worker acessa o Firestore pela API REST com uma **service account própria** (Cloud Datastore User). Esse papel é amplo (não restringe por coleção), então o isolamento por coleção é feito no código e por teste, e o segredo fica só em `wrangler secret`. Ela é distinta do segredo da NVIDIA e do Coach IA.
-- **Domínio.** `gestao.bohtreinar.com` exige comprar e configurar o domínio na Cloudflare e autorizá-lo no Firebase Auth. Até lá: `bohtreinar-gestao.marcelo-labs.workers.dev`.
+Um Worker é uma boa fronteira de segurança; o risco está em uma service account que **ignora as regras do Firestore**: um bug no Worker passa a poder ler ou alterar qualquer coleção que a credencial alcance. Por isso a divisão é por responsabilidade, e **cada operação tem exatamente uma autoridade de escrita** (nunca o cliente e o Worker para a mesma operação):
+
+| Autoridade | Operações |
+|---|---|
+| **App do aluno, sob as regras do Firestore** | check-ins, medidas, preferências pessoais, execução de treino, dados que pertencem ao aluno; aceite/recusa do convite, consentimento e saída da academia (ações do próprio aluno) |
+| **Worker empresarial** | criar academia, alterar papéis (suspender, reativar, remover), convidar membros, atribuir ou transferir professores, atribuir ficha e operações em lote, relatórios agregados, agregador de aderência, integrações financeiras e de hardware |
+
+As regras continuam como defesa do app do aluno e das leituras. Quando uma operação migra para o Worker, as regras correspondentes passam a **negar a escrita direta do cliente** (`allow write: if false` para o que é só do Worker); o código de cliente que hoje escreve essas coleções (app do aluno e telas de gestão atuais) é removido na mesma entrega, para não haver duas autoridades. Rascunho, publicação e arquivamento de fichas continuam sob regras até decisão posterior, desde que a Gestão seja o único cliente que os escreve.
+
+Defesas do Worker, porque o IAM do Firestore não isola por coleção: (1) endpoints explícitos, **nunca caminho de coleção arbitrário**; (2) vínculo e papel validados a cada chamada; (3) lista de campos permitidos por operação; (4) transações; (5) idempotência; (6) auditoria no mesmo commit; (7) testes com duas academias; (8) revisão de diff (`revisor-diff`) em toda mudança do Worker; (9) rate limit por usuário e por academia; (10) **kill switch**: variável `ADMIN_OPS_ENABLED` que, desligada, faz todo endpoint de escrita devolver `503` sem tocar no banco. Se a Gestão passar a guardar dados financeiros e relatórios sensíveis, reavaliar um projeto Firebase empresarial separado.
+
+### Service account do Worker
+
+Exclusiva do Worker empresarial: diferente da NVIDIA, do Worker do app e **diferente entre homologação e produção**; só em `wrangler secret`; nunca no bundle nem em log; rotação documentada (seção 9). O Worker nasce **sem** service account (rotas `/v1/health` e `/v1/me` só validam o token, que é verificação pública de assinatura); a credencial só é criada quando a primeira operação administrativa real for liberada.
 
 ## 2. Visão geral
 
@@ -39,10 +50,10 @@ Código no mesmo repositório (monorepo), sem importar código de tela entre pro
 
 ```
 src/                      app do aluno (como hoje)
-gestao/                   frontend da gestão (React, CRA ou Vite; decidir na V2.0)
+gestao/                   frontend da gestão (Vite, build e deploy independentes)
 worker/                   Worker do app do aluno (como hoje)
 gestao-worker/            Worker da API empresarial
-shared/                   só contratos: nomes de coleções, papéis, ações de auditoria, esquemas
+shared/                   contratos (coleções, papéis, ações de auditoria, esquemas) e, quando necessário, tokens/ícones/componentes visuais por pacote; páginas do app do aluno nunca são copiadas
 ```
 
 ## 3. Contrato de identidade
@@ -151,17 +162,18 @@ O lote do Worker substitui o lote cliente-por-aluno atual quando houver mais alu
 
 ## 9. Ambientes e segredos
 
-| Ambiente | Firebase | Worker | Uso |
+| Ambiente | Firebase | Workers | Uso |
 |---|---|---|---|
 | local | emulador (`demo-*`) | `wrangler dev` | testes de regras e do Worker |
-| produção | `workout-tracker-app-20e43` | três Workers | academias fictícias para teste; HELL GYM nunca é tocada |
+| **homologação** | projeto Firebase **separado** (banco de testes, usuários fictícios) | Workers de homologação, segredos próprios, deploy independente | toda operação empresarial nova |
+| produção | `workout-tracker-app-20e43` | três Workers | só depois de aprovada em homologação; **a produção atual, incluindo a HELL GYM, não é usada para testar operações empresariais novas** |
 
-Não há projeto de homologação separado hoje (custo e Spark). Mitigação: testes no emulador, em produção com IDs fictícios prefixados e limpeza ao final. Um projeto de staging é recomendável antes do primeiro cliente pagante (decisão na seção 11).
+O projeto de homologação é criado **antes** de qualquer academia pagante (e antes da primeira operação administrativa real). Domínio: `workers.dev` em desenvolvimento e homologação; antes do primeiro cliente pagante, domínio próprio (`gestao.bohtreinar.com`).
 
 Segredos (sempre `wrangler secret`, nunca em arquivo versionado):
 
 - `bohtreinar`: `NVIDIA_API_KEY` (como hoje).
-- `bohtreinar-academy-worker`: `GOOGLE_SERVICE_ACCOUNT_JSON` (service account própria, nome `gestao-worker`, papel mínimo; revogável sem afetar o Coach IA), nenhum segredo de IA até a V2.3.
+- `bohtreinar-academy-worker`: `GOOGLE_SERVICE_ACCOUNT_JSON` (service account `gestao-worker`, uma por ambiente, papel mínimo, revogável sem afetar o Coach IA), só quando a primeira operação real for liberada; nenhum segredo de IA até a V2.3. Rotação: criar a chave nova, `wrangler secret put`, conferir `/v1/health`, desativar e apagar a chave antiga (documentar a data); em suspeita de vazamento, ligar o kill switch, revogar a chave e investigar a auditoria.
 - `bohtreinar-gestao` (assets): nenhum segredo.
 
 Limites e medição: namespaces de rate limit próprios (`GESTAO_USER_LIMIT`, `GESTAO_ACADEMY_LIMIT`, `GESTAO_IP_LIMIT`), logs por `requestId`, contador de operações por academia para medir consumo.
@@ -176,17 +188,23 @@ Interface (Gestão): desktop para dono e recepção, celular para professor, est
 
 Produção: duas academias fictícias, HELL GYM intacta (contagem antes e depois), IDs registrados, limpeza ao final, smoke test depois do deploy.
 
-## 11. Decisões que dependem de você
+## 11. Decisões aprovadas
 
-1. **Híbrido (recomendado) ou tudo pelo Worker?** O primeiro mantém as garantias das regras e usa o Worker só onde elas não alcançam; o segundo concentra tudo no Worker, mas troca o isolamento do banco por isolamento de código.
-2. **Domínio:** comprar `bohtreinar.com` agora ou começar em `workers.dev`?
-3. **Staging:** criar um segundo projeto Firebase para homologação antes de clientes pagantes?
-4. **Framework do frontend de Gestão:** manter CRA (reaproveita ferramentas, testes e componentes) ou Vite (mais rápido, mas diverge do app). Recomendo CRA na V2.0 para reaproveitar o que já está testado e reavaliar depois.
-5. **Recepção e cadastro de alunos:** recepção cria convites, mas cadastro com dados pessoais (CPF, telefone) só entra com a revisão jurídica.
+1. **Híbrido**, com uma única autoridade de escrita por operação (seção 1).
+2. **Domínio:** `workers.dev` em desenvolvimento e homologação; domínio próprio (`gestao.bohtreinar.com`) antes do primeiro cliente pagante.
+3. **Homologação:** projeto Firebase separado, Worker de homologação, segredos separados, banco de testes, usuários fictícios, deploy independente.
+4. **Frontend:** **Vite**, com build, deploy, rotas, testes e variáveis próprios; identidade visual compartilhada por pacote, sem copiar páginas do app atual.
+5. **Recepção:** cria convites e cadastra membros só com **nome e e-mail**. CPF, telefone obrigatório e outros dados pessoais aguardam revisão jurídica, base legal, política de retenção, texto de consentimento e fluxo de exportação e exclusão.
 
-## 12. Próximos passos (após aprovação)
+## 12. Próximos passos
 
-1. Você decide a seção 11.
-2. V2.0 da Gestão: esqueleto do frontend (login compartilhado, rotas, layout desktop/mobile), reutilizando os serviços de academia já testados; Worker com `/v1/health` e a cadeia de autenticação (itens 1 a 7 da seção 6) e testes.
-3. Telas: criar/configurar academia, convites, membros e papéis, suspensão/reativação, auditoria, dashboard inicial; remover do app do aluno apenas as telas de gestão que migrarem (ficha atribuída, consentimento e convites ficam).
-4. Critério de saída da V2.0 conforme a lista de validação do roadmap, com duas academias fictícias em produção.
+1. Criar o projeto Firebase de homologação.
+2. Criar o frontend Vite da Gestão.
+3. Criar o Worker empresarial **sem service account**.
+4. Implementar `/v1/health` e `/v1/me`.
+5. Validar a autenticação com o Firebase ID token.
+6. Contratos de resposta e erro.
+7. Testes: token inválido, usuário sem academia, papel insuficiente e academia suspensa.
+8. Só então liberar a primeira operação administrativa real (com a service account de homologação).
+
+Critério de saída da V2.0: lista de validação do roadmap, com duas academias fictícias **em homologação**.
