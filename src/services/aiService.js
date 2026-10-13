@@ -492,6 +492,29 @@ export const aiService = {
       }
     };
 
+    // Pedido de ficha com a NVIDIA como principal: o compositor (filtro + IA + validação + fallback local) responde sozinho.
+    // O Gemini com funções não responde nesse modo e deixava o chat esperando até o teto de 45 s sem ficha nenhuma.
+    if (NVIDIA_FIRST && needsTools(safePrompt)) {
+      const request = { goal, userRequest: safePrompt, muscleFocus: 'Full Body (Corpo Todo)', durationMinutes: 45, customExercises };
+      try {
+        let workout;
+        try {
+          workout = await aiService.generateAIWorkout(request);
+        } catch (error) {
+          if (error instanceof InsufficientExercisesError) return error.message;
+          console.warn('Composição por IA indisponível, usando a local:', error?.message || error);
+          workout = aiService.generateLocalWorkout(request);
+        }
+        onWorkout?.(workout);
+        onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : 'indisponivel' });
+        const lines = workout.exercises.map((ex, i) => `${i + 1}. ${ex.name} - ${ex.sets}x${ex.reps}`).join('\n');
+        return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}:\n${lines}\nEla está na aba Treino, onde você pode salvar em Meus treinos.`;
+      } catch (error) {
+        if (error instanceof InsufficientExercisesError) return error.message;
+        console.error('Falha ao montar a ficha pelo chat:', error?.message || error);
+      }
+    }
+
     if (NVIDIA_FIRST) {
       const reply = await tryNvidia();
       if (reply) return reply;
