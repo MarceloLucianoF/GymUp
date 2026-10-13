@@ -22,9 +22,10 @@ const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER]);
 // Status que significam "este modelo não serve para esta chave": tenta o próximo.
 const SKIP_STATUS = new Set([400, 404, 410, 422]);
 const MAX_ATTEMPTS = 8;
-const ATTEMPT_TIMEOUT_MS = 12_000;
+// Respostas longas sem streaming levam 10 a 15 s em modelos de raciocínio; 12 s derrubava até a resposta certa e a fila inteira acabava em 504.
+const ATTEMPT_TIMEOUT_MS = 20_000;
 const MAX_TOKENS_CAP = 2400;
-const TOTAL_TIMEOUT_MS = 28_000;
+const TOTAL_TIMEOUT_MS = 42_000;
 let lastWorkingModel = null;
 export const resetModelCache = () => { lastWorkingModel = null; };
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant']);
