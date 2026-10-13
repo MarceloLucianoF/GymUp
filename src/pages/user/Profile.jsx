@@ -287,6 +287,12 @@ export default function Profile() {
 
                     <div className="border-t border-gray-100 dark:border-gray-700 my-6"></div>
 
+                    <Link to="/academia" className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-100 dark:bg-white/5 dark:text-gray-200">
+                        <span>Minha academia</span><span aria-hidden="true">›</span>
+                    </Link>
+
+                    <div className="border-t border-gray-100 dark:border-gray-700 my-6"></div>
+
                     {/* Medidas Físicas + IMC */}
                     <div>
                         <div className="flex justify-between items-center mb-4">

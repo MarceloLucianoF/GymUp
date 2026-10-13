@@ -938,6 +938,7 @@ service cloud.firestore {
           (resource.data.userId == request.auth.uid && resource.data.status == 'active' && resource.data.role != 'owner'
             && request.resource.data.status == 'left' && request.resource.data.role == resource.data.role
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'auditId'])
+            && !existsAfter(acStatsPath(resource.data.academyId, resource.data.userId))
             && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.left', request.auth.uid))
           // (S2) quem saiu volta com um convite novo e válido (removido ou suspenso NÃO volta sozinho)
           || (resource.data.userId == request.auth.uid && resource.data.status == 'left' && resource.data.role != 'owner'
@@ -1050,14 +1051,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Aderência mínima do aluno (em dia / atrasado / sem dados): só validUntil e o último check-in. "em dia" = validUntil no futuro;
-    // vencido = atrasado; sem documento = sem dados. Sem cargas, medidas, horários nem histórico.
+    // Aderência do aluno (validUntil + último check-in), legível só por ele na V2.0. Sem cargas, medidas nem histórico.
     match /academyMemberStats/{statsId} {
-      allow get: if signedIn() && (isAdmin() || (resource != null && (
-        resource.data.userId == request.auth.uid
-        || acTeacherOf(resource.data.academyId, resource.data.userId)
-        || (acStaff(resource.data.academyId) && acIsStudent(resource.data.academyId, resource.data.userId)
-          && get(acMemberPath(resource.data.academyId, resource.data.userId)).data.consent.adherence == true))));
+      // V2.0: só o próprio aluno lê. Equipe e professor NÃO leem (validUntil revelaria a data do último treino); a aderência
+      // individual na academia só volta na V2.1, com agregador no servidor que publica apenas em_dia/atrasado/sem_dados.
+      allow get: if signedIn() && (isAdmin() || (resource != null && resource.data.userId == request.auth.uid));
       // sem list para a equipe: o consentimento mora em outro documento; a equipe lê aluno a aluno (get)
       allow list: if signedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
       allow create, update: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'userId', 'validUntil', 'lastCheckInId', 'updatedAt'])

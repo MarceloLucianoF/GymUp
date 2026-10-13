@@ -117,13 +117,12 @@ test('papéis: dono/admin leem membros; recepção e aluno não leem de terceiro
   await assertSucceeds(getDoc(doc(db('astu'), `academyMembers/${A}_astu`)));
 });
 
-test('papéis: professor responsável (atribuição ativa) lê o membro e a aderência do aluno; outro professor não', async () => {
+test('papéis: professor responsável (atribuição ativa) lê o membro; outro professor não', async () => {
   await assertSucceeds(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
-  await assertSucceeds(getDoc(doc(db('ateacher'), `academyMemberStats/${A}_astu`)));
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), `academyMembers/${A}_ateacher2`), member(A, 'ateacher2', 'teacher'));
   });
-  await assertFails(getDoc(doc(db('ateacher2'), `academyMemberStats/${A}_astu`)));
+  await assertFails(getDoc(doc(db('ateacher2'), `academyMembers/${A}_astu`)));
 });
 
 test('papéis: professor com atribuição pendente ou encerrada não lê o aluno', async () => {
@@ -134,12 +133,11 @@ test('papéis: professor com atribuição pendente ou encerrada não lê o aluno
   }
 });
 
-test('papéis: aderência do aluno só aparece para a equipe com consentimento', async () => {
-  await assertSucceeds(getDoc(doc(db('aowner'), `academyMemberStats/${A}_astu`)));
-  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyMembers/${A}_astu`), { consent: { adherence: false } }); });
-  await assertFails(getDoc(doc(db('aowner'), `academyMemberStats/${A}_astu`)));
+test('papéis: aderência (validUntil) só o próprio aluno lê; equipe e professor não, mesmo com consentimento', async () => {
   await assertSucceeds(getDoc(doc(db('astu'), `academyMemberStats/${A}_astu`)));
-  await assertFails(getDoc(doc(db('arecep'), `academyMemberStats/${A}_astu`)));
+  for (const u of ['aowner', 'aadmin', 'ateacher', 'arecep']) {
+    await assertFails(getDoc(doc(db(u), `academyMemberStats/${A}_astu`)));
+  }
 });
 
 test('papéis: aluno não promove a si mesmo nem muda papel de outro', async () => {
@@ -340,13 +338,22 @@ test('revisão: equipe não lista aderência (consentimento mora em outro docume
   await assertSucceeds(getDocs(query(collection(db('astu'), 'academyMemberStats'), where('userId', '==', 'astu'))));
 });
 
-test('revisão: aluno sai da academia e a saída é auditada', async () => {
+test('saída: aluno sai, a aderência é apagada no mesmo lote e a saída é auditada', async () => {
   const s = db('astu');
-  const b = writeBatch(s);
-  b.update(doc(s, `academyMembers/${A}_astu`), { status: 'left', updatedAt: NOW, auditId: 'o1' });
-  b.set(...logDoc(s, 'o1', A, 'astu', 'member.left', 'member', 'astu'));
-  await assertSucceeds(b.commit());
+  const mk = (withDelete, id) => {
+    const b = writeBatch(s);
+    b.update(doc(s, `academyMembers/${A}_astu`), { status: 'left', updatedAt: NOW, auditId: id });
+    b.set(...logDoc(s, id, A, 'astu', 'member.left', 'member', 'astu'));
+    if (withDelete) b.delete(doc(s, `academyMemberStats/${A}_astu`));
+    return b;
+  };
+  await assertFails(mk(false, 'o0').commit());
+  await assertSucceeds(mk(true, 'o1').commit());
   await assertFails(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const x = await getDoc(doc(ctx.firestore(), `academyMemberStats/${A}_astu`));
+    if (x.exists()) throw new Error('aderência não foi apagada');
+  });
 });
 
 test('revisão: aluno não forja auditoria de ações da equipe', async () => {
