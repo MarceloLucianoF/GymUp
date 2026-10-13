@@ -768,6 +768,390 @@ service cloud.firestore {
       allow create, update, delete: if isCoach() || isAdmin();
     }
 
+    // =====================================================================================================================
+    // V2: ACADEMIAS (docs/V2_ACADEMIAS.md). Papel dentro da academia NUNCA altera users.role. IDs determinísticos
+    // (academyId_userId) para as regras precisarem de poucos get(); academyId é minúsculo/alfanumérico, sem "_".
+    // Toda mudança administrativa grava o registro de auditoria NO MESMO LOTE (acLogged confere por getAfter).
+    // =====================================================================================================================
+    function acMemberPath(aid, uid) {
+      return /databases/$(database)/documents/academyMembers/$(aid + '_' + uid);
+    }
+    function acAssignPath(aid, sid) {
+      return /databases/$(database)/documents/academyAssignments/$(aid + '_' + sid);
+    }
+    function acStatsPath(aid, uid) {
+      return /databases/$(database)/documents/academyMemberStats/$(aid + '_' + uid);
+    }
+    function acLogPath(logId) {
+      return /databases/$(database)/documents/academyAuditLog/$(logId);
+    }
+    function acInvitePath(inviteId) {
+      return /databases/$(database)/documents/academyInvites/$(inviteId);
+    }
+    function acAcademyPath(aid) {
+      return /databases/$(database)/documents/academies/$(aid);
+    }
+    function acActive(aid) {
+      return signedIn() && exists(acMemberPath(aid, request.auth.uid))
+        && get(acMemberPath(aid, request.auth.uid)).data.status == 'active'
+        && get(acAcademyPath(aid)).data.status == 'active';
+    }
+    function acRole(aid) {
+      return get(acMemberPath(aid, request.auth.uid)).data.role;
+    }
+    function acStaff(aid) {
+      return acActive(aid) && acRole(aid) in ['owner', 'admin'];
+    }
+    function acOwner(aid) {
+      return acActive(aid) && acRole(aid) == 'owner';
+    }
+    function acIsStudent(aid, uid) {
+      return exists(acMemberPath(aid, uid)) && get(acMemberPath(aid, uid)).data.status == 'active'
+        && get(acMemberPath(aid, uid)).data.role == 'student';
+    }
+    // Professor responsável DE FATO: atribuição ativa (aceita pelo aluno) + os dois membros ativos.
+    function acTeacherOf(aid, sid) {
+      return signedIn() && acCanTeach(aid, request.auth.uid) && exists(acAssignPath(aid, sid))
+        && get(acAssignPath(aid, sid)).data.teacherId == request.auth.uid
+        && get(acAssignPath(aid, sid)).data.status == 'active'
+        && acIsStudent(aid, sid);
+    }
+    function acCanTeach(aid, uid) {
+      return exists(acMemberPath(aid, uid)) && get(acMemberPath(aid, uid)).data.status == 'active'
+        && get(acMemberPath(aid, uid)).data.role in ['teacher', 'admin', 'owner'];
+    }
+    // Registro de auditoria criado no mesmo lote, do mesmo ator, da mesma academia, com a ação e o alvo esperados.
+    function acLogged(aid, auditId, action, targetId) {
+      return auditId is string && !exists(acLogPath(auditId)) && existsAfter(acLogPath(auditId))
+        && getAfter(acLogPath(auditId)).data.academyId == aid
+        && getAfter(acLogPath(auditId)).data.actorId == request.auth.uid
+        && getAfter(acLogPath(auditId)).data.action == action
+        && getAfter(acLogPath(auditId)).data.targetId == targetId;
+    }
+    // Encerrar atribuição: aceita o registro 'assignment.ended' ou o 'member.joined' do mesmo lote (aluno que volta à academia).
+    function acLoggedEnded(aid, auditId, sid) {
+      return auditId is string && !exists(acLogPath(auditId)) && existsAfter(acLogPath(auditId))
+        && getAfter(acLogPath(auditId)).data.academyId == aid
+        && getAfter(acLogPath(auditId)).data.actorId == request.auth.uid
+        && getAfter(acLogPath(auditId)).data.action in ['assignment.ended', 'member.joined']
+        && getAfter(acLogPath(auditId)).data.targetId == sid;
+    }
+    // Convite válido e com 1 uso somado no mesmo lote (mesmo desenho de coachInvites).
+    function acInviteUsable(inviteId, aid, role) {
+      return inviteId is string && exists(acInvitePath(inviteId))
+        && get(acInvitePath(inviteId)).data.academyId == aid
+        && get(acInvitePath(inviteId)).data.role == role
+        && get(acInvitePath(inviteId)).data.revoked == false
+        && get(acInvitePath(inviteId)).data.expiresAt > request.time
+        && get(acInvitePath(inviteId)).data.uses < get(acInvitePath(inviteId)).data.maxUses
+        && getAfter(acInvitePath(inviteId)).data.uses == get(acInvitePath(inviteId)).data.uses + 1;
+    }
+    function acAssignableRole(aid, role) {
+      return (acRole(aid) == 'owner' && role in ['admin', 'teacher', 'reception', 'student'])
+        || (acRole(aid) == 'admin' && role in ['teacher', 'reception', 'student']);
+    }
+
+    // Quem pode registrar cada ação: ações da equipe só pela equipe; ações do próprio membro só sobre si mesmo.
+    function acLogActionAllowed(d) {
+      return (d.action == 'academy.created' && getAfter(acMemberPath(d.academyId, request.auth.uid)).data.role == 'owner')
+        || (d.action in ['academy.updated', 'invite.created', 'invite.revoked', 'member.updated', 'assignment.proposed', 'assignment.transferred']
+          && acStaff(d.academyId))
+        || (d.action in ['member.joined', 'member.left', 'member.consent', 'assignment.accepted'] && d.targetId == request.auth.uid)
+        || (d.action == 'assignment.ended' && acActive(d.academyId))
+        || (d.action in ['training.created', 'training.updated', 'training.assigned', 'training.unassigned']
+          && acActive(d.academyId) && acRole(d.academyId) in ['owner', 'admin', 'teacher']);
+    }
+
+    match /academyAuditLog/{logId} {
+      allow get, list: if signedIn() && (isAdmin() || acStaff(resource.data.academyId));
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['academyId', 'actorId', 'action', 'targetType', 'targetId', 'at', 'detail'])
+        && request.resource.data.actorId == request.auth.uid
+        && request.resource.data.academyId is string && request.resource.data.academyId.matches('^[a-z0-9]{16,28}$')
+        && request.resource.data.at == request.time
+        && request.resource.data.action in ['academy.created', 'academy.updated', 'member.joined', 'member.left', 'member.updated',
+          'member.consent', 'invite.created', 'invite.revoked', 'assignment.proposed', 'assignment.accepted', 'assignment.ended',
+          'assignment.transferred', 'training.created', 'training.updated', 'training.assigned', 'training.unassigned']
+        && request.resource.data.targetType in ['academy', 'member', 'invite', 'assignment', 'training']
+        && request.resource.data.targetId is string && request.resource.data.targetId.size() > 0 && request.resource.data.targetId.size() <= 120
+        && request.resource.data.get('detail', '') is string && request.resource.data.get('detail', '').size() <= 200
+        // só quem é (ou está entrando como) membro da academia registra; ex-membro e estranho não conseguem
+        && (getAfter(acMemberPath(request.resource.data.academyId, request.auth.uid)).data.status == 'active'
+          || (request.resource.data.action == 'member.left'
+            && getAfter(acMemberPath(request.resource.data.academyId, request.auth.uid)).data.status == 'left'))
+        && acLogActionAllowed(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /academies/{academyId} {
+      allow get: if signedIn() && (isAdmin() || acActive(academyId));
+      allow list: if isAdmin();
+      allow create: if signedIn() && academyId.matches('^[a-z0-9]{16,28}$')
+        && request.resource.data.keys().hasOnly(['name', 'ownerId', 'status', 'createdAt', 'updatedAt', 'auditId'])
+        && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == 'active'
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 80
+        && request.resource.data.createdAt is string && request.resource.data.updatedAt is string
+        && getAfter(acMemberPath(academyId, request.auth.uid)).data.role == 'owner'
+        && getAfter(acMemberPath(academyId, request.auth.uid)).data.status == 'active'
+        && acLogged(academyId, request.resource.data.auditId, 'academy.created', academyId);
+      // Proprietário e admin editam só o nome; propriedade e status ficam travados (suporte do produto muda o status).
+      allow update: if signedIn() && (
+        (acStaff(academyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt', 'auditId'])
+          && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 80
+          && acLogged(academyId, request.resource.data.auditId, 'academy.updated', academyId))
+        || (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && request.resource.data.status in ['active', 'suspended']));
+      allow delete: if false;
+    }
+
+    match /academyMembers/{memberId} {
+      allow get: if signedIn() && (isAdmin() || (resource == null
+        ? memberId.matches('^[a-z0-9]{16,28}_' + request.auth.uid + '$')
+        : (resource.data.userId == request.auth.uid || acStaff(resource.data.academyId)
+          || acTeacherOf(resource.data.academyId, resource.data.userId))));
+      allow list: if signedIn() && (isAdmin() || resource.data.userId == request.auth.uid || acStaff(resource.data.academyId));
+
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'userId', 'role', 'status', 'displayName',
+          'inviteId', 'consent', 'perms', 'auditId', 'createdAt', 'updatedAt'])
+        && memberId == request.resource.data.academyId + '_' + request.resource.data.userId
+        && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'active'
+        && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80
+        && request.resource.data.consent is map && request.resource.data.consent.keys().hasOnly(['adherence'])
+        && request.resource.data.consent.adherence is bool && !('perms' in request.resource.data)
+        && request.resource.data.createdAt is string && request.resource.data.updatedAt is string
+        && (
+          // (A) criação da academia: o criador é o proprietário
+          (request.resource.data.role == 'owner' && !('inviteId' in request.resource.data)
+            && existsAfter(acAcademyPath(request.resource.data.academyId)) && !exists(acAcademyPath(request.resource.data.academyId))
+            && getAfter(acAcademyPath(request.resource.data.academyId)).data.ownerId == request.auth.uid
+            && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'academy.created', request.resource.data.academyId))
+          // (B) entrada por convite: papel do convite (nunca owner), 1 uso somado no mesmo lote
+          || (request.resource.data.role in ['admin', 'teacher', 'reception', 'student']
+            && acInviteUsable(request.resource.data.inviteId, request.resource.data.academyId, request.resource.data.role)
+            && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'member.joined', request.auth.uid))
+        );
+
+      allow update: if signedIn() && request.resource.data.academyId == resource.data.academyId
+        && request.resource.data.userId == resource.data.userId && memberId == request.resource.data.academyId + '_' + request.resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt && (
+          // (S1) o próprio membro sai da academia (o proprietário não sai)
+          (resource.data.userId == request.auth.uid && resource.data.status == 'active' && resource.data.role != 'owner'
+            && request.resource.data.status == 'left' && request.resource.data.role == resource.data.role
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'auditId'])
+            && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.left', request.auth.uid))
+          // (S2) quem saiu volta com um convite novo e válido (removido ou suspenso NÃO volta sozinho)
+          || (resource.data.userId == request.auth.uid && resource.data.status == 'left' && resource.data.role != 'owner'
+            && request.resource.data.status == 'active' && request.resource.data.role in ['admin', 'teacher', 'reception', 'student']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'role', 'inviteId', 'consent', 'displayName', 'updatedAt', 'auditId'])
+            && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80
+            && request.resource.data.consent is map && request.resource.data.consent.keys().hasOnly(['adherence'])
+            && request.resource.data.consent.adherence is bool
+            && (!exists(acAssignPath(resource.data.academyId, resource.data.userId))
+              || getAfter(acAssignPath(resource.data.academyId, resource.data.userId)).data.status == 'ended')
+            && acInviteUsable(request.resource.data.inviteId, resource.data.academyId, request.resource.data.role)
+            && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.joined', request.auth.uid))
+          // (S3) nome e consentimento; revogar a aderência exige apagar o status no mesmo lote
+          || (resource.data.userId == request.auth.uid && resource.data.status == 'active'
+            && request.resource.data.status == 'active' && request.resource.data.role == resource.data.role
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'consent', 'updatedAt', 'auditId'])
+            && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80
+            && request.resource.data.consent is map && request.resource.data.consent.keys().hasOnly(['adherence'])
+            && request.resource.data.consent.adherence is bool
+            && (request.resource.data.consent.adherence == true || !existsAfter(acStatsPath(resource.data.academyId, resource.data.userId)))
+            && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.consent', request.auth.uid))
+          // (T) proprietário/admin gerenciam papel, status e permissões de quem está abaixo deles (nunca de si nem do proprietário)
+          || (acStaff(resource.data.academyId) && resource.data.userId != request.auth.uid && resource.data.role != 'owner'
+            && (acRole(resource.data.academyId) == 'owner' || resource.data.role != 'admin')
+            && request.resource.data.role != 'owner'
+            && (request.resource.data.role == resource.data.role || acAssignableRole(resource.data.academyId, request.resource.data.role))
+            && request.resource.data.status in ['active', 'suspended', 'removed']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'perms', 'updatedAt', 'auditId'])
+            && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.updated', resource.data.userId))
+        );
+      allow delete: if false;
+    }
+
+    match /academyInvites/{inviteId} {
+      // O ID é segredo (só vale com o link). O documento não tem dado pessoal.
+      allow get: if true;
+      allow list: if signedIn() && (isAdmin() || acStaff(resource.data.academyId));
+      allow create: if signedIn() && inviteId.matches('^ai_[A-Za-z0-9]{20}$')
+        && request.resource.data.keys().hasOnly(['academyId', 'academyName', 'role', 'expiresAt', 'maxUses', 'uses', 'revoked',
+          'createdBy', 'createdAt', 'auditId'])
+        && acStaff(request.resource.data.academyId) && acAssignableRole(request.resource.data.academyId, request.resource.data.role)
+        && request.resource.data.academyName == get(acAcademyPath(request.resource.data.academyId)).data.name
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt is string
+        && request.resource.data.uses == 0 && request.resource.data.revoked == false
+        && request.resource.data.maxUses is int && request.resource.data.maxUses >= 1
+        && request.resource.data.maxUses <= (request.resource.data.role == 'admin' ? 5 : 200)
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt >= request.time + duration.value(1, 'h')
+        && request.resource.data.expiresAt <= request.time + duration.value(31, 'd')
+        && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'invite.created', inviteId);
+      allow update: if signedIn() && (
+        // revogar (só a equipe da academia dona do convite)
+        (acStaff(resource.data.academyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked', 'auditId'])
+          && request.resource.data.revoked == true
+          && acLogged(resource.data.academyId, request.resource.data.auditId, 'invite.revoked', inviteId))
+        // uso: 1 por vez, junto da criação/reativação do próprio membro com este convite
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+          && request.resource.data.uses == resource.data.uses + 1 && request.resource.data.uses <= resource.data.maxUses
+          && resource.data.revoked == false && resource.data.expiresAt > request.time
+          && (!exists(acMemberPath(resource.data.academyId, request.auth.uid))
+            || get(acMemberPath(resource.data.academyId, request.auth.uid)).data.status == 'left')
+          && getAfter(acMemberPath(resource.data.academyId, request.auth.uid)).data.inviteId == inviteId
+          && getAfter(acMemberPath(resource.data.academyId, request.auth.uid)).data.status == 'active'
+          && getAfter(acMemberPath(resource.data.academyId, request.auth.uid)).data.role == resource.data.role));
+      allow delete: if false;
+    }
+
+    match /academyAssignments/{assignId} {
+      allow get: if signedIn() && (isAdmin() || (resource == null
+        ? assignId.matches('^[a-z0-9]{16,28}_' + request.auth.uid + '$')
+        : (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid
+          || acStaff(resource.data.academyId))));
+      allow list: if signedIn() && (isAdmin() || resource.data.studentId == request.auth.uid
+        || resource.data.teacherId == request.auth.uid || acStaff(resource.data.academyId));
+      // Proposta da equipe: professor elegível + aluno ativo; sem aceite do aluno o professor não lê nada.
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'studentId', 'teacherId', 'status',
+          'requestedBy', 'previousTeacherId', 'auditId', 'createdAt', 'updatedAt'])
+        && assignId == request.resource.data.academyId + '_' + request.resource.data.studentId
+        && acStaff(request.resource.data.academyId) && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && acCanTeach(request.resource.data.academyId, request.resource.data.teacherId)
+        && acIsStudent(request.resource.data.academyId, request.resource.data.studentId)
+        && request.resource.data.createdAt is string && request.resource.data.updatedAt is string
+        && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'assignment.proposed', request.resource.data.studentId);
+      allow update: if signedIn() && request.resource.data.academyId == resource.data.academyId
+        && request.resource.data.studentId == resource.data.studentId
+        && assignId == request.resource.data.academyId + '_' + request.resource.data.studentId
+        && request.resource.data.createdAt == resource.data.createdAt && (
+          // o ALUNO aceita
+          (resource.data.studentId == request.auth.uid && resource.data.status == 'pending' && request.resource.data.status == 'active'
+            && request.resource.data.teacherId == resource.data.teacherId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'auditId'])
+            && acIsStudent(resource.data.academyId, request.auth.uid) && acCanTeach(resource.data.academyId, resource.data.teacherId)
+            && acLogged(resource.data.academyId, request.resource.data.auditId, 'assignment.accepted', resource.data.studentId))
+          // aluno, professor ou equipe encerram (o acesso do professor acaba na hora)
+          || ((resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid || acStaff(resource.data.academyId))
+            && resource.data.status in ['pending', 'active'] && request.resource.data.status == 'ended'
+            && request.resource.data.teacherId == resource.data.teacherId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'auditId'])
+            && acLoggedEnded(resource.data.academyId, request.resource.data.auditId, resource.data.studentId))
+          // a equipe propõe de novo (depois de encerrada) ou TRANSFERE para outro professor: volta a pendente, exige novo aceite
+          || (acStaff(resource.data.academyId) && request.resource.data.status == 'pending'
+            && request.resource.data.requestedBy == request.auth.uid
+            && request.resource.data.previousTeacherId == resource.data.teacherId
+            && acCanTeach(resource.data.academyId, request.resource.data.teacherId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherId', 'status', 'requestedBy', 'previousTeacherId', 'updatedAt', 'auditId'])
+            && acLogged(resource.data.academyId, request.resource.data.auditId,
+              resource.data.status == 'active' ? 'assignment.transferred' : 'assignment.proposed', resource.data.studentId))
+        );
+      allow delete: if false;
+    }
+
+    // Aderência mínima do aluno (em dia / atrasado / sem dados): só validUntil e o último check-in. "em dia" = validUntil no futuro;
+    // vencido = atrasado; sem documento = sem dados. Sem cargas, medidas, horários nem histórico.
+    match /academyMemberStats/{statsId} {
+      allow get: if signedIn() && (isAdmin() || (resource != null && (
+        resource.data.userId == request.auth.uid
+        || acTeacherOf(resource.data.academyId, resource.data.userId)
+        || (acStaff(resource.data.academyId) && acIsStudent(resource.data.academyId, resource.data.userId)
+          && get(acMemberPath(resource.data.academyId, resource.data.userId)).data.consent.adherence == true))));
+      // sem list para a equipe: o consentimento mora em outro documento; a equipe lê aluno a aluno (get)
+      allow list: if signedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create, update: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'userId', 'validUntil', 'lastCheckInId', 'updatedAt'])
+        && statsId == request.resource.data.academyId + '_' + request.resource.data.userId
+        && request.resource.data.userId == request.auth.uid
+        && acIsStudent(request.resource.data.academyId, request.auth.uid)
+        && get(acMemberPath(request.resource.data.academyId, request.auth.uid)).data.consent.adherence == true
+        && request.resource.data.validUntil is timestamp && request.resource.data.validUntil > request.time
+        && request.resource.data.validUntil <= request.time + duration.value(7, 'd') + duration.value(1, 'h')
+        && request.resource.data.lastCheckInId is string
+        && request.resource.data.lastCheckInId == get(/databases/$(database)/documents/userStats/$(request.auth.uid)).data.lastCheckInId
+        && request.resource.data.updatedAt is string
+        && (resource == null || request.resource.data.lastCheckInId != resource.data.lastCheckInId);
+      allow delete: if signedIn() && (resource.data.userId == request.auth.uid
+        || (acStaff(resource.data.academyId) && getAfter(acMemberPath(resource.data.academyId, resource.data.userId)).data.status in ['removed', 'suspended', 'left']));
+    }
+
+    // Fichas versionadas da academia: série + versões imutáveis. Atribuição fixa a versão.
+    function acCanAuthor(aid) {
+      return acActive(aid) && (acRole(aid) in ['owner', 'admin']
+        || (acRole(aid) == 'teacher' && get(acMemberPath(aid, request.auth.uid)).data.get('perms', {}).get('createTrainings', false) == true));
+    }
+    function acTrainingVersionPath(seriesId, n) {
+      return /databases/$(database)/documents/trainingVersions/$(seriesId + '_' + string(n));
+    }
+    function acAssignedTrainingPath(aid, sid) {
+      return /databases/$(database)/documents/academyAssigned/$(aid + '_' + sid);
+    }
+    function acReadsTraining(aid, seriesId) {
+      return acActive(aid) && (acRole(aid) in ['owner', 'admin', 'teacher']
+        || (acRole(aid) == 'student' && exists(acAssignedTrainingPath(aid, request.auth.uid))
+          && get(acAssignedTrainingPath(aid, request.auth.uid)).data.seriesId == seriesId));
+    }
+    function validExercises(list) {
+      return list is list && list.size() <= 40;
+    }
+
+    match /trainingSeries/{seriesId} {
+      allow get: if signedIn() && (isAdmin() || (resource != null && acReadsTraining(resource.data.academyId, seriesId)));
+      allow list: if signedIn() && (isAdmin() || (acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'name', 'currentVersion', 'status', 'createdBy', 'auditId', 'createdAt', 'updatedAt'])
+        && acCanAuthor(request.resource.data.academyId) && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 80
+        && request.resource.data.currentVersion == 1 && request.resource.data.status == 'active'
+        && existsAfter(acTrainingVersionPath(seriesId, 1))
+        && getAfter(acTrainingVersionPath(seriesId, 1)).data.academyId == request.resource.data.academyId
+        && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'training.created', seriesId);
+      allow update: if signedIn() && acCanAuthor(resource.data.academyId) && request.resource.data.academyId == resource.data.academyId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'currentVersion', 'status', 'updatedAt', 'auditId'])
+        && request.resource.data.status in ['active', 'archived']
+        && (request.resource.data.currentVersion == resource.data.currentVersion
+          || (request.resource.data.currentVersion == resource.data.currentVersion + 1
+            && existsAfter(acTrainingVersionPath(seriesId, request.resource.data.currentVersion))))
+        && acLogged(resource.data.academyId, request.resource.data.auditId, 'training.updated', seriesId);
+      allow delete: if false;
+    }
+
+    match /trainingVersions/{versionId} {
+      allow get: if signedIn() && (isAdmin() || (resource != null && acReadsTraining(resource.data.academyId, resource.data.seriesId)));
+      allow list: if signedIn() && (isAdmin() || (acActive(resource.data.academyId) && acRole(resource.data.academyId) in ['owner', 'admin', 'teacher']));
+      // Versão imutável: só nasce junto da série (ou da sua atualização) e nunca muda.
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'seriesId', 'version', 'name', 'exercises', 'createdBy', 'createdAt'])
+        && versionId == request.resource.data.seriesId + '_' + string(request.resource.data.version)
+        && request.resource.data.version is int && request.resource.data.version >= 1
+        && acCanAuthor(request.resource.data.academyId) && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 80
+        && validExercises(request.resource.data.exercises)
+        && existsAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId))
+        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.academyId == request.resource.data.academyId
+        && getAfter(/databases/$(database)/documents/trainingSeries/$(request.resource.data.seriesId)).data.currentVersion == request.resource.data.version;
+      allow update, delete: if false;
+    }
+
+    match /academyAssigned/{assignedId} {
+      allow get: if signedIn() && (isAdmin() || (resource == null
+        ? assignedId.matches('^[a-z0-9]{16,28}_' + request.auth.uid + '$')
+        : (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid || acStaff(resource.data.academyId))));
+      allow list: if signedIn() && (isAdmin() || resource.data.studentId == request.auth.uid
+        || resource.data.teacherId == request.auth.uid || acStaff(resource.data.academyId));
+      allow create, update: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'studentId', 'seriesId', 'version', 'teacherId', 'assignedBy', 'auditId', 'updatedAt'])
+        && assignedId == request.resource.data.academyId + '_' + request.resource.data.studentId
+        && request.resource.data.assignedBy == request.auth.uid
+        && acIsStudent(request.resource.data.academyId, request.resource.data.studentId)
+        && (acStaff(request.resource.data.academyId) || acTeacherOf(request.resource.data.academyId, request.resource.data.studentId))
+        && request.resource.data.version is int
+        && get(acTrainingVersionPath(request.resource.data.seriesId, request.resource.data.version)).data.academyId == request.resource.data.academyId
+        && request.resource.data.seriesId is string
+        && get(acAssignPath(request.resource.data.academyId, request.resource.data.studentId)).data.teacherId == request.resource.data.teacherId
+        && get(acAssignPath(request.resource.data.academyId, request.resource.data.studentId)).data.status == 'active'
+        && acLogged(request.resource.data.academyId, request.resource.data.auditId, 'training.assigned', request.resource.data.studentId);
+      allow delete: if signedIn() && (acStaff(resource.data.academyId) || acTeacherOf(resource.data.academyId, resource.data.studentId));
+    }
+
     // All unmatched paths, including legacy users/{uid}/checkIns, stay denied.
   }
 }

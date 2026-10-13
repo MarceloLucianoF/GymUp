@@ -27,4 +27,4 @@ deploy-rules:
 	firebase deploy --only firestore:rules,firestore:indexes
 
 test-rules:
-	firebase emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js"
+	firebase emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js && node --test academy.rules.test.js"
