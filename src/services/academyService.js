@@ -58,9 +58,10 @@ export async function listMyMemberships(userId) {
   }));
 }
 
+/** Membros ativos e suspensos (a equipe reativa quem foi suspenso); removidos e quem saiu ficam de fora. */
 export async function listAcademyMembers(academyId) {
   const snap = await getDocs(query(collection(db, 'academyMembers'), where('academyId', '==', academyId)));
-  return snap.docs.map((d) => d.data()).filter((m) => m.status === 'active');
+  return snap.docs.map((d) => d.data()).filter((m) => ['active', 'suspended'].includes(m.status));
 }
 
 export async function listAcademyInvites(academyId) {

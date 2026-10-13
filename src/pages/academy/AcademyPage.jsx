@@ -133,7 +133,7 @@ function MembersList({ membership, actor }) {
   }, [academyId]);
   useEffect(() => { load(); }, [load]);
 
-  const teachers = (members || []).filter((m) => ['teacher', 'admin', 'owner'].includes(m.role));
+  const teachers = (members || []).filter((m) => m.status === 'active' && ['teacher', 'admin', 'owner'].includes(m.role));
   const asgOf = (uid) => assignments.find((a) => a.studentId === uid);
   const nameOf = (uid) => members?.find((m) => m.userId === uid)?.displayName || 'Professor';
   const manageable = (m) => m.userId !== actor.uid && m.role !== 'owner' && (myRole === 'owner' || m.role !== 'admin');
@@ -163,24 +163,26 @@ function MembersList({ membership, actor }) {
       <h3 className="font-bold text-gray-900 dark:text-white">Membros{members ? ` (${members.length})` : ''}</h3>
       <ul className="mt-3 space-y-2">
         {members?.map((m) => {
-          const asg = m.role === 'student' ? asgOf(m.userId) : null;
+          const asg = m.role === 'student' && m.status === 'active' ? asgOf(m.userId) : null;
           const open = asg && asg.status !== 'ended';
           return (
             <li key={m.userId} className="rounded-2xl bg-gray-50 px-4 py-3 text-sm dark:bg-white/5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="truncate font-semibold text-gray-900 dark:text-white">{m.displayName || 'Membro'}</span>
+                <span className="truncate font-semibold text-gray-900 dark:text-white">{m.displayName || 'Membro'}{m.status === 'suspended' ? ' (suspenso)' : ''}</span>
                 {manageable(m) ? (
                   <span className="flex flex-wrap items-center gap-2">
                     <label className="sr-only" htmlFor={`role-${m.userId}`}>Papel de {m.displayName}</label>
                     <select id={`role-${m.userId}`} value={m.role} disabled={busy === `r-${m.userId}`} onChange={(e) => changeRole(m, e.target.value)} className="min-h-[44px] rounded-xl bg-white px-3 text-xs font-bold dark:bg-gray-800 dark:text-white">
                       {rolesFor.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                     </select>
-                    <button type="button" onClick={() => setStatus(m, 'suspended', 'Suspender')} className={`${btnGhost} text-xs`}>Suspender</button>
+                    {m.status === 'suspended'
+                      ? <button type="button" onClick={() => run(`a-${m.userId}`, () => updateMember(actor, m, { status: 'active' }), 'Membro reativado.')} className={`${btnPrimary} text-xs`}>Reativar</button>
+                      : <button type="button" onClick={() => setStatus(m, 'suspended', 'Suspender')} className={`${btnGhost} text-xs`}>Suspender</button>}
                     <button type="button" onClick={() => setStatus(m, 'removed', 'Remover')} className={`${btnDanger} text-xs`}>Remover</button>
                   </span>
                 ) : <span className="text-xs text-gray-600 dark:text-gray-400">{ROLE_LABEL[m.role]}</span>}
               </div>
-              {m.role === 'student' && (
+              {m.role === 'student' && m.status === 'active' && (
                 <div className="mt-2 border-t border-gray-100 pt-2 dark:border-white/10">
                   <p className="text-xs text-gray-600 dark:text-gray-400">
                     Professor responsável: {asg && asg.status !== 'ended' ? `${nameOf(asg.teacherId)} (${ASSIGNMENT_LABEL[asg.status]})` : 'nenhum'}
