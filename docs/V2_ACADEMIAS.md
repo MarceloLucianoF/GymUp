@@ -319,3 +319,18 @@ marketplace de professores, campeonatos entre academias, e qualquer uso de IA qu
 | Acesso residual depois de sair | Status conferido a cada leitura; saída e remoção encerram atribuição e apagam a projeção de frequência. |
 | Academia grande demais para ler no cliente | `academyMemberStats` paginado; relatórios e IA agregada no Worker. |
 | Perder o aluno que usa sozinho | Modo independente permanece intacto; academia é opcional e reversível. |
+
+## 13. Decisões assumidas para iniciar a V2.0 (13/10/2026)
+1. **Coordenação e administração não acessam saúde nem detalhe de treino por padrão**; veem só indicadores operacionais. Acesso detalhado exigiria consentimento explícito, revogável e auditado (não implementado na V2.0).
+2. **Professor atribuído** vê apenas o status mínimo de aderência (`em_dia | atrasado | sem_dados`), sem cargas, medidas, horários nem histórico, e só depois do aceite do aluno.
+3. **Um professor responsável por vez.** A academia transfere o aluno: a atribuição volta a `pending` (novo aceite), guarda `previousTeacherId` e grava auditoria; o histórico do aluno não muda.
+4. **Sem servidor com credencial antes da V2.1.** A V2.0 funciona só com regras, lotes e dados mínimos.
+5. **Modelo comercial:** assinatura da academia por faixa de alunos ativos; sem gateway agora, o sistema só guarda plano, valor, status e isenção.
+6. Também aprovado: revisão jurídica antes da V2.1; migração opcional e assistida dos treinadores atuais; o usuário pode seguir independente ao sair da academia; academia/professor não têm acesso retroativo a dados anteriores sem consentimento.
+
+### Como a V2.0 implementa (e um desvio consciente)
+- Coleções: `academies`, `academyMembers`, `academyInvites`, `academyAssignments`, `academyMemberStats`, `academyAuditLog`, `trainingSeries`, `trainingVersions`, `academyAssigned`. Toda mudança administrativa exige o registro de auditoria **no mesmo lote** (`acLogged`).
+- A aderência é um documento por aluno (`validUntil` até 7 dias + 1 h, `lastCheckInId` ligado ao `userStats` real). "Em dia" = `validUntil` no futuro; vencido = atrasado; sem documento = sem dados. Só existe com consentimento do aluno; revogar exige apagar o documento no mesmo lote.
+- **Desvio da decisão 1:** sem servidor que agregue, a equipe (dono/admin) lê o documento mínimo de aderência de cada aluno **que consentiu** para montar o indicador de frequência. Não há carga, medida nem horário nesse documento. Quando houver agregador (V2.1) a leitura individual pela equipe pode ser removida.
+- Propriedade e papel `owner` são imutáveis na V2.0; admin não gerencia outro admin; convites de admin têm teto de 5 usos; ex-membro removido ou suspenso não volta sozinho (só quem saiu, com convite novo).
+- UI fica para a próxima entrega; a V2.0 entrega regras, testes de isolamento e `src/services/academyService.js`.

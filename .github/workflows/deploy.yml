@@ -30,4 +30,4 @@ jobs:
           java-version: '21'
       - run: npm ci
         working-directory: rules-test
-      - run: npx --yes firebase-tools@13.29.1 emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js"
+      - run: npx --yes firebase-tools@13.29.1 emulators:exec --only firestore --project demo-bohtreinar "cd rules-test && node --test firestore.rules.test.js && node --test academy.rules.test.js"
