@@ -12,7 +12,7 @@ import { useConfirm } from '../../hooks/useConfirm';
 import usePageMeta from '../../hooks/usePageMeta';
 import {
   academyInviteStatus, createAcademy, createAcademyInvite, leaveAcademy, listAcademyInvites, listAcademyMembers,
-  listMyMemberships, revokeAcademyInvite, ROLE_LABEL
+  listMyMemberships, revokeAcademyInvite, ROLE_LABEL, setAdherenceConsent
 } from '../../services/academyService';
 
 const STATUS_LABEL = { ok: 'Ativo', revoked: 'Cancelado', expired: 'Expirado', exhausted: 'Esgotado', missing: '-' };
@@ -86,6 +86,36 @@ function InvitesPanel({ membership, user }) {
   );
 }
 
+function ConsentCard({ membership, actor, onChanged }) {
+  const on = membership.consent?.adherence === true;
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await setAdherenceConsent(actor, membership.academyId, !on);
+      toast.success(on ? 'Compartilhamento revogado.' : 'Compartilhamento ativado.');
+      await onChanged();
+    } catch (e) { console.error(e); toast.error('Não foi possível alterar o consentimento.'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <section aria-label="Consentimento de aderência" className="mt-5 border-t border-gray-100 pt-4 dark:border-white/10">
+      <h3 className="font-bold text-gray-900 dark:text-white">Compartilhar aderência com esta academia</h3>
+      <p className="mt-1 text-sm font-semibold" role="status">{on ? 'Ativado: você autorizou o compartilhamento.' : 'Desativado: nada é compartilhado.'}</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-400">
+        <li>Será compartilhado apenas se você está <strong>em dia</strong>, <strong>atrasado</strong> ou <strong>sem dados</strong>.</li>
+        <li>Nunca: horários, datas de treino, cargas, medidas, volume ou histórico.</li>
+        <li>Vale só para esta academia e você pode revogar quando quiser; ao revogar, o dado de aderência é apagado na hora.</li>
+        <li>A exibição individual para a academia só começa quando o sistema de cálculo no servidor estiver ativo; até lá ela não vê nada.</li>
+        <li>Seus treinos, medidas e histórico continuam só seus. Sair da academia também encerra este consentimento.</li>
+      </ul>
+      <button type="button" onClick={toggle} disabled={busy} className={`${on ? btnDanger : btnPrimary} mt-3`}>
+        {busy ? 'Salvando...' : on ? 'Revogar compartilhamento' : 'Ativar compartilhamento'}
+      </button>
+    </section>
+  );
+}
+
 function MembersList({ academyId }) {
   const [members, setMembers] = useState(null);
   useEffect(() => { listAcademyMembers(academyId).then(setMembers).catch((e) => { console.error(e); setMembers([]); }); }, [academyId]);
@@ -100,7 +130,7 @@ function MembersList({ academyId }) {
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">Dados de aderência não compartilhados pelo aluno. A academia não vê treinos, medidas nem frequência individual nesta versão.</p>
+      <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">Dados de aderência não compartilhados pelo aluno. A academia não vê aderência individual, treinos nem medidas nesta versão.</p>
     </section>
   );
 }
@@ -152,6 +182,7 @@ export default function AcademyPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">Seu papel: {ROLE_LABEL[m.role]}</p></div>
               {m.role !== 'owner' && <button type="button" onClick={() => leave(m)} className={btnDanger}><LogOut className="h-4 w-4" aria-hidden="true" />Sair da academia</button>}
             </div>
+            {m.role === 'student' && <ConsentCard membership={m} actor={actor} onChanged={load} />}
             {['owner', 'admin'].includes(m.role) && <><InvitesPanel membership={m} user={actor} /><MembersList academyId={m.academyId} /></>}
           </article>
         ))}

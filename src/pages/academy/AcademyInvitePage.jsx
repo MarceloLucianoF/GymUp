@@ -11,6 +11,7 @@ const MESSAGES = {
   missing: 'Este convite não existe ou o link está incompleto.',
   revoked: 'Este convite foi cancelado pela academia.',
   expired: 'Este convite expirou. Peça um novo à academia.',
+  error: 'Não foi possível carregar o convite. Verifique a conexão e tente de novo.',
   exhausted: 'Este convite já atingiu o limite de usos. Peça um novo à academia.'
 };
 
@@ -24,7 +25,7 @@ export default function AcademyInvitePage() {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { getAcademyInviteInfo(id).then(setInvite).catch((e) => { console.error(e); setInvite(null); }); }, [id]);
+  useEffect(() => { getAcademyInviteInfo(id).then(setInvite).catch((e) => { console.error(e); setInvite('error'); }); }, [id]);
 
   const join = async () => {
     setBusy(true);
@@ -38,7 +39,7 @@ export default function AcademyInvitePage() {
     } finally { setBusy(false); }
   };
 
-  const status = invite === undefined ? 'loading' : academyInviteStatus(invite);
+  const status = invite === undefined ? 'loading' : invite === 'error' ? 'error' : academyInviteStatus(invite);
   return (
     <div className={pageCls}>
       <div className="mx-auto max-w-md">
@@ -62,7 +63,7 @@ export default function AcademyInvitePage() {
                   {invite.role === 'student' && (
                     <label className="mt-4 flex items-start gap-3 rounded-2xl bg-gray-50 p-3 text-left text-sm text-gray-700 dark:bg-white/5 dark:text-gray-300">
                       <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 h-5 w-5" />
-                      <span>Autorizo esta academia a saber se estou em dia com meus treinos (somente em dia, atrasado ou sem dados; nunca horários, cargas ou medidas). Posso revogar quando quiser.</span>
+                      <span>Autorizo compartilhar com esta academia se estou em dia, atrasado ou sem dados (nunca horários, cargas ou medidas). A exibição individual só começa quando o cálculo no servidor estiver ativo; até lá ninguém da academia vê. Posso revogar quando quiser.</span>
                     </label>
                   )}
                   <button type="button" onClick={join} disabled={busy} className={`${btnPrimary} mt-5 w-full`}>{busy ? 'Entrando...' : 'Entrar na academia'}</button>

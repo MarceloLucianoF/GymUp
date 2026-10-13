@@ -52,8 +52,9 @@ export async function listMyMemberships(userId) {
   const snap = await getDocs(query(collection(db, 'academyMembers'), where('userId', '==', userId)));
   const active = snap.docs.map((d) => d.data()).filter((m) => m.status === 'active');
   return Promise.all(active.map(async (m) => {
-    const a = await getDoc(doc(db, 'academies', m.academyId));
-    return { ...m, academy: a.exists() ? { id: a.id, ...a.data() } : { id: m.academyId, name: 'Academia' } };
+    const fallback = { id: m.academyId, name: 'Academia' };
+    const a = await getDoc(doc(db, 'academies', m.academyId)).catch(() => null);
+    return { ...m, academy: a?.exists() ? { id: a.id, ...a.data() } : fallback };
   }));
 }
 
@@ -131,7 +132,7 @@ export async function joinAcademy(user, invite, { adherenceConsent = false } = {
 export async function leaveAcademy(user, academyId) {
   const auditId = newAuditId();
   const batch = writeBatch(db);
-  batch.update(doc(db, 'academyMembers', memberId(academyId, user.uid)), { status: 'left', updatedAt: now(), auditId });
+  batch.update(doc(db, 'academyMembers', memberId(academyId, user.uid)), { status: 'left', consent: { adherence: false }, updatedAt: now(), auditId });
   batch.delete(doc(db, 'academyMemberStats', memberId(academyId, user.uid))); // sair apaga a aderência (exigido pelas regras)
   audit(batch, user.uid, academyId, auditId, 'member.left', 'member', user.uid);
   await batch.commit();

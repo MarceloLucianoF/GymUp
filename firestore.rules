@@ -856,7 +856,9 @@ service cloud.firestore {
       return (d.action == 'academy.created' && getAfter(acMemberPath(d.academyId, request.auth.uid)).data.role == 'owner')
         || (d.action in ['academy.updated', 'invite.created', 'invite.revoked', 'member.updated', 'assignment.proposed', 'assignment.transferred']
           && acStaff(d.academyId))
-        || (d.action in ['member.joined', 'member.left', 'member.consent', 'assignment.accepted'] && d.targetId == request.auth.uid)
+        || (d.action in ['member.joined', 'member.left', 'assignment.accepted'] && d.targetId == request.auth.uid)
+        || (d.action == 'member.consent' && d.targetId == request.auth.uid
+          && d.get('detail', '') == (getAfter(acMemberPath(d.academyId, request.auth.uid)).data.consent.adherence ? 'concedido' : 'revogado'))
         || (d.action == 'assignment.ended' && acActive(d.academyId))
         || (d.action in ['training.created', 'training.updated', 'training.assigned', 'training.unassigned']
           && acActive(d.academyId) && acRole(d.academyId) in ['owner', 'admin', 'teacher']);
@@ -937,7 +939,8 @@ service cloud.firestore {
           // (S1) o próprio membro sai da academia (o proprietário não sai)
           (resource.data.userId == request.auth.uid && resource.data.status == 'active' && resource.data.role != 'owner'
             && request.resource.data.status == 'left' && request.resource.data.role == resource.data.role
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'auditId'])
+            && request.resource.data.consent.adherence == false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'consent', 'updatedAt', 'auditId'])
             && !existsAfter(acStatsPath(resource.data.academyId, resource.data.userId))
             && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.left', request.auth.uid))
           // (S2) quem saiu volta com um convite novo e válido (removido ou suspenso NÃO volta sozinho)
@@ -962,6 +965,7 @@ service cloud.firestore {
             && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.consent', request.auth.uid))
           // (T) proprietário/admin gerenciam papel, status e permissões de quem está abaixo deles (nunca de si nem do proprietário)
           || (acStaff(resource.data.academyId) && resource.data.userId != request.auth.uid && resource.data.role != 'owner'
+            && resource.data.status != 'left'
             && (acRole(resource.data.academyId) == 'owner' || resource.data.role != 'admin')
             && request.resource.data.role != 'owner'
             && (request.resource.data.role == resource.data.role || acAssignableRole(resource.data.academyId, request.resource.data.role))
@@ -1069,8 +1073,11 @@ service cloud.firestore {
         && request.resource.data.lastCheckInId == get(/databases/$(database)/documents/userStats/$(request.auth.uid)).data.lastCheckInId
         && request.resource.data.updatedAt is string
         && (resource == null || request.resource.data.lastCheckInId != resource.data.lastCheckInId);
-      allow delete: if signedIn() && (resource.data.userId == request.auth.uid
-        || (acStaff(resource.data.academyId) && getAfter(acMemberPath(resource.data.academyId, resource.data.userId)).data.status in ['removed', 'suspended', 'left']));
+      // Apagar o que não existe também é permitido ao dono do ID (sair/revogar sem aderência publicada não pode falhar).
+      allow delete: if signedIn() && (resource == null
+        ? statsId.matches('^[a-z0-9]{16,28}_' + request.auth.uid + '$')
+        : (resource.data.userId == request.auth.uid
+          || (acStaff(resource.data.academyId) && getAfter(acMemberPath(resource.data.academyId, resource.data.userId)).data.status in ['removed', 'suspended', 'left'])));
     }
 
     // Fichas versionadas da academia: série + versões imutáveis. Atribuição fixa a versão.
