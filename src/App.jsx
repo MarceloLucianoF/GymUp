@@ -15,6 +15,7 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const AuthAction = lazy(() => import('./pages/auth/AuthAction'));
 const InviteRedirect = lazy(() => import('./pages/public/InviteRedirect'));
 const AcademyPage = lazy(() => import('./pages/academy/AcademyPage'));
+const AcademyTrainingsPage = lazy(() => import('./pages/academy/AcademyTrainingsPage'));
 const AcademyInvitePage = lazy(() => import('./pages/academy/AcademyInvitePage'));
 const Friends = lazy(() => import('./pages/user/Friends'));
 
@@ -247,6 +248,7 @@ function AppRoutes() {
           <Route path="/convite/:code" element={<InviteRedirect />} />
           <Route path="/academia/convite/:id" element={<AcademyInvitePage />} />
           <Route path="/academia" element={<ProtectedRoute><AcademyPage /></ProtectedRoute>} />
+          <Route path="/academia/:academyId/fichas" element={<ProtectedRoute><AcademyTrainingsPage /></ProtectedRoute>} />
           <Route path="/auth/action" element={<main id="main-content" tabIndex={-1} className="outline-none"><AuthAction /></main>} />
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           

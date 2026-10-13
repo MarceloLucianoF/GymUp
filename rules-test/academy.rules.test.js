@@ -5,6 +5,7 @@ const path = require('path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
 const { doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where, writeBatch, serverTimestamp, Timestamp, increment } = require('firebase/firestore');
 
+const EX = { name: 'Agachamento', sets: '3', reps: '10', rest: 60 };
 const A = 'academiaaaaaaaaaaaa';
 const B = 'academiabbbbbbbbbbbb';
 const NOW = '2026-10-13T00:00:00.000Z';
@@ -45,9 +46,9 @@ async function seedAcademy(d, aid, p) {
   await setDoc(doc(d, `userStats/${p}stu`), { lastCheckInId: 'c1' });
   await setDoc(doc(d, `academyInvites/${invId(p)}`), { academyId: aid, academyName: `Academia ${p}`, role: 'student', expiresAt: days(5), maxUses: 10, uses: 0, revoked: false, createdBy: `${p}owner`, createdAt: NOW });
   await setDoc(doc(d, `academyAuditLog/${aid}_log`), { academyId: aid, actorId: `${p}owner`, action: 'academy.created', targetType: 'academy', targetId: aid, at: new Date() });
-  await setDoc(doc(d, `trainingSeries/s_${p}`), { academyId: aid, name: 'Série', currentVersion: 1, status: 'active', createdBy: `${p}owner`, createdAt: NOW, updatedAt: NOW });
-  await setDoc(doc(d, `trainingVersions/s_${p}_1`), { academyId: aid, seriesId: `s_${p}`, version: 1, name: 'Série', exercises: [], createdBy: `${p}owner`, createdAt: NOW });
-  await setDoc(doc(d, `academyAssigned/${aid}_${p}stu`), { academyId: aid, studentId: `${p}stu`, seriesId: `s_${p}`, version: 1, teacherId: `${p}teacher`, assignedBy: `${p}teacher`, updatedAt: NOW });
+  await setDoc(doc(d, `trainingSeries/s_${p}`), { academyId: aid, name: 'Série', currentVersion: 1, status: 'active', draft: { name: 'Série', exercises: [EX] }, createdBy: `${p}owner`, createdAt: NOW, updatedAt: NOW });
+  await setDoc(doc(d, `trainingVersions/s_${p}_1`), { academyId: aid, seriesId: `s_${p}`, version: 1, name: 'Série', exercises: [EX], createdBy: `${p}owner`, createdAt: NOW });
+  await setDoc(doc(d, `academyAssigned/${aid}_${p}stu`), { academyId: aid, studentId: `${p}stu`, seriesId: `s_${p}`, version: 1, versionId: `s_${p}_1`, teacherId: `${p}teacher`, assignedBy: `${p}teacher`, updatedAt: NOW });
 }
 
 beforeEach(async () => {
@@ -59,6 +60,9 @@ beforeEach(async () => {
     await seedAcademy(d, B, 'b');
   });
 });
+
+const logDoc = (d, id, aid, uid, action, targetType, targetId) =>
+  [doc(d, `academyAuditLog/${id}`), { academyId: aid, actorId: uid, action, targetType, targetId, at: serverTimestamp() }];
 
 const ROLES = ['owner', 'admin', 'teacher', 'recep', 'stu'];
 const docsOfA = [
@@ -281,23 +285,6 @@ test('fluxo: auditoria é imutável e só a equipe da academia lê', async () =>
   await assertFails(deleteDoc(doc(db('aowner'), `academyAuditLog/${A}_log`)));
 });
 
-test('fluxo: ficha versionada - nova versão é imutável e aluno só lê a versão atribuída', async () => {
-  const t = db('aowner');
-  const b = writeBatch(t);
-  b.update(doc(t, 'trainingSeries/s_a'), { currentVersion: 2, updatedAt: NOW, auditId: 't1' });
-  b.set(doc(t, 'trainingVersions/s_a_2'), { academyId: A, seriesId: 's_a', version: 2, name: 'Série', exercises: [], createdBy: 'aowner', createdAt: NOW });
-  b.set(doc(t, 'academyAuditLog/t1'), { academyId: A, actorId: 'aowner', action: 'training.updated', targetType: 'training', targetId: 's_a', at: serverTimestamp() });
-  await assertSucceeds(b.commit());
-  await assertFails(updateDoc(doc(t, 'trainingVersions/s_a_1'), { name: 'Adulterada' }));
-  await assertSucceeds(getDoc(doc(db('astu'), 'trainingVersions/s_a_1')));
-  await assertSucceeds(getDoc(doc(db('astu'), 'trainingSeries/s_a')));
-  await assertFails(getDoc(doc(db('arecep'), 'trainingVersions/s_a_1')));
-});
-
-// ---------- ACHADOS DA REVISÃO ----------
-const logDoc = (d, id, aid, uid, action, targetType, targetId) =>
-  [doc(d, `academyAuditLog/${id}`), { academyId: aid, actorId: uid, action, targetType, targetId, at: serverTimestamp() }];
-
 test('revisão: convidado não se concede perms no próprio create', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'users/prof'), { uid: 'prof', role: 'user' }); });
   const d = db('prof');
@@ -361,19 +348,6 @@ test('revisão: aluno não forja auditoria de ações da equipe', async () => {
   await assertFails(setDoc(...logDoc(s, 'f1', A, 'astu', 'member.updated', 'member', 'ateacher')));
   await assertFails(setDoc(...logDoc(s, 'f2', A, 'astu', 'invite.revoked', 'invite', invA)));
   await assertFails(setDoc(...logDoc(s, 'f3', A, 'astu', 'member.left', 'member', 'aowner')));
-});
-
-test('revisão: ficha atribuída só com o professor responsável de fato', async () => {
-  await env.withSecurityRulesDisabled(async (ctx) => { await deleteDoc(doc(ctx.firestore(), `academyAssigned/${A}_astu`)); });
-  const t = db('ateacher');
-  const mk = (teacherId) => {
-    const b = writeBatch(t);
-    b.set(doc(t, `academyAssigned/${A}_astu`), { academyId: A, studentId: 'astu', seriesId: 's_a', version: 1, teacherId, assignedBy: 'ateacher', auditId: 'g1', updatedAt: NOW });
-    b.set(...logDoc(t, 'g1', A, 'ateacher', 'training.assigned', 'training', 'astu'));
-    return b;
-  };
-  await assertFails(mk('aowner').commit());
-  await assertSucceeds(mk('ateacher').commit());
 });
 
 test('revisão: academia suspensa congela os membros', async () => {
@@ -580,4 +554,215 @@ test('papéis: perms só aceita createTrainings booleano', async () => {
   await assertFails(roleBatch('aowner', A, 'ateacher', { perms: { admin: true } }, 'e1', 'teacher,active').commit());
   await assertFails(roleBatch('aowner', A, 'ateacher', { perms: { createTrainings: 'sim' } }, 'e2', 'teacher,active').commit());
   await assertSucceeds(roleBatch('aowner', A, 'ateacher', { perms: { createTrainings: true } }, 'e3', 'teacher,active').commit());
+});
+
+// ---------- FICHAS VERSIONADAS (primeiro corte) ----------
+const mkSeries = (uid, aid, id, extra = {}, logId = `ls_${id}`, action = 'training.created') => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  const draft = extra.draft || { name: 'Perna A', exercises: [EX] };
+  b.set(doc(d, `trainingSeries/${id}`), { academyId: aid, name: draft.name, currentVersion: 0, status: 'active', draft, createdBy: uid, createdAt: NOW, updatedAt: NOW, auditId: logId, ...extra });
+  b.set(...logDoc(d, logId, aid, uid, action, 'training', id));
+  return b;
+};
+const editDraft = (uid, aid, id, draft, logId, extra = {}) => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.update(doc(d, `trainingSeries/${id}`), { draft, name: draft.name, updatedAt: NOW, auditId: logId, ...extra });
+  b.set(...logDoc(d, logId, aid, uid, 'training.updated', 'training', id));
+  return b;
+};
+const publish = (uid, aid, id, n, exercises, logId, name = 'Perna A') => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.update(doc(d, `trainingSeries/${id}`), { currentVersion: n, updatedAt: NOW, auditId: logId });
+  b.set(doc(d, `trainingVersions/${id}_${n}`), { academyId: aid, seriesId: id, version: n, name, exercises, createdBy: uid, createdAt: NOW });
+  b.set(...logDoc(d, logId, aid, uid, 'training.published', 'training', id));
+  return b;
+};
+const assignTo = (uid, aid, sid, seriesId, version, teacherId, logId, versionId) => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.set(doc(d, `academyAssigned/${aid}_${sid}`), { academyId: aid, studentId: sid, seriesId, version, versionId: versionId || `${seriesId}_${version}`, teacherId, assignedBy: uid, auditId: logId, updatedAt: NOW });
+  b.set(...logDoc(d, logId, aid, uid, 'training.assigned', 'training', sid));
+  return b;
+};
+const withPerm = async (uid, aid, perms = { createTrainings: true }) => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await setDoc(doc(d, `users/${uid}`), { uid, role: 'user' });
+    await setDoc(doc(d, `academyMembers/${aid}_${uid}`), { ...member(aid, uid, 'teacher'), perms });
+  });
+};
+
+test('fichas: nasce como rascunho; só dono, admin e professor com permissão criam', async () => {
+  await assertSucceeds(mkSeries('aowner', A, 'f1').commit());
+  await assertSucceeds(mkSeries('aadmin', A, 'f2').commit());
+  await assertFails(mkSeries('ateacher', A, 'f3').commit());      // professor sem perms.createTrainings
+  await withPerm('aprof', A);
+  await assertSucceeds(mkSeries('aprof', A, 'f4').commit());      // professor COM permissão
+  await assertFails(mkSeries('arecep', A, 'f5').commit());
+  await assertFails(mkSeries('astu', A, 'f6').commit());
+  await assertFails(mkSeries('bowner', A, 'f7').commit());        // dono de outra academia
+});
+
+test('fichas: não nasce já publicada, nem com lixo no rascunho', async () => {
+  await assertFails(mkSeries('aowner', A, 'g1', { currentVersion: 1 }).commit());
+  await assertFails(mkSeries('aowner', A, 'g2', { draft: { name: 'x', exercises: [EX] } }).commit());                    // nome curto
+  await assertFails(mkSeries('aowner', A, 'g3', { draft: { name: 'Perna', exercises: Array(16).fill(EX) } }).commit());  // limite de exercícios
+  await assertFails(mkSeries('aowner', A, 'g4', { draft: { name: 'Perna', exercises: [EX], extra: 1 } }).commit());
+  const d = db('aowner');
+  const b = writeBatch(d);
+  b.set(doc(d, 'trainingSeries/g5'), { academyId: A, name: 'Perna A', currentVersion: 0, status: 'active', draft: { name: 'Perna A', exercises: [EX] }, createdBy: 'aowner', createdAt: NOW, updatedAt: NOW, auditId: 'sem_log' });
+  await assertFails(b.commit()); // sem auditoria no lote
+});
+
+test('fichas: editar o rascunho é auditado e restrito; não mexe na versão atual', async () => {
+  await assertSucceeds(mkSeries('aowner', A, 'h1').commit());
+  const novo = { name: 'Perna B', exercises: [EX, { ...EX, name: 'Leg Press' }] };
+  await assertSucceeds(editDraft('aowner', A, 'h1', novo, 'eh1').commit());
+  await assertFails(editDraft('ateacher', A, 'h1', novo, 'eh2').commit());                      // professor sem permissão
+  await assertFails(editDraft('bowner', A, 'h1', novo, 'eh3').commit());                        // outra academia
+  await assertFails(editDraft('aowner', A, 'h1', novo, 'eh4', { currentVersion: 5 }).commit()); // escalar versão pela edição
+  const d = db('aowner');
+  const sem = writeBatch(d);
+  sem.update(doc(d, 'trainingSeries/h1'), { draft: novo, name: novo.name, updatedAt: NOW, auditId: 'sem_log2' });
+  await assertFails(sem.commit());
+});
+
+test('fichas: publicar cria versão imutável idêntica ao rascunho e sobe currentVersion em 1', async () => {
+  await assertSucceeds(mkSeries('aowner', A, 'i1').commit());
+  await assertFails(publish('aowner', A, 'i1', 1, [{ ...EX, name: 'Outro' }], 'pi0').commit());   // versão diferente do rascunho
+  await assertFails(publish('aowner', A, 'i1', 2, [EX], 'pi00').commit());                         // pulou número
+  await assertFails(publish('ateacher', A, 'i1', 1, [EX], 'pi01').commit());                       // sem permissão
+  await assertFails(publish('bowner', A, 'i1', 1, [EX], 'pi02').commit());                         // outra academia
+  await assertSucceeds(publish('aowner', A, 'i1', 1, [EX], 'pi1').commit());
+  // versão publicada não muda nem some, nem para quem a criou
+  const o = db('aowner');
+  await assertFails(updateDoc(doc(o, 'trainingVersions/i1_1'), { name: 'Adulterada' }));
+  await assertFails(setDoc(doc(o, 'trainingVersions/i1_1'), { academyId: A, seriesId: 'i1', version: 1, name: 'Perna A', exercises: [{ ...EX, reps: '99' }], createdBy: 'aowner', createdAt: NOW }));
+  await assertFails(deleteDoc(doc(o, 'trainingVersions/i1_1')));
+  // editar o rascunho depois e publicar de novo gera a versão 2 sem tocar na 1
+  await assertSucceeds(editDraft('aowner', A, 'i1', { name: 'Perna A', exercises: [EX, { ...EX, name: 'Leg Press' }] }, 'ei1').commit());
+  await assertSucceeds(publish('aowner', A, 'i1', 2, [EX, { ...EX, name: 'Leg Press' }], 'pi2').commit());
+  const v1 = await getDoc(doc(o, 'trainingVersions/i1_1'));
+  if (v1.data().exercises.length !== 1) throw new Error('a versão 1 mudou');
+});
+
+test('fichas: rascunho vazio não publica', async () => {
+  await assertSucceeds(mkSeries('aowner', A, 'j1', { draft: { name: 'Vazia', exercises: [] } }).commit());
+  await assertFails(publish('aowner', A, 'j1', 1, [], 'pj1', 'Vazia').commit());
+});
+
+test('fichas: só rascunho nunca publicado pode ser excluído (com auditoria); publicada/em uso não', async () => {
+  await assertSucceeds(mkSeries('aowner', A, 'k1').commit());
+  const del = (uid, id, withLog = true) => {
+    const d = db(uid);
+    const b = writeBatch(d);
+    b.delete(doc(d, `trainingSeries/${id}`));
+    if (withLog) b.set(...logDoc(d, `del_${id}`, A, uid, 'training.deleted', 'training', id));
+    return b;
+  };
+  await assertFails(del('aowner', 'k1', false).commit());   // sem auditoria
+  await assertFails(del('ateacher', 'k1').commit());        // professor sem permissão
+  await assertFails(del('bowner', 'k1').commit());          // outra academia
+  await assertSucceeds(del('aowner', 'k1').commit());
+  // ficha publicada e atribuída (s_a já tem versão 1 e aluno): não exclui
+  await assertFails(del('aowner', 's_a').commit());
+});
+
+test('fichas: atribuir só versão publicada, com versionId, por quem pode; fica fixa após nova versão', async () => {
+  await assertSucceeds(mkSeries('aowner', A, 'm1').commit());
+  await assertFails(assignTo('aowner', A, 'astu', 'm1', 1, 'ateacher', 'am0').commit());                 // rascunho: não há versão
+  await assertSucceeds(publish('aowner', A, 'm1', 1, [EX], 'pm1').commit());
+  await assertFails(assignTo('aowner', A, 'astu', 'm1', 1, 'ateacher', 'am1', 'm1_2').commit());        // versionId errado
+  await assertFails(assignTo('aowner', A, 'astu', 'm1', 2, 'ateacher', 'am2').commit());                 // versão inexistente
+  await assertFails(assignTo('astu', A, 'astu', 'm1', 1, 'ateacher', 'am3').commit());                   // aluno se atribuindo
+  await assertFails(assignTo('arecep', A, 'astu', 'm1', 1, 'ateacher', 'am4').commit());                 // recepção
+  await assertFails(assignTo('aowner', A, 'astu', 'm1', 1, 'aowner', 'am5').commit());                   // teacherId diferente do responsável
+  await assertSucceeds(assignTo('aowner', A, 'astu', 'm1', 1, 'ateacher', 'am6').commit());              // equipe atribui
+  await assertSucceeds(assignTo('ateacher', A, 'astu', 'm1', 1, 'ateacher', 'am7').commit());            // professor responsável
+  // nova versão publicada: a atribuição do aluno continua na v1 e ele só lê a v1
+  await assertSucceeds(editDraft('aowner', A, 'm1', { name: 'Perna A', exercises: [EX, { ...EX, name: 'Leg Press' }] }, 'em1').commit());
+  await assertSucceeds(publish('aowner', A, 'm1', 2, [EX, { ...EX, name: 'Leg Press' }], 'pm2').commit());
+  const a = await getDoc(doc(db('astu'), `academyAssigned/${A}_astu`));
+  if (a.data().versionId !== 'm1_1') throw new Error('atribuição mudou sozinha');
+  await assertSucceeds(getDoc(doc(db('astu'), 'trainingVersions/m1_1')));
+  await assertFails(getDoc(doc(db('astu'), 'trainingVersions/m1_2')));
+});
+
+test('fichas: aluno sem professor ativo recebe ficha da equipe (teacherId vazio); professor não responsável não atribui', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyAssignments/${A}_astu`), { status: 'ended' }); });
+  await assertSucceeds(assignTo('aowner', A, 'astu', 's_a', 1, '', 'an1').commit());
+  await assertFails(assignTo('aowner', A, 'astu', 's_a', 1, 'ateacher', 'an2').commit());   // teacherId sem atribuição ativa
+  await assertFails(assignTo('ateacher', A, 'astu', 's_a', 1, '', 'an3').commit());         // professor que não é o responsável
+});
+
+test('fichas: isolamento entre academias (ler, publicar, atribuir)', async () => {
+  for (const u of ['bowner', 'badmin', 'bteacher', 'bstu']) {
+    await assertFails(getDoc(doc(db(u), 'trainingSeries/s_a')));
+    await assertFails(getDoc(doc(db(u), 'trainingVersions/s_a_1')));
+  }
+  await assertFails(publish('bowner', A, 's_a', 2, [EX], 'xb1').commit());
+  await assertFails(assignTo('bowner', B, 'bstu', 's_a', 1, '', 'xb2').commit());            // versão da academia A para aluno da B
+  await assertFails(assignTo('bowner', A, 'astu', 's_a', 1, 'ateacher', 'xb3').commit());
+  await assertFails(getDocs(query(collection(db('bowner'), 'trainingSeries'), where('academyId', '==', A))));
+});
+
+test('fichas: contagem de alunos por versão (equipe lista; professor só os dele; outra academia não)', async () => {
+  await assertSucceeds(getDocs(query(collection(db('aowner'), 'academyAssigned'), where('academyId', '==', A), where('seriesId', '==', 's_a'))));
+  await assertSucceeds(getDocs(query(collection(db('ateacher'), 'academyAssigned'), where('academyId', '==', A), where('teacherId', '==', 'ateacher'))));
+  await assertFails(getDocs(query(collection(db('ateacher'), 'academyAssigned'), where('academyId', '==', A), where('seriesId', '==', 's_a'))));
+  await assertFails(getDocs(query(collection(db('bowner'), 'academyAssigned'), where('academyId', '==', A), where('seriesId', '==', 's_a'))));
+});
+
+test('fichas: aluno lê só a versão atribuída e nunca o rascunho de outras fichas; recepção não lê', async () => {
+  await assertSucceeds(getDoc(doc(db('astu'), 'trainingVersions/s_a_1')));
+  await assertSucceeds(mkSeries('aowner', A, 'n1').commit());
+  await assertFails(getDoc(doc(db('astu'), 'trainingSeries/n1')));
+  await assertFails(getDoc(doc(db('arecep'), 'trainingVersions/s_a_1')));
+  await assertFails(getDoc(doc(db('arecep'), 'trainingSeries/s_a')));
+});
+
+test('fichas: aluno atribuído NÃO lê a série (carrega o rascunho), só a versão atribuída', async () => {
+  await assertFails(getDoc(doc(db('astu'), 'trainingSeries/s_a')));
+  await assertSucceeds(getDoc(doc(db('astu'), 'trainingVersions/s_a_1')));
+  await assertSucceeds(getDoc(doc(db('aowner'), 'trainingSeries/s_a')));
+  await assertSucceeds(getDoc(doc(db('ateacher'), 'trainingSeries/s_a')));
+});
+
+test('fichas: cada exercício é validado (mapa, campos permitidos e nome)', async () => {
+  const bad = [
+    ['texto solto', 'agachar'],
+    ['campo extra', { ...EX, script: 'x' }],
+    ['nome enorme', { ...EX, name: 'x'.repeat(121) }],
+    ['sem nome', { sets: '3' }]
+  ];
+  let i = 0;
+  for (const [label, item] of bad) {
+    i += 1;
+    await assertFails(mkSeries('aowner', A, `v${i}`, { draft: { name: 'Perna', exercises: [EX, item] } }).commit()).catch((e) => { throw new Error(`${label}: ${e.message}`); });
+  }
+  await assertSucceeds(mkSeries('aowner', A, 'v99', { draft: { name: 'Perna', exercises: Array(15).fill(EX) } }).commit());
+});
+
+test('fichas: professor sem permissão não forja auditoria de ficha nem queima o ID de exclusão', async () => {
+  await assertSucceeds(mkSeries('aowner', A, 'w1').commit());
+  const t = db('ateacher');
+  for (const [id, action] of [['forja1', 'training.created'], ['forja2', 'training.updated'], ['forja3', 'training.published'], ['del_w1', 'training.deleted']]) {
+    await assertFails(setDoc(...logDoc(t, id, A, 'ateacher', action, 'training', 'w1')));
+  }
+  // dono também não grava log de exclusão solto (a ficha continua existindo)
+  await assertFails(setDoc(...logDoc(db('aowner'), 'del_w1', A, 'aowner', 'training.deleted', 'training', 'w1')));
+  // a exclusão real continua funcionando
+  const o = db('aowner');
+  const b = writeBatch(o);
+  b.delete(doc(o, 'trainingSeries/w1'));
+  b.set(...logDoc(o, 'del_w1', A, 'aowner', 'training.deleted', 'training', 'w1'));
+  await assertSucceeds(b.commit());
+});
+
+test('fichas: log de atribuição só com atribuição real; log de ficha de outra academia não passa', async () => {
+  await assertFails(setDoc(...logDoc(db('aowner'), 'solto1', A, 'aowner', 'training.assigned', 'training', 'astu')));
+  await assertFails(setDoc(...logDoc(db('bowner'), 'solto2', B, 'bowner', 'training.published', 'training', 's_a')));
 });
