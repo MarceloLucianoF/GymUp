@@ -1,23 +1,13 @@
 import React from 'react';
 import { Target, Sparkles, Play, Clock, ClipboardList, Dumbbell } from 'lucide-react';
-
-// Escolhe o treino do dia: prescrito pelo coach ou próximo da sequência.
-export const pickNextTraining = (trainings, lastWorkoutId, assignedTrainingId) => {
-  if (assignedTrainingId) {
-    const assigned = trainings.find((t) => t.firestoreId === assignedTrainingId);
-    if (assigned) return { training: assigned, isAssigned: true };
-  }
-  if (trainings.length === 0) return { training: null, isAssigned: false };
-  if (lastWorkoutId) {
-    const lastIndex = trainings.findIndex((t) => t.firestoreId === lastWorkoutId);
-    if (lastIndex !== -1 && lastIndex < trainings.length - 1) return { training: trainings[lastIndex + 1], isAssigned: false };
-  }
-  return { training: trainings[0], isAssigned: false };
-};
+import { suggestNext, goalSentence } from '../../utils/rotation';
 
 // --- CARD "TREINO DE HOJE" ---
-const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTrainingId, weekCount = 0, weekGoal = 0, trainedToday = false, onBrowse }) => {
-  const { training: nextTraining, isAssigned } = pickNextTraining(trainings, lastWorkoutId, assignedTrainingId);
+// Sugestão por rotação (determinística): ver utils/rotation.js.
+const RecommendedWorkoutCard = ({ history = [], trainings, onStart, assignedTrainingId, weekCount = 0, weekGoal = 0, trainedToday = false, onBrowse }) => {
+  const suggestion = suggestNext({ trainings, assignedId: assignedTrainingId, history, weeklyGoal: weekGoal, weekCount, trainedToday });
+  const nextTraining = suggestion.training;
+  const isAssigned = !!suggestion.isAssigned;
 
   if (!nextTraining) {
     return (
@@ -37,7 +27,7 @@ const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTra
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full bg-black/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider">
             <Sparkles className="h-3 w-3" aria-hidden="true" />
-            {isAssigned ? 'Prescrito pelo Coach' : 'Treino de hoje'}
+            {trainedToday ? 'Próximo treino' : isAssigned ? 'Prescrito pelo Coach' : 'Treino de hoje'}
           </span>
           {nextTraining.difficulty && (
             <span className="rounded-full bg-black/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">{nextTraining.difficulty}</span>
@@ -48,6 +38,12 @@ const RecommendedWorkoutCard = ({ lastWorkoutId, trainings, onStart, assignedTra
         <p className="mt-1.5 line-clamp-2 max-w-lg text-sm text-black/75">
           {nextTraining.description || 'Foco total no progresso e consistência.'}
         </p>
+
+        {suggestion.reason && (
+          <p className="mt-3 max-w-lg text-xs font-semibold text-black/80" data-testid="rotation-reason">
+            {suggestion.reason}{weekGoal > 0 ? ` ${goalSentence(suggestion.goal, trainedToday)}` : ''}
+          </p>
+        )}
 
         <div className="mt-4 flex items-center gap-4 text-xs font-bold text-black/80">
           <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" aria-hidden="true" /> ~{(nextTraining.exercises?.length || 0) * 5 + 10} min</span>

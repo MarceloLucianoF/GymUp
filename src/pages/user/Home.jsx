@@ -68,7 +68,6 @@ export default function Home() {
 
   const firstName = (userProfile?.displayName || user?.displayName || 'Atleta').split(' ')[0];
   const photoURL = userProfile?.photoURL || user?.photoURL;
-  const lastWorkoutId = history.length > 0 ? history[0].trainingId : null;
   const greeting = getGreeting();
 
   const weekDays = getWeekDays(history);
@@ -169,7 +168,7 @@ export default function Home() {
               </div>
             ) : (
               <RecommendedWorkoutCard
-                lastWorkoutId={lastWorkoutId}
+                history={history}
                 trainings={trainings}
                 assignedTrainingId={userProfile?.currentTrainingId}
                 weekCount={weekCount}
