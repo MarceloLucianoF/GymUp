@@ -24,8 +24,8 @@ export default function StudentChatWidget() {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().coachId) {
                     const coachId = userDoc.data().coachId;
-                    const coachData = await getPublicCoach(coachId);
-                    if (coachData && isMounted) {
+                    const coachData = (await getPublicCoach(coachId)) || { uid: coachId, displayName: 'Treinador' };
+                    if (isMounted) {
                         setCoach(coachData);
                         openChatWithUser(coachData);
                     }
