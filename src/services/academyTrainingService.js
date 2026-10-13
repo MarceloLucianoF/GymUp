@@ -7,7 +7,8 @@ import { exercises as defaultExercises } from '../data/exercises';
 // versão exata (versionId) e não muda quando uma versão nova é publicada. Toda ação grava a auditoria no mesmo lote.
 
 const now = () => new Date().toISOString();
-const MAX_EXERCISES = 15;
+// Contrato único com as regras (firestore.rules > validExercises): o teste academyTrainingService.test.js confere os dois lados.
+export const MAX_EXERCISES = 20;
 
 export const versionIdOf = (seriesId, version) => `${seriesId}_${version}`;
 

@@ -1,4 +1,4 @@
-import { canAuthorTrainings, countByVersion, draftChanged, toDraftExercise, versionIdOf } from './academyTrainingService';
+import { MAX_EXERCISES, canAuthorTrainings, countByVersion, draftChanged, toDraftExercise, versionIdOf } from './academyTrainingService';
 
 jest.mock('../firebase/config', () => ({ db: {} }));
 jest.mock('../data/exercises', () => ({ exercises: [] }));
@@ -38,4 +38,15 @@ test('exercício vira cópia enxuta da biblioteca, com limites', () => {
   const out = toDraftExercise({ name: 'Leg Press', muscleGroup: 'pernas', machineImage: '/exercises/leg-press.gif', rest: 999 }, {});
   expect(out).toEqual({ name: 'Leg Press', muscleGroup: 'pernas', sets: '3', reps: '8-12', rest: 300, machineImage: '/exercises/leg-press.gif' });
   expect(toDraftExercise({ name: 'X' }, { sets: '5', reps: '6', rest: 90 })).toMatchObject({ sets: '5', reps: '6', rest: 90 });
+});
+
+test('o limite de exercícios da tela é o mesmo das regras do Firestore', () => {
+  // eslint-disable-next-line global-require
+  const rules = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'firestore.rules'), 'utf8');
+  const m = rules.match(/function validExercises\(l\) \{\s*return l is list && l\.size\(\) <= (\d+)/);
+  expect(m).not.toBeNull();
+  expect(Number(m[1])).toBe(MAX_EXERCISES);
+  // e as regras validam cada posição até o limite (exAt(l, 0) ... exAt(l, MAX-1))
+  const positions = [...rules.matchAll(/exAt\(l, (\d+)\)/g)].map((x) => Number(x[1]));
+  expect(Math.max(...positions)).toBe(MAX_EXERCISES - 1);
 });
