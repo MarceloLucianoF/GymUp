@@ -786,3 +786,44 @@ test('execução: a versão atribuída continua legível pelo aluno após a sér
   await assertFails(getDoc(doc(db('astu'), 'trainingSeries/s_a')));       // nem o documento da série (rascunho)
   await assertFails(getDoc(doc(db('bstu'), 'trainingVersions/s_a_1')));   // nem aluno de outra academia
 });
+
+// ---------- MODELOS OFICIAIS GLOBAIS (trainingTemplates) ----------
+const TPL = { scope: 'official', order: 1, focus: 'completo', name: 'Pernas completas', description: 'Modelo oficial', exercises: [EX, { ...EX, name: 'Leg Press' }], updatedAt: NOW, updatedBy: 'admin1' };
+
+test('modelos oficiais: só o admin da plataforma cria, altera e apaga; qualquer usuário logado lê', async () => {
+  await assertSucceeds(setDoc(doc(db('admin1'), 'trainingTemplates/pernas-completas'), TPL));
+  await assertSucceeds(updateDoc(doc(db('admin1'), 'trainingTemplates/pernas-completas'), { description: 'Atualizado' }));
+  for (const u of ['aowner', 'aadmin', 'ateacher', 'astu', 'bowner', 'arecep']) {
+    await assertFails(setDoc(doc(db(u), 'trainingTemplates/hack'), TPL));
+    await assertFails(updateDoc(doc(db(u), 'trainingTemplates/pernas-completas'), { name: 'Adulterado' }));
+    await assertFails(deleteDoc(doc(db(u), 'trainingTemplates/pernas-completas')));
+    await assertSucceeds(getDoc(doc(db(u), 'trainingTemplates/pernas-completas')));
+  }
+  await assertSucceeds(getDocs(query(collection(db('aowner'), 'trainingTemplates'), where('scope', '==', 'official'))));
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'trainingTemplates/pernas-completas')));
+});
+
+test('modelos oficiais: o admin não grava lixo (escopo, foco, campos extras, exercícios inválidos)', async () => {
+  const a = db('admin1');
+  await assertFails(setDoc(doc(a, 'trainingTemplates/x1'), { ...TPL, scope: 'academy' }));
+  await assertFails(setDoc(doc(a, 'trainingTemplates/x2'), { ...TPL, focus: 'peito' }));
+  await assertFails(setDoc(doc(a, 'trainingTemplates/x3'), { ...TPL, extra: 1 }));
+  await assertFails(setDoc(doc(a, 'trainingTemplates/x4'), { ...TPL, exercises: [] }));
+  await assertFails(setDoc(doc(a, 'trainingTemplates/x5'), { ...TPL, exercises: ['texto'] }));
+  await assertFails(setDoc(doc(a, 'trainingTemplates/x6'), { ...TPL, exercises: Array(21).fill(EX) }));
+});
+
+test('modelos oficiais: a academia copia para uma ficha própria e o original continua intacto', async () => {
+  await assertSucceeds(setDoc(doc(db('admin1'), 'trainingTemplates/pernas-completas'), TPL));
+  const copia = mkSeries('aowner', A, 'copia1', { draft: { name: TPL.name, exercises: TPL.exercises }, sourceTemplateId: 'pernas-completas' });
+  await assertSucceeds(copia.commit());
+  await assertSucceeds(editDraft('aowner', A, 'copia1', { name: 'Pernas da minha academia', exercises: [EX] }, 'ecopia1').commit());
+  await assertFails(updateDoc(doc(db('aowner'), 'trainingTemplates/pernas-completas'), { name: 'Pernas da minha academia' }));
+  const t = await getDoc(doc(db('aowner'), 'trainingTemplates/pernas-completas'));
+  if (t.data().name !== 'Pernas completas' || t.data().exercises.length !== 2) throw new Error('o modelo original mudou');
+  // a cópia é versionada e atribuível como qualquer ficha
+  await assertSucceeds(publish('aowner', A, 'copia1', 1, [EX], 'pcopia1', 'Pernas da minha academia').commit());
+  // quem não pode criar ficha não copia; outra academia não copia para a A
+  await assertFails(mkSeries('ateacher', A, 'copia2', { sourceTemplateId: 'pernas-completas' }).commit());
+  await assertFails(mkSeries('bowner', A, 'copia3', { sourceTemplateId: 'pernas-completas' }).commit());
+});

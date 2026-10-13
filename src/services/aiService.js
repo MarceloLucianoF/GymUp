@@ -2,6 +2,11 @@ import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
 import { failureMessage } from './aiMeta';
+import {
+  canonicalGroup as composerGroup, composeLocalPlan, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseRequest,
+  setLegacyPicker, specFromFocus
+} from '../utils/workoutComposer';
+import officialTemplates from '../data/officialTemplates.json';
 
 // O SDK `firebase/ai` é pesado: carregado sob demanda, só quando o Coach IA é usado.
 let aiSdkPromise = null;
@@ -129,22 +134,12 @@ Exercícios Executados:\n${exList}`;
   }).join('\n\n');
 };
 
-const FOCUS_OPTIONS = ['Peito e Tríceps', 'Costas e Bíceps', 'Pernas Completo', 'Ombros e ABS', 'Full Body (Corpo Todo)'];
+export const FOCUS_OPTIONS = ['Peito e Tríceps', 'Costas e Bíceps', 'Pernas Completo', 'Quadríceps', 'Posterior e Glúteos', 'Glúteos', 'Panturrilhas', 'Pernas + Ombros', 'Ombros e ABS', 'Full Body (Corpo Todo)'];
 
 // ---- Foco do treino: a biblioteca usa rótulos diferentes para o mesmo grupo ("pernas", "perna", "gluteo", "panturrilha", "biceps"...). ----
 // Sem normalizar, o filtro por "Pernas" não achava nada e a ficha caía na biblioteca inteira (braço e costas na frente).
 const plain = (value) => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-export const canonicalGroup = (value) => {
-  const g = plain(value);
-  if (/peit/.test(g)) return 'peito';
-  if (/costa|dorsal|trapez|lombar/.test(g)) return 'costas';
-  if (/ombro|deltoid/.test(g)) return 'ombros';
-  if (/biceps|triceps|braco|antebraco/.test(g)) return 'bracos';
-  if (/perna|quadric|posterior|gluteo|panturrilha|coxa|adutor|abdutor|inferior/.test(g)) return 'pernas';
-  if (/core|abdom|abdominal/.test(g)) return 'core';
-  if (/cardio|aerobi/.test(g)) return 'cardio';
-  return g || 'geral';
-};
+export const canonicalGroup = composerGroup;
 const nameHas = (ex, re) => re.test(plain(ex?.name));
 // Grupos (e, no caso de braços, o subgrupo pelo nome) aceitos por foco, na ordem de prioridade.
 const FOCUS_RULES = {
@@ -336,7 +331,6 @@ const askNvidiaProxy = async (messages, { timeoutMs = 46000, maxTokens = 1800, t
   }
 };
 
-const normalize = (value) => String(value || '').trim().toLowerCase();
 
 /** Texto sem IA com o ponto de partida calculado do perfil: usado quando a IA falha, demora ou o aluno cancela. */
 export const localFallbackText = (userProfile, reason = 'indisponivel') => {
@@ -350,6 +344,65 @@ export const localFallbackText = (userProfile, reason = 'indisponivel') => {
 /**
  * Serviço de Inteligência Artificial do BohTreinar
  */
+// Pickers antigos (Peito e Tríceps, Costas e Bíceps, Ombros e ABS, Full Body) usados pelo compositor.
+setLegacyPicker((label, pool, count) => {
+  const refs = pool.map((e) => e.ref);
+  return pickForFocus(refs, label, count).map((ref) => pool.find((e) => e.ref === ref)).filter(Boolean);
+});
+
+export { InsufficientExercisesError };
+
+// Modelos oficiais (mesmos do Firestore) como referência para a IA: só nome e ordem dos exercícios do foco pedido.
+const templateReferences = (spec) => {
+  const legFocus = spec.parts.find((p) => p.group === 'pernas')?.focus;
+  if (!legFocus) return [];
+  return officialTemplates.filter((t) => t.focus === legFocus || (legFocus === 'completo' && t.focus === 'completo'))
+    .map((t) => ({ name: t.name, exercises: t.exercises.map((e) => idOf(e.name)) }));
+};
+
+// IA do gerador: NVIDIA primeiro quando o proxy está ativo, depois o Gemini; devolve texto JSON. Falhas sobem e o compositor cai no local.
+const askWorkoutModel = async (prompt) => {
+  if (USE_NVIDIA_PROXY && auth.currentUser) {
+    try {
+      const { text } = await askNvidiaProxy([{ role: 'user', content: prompt }], { timeoutMs: 30000, maxTokens: 1500, temperature: 0.3 });
+      return text;
+    } catch (error) {
+      console.warn('NVIDIA indisponível no gerador de treino:', error?.message || error);
+    }
+  }
+  return withModelFallback(async (modelName) => {
+    const model = await buildModel(modelName, { generationConfig: { temperature: 0.3, maxOutputTokens: 2048, responseMimeType: 'application/json' } });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  });
+};
+
+const planToWorkout = (plan, { goal, durationMinutes, requestedFocus }) => {
+  const exercises = plan.exercises.map((e, idx) => ({
+    firestoreId: e.ref?.firestoreId || e.ref?.id || `ai-ex-${idx}`,
+    name: e.name,
+    muscleGroup: e.ref?.muscleGroup || 'Geral',
+    sets: String(Math.min(6, Math.max(1, Number(e.sets) || 3))),
+    reps: String(e.reps || '8-12'),
+    rest: Math.min(300, Math.max(20, Number(e.rest) || 60)),
+    machineImage: e.ref?.machineImage || e.ref?.demoUrl || null,
+    videoUrl: e.ref?.videoUrl || null,
+    description: e.ref?.description || 'Execução focada na cadência e controle do movimento.'
+  }));
+  const divisionNote = plan.division ? ` Divisão: ${plan.division}.` : '';
+  const base = `Ficha de ${plan.spec.label.toLowerCase()} para ${goal.toLowerCase()}.`;
+  return {
+    name: stripEmojis(String(plan.name || `Treino IA — ${plan.spec.label}`)).slice(0, 80),
+    category: goal,
+    description: stripEmojis(`${plan.description || base}${divisionNote}`).slice(0, 300),
+    estimatedTime: `${durationMinutes} min`,
+    exercises,
+    createdAt: new Date().toISOString(),
+    isAIGenerated: true,
+    composition: { focus: plan.spec.label, requestedFocus, source: plan.source, division: plan.division || null, reason: plan.reason || null }
+  };
+};
+
 export const aiService = {
   /**
    * Reescreve fatos já calculados em texto (resumo semanal). Só usa o proxy da NVIDIA e devolve null em qualquer
@@ -394,14 +447,22 @@ export const aiService = {
         });
       }
       if (call.name === 'gerar_treino') {
-        const workout = await aiService.generateAIWorkout({
-          goal: args.objetivo || goal,
-          muscleFocus: inferFocusFromPrompt(safePrompt) || args.foco || 'Full Body (Corpo Todo)',
-          durationMinutes: Math.min(90, Math.max(30, Number(args.duracao_min) || 45)),
-          customExercises
-        });
+        let workout;
+        try {
+          workout = await aiService.generateAIWorkout({
+            goal: args.objetivo || goal,
+            userRequest: safePrompt,
+            muscleFocus: args.foco || 'Full Body (Corpo Todo)',
+            durationMinutes: Math.min(90, Math.max(30, Number(args.duracao_min) || 45)),
+            customExercises
+          });
+        } catch (error) {
+          // Biblioteca sem exercícios do grupo pedido: o modelo explica ao aluno em vez de entregar uma ficha de outro grupo.
+          if (error instanceof InsufficientExercisesError) return { erro: error.message };
+          throw error;
+        }
         onWorkout?.(workout);
-        return { ok: true, nome: workout.name, exercicios: workout.exercises.map(ex => `${ex.name} ${ex.sets}x${ex.reps}`) };
+        return { ok: true, nome: workout.name, divisao: workout.composition?.division || undefined, exercicios: workout.exercises.map(ex => `${ex.name} ${ex.sets}x${ex.reps}`) };
       }
       if (call.name === 'consultar_historico') {
         const qty = Math.min(10, Math.max(1, Number(args.quantidade) || 5));
@@ -489,136 +550,24 @@ export const aiService = {
   },
 
   /**
-   * 2. Gerador de treinos: IA com saída estruturada (JSON Schema) restrita à biblioteca do app,
-   * com fallback determinístico.
+   * 2. Gerador de treinos. O pedido vira um foco, a biblioteca é filtrada ANTES da IA, a IA só recebe os candidatos (com metadados
+   * normalizados) e a resposta é validada por ID e por composição; qualquer falha cai na montagem determinística.
+   * `userRequest` (texto do aluno) vale mais que o foco escolhido na tela. Lança InsufficientExercisesError quando a biblioteca
+   * não tem exercícios do grupo pedido.
    */
-  async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [] }) {
-    const library = [...customExercises, ...defaultExercises];
-    const count = durationMinutes >= 60 ? 6 : 5;
-    // Só entram no catálogo os exercícios do foco pedido: a IA não tem como escolher braço para um treino de perna.
-    const focusPool = pickForFocus(library, muscleFocus, 60);
-    const poolByName = new Map(focusPool.map(ex => [normalize(ex.name), ex]));
-    const catalog = focusPool.map(ex => `${ex.name} (${ex.muscleGroup || ex.category || 'Geral'})`).join('; ');
-
-    try {
-      const plan = await withModelFallback(async (modelName) => {
-        const { Schema } = await loadAiSdk();
-        const model = await buildModel(modelName, {
-          generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 4096,
-            responseMimeType: 'application/json',
-            responseSchema: Schema.object({
-              properties: {
-                name: Schema.string(),
-                description: Schema.string(),
-                exercises: Schema.array({
-                  items: Schema.object({
-                    properties: {
-                      name: Schema.string(),
-                      sets: Schema.integer(),
-                      reps: Schema.string(),
-                      rest: Schema.integer()
-                    }
-                  })
-                })
-              }
-            })
-          }
-        });
-        const result = await model.generateContent(
-          `Monte uma ficha de treino em português com ${count} exercícios. Objetivo: ${goal}. Foco OBRIGATÓRIO: ${muscleFocus}. Duração: ${durationMinutes} min. ` +
-          `Todos os exercícios precisam trabalhar o foco ${muscleFocus}; não inclua exercícios de outros grupos musculares. ` +
-          `Use SOMENTE exercícios desta lista, com o nome exatamente igual: ${catalog}. ` +
-          `Defina séries (2-5), repetições (ex. "8-12") e descanso em segundos (30-180) adequados ao objetivo, e uma descrição curta, sem emojis.`
-        );
-        return JSON.parse(result.response.text());
-      });
-
-      const exercises = (plan.exercises || [])
-        .map((item, idx) => {
-          const base = poolByName.get(normalize(item.name));
-          if (!base) return null;
-          return {
-            firestoreId: base.firestoreId || base.id || `ai-ex-${idx}`,
-            name: base.name,
-            muscleGroup: base.muscleGroup || 'Geral',
-            sets: String(Math.min(6, Math.max(1, Number(item.sets) || 3))),
-            reps: String(item.reps || '8-12'),
-            rest: Math.min(300, Math.max(20, Number(item.rest) || 60)),
-            machineImage: base.machineImage || base.demoUrl || null,
-            videoUrl: base.videoUrl || null,
-            description: base.description || 'Execução focada na cadência e controle do movimento.'
-          };
-        })
-        .filter(Boolean);
-
-      if (exercises.length >= Math.min(3, focusPool.length)) {
-        return {
-          name: stripEmojis(String(plan.name || `Treino IA — ${muscleFocus}`)).slice(0, 80),
-          category: goal,
-          description: stripEmojis(String(plan.description || `Ficha gerada por IA para ${goal.toLowerCase()}.`)).slice(0, 300),
-          estimatedTime: `${durationMinutes} min`,
-          exercises,
-          createdAt: new Date().toISOString(),
-          isAIGenerated: true
-        };
-      }
-    } catch (error) {
-      console.error('Geração de treino por IA indisponível, usando fallback local:', error?.message || error);
-    }
-
-    return aiService.generateLocalWorkout({ goal, muscleFocus, durationMinutes, customExercises });
-  },
-
-  /**
-   * 2. Gerador local (determinístico) de treinos: fallback quando a IA está indisponível
-   */
-  generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [] }) {
-    const combinedLib = [...customExercises, ...defaultExercises];
-    
+  async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
+    const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const selectedExercises = pickForFocus(combinedLib, muscleFocus, total);
-
-    let defaultSets = 3;
-    let defaultReps = '10';
-    let defaultRest = 60;
-
-    if (goal === 'Força') {
-      defaultSets = 4;
-      defaultReps = '6';
-      defaultRest = 90;
-    } else if (goal === 'Emagrecimento' || goal === 'Resistência') {
-      defaultSets = 3;
-      defaultReps = '12-15';
-      defaultRest = 45;
-    } else {
-      defaultSets = 3;
-      defaultReps = '8-12';
-      defaultRest = 60;
-    }
-
-    const formattedExercises = selectedExercises.map((ex, idx) => ({
-      firestoreId: ex.firestoreId || ex.id || `ai-ex-${idx}`,
-      name: ex.name || `Exercício ${idx + 1}`,
-      muscleGroup: ex.muscleGroup || 'Geral',
-      sets: String(defaultSets),
-      reps: defaultReps,
-      rest: defaultRest,
-      machineImage: ex.machineImage || ex.demoUrl || null,
-      videoUrl: ex.videoUrl || null,
-      description: ex.description || 'Execução focada na cadência e controle do movimento.'
-    }));
-
-    return {
-      name: `Treino IA — ${muscleFocus}`,
-      category: goal,
-      description: `Ficha personalizada gerada por Inteligência Artificial focada em ${goal.toLowerCase()} e alinhada ao seu perfil.`,
-      estimatedTime: `${durationMinutes} min`,
-      exercises: formattedExercises,
-      createdAt: new Date().toISOString(),
-      isAIGenerated: true
-    };
+    const library = normalizeLibrary([...customExercises, ...defaultExercises]);
+    const plan = await generatePlan({ spec, library, total, goal, durationMinutes, askModel: askWorkoutModel, references: templateReferences(spec) });
+    return planToWorkout(plan, { goal, durationMinutes, requestedFocus: muscleFocus });
+  },
+  /** Mesma regra de composição, sem IA e sem rede. */
+  generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
+    const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
+    const total = durationMinutes >= 60 ? 6 : 5;
+    const library = normalizeLibrary([...customExercises, ...defaultExercises]);
+    return planToWorkout(composeLocalPlan({ spec, library, total, goal }), { goal, durationMinutes, requestedFocus: muscleFocus });
   },
 
   /**

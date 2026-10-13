@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
-import { aiService, localFallbackText } from '../../services/aiService';
+import { aiService, InsufficientExercisesError, localFallbackText } from '../../services/aiService';
 import { modelLabel, failureMessage } from '../../services/aiMeta';
 import Markdown from '../common/Markdown';
 import { db } from '../../firebase/config';
@@ -186,10 +186,10 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         customExercises
       });
       setGeneratedWorkout(workout);
-      toast.success('Treino com IA gerado com sucesso!');
+      toast.success(workout.composition?.division ? `Treino gerado (${workout.composition.division}).` : 'Treino com IA gerado com sucesso!');
     } catch (error) {
       console.error(error);
-      toast.error('Não foi possível gerar o treino agora.');
+      toast.error(error instanceof InsufficientExercisesError ? error.message : 'Não foi possível gerar o treino agora.');
     } finally {
       setIsGenerating(false);
     }
@@ -385,7 +385,12 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                     >
                       <option value="Peito e Tríceps">Peito + Tríceps + Ombros</option>
                       <option value="Costas e Bíceps">Costas + Bíceps + Trapézio</option>
-                      <option value="Pernas Completo">Pernas Completo (Quadríceps/Glúteo)</option>
+                      <option value="Pernas Completo">Pernas Completo (Quadríceps/Posterior/Glúteo/Panturrilha)</option>
+                      <option value="Quadríceps">Pernas: foco em Quadríceps</option>
+                      <option value="Posterior e Glúteos">Pernas: foco em Posterior e Glúteos</option>
+                      <option value="Glúteos">Pernas: foco em Glúteos</option>
+                      <option value="Panturrilhas">Pernas: foco em Panturrilhas</option>
+                      <option value="Pernas + Ombros">Pernas + Ombros (4 de pernas e 2 de ombros)</option>
                       <option value="Ombros e ABS">Ombros + Abdômen + CORE</option>
                       <option value="Full Body (Corpo Todo)">Full Body (Corpo Todo)</option>
                     </select>
