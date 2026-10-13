@@ -1,5 +1,5 @@
 // Proxy autenticado para a API da NVIDIA (mesmas validações da Cloud Function em functions/lib).
-import { verifyFirebaseIdToken } from './firebaseAuth.js';
+import { verifyFirebaseIdToken } from '../../shared/firebaseAuth.js';
 
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 // Modelos conferidos no catálogo público da NVIDIA (scripts/check-nvidia-models.mjs avisa se algum for aposentado).

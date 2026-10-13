@@ -13,8 +13,8 @@ const b64urlToBytes = (value) => {
 
 const decodeJson = (part) => JSON.parse(new TextDecoder().decode(b64urlToBytes(part)));
 
-async function getJwks(fetchImpl, now) {
-  if (jwksCache.keys && now - jwksCache.fetchedAt < JWKS_TTL_MS) return jwksCache.keys;
+async function getJwks(fetchImpl, now, force = false) {
+  if (!force && jwksCache.keys && now - jwksCache.fetchedAt < JWKS_TTL_MS) return jwksCache.keys;
   const response = await fetchImpl(JWKS_URL);
   if (!response.ok) throw new Error('JWKS indisponível');
   const { keys } = await response.json();
@@ -32,8 +32,13 @@ export async function verifyFirebaseIdToken(token, { projectId, fetchImpl = fetc
   const header = decodeJson(parts[0]);
   if (header.alg !== 'RS256' || !header.kid) throw new Error('Algoritmo inválido');
 
-  const keys = await getJwks(fetchImpl, now);
-  const jwk = keys.find((key) => key.kid === header.kid);
+  let keys = await getJwks(fetchImpl, now);
+  let jwk = keys.find((key) => key.kid === header.kid);
+  // Rotação de chaves: kid desconhecido pede uma nova lista, no máximo uma vez por minuto.
+  if (!jwk && now - jwksCache.fetchedAt > 60 * 1000) {
+    keys = await getJwks(fetchImpl, now, true);
+    jwk = keys.find((key) => key.kid === header.kid);
+  }
   if (!jwk) throw new Error('Chave desconhecida');
 
   const cryptoKey = await crypto.subtle.importKey(

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { verifyFirebaseIdToken, resetJwksCache } from '../src/firebaseAuth.js';
+import { verifyFirebaseIdToken, resetJwksCache } from '../../shared/firebaseAuth.js';
 import { handleNvidiaRequest, resetRateLimit, normalizeMessages } from '../src/nvidiaProxy.js';
 
 const PROJECT = 'proj-teste';

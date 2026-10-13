@@ -34,3 +34,4 @@ firestore-debug.log
 
 # Arquivos de teste locais (ex.: GIFs de terceiros sem licença confirmada)
 /artifacts/
+gestao/dist
