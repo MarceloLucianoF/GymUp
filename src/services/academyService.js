@@ -58,9 +58,10 @@ export async function listMyMemberships(userId) {
   }));
 }
 
+/** Membros ativos e suspensos (a equipe reativa quem foi suspenso); removidos e quem saiu ficam de fora. */
 export async function listAcademyMembers(academyId) {
   const snap = await getDocs(query(collection(db, 'academyMembers'), where('academyId', '==', academyId)));
-  return snap.docs.map((d) => d.data()).filter((m) => m.status === 'active');
+  return snap.docs.map((d) => d.data()).filter((m) => ['active', 'suspended'].includes(m.status));
 }
 
 export async function listAcademyInvites(academyId) {
@@ -77,6 +78,29 @@ export function academyInviteStatus(inv, nowMs = Date.now()) {
   if ((inv.uses || 0) >= (inv.maxUses || 0)) return 'exhausted';
   return 'ok';
 }
+
+export async function listAcademyAssignments(academyId) {
+  const snap = await getDocs(query(collection(db, 'academyAssignments'), where('academyId', '==', academyId)));
+  return snap.docs.map((d) => d.data());
+}
+
+/** Atribuições em que o usuário é aluno (as dele) ou professor (os alunos que ele atende). */
+export async function listMyAssignments(userId, as) {
+  const constraints = as === 'teacher' ? [where('teacherId', '==', userId), where('status', '==', 'active')] : [where('studentId', '==', userId)];
+  const snap = await getDocs(query(collection(db, 'academyAssignments'), ...constraints));
+  return snap.docs.map((d) => d.data());
+}
+
+/** Nome do aluno para o professor responsável; null quando a regra não permite ler (acesso encerrado ou aluno inativo). */
+export async function getMemberName(academyId, userId) {
+  try {
+    const snap = await getDoc(doc(db, 'academyMembers', memberId(academyId, userId)));
+    return snap.exists() ? snap.data().displayName || 'Aluno' : null;
+  } catch (e) { return null; }
+}
+
+export const ASSIGNMENT_LABEL = { pending: 'Aguardando aceite do aluno', active: 'Ativa', ended: 'Encerrada' };
+export const MEMBER_STATUS_LABEL = { active: 'Ativo', suspended: 'Suspenso', removed: 'Removido', left: 'Saiu' };
 
 export const ROLE_LABEL = { owner: 'Proprietário', admin: 'Administrador', teacher: 'Professor', reception: 'Recepção', student: 'Aluno' };
 
@@ -152,23 +176,25 @@ export async function setAdherenceConsent(user, academyId, allowed) {
 export async function updateMember(actor, member, patch) {
   const auditId = newAuditId();
   const batch = writeBatch(db);
+  const final = { role: member.role, status: member.status || 'active', ...patch };
   batch.update(doc(db, 'academyMembers', memberId(member.academyId, member.userId)), { ...patch, updatedAt: now(), auditId });
-  audit(batch, actor.uid, member.academyId, auditId, 'member.updated', 'member', member.userId);
+  audit(batch, actor.uid, member.academyId, auditId, 'member.updated', 'member', member.userId, `${final.role},${final.status}`);
   await batch.commit();
 }
 
 /** Equipe propõe (ou transfere) o professor responsável; o aluno precisa aceitar antes de qualquer acesso. */
-export async function proposeAssignment(actor, academyId, studentId, teacherId) {
+export async function proposeAssignment(actor, academyId, studentId, teacher, previous = null) {
+  const teacherId = teacher.userId;
+  const teacherName = String(teacher.displayName || 'Professor').slice(0, 80);
+  // `previous` vem da lista da academia: ler um documento que não existe é negado pelas regras, então não relemos aqui.
   const ref = doc(db, 'academyAssignments', memberId(academyId, studentId));
-  const prev = await getDoc(ref);
   const auditId = newAuditId();
   const batch = writeBatch(db);
-  if (prev.exists()) {
-    const p = prev.data();
-    batch.update(ref, { teacherId, status: 'pending', requestedBy: actor.uid, previousTeacherId: p.teacherId, updatedAt: now(), auditId });
-    audit(batch, actor.uid, academyId, auditId, p.status === 'active' ? 'assignment.transferred' : 'assignment.proposed', 'assignment', studentId);
+  if (previous) {
+    batch.update(ref, { teacherId, teacherName, status: 'pending', requestedBy: actor.uid, previousTeacherId: previous.teacherId, updatedAt: now(), auditId });
+    audit(batch, actor.uid, academyId, auditId, previous.status === 'active' ? 'assignment.transferred' : 'assignment.proposed', 'assignment', studentId);
   } else {
-    batch.set(ref, { academyId, studentId, teacherId, status: 'pending', requestedBy: actor.uid, previousTeacherId: '', createdAt: now(), updatedAt: now(), auditId });
+    batch.set(ref, { academyId, studentId, teacherId, teacherName, status: 'pending', requestedBy: actor.uid, previousTeacherId: '', createdAt: now(), updatedAt: now(), auditId });
     audit(batch, actor.uid, academyId, auditId, 'assignment.proposed', 'assignment', studentId);
   }
   await batch.commit();
