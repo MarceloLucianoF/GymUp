@@ -113,7 +113,7 @@ test('papéis: dono/admin leem membros; recepção e aluno não leem de terceiro
   await assertSucceeds(getDoc(doc(db('aadmin'), `academyMembers/${A}_astu`)));
   await assertSucceeds(getDocs(query(collection(db('aowner'), 'academyMembers'), where('academyId', '==', A))));
   await assertFails(getDoc(doc(db('arecep'), `academyMembers/${A}_astu`)));
-  await assertFails(getDoc(doc(db('astu'), `academyMembers/${A}_ateacher`)));
+  await assertFails(getDoc(doc(db('astu'), `academyMembers/${A}_arecep`)));
   await assertSucceeds(getDoc(doc(db('astu'), `academyMembers/${A}_astu`)));
 });
 
@@ -212,7 +212,7 @@ test('fluxo: atribuição - equipe propõe, aluno aceita, professor passa a ler;
   });
   const o = db('aowner');
   const propose = writeBatch(o);
-  propose.update(doc(o, `academyAssignments/${A}_astu`), { teacherId: 'ateacher', status: 'pending', requestedBy: 'aowner', previousTeacherId: 'ateacher', updatedAt: NOW, auditId: 'p1' });
+  propose.update(doc(o, `academyAssignments/${A}_astu`), { teacherId: 'ateacher', status: 'pending', requestedBy: 'aowner', previousTeacherId: 'ateacher', teacherName: 'prof', updatedAt: NOW, auditId: 'p1' });
   propose.set(doc(o, 'academyAuditLog/p1'), { academyId: A, actorId: 'aowner', action: 'assignment.proposed', targetType: 'assignment', targetId: 'astu', at: serverTimestamp() });
   await assertSucceeds(propose.commit());
   await assertFails(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
@@ -225,7 +225,7 @@ test('fluxo: atribuição - equipe propõe, aluno aceita, professor passa a ler;
   await assertSucceeds(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
 
   const tr = writeBatch(o);
-  tr.update(doc(o, `academyAssignments/${A}_astu`), { teacherId: 'ateacher2', status: 'pending', requestedBy: 'aowner', previousTeacherId: 'ateacher', updatedAt: NOW, auditId: 'p3' });
+  tr.update(doc(o, `academyAssignments/${A}_astu`), { teacherId: 'ateacher2', status: 'pending', requestedBy: 'aowner', previousTeacherId: 'ateacher', teacherName: 'prof', updatedAt: NOW, auditId: 'p3' });
   tr.set(doc(o, 'academyAuditLog/p3'), { academyId: A, actorId: 'aowner', action: 'assignment.transferred', targetType: 'assignment', targetId: 'astu', at: serverTimestamp() });
   await assertSucceeds(tr.commit());
   await assertFails(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
@@ -236,7 +236,7 @@ test('fluxo: professor de outra academia não pode ser proposto como responsáve
   const o = db('aowner');
   await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyAssignments/${A}_astu`), { status: 'ended' }); });
   const b = writeBatch(o);
-  b.update(doc(o, `academyAssignments/${A}_astu`), { teacherId: 'bteacher', status: 'pending', requestedBy: 'aowner', previousTeacherId: 'ateacher', updatedAt: NOW, auditId: 'p1' });
+  b.update(doc(o, `academyAssignments/${A}_astu`), { teacherId: 'bteacher', status: 'pending', requestedBy: 'aowner', previousTeacherId: 'ateacher', teacherName: 'prof', updatedAt: NOW, auditId: 'p1' });
   b.set(doc(o, 'academyAuditLog/p1'), { academyId: A, actorId: 'aowner', action: 'assignment.proposed', targetType: 'assignment', targetId: 'astu', at: serverTimestamp() });
   await assertFails(b.commit());
 });
@@ -466,4 +466,118 @@ test('revisão: equipe não reativa quem saiu sem convite', async () => {
   b.update(doc(o, `academyMembers/${A}_astu`), { status: 'active', updatedAt: NOW, auditId: 'u1' });
   b.set(...logDoc(o, 'u1', A, 'aowner', 'member.updated', 'member', 'astu'));
   await assertFails(b.commit());
+});
+
+// ---------- PAPÉIS E ATRIBUIÇÃO (critérios da frente de papéis) ----------
+const roleBatch = (uid, aid, target, patch, id, detail) => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.update(doc(d, `academyMembers/${aid}_${target}`), { ...patch, updatedAt: NOW, auditId: id });
+  b.set(doc(d, `academyAuditLog/${id}`), { academyId: aid, actorId: uid, action: 'member.updated', targetType: 'member', targetId: target, at: serverTimestamp(), ...(detail === undefined ? {} : { detail }) });
+  return b;
+};
+
+test('papéis: dono promove aluno a admin; admin promove a professor mas não cria outro admin; ambos auditados', async () => {
+  await assertSucceeds(roleBatch('aowner', A, 'astu', { role: 'admin' }, 'p1', 'admin,active').commit());
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyMembers/${A}_astu`), { role: 'student' }); });
+  await assertSucceeds(roleBatch('aadmin', A, 'astu', { role: 'teacher' }, 'p2', 'teacher,active').commit());
+  await assertFails(roleBatch('aadmin', A, 'astu', { role: 'admin' }, 'p3').commit());
+  await assertSucceeds(getDoc(doc(db('aowner'), 'academyAuditLog/p1')));
+});
+
+test('papéis: professor, recepção e aluno não mudam papel de ninguém', async () => {
+  for (const u of ['ateacher', 'arecep', 'astu']) await assertFails(roleBatch(u, A, 'astu', { role: 'teacher' }, `x_${u}`).commit());
+  await assertFails(roleBatch('ateacher', A, 'arecep', { status: 'removed' }, 'x2').commit());
+});
+
+test('papéis: ninguém altera o proprietário (último proprietário não sai nem é rebaixado)', async () => {
+  await assertFails(roleBatch('aowner', A, 'aowner', { role: 'admin' }, 'o1').commit());
+  await assertFails(roleBatch('aadmin', A, 'aowner', { role: 'student' }, 'o2').commit());
+  await assertFails(roleBatch('aadmin', A, 'aowner', { status: 'removed' }, 'o3').commit());
+  const o = db('aowner');
+  const leave = writeBatch(o);
+  leave.update(doc(o, `academyMembers/${A}_aowner`), { status: 'left', consent: { adherence: false }, updatedAt: NOW, auditId: 'o4' });
+  leave.set(...logDoc(o, 'o4', A, 'aowner', 'member.left', 'member', 'aowner'));
+  await assertFails(leave.commit());
+});
+
+test('papéis: admin da academia B não muda papel nem remove membro da academia A', async () => {
+  await assertFails(roleBatch('badmin', A, 'astu', { role: 'teacher' }, 'b1').commit());
+  await assertFails(roleBatch('bowner', A, 'astu', { status: 'removed' }, 'b2').commit());
+});
+
+test('papéis: remover membro corta o acesso e é auditado', async () => {
+  await assertSucceeds(roleBatch('aowner', A, 'ateacher', { status: 'removed' }, 'm1', 'teacher,removed').commit());
+  await assertFails(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
+  await assertFails(getDoc(doc(db('ateacher'), `academies/${A}`)));
+});
+
+test('atribuição: não propõe aluno de outra academia nem aluno inexistente', async () => {
+  const o = db('aowner');
+  const mk = (sid, id) => {
+    const b = writeBatch(o);
+    b.set(doc(o, `academyAssignments/${A}_${sid}`), { academyId: A, studentId: sid, teacherId: 'ateacher', status: 'pending', requestedBy: 'aowner', previousTeacherId: '', teacherName: 'prof', createdAt: NOW, updatedAt: NOW, auditId: id });
+    b.set(...logDoc(o, id, A, 'aowner', 'assignment.proposed', 'assignment', sid));
+    return b;
+  };
+  await assertFails(mk('bstu', 'q1').commit());
+  await assertFails(mk('ninguem', 'q2').commit());
+});
+
+test('atribuição: só o próprio aluno aceita; professor e equipe não aceitam por ele', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyAssignments/${A}_astu`), { status: 'pending' }); });
+  for (const u of ['ateacher', 'aowner', 'aadmin']) {
+    const d = db(u);
+    const b = writeBatch(d);
+    b.update(doc(d, `academyAssignments/${A}_astu`), { status: 'active', updatedAt: NOW, auditId: `ac_${u}` });
+    b.set(...logDoc(d, `ac_${u}`, A, u, 'assignment.accepted', 'assignment', 'astu'));
+    await assertFails(b.commit());
+  }
+  await assertFails(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
+});
+
+test('atribuição: professor encerra a própria atribuição e perde o acesso na hora (auditado)', async () => {
+  const t = db('ateacher');
+  const b = writeBatch(t);
+  b.update(doc(t, `academyAssignments/${A}_astu`), { status: 'ended', updatedAt: NOW, auditId: 'te1' });
+  b.set(...logDoc(t, 'te1', A, 'ateacher', 'assignment.ended', 'assignment', 'astu'));
+  await assertSucceeds(b.commit());
+  await assertFails(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
+});
+
+test('atribuição: primeira proposta (create) da equipe para professor da própria academia', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await deleteDoc(doc(d, `academyAssignments/${A}_astu`));
+  });
+  const o = db('aowner');
+  const b = writeBatch(o);
+  b.set(doc(o, `academyAssignments/${A}_astu`), { academyId: A, studentId: 'astu', teacherId: 'ateacher', status: 'pending', requestedBy: 'aowner', previousTeacherId: '', teacherName: 'prof', createdAt: NOW, updatedAt: NOW, auditId: 'cr1' });
+  b.set(...logDoc(o, 'cr1', A, 'aowner', 'assignment.proposed', 'assignment', 'astu'));
+  await assertSucceeds(b.commit());
+});
+
+test('atribuição: aluno NÃO lê o cadastro do professor (o nome vem na própria atribuição)', async () => {
+  await assertFails(getDoc(doc(db('astu'), `academyMembers/${A}_ateacher`)));
+  const snap = await getDoc(doc(db('astu'), `academyAssignments/${A}_astu`));
+  if (!snap.exists()) throw new Error('aluno deveria ler a própria atribuição');
+});
+
+test('atribuição: professor só lê/lista a atribuição depois do aceite', async () => {
+  await assertSucceeds(getDocs(query(collection(db('ateacher'), 'academyAssignments'), where('teacherId', '==', 'ateacher'), where('status', '==', 'active'))));
+  await assertFails(getDocs(query(collection(db('ateacher'), 'academyAssignments'), where('teacherId', '==', 'ateacher'))));
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyAssignments/${A}_astu`), { status: 'pending' }); });
+  await assertFails(getDoc(doc(db('ateacher'), `academyAssignments/${A}_astu`)));
+});
+
+test('papéis: o registro member.updated precisa dizer o que mudou (papel,status finais)', async () => {
+  await assertFails(roleBatch('aowner', A, 'astu', { role: 'teacher' }, 'd1', 'admin,active').commit());
+  await assertFails(roleBatch('aowner', A, 'astu', { role: 'teacher' }, 'd2', undefined).commit());
+  await assertSucceeds(roleBatch('aowner', A, 'astu', { role: 'teacher' }, 'd3', 'teacher,active').commit());
+});
+
+test('papéis: perms só aceita createTrainings booleano', async () => {
+  await assertFails(roleBatch('aowner', A, 'ateacher', { perms: { admin: true } }, 'e1', 'teacher,active').commit());
+  await assertFails(roleBatch('aowner', A, 'ateacher', { perms: { createTrainings: 'sim' } }, 'e2', 'teacher,active').commit());
+  await assertSucceeds(roleBatch('aowner', A, 'ateacher', { perms: { createTrainings: true } }, 'e3', 'teacher,active').commit());
 });

@@ -854,8 +854,11 @@ service cloud.firestore {
     // Quem pode registrar cada ação: ações da equipe só pela equipe; ações do próprio membro só sobre si mesmo.
     function acLogActionAllowed(d) {
       return (d.action == 'academy.created' && getAfter(acMemberPath(d.academyId, request.auth.uid)).data.role == 'owner')
-        || (d.action in ['academy.updated', 'invite.created', 'invite.revoked', 'member.updated', 'assignment.proposed', 'assignment.transferred']
+        || (d.action in ['academy.updated', 'invite.created', 'invite.revoked', 'assignment.proposed', 'assignment.transferred']
           && acStaff(d.academyId))
+        // o registro diz o que mudou: "papel,status" finais do membro-alvo, e a regra confere com o documento gravado
+        || (d.action == 'member.updated' && acStaff(d.academyId)
+          && d.get('detail', '') == getAfter(acMemberPath(d.academyId, d.targetId)).data.role + ',' + getAfter(acMemberPath(d.academyId, d.targetId)).data.status)
         || (d.action in ['member.joined', 'member.left', 'assignment.accepted'] && d.targetId == request.auth.uid)
         || (d.action == 'member.consent' && d.targetId == request.auth.uid
           && d.get('detail', '') == (getAfter(acMemberPath(d.academyId, request.auth.uid)).data.consent.adherence ? 'concedido' : 'revogado'))
@@ -971,6 +974,9 @@ service cloud.firestore {
             && (request.resource.data.role == resource.data.role || acAssignableRole(resource.data.academyId, request.resource.data.role))
             && request.resource.data.status in ['active', 'suspended', 'removed']
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'perms', 'updatedAt', 'auditId'])
+            && (!('perms' in request.resource.data) || (request.resource.data.perms is map
+              && request.resource.data.perms.keys().hasOnly(['createTrainings'])
+              && request.resource.data.perms.get('createTrainings', false) is bool))
             && acLogged(resource.data.academyId, request.resource.data.auditId, 'member.updated', resource.data.userId))
         );
       allow delete: if false;
@@ -1013,13 +1019,16 @@ service cloud.firestore {
     match /academyAssignments/{assignId} {
       allow get: if signedIn() && (isAdmin() || (resource == null
         ? assignId.matches('^[a-z0-9]{16,28}_' + request.auth.uid + '$')
-        : (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid
+        : (resource.data.studentId == request.auth.uid
+          || (resource.data.teacherId == request.auth.uid && resource.data.status == 'active')
           || acStaff(resource.data.academyId))));
+      // Professor só enxerga a atribuição depois do aceite (a consulta precisa filtrar status == 'active').
       allow list: if signedIn() && (isAdmin() || resource.data.studentId == request.auth.uid
-        || resource.data.teacherId == request.auth.uid || acStaff(resource.data.academyId));
+        || (resource.data.teacherId == request.auth.uid && resource.data.status == 'active') || acStaff(resource.data.academyId));
       // Proposta da equipe: professor elegível + aluno ativo; sem aceite do aluno o professor não lê nada.
       allow create: if signedIn() && request.resource.data.keys().hasOnly(['academyId', 'studentId', 'teacherId', 'status',
-          'requestedBy', 'previousTeacherId', 'auditId', 'createdAt', 'updatedAt'])
+          'requestedBy', 'previousTeacherId', 'teacherName', 'auditId', 'createdAt', 'updatedAt'])
+        && request.resource.data.teacherName is string && request.resource.data.teacherName.size() <= 80
         && assignId == request.resource.data.academyId + '_' + request.resource.data.studentId
         && acStaff(request.resource.data.academyId) && request.resource.data.requestedBy == request.auth.uid
         && request.resource.data.status == 'pending'
@@ -1048,7 +1057,8 @@ service cloud.firestore {
             && request.resource.data.requestedBy == request.auth.uid
             && request.resource.data.previousTeacherId == resource.data.teacherId
             && acCanTeach(resource.data.academyId, request.resource.data.teacherId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherId', 'status', 'requestedBy', 'previousTeacherId', 'updatedAt', 'auditId'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherId', 'teacherName', 'status', 'requestedBy', 'previousTeacherId', 'updatedAt', 'auditId'])
+            && request.resource.data.teacherName is string && request.resource.data.teacherName.size() <= 80
             && acLogged(resource.data.academyId, request.resource.data.auditId,
               resource.data.status == 'active' ? 'assignment.transferred' : 'assignment.proposed', resource.data.studentId))
         );

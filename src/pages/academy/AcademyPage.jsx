@@ -12,7 +12,8 @@ import { useConfirm } from '../../hooks/useConfirm';
 import usePageMeta from '../../hooks/usePageMeta';
 import {
   academyInviteStatus, createAcademy, createAcademyInvite, leaveAcademy, listAcademyInvites, listAcademyMembers,
-  listMyMemberships, revokeAcademyInvite, ROLE_LABEL, setAdherenceConsent
+  listMyMemberships, revokeAcademyInvite, ROLE_LABEL, setAdherenceConsent, listAcademyAssignments, listMyAssignments,
+  proposeAssignment, acceptAssignment, endAssignment, updateMember, getMemberName, ASSIGNMENT_LABEL
 } from '../../services/academyService';
 
 const STATUS_LABEL = { ok: 'Ativo', revoked: 'Cancelado', expired: 'Expirado', exhausted: 'Esgotado', missing: '-' };
@@ -106,7 +107,7 @@ function ConsentCard({ membership, actor, onChanged }) {
         <li>Será compartilhado apenas se você está <strong>em dia</strong>, <strong>atrasado</strong> ou <strong>sem dados</strong>.</li>
         <li>Nunca: horários, datas de treino, cargas, medidas, volume ou histórico.</li>
         <li>Vale só para esta academia e você pode revogar quando quiser; ao revogar, o dado de aderência é apagado na hora.</li>
-        <li>A exibição individual para a academia só começa quando o sistema de cálculo no servidor estiver ativo; até lá ela não vê nada.</li>
+        <li><strong>A aderência individual ainda não é compartilhada nesta versão.</strong> Esta preferência será aplicada quando o recurso estiver disponível.</li>
         <li>Seus treinos, medidas e histórico continuam só seus. Sair da academia também encerra este consentimento.</li>
       </ul>
       <button type="button" onClick={toggle} disabled={busy} className={`${on ? btnDanger : btnPrimary} mt-3`}>
@@ -116,21 +117,152 @@ function ConsentCard({ membership, actor, onChanged }) {
   );
 }
 
-function MembersList({ academyId }) {
+function MembersList({ membership, actor }) {
+  const { academyId, role: myRole } = membership;
   const [members, setMembers] = useState(null);
-  useEffect(() => { listAcademyMembers(academyId).then(setMembers).catch((e) => { console.error(e); setMembers([]); }); }, [academyId]);
+  const [assignments, setAssignments] = useState([]);
+  const [pick, setPick] = useState({});
+  const [busy, setBusy] = useState('');
+  const { confirm, dialog } = useConfirm();
+
+  const load = useCallback(async () => {
+    try {
+      const [m, a] = await Promise.all([listAcademyMembers(academyId), listAcademyAssignments(academyId)]);
+      setMembers(m); setAssignments(a);
+    } catch (e) { console.error(e); setMembers([]); }
+  }, [academyId]);
+  useEffect(() => { load(); }, [load]);
+
+  const teachers = (members || []).filter((m) => ['teacher', 'admin', 'owner'].includes(m.role));
+  const asgOf = (uid) => assignments.find((a) => a.studentId === uid);
+  const nameOf = (uid) => members?.find((m) => m.userId === uid)?.displayName || 'Professor';
+  const manageable = (m) => m.userId !== actor.uid && m.role !== 'owner' && (myRole === 'owner' || m.role !== 'admin');
+  const rolesFor = myRole === 'owner' ? ['admin', 'teacher', 'reception', 'student'] : ['teacher', 'reception', 'student'];
+
+  const run = async (key, fn, okMsg) => {
+    setBusy(key);
+    try { await fn(); toast.success(okMsg); await load(); } catch (e) {
+      console.error(e);
+      toast.error('Não foi possível concluir: o estado pode ter mudado ou você perdeu a permissão. A lista foi atualizada.');
+      await load();
+    } finally { setBusy(''); }
+  };
+  const changeRole = async (m, role) => {
+    if (role === m.role) return;
+    if (!(await confirm({ title: `Mudar ${m.displayName} para ${ROLE_LABEL[role]}?`, message: 'O acesso muda na hora. Se era professor responsável, o acesso aos alunos acaba imediatamente.', confirmLabel: 'Mudar' }))) return;
+    await run(`r-${m.userId}`, () => updateMember(actor, m, { role }), 'Papel alterado.');
+  };
+  const setStatus = async (m, status, label) => {
+    if (!(await confirm({ title: `${label} ${m.displayName}?`, message: 'A pessoa perde o acesso à academia na hora. Os dados pessoais dela continuam dela.', confirmLabel: label, danger: true }))) return;
+    await run(`s-${m.userId}`, () => updateMember(actor, m, { status }), `${label}: feito.`);
+  };
+
   return (
     <section aria-label="Membros" className="mt-5 border-t border-gray-100 pt-4 dark:border-white/10">
+      {dialog}
       <h3 className="font-bold text-gray-900 dark:text-white">Membros{members ? ` (${members.length})` : ''}</h3>
-      <ul className="mt-3 space-y-1.5">
-        {members?.map((m) => (
-          <li key={m.userId} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm dark:bg-white/5">
-            <span className="truncate font-semibold text-gray-900 dark:text-white">{m.displayName || 'Membro'}</span>
-            <span className="text-xs text-gray-600 dark:text-gray-400">{ROLE_LABEL[m.role]}</span>
-          </li>
-        ))}
+      <ul className="mt-3 space-y-2">
+        {members?.map((m) => {
+          const asg = m.role === 'student' ? asgOf(m.userId) : null;
+          const open = asg && asg.status !== 'ended';
+          return (
+            <li key={m.userId} className="rounded-2xl bg-gray-50 px-4 py-3 text-sm dark:bg-white/5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="truncate font-semibold text-gray-900 dark:text-white">{m.displayName || 'Membro'}</span>
+                {manageable(m) ? (
+                  <span className="flex flex-wrap items-center gap-2">
+                    <label className="sr-only" htmlFor={`role-${m.userId}`}>Papel de {m.displayName}</label>
+                    <select id={`role-${m.userId}`} value={m.role} disabled={busy === `r-${m.userId}`} onChange={(e) => changeRole(m, e.target.value)} className="min-h-[44px] rounded-xl bg-white px-3 text-xs font-bold dark:bg-gray-800 dark:text-white">
+                      {rolesFor.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                    </select>
+                    <button type="button" onClick={() => setStatus(m, 'suspended', 'Suspender')} className={`${btnGhost} text-xs`}>Suspender</button>
+                    <button type="button" onClick={() => setStatus(m, 'removed', 'Remover')} className={`${btnDanger} text-xs`}>Remover</button>
+                  </span>
+                ) : <span className="text-xs text-gray-600 dark:text-gray-400">{ROLE_LABEL[m.role]}</span>}
+              </div>
+              {m.role === 'student' && (
+                <div className="mt-2 border-t border-gray-100 pt-2 dark:border-white/10">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Professor responsável: {asg && asg.status !== 'ended' ? `${nameOf(asg.teacherId)} (${ASSIGNMENT_LABEL[asg.status]})` : 'nenhum'}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label className="sr-only" htmlFor={`tch-${m.userId}`}>Professor para {m.displayName}</label>
+                    <select id={`tch-${m.userId}`} value={pick[m.userId] || ''} onChange={(e) => setPick((p) => ({ ...p, [m.userId]: e.target.value }))} className="min-h-[44px] rounded-xl bg-white px-3 text-xs font-bold dark:bg-gray-800 dark:text-white">
+                      <option value="">Escolher professor</option>
+                      {teachers.filter((t) => t.userId !== asg?.teacherId || asg?.status === 'ended').map((t) => <option key={t.userId} value={t.userId}>{t.displayName}</option>)}
+                    </select>
+                    <button type="button" disabled={!pick[m.userId] || busy === `p-${m.userId}`} className={`${btnPrimary} text-xs`}
+                      onClick={() => run(`p-${m.userId}`, () => proposeAssignment(actor, academyId, m.userId, teachers.find((t) => t.userId === pick[m.userId]), asg), open ? 'Transferência proposta: o professor atual perde o acesso agora e o novo só vê o aluno depois do aceite.' : 'Proposta enviada; o aluno precisa aceitar.')}>
+                      {open ? 'Transferir' : 'Propor professor'}
+                    </button>
+                    {open && <button type="button" className={`${btnDanger} text-xs`} onClick={() => run(`e-${m.userId}`, () => endAssignment(actor, academyId, m.userId), 'Atribuição encerrada.')}>Encerrar</button>}
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
-      <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">Dados de aderência não compartilhados pelo aluno. A academia não vê aderência individual, treinos nem medidas nesta versão.</p>
+      <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">A academia não vê aderência individual, treinos nem medidas nesta versão. O professor só vê o aluno depois do aceite dele.</p>
+    </section>
+  );
+}
+
+function StudentAssignmentCard({ membership, actor }) {
+  const [asg, setAsg] = useState(undefined);
+  const [teacherName, setTeacherName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { confirm, dialog } = useConfirm();
+  const load = useCallback(async () => {
+    try {
+      const mine = (await listMyAssignments(actor.uid, 'student')).find((a) => a.academyId === membership.academyId) || null;
+      setAsg(mine);
+      if (mine && mine.status !== 'ended') setTeacherName(mine.teacherName || 'Professor');
+    } catch (e) { console.error(e); setAsg(null); }
+  }, [actor.uid, membership.academyId]);
+  useEffect(() => { load(); }, [load]);
+  if (!asg || asg.status === 'ended') return null;
+  const act = async (fn, msg) => { setBusy(true); try { await fn(); toast.success(msg); await load(); } catch (e) { console.error(e); toast.error('Não foi possível concluir.'); } finally { setBusy(false); } };
+  return (
+    <section aria-label="Professor responsável" className="mt-5 border-t border-gray-100 pt-4 dark:border-white/10">
+      {dialog}
+      <h3 className="font-bold text-gray-900 dark:text-white">Professor responsável</h3>
+      {asg.status === 'pending' ? (
+        <>
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300"><strong>{teacherName}</strong> foi indicado como seu professor nesta academia. Até você aceitar, ele não vê nada seu. Se isto é uma troca, o professor anterior já perdeu o acesso e recusar encerra o vínculo.</p>
+          <div className="mt-3 flex gap-2">
+            <button type="button" disabled={busy} className={btnPrimary} onClick={() => act(() => acceptAssignment(actor, membership.academyId), 'Professor aceito.')}>Aceitar</button>
+            <button type="button" disabled={busy} className={btnGhost} onClick={() => act(() => endAssignment(actor, membership.academyId, actor.uid), 'Indicação recusada.')}>Recusar</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">Seu professor é <strong>{teacherName}</strong>. Você pode encerrar quando quiser; o acesso dele acaba na hora.</p>
+          <button type="button" disabled={busy} className={`${btnDanger} mt-3`} onClick={async () => { if (await confirm({ title: 'Encerrar o vínculo com o professor?', message: 'Ele perde o acesso na hora.', confirmLabel: 'Encerrar', danger: true })) act(() => endAssignment(actor, membership.academyId, actor.uid), 'Vínculo encerrado.'); }}>Encerrar vínculo</button>
+        </>
+      )}
+    </section>
+  );
+}
+
+function TeacherStudents({ membership, actor }) {
+  const [list, setList] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const mine = (await listMyAssignments(actor.uid, 'teacher')).filter((a) => a.academyId === membership.academyId && a.status === 'active');
+        const named = await Promise.all(mine.map(async (a) => ({ id: a.studentId, name: await getMemberName(a.academyId, a.studentId) })));
+        setList(named.filter((s) => s.name)); // sem leitura permitida (aluno inativo) não aparece com nome falso
+      } catch (e) { console.error(e); setList([]); }
+    })();
+  }, [actor.uid, membership.academyId]);
+  return (
+    <section aria-label="Meus alunos" className="mt-5 border-t border-gray-100 pt-4 dark:border-white/10">
+      <h3 className="font-bold text-gray-900 dark:text-white">Alunos sob sua responsabilidade</h3>
+      <ul className="mt-2 space-y-1.5">
+        {list?.length === 0 && <li className="text-sm text-gray-600 dark:text-gray-400">Nenhum aluno aceitou você como professor ainda.</li>}
+        {list?.map((s) => <li key={s.id} className="rounded-xl bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-900 dark:bg-white/5 dark:text-white">{s.name}</li>)}
+      </ul>
     </section>
   );
 }
@@ -182,8 +314,9 @@ export default function AcademyPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">Seu papel: {ROLE_LABEL[m.role]}</p></div>
               {m.role !== 'owner' && <button type="button" onClick={() => leave(m)} className={btnDanger}><LogOut className="h-4 w-4" aria-hidden="true" />Sair da academia</button>}
             </div>
-            {m.role === 'student' && <ConsentCard membership={m} actor={actor} onChanged={load} />}
-            {['owner', 'admin'].includes(m.role) && <><InvitesPanel membership={m} user={actor} /><MembersList academyId={m.academyId} /></>}
+            {m.role === 'student' && <><StudentAssignmentCard membership={m} actor={actor} /><ConsentCard membership={m} actor={actor} onChanged={load} /></>}
+            {['teacher', 'admin', 'owner'].includes(m.role) && <TeacherStudents membership={m} actor={actor} />}
+            {['owner', 'admin'].includes(m.role) && <><InvitesPanel membership={m} user={actor} /><MembersList membership={m} actor={actor} /></>}
           </article>
         ))}
         <form onSubmit={create} className="surface bg-white p-5 dark:bg-gray-900">
