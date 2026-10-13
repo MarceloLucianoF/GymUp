@@ -25,6 +25,8 @@ import {
 } from '../../utils/training';
 import { invalidateCheckIns } from '../../services/checkInsCache';
 import { saveCheckIn } from '../../services/checkInService';
+import { getMyAssignedTraining } from '../../services/academyTrainingService';
+import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
 export default function TrainingExecutionPage() {
@@ -78,11 +80,27 @@ export default function TrainingExecutionPage() {
 
         const initTraining = async () => {
             try {
-                let docSnap = await getDoc(doc(db, 'trainings', trainingId));
+                const academyRef = parseAcademyTrainingId(trainingId);
+                let docSnap = academyRef ? null : await getDoc(doc(db, 'trainings', trainingId));
                 let trainingData = null;
                 let trainingDocId = null;
 
-                if (docSnap.exists()) {
+                if (academyRef) {
+                    // Ficha da academia: lê SÓ a versão atribuída a este aluno (as regras negam o rascunho e versões de outros).
+                    const mine = await getMyAssignedTraining(academyRef.academyId, user.uid).catch(() => null);
+                    const saved = activeWorkoutService.getActiveSession(user.uid);
+                    if (mine && mine.assignment.versionId === academyRef.versionId) {
+                        trainingData = { name: mine.version.name, exercises: mine.version.exercises, coachId: '', academyId: academyRef.academyId, versionId: academyRef.versionId };
+                    } else if (saved && saved.trainingId === trainingId && saved.hydratedExercises?.length) {
+                        // a ficha foi trocada no meio do treino: quem já começou termina a versão que começou
+                        trainingData = { name: saved.trainingName || 'Treino da academia', exercises: saved.hydratedExercises, coachId: '', academyId: academyRef.academyId, versionId: academyRef.versionId };
+                    } else {
+                        toast.error('Esta ficha não está mais atribuída a você.');
+                        navigate('/academia');
+                        return;
+                    }
+                    trainingDocId = trainingId;
+                } else if (docSnap.exists()) {
                     trainingData = docSnap.data();
                     trainingDocId = docSnap.id;
                 } else {
@@ -329,6 +347,7 @@ export default function TrainingExecutionPage() {
                 trainingId: training.id, 
                 trainingName: training.name,
                 coachId: training.coachId || '',
+                ...(training.academyId ? { academyId: training.academyId, versionId: training.versionId, source: 'academy' } : {}),
                 date: new Date().toISOString(),
                 duration: elapsedTime,
                 totalVolume,

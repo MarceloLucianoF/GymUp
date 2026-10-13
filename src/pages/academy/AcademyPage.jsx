@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Building2, Copy, LogOut, Link2, Ban } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
@@ -16,6 +16,7 @@ import {
   proposeAssignment, acceptAssignment, endAssignment, updateMember, getMemberName, ASSIGNMENT_LABEL
 } from '../../services/academyService';
 import { getMyAssignedTraining } from '../../services/academyTrainingService';
+import { academyTrainingId } from '../../utils/academyTrainingId';
 
 const STATUS_LABEL = { ok: 'Ativo', revoked: 'Cancelado', expired: 'Expirado', exhausted: 'Esgotado', missing: '-' };
 const toDate = (v) => (typeof v?.toDate === 'function' ? v.toDate() : new Date(v));
@@ -250,6 +251,7 @@ function StudentAssignmentCard({ membership, actor }) {
 
 /** Ficha atribuída ao aluno: sempre a versão exata que lhe foi dada, mesmo que a academia publique versões novas. */
 function MyTrainingCard({ membership, actor }) {
+  const navigate = useNavigate();
   const [data, setData] = useState(undefined);
   useEffect(() => { getMyAssignedTraining(membership.academyId, actor.uid).then(setData).catch((e) => { console.error(e); setData(null); }); }, [membership.academyId, actor.uid]);
   if (!data) return null;
@@ -265,6 +267,7 @@ function MyTrainingCard({ membership, actor }) {
           </li>
         ))}
       </ol>
+      <button type="button" onClick={() => navigate(`/execution/${academyTrainingId(membership.academyId, data.assignment.versionId)}`)} className={`${btnPrimary} mt-3`}>Iniciar treino</button>
     </section>
   );
 }
