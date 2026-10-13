@@ -50,8 +50,35 @@ export async function createAcademy(user, name) {
 
 export async function listMyMemberships(userId) {
   const snap = await getDocs(query(collection(db, 'academyMembers'), where('userId', '==', userId)));
+  const active = snap.docs.map((d) => d.data()).filter((m) => m.status === 'active');
+  return Promise.all(active.map(async (m) => {
+    const fallback = { id: m.academyId, name: 'Academia' };
+    const a = await getDoc(doc(db, 'academies', m.academyId)).catch(() => null);
+    return { ...m, academy: a?.exists() ? { id: a.id, ...a.data() } : fallback };
+  }));
+}
+
+export async function listAcademyMembers(academyId) {
+  const snap = await getDocs(query(collection(db, 'academyMembers'), where('academyId', '==', academyId)));
   return snap.docs.map((d) => d.data()).filter((m) => m.status === 'active');
 }
+
+export async function listAcademyInvites(academyId) {
+  const snap = await getDocs(query(collection(db, 'academyInvites'), where('academyId', '==', academyId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** Estado exibido de um convite: ok | revoked | expired | exhausted. */
+export function academyInviteStatus(inv, nowMs = Date.now()) {
+  if (!inv) return 'missing';
+  if (inv.revoked) return 'revoked';
+  const exp = typeof inv.expiresAt?.toMillis === 'function' ? inv.expiresAt.toMillis() : Date.parse(inv.expiresAt);
+  if (!Number.isFinite(exp) || exp <= nowMs) return 'expired';
+  if ((inv.uses || 0) >= (inv.maxUses || 0)) return 'exhausted';
+  return 'ok';
+}
+
+export const ROLE_LABEL = { owner: 'Proprietário', admin: 'Administrador', teacher: 'Professor', reception: 'Recepção', student: 'Aluno' };
 
 export async function createAcademyInvite(user, academy, { role, days = 7, maxUses = 20 }) {
   const id = newInviteId();
@@ -105,7 +132,8 @@ export async function joinAcademy(user, invite, { adherenceConsent = false } = {
 export async function leaveAcademy(user, academyId) {
   const auditId = newAuditId();
   const batch = writeBatch(db);
-  batch.update(doc(db, 'academyMembers', memberId(academyId, user.uid)), { status: 'left', updatedAt: now(), auditId });
+  batch.update(doc(db, 'academyMembers', memberId(academyId, user.uid)), { status: 'left', consent: { adherence: false }, updatedAt: now(), auditId });
+  batch.delete(doc(db, 'academyMemberStats', memberId(academyId, user.uid))); // sair apaga a aderência (exigido pelas regras)
   audit(batch, user.uid, academyId, auditId, 'member.left', 'member', user.uid);
   await batch.commit();
 }
@@ -169,8 +197,9 @@ export async function publishAdherence(user, academyId, lastCheckInId) {
   });
 }
 
-export async function getAdherence(academyId, studentId) {
-  const snap = await getDoc(doc(db, 'academyMemberStats', memberId(academyId, studentId)));
+/** Aderência do próprio aluno (a equipe não lê na V2.0). */
+export async function getMyAdherence(academyId, userId) {
+  const snap = await getDoc(doc(db, 'academyMemberStats', memberId(academyId, userId)));
   return adherenceStatus(snap.exists() ? snap.data() : null);
 }
 

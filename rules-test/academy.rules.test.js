@@ -117,13 +117,12 @@ test('papéis: dono/admin leem membros; recepção e aluno não leem de terceiro
   await assertSucceeds(getDoc(doc(db('astu'), `academyMembers/${A}_astu`)));
 });
 
-test('papéis: professor responsável (atribuição ativa) lê o membro e a aderência do aluno; outro professor não', async () => {
+test('papéis: professor responsável (atribuição ativa) lê o membro; outro professor não', async () => {
   await assertSucceeds(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
-  await assertSucceeds(getDoc(doc(db('ateacher'), `academyMemberStats/${A}_astu`)));
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), `academyMembers/${A}_ateacher2`), member(A, 'ateacher2', 'teacher'));
   });
-  await assertFails(getDoc(doc(db('ateacher2'), `academyMemberStats/${A}_astu`)));
+  await assertFails(getDoc(doc(db('ateacher2'), `academyMembers/${A}_astu`)));
 });
 
 test('papéis: professor com atribuição pendente ou encerrada não lê o aluno', async () => {
@@ -134,12 +133,11 @@ test('papéis: professor com atribuição pendente ou encerrada não lê o aluno
   }
 });
 
-test('papéis: aderência do aluno só aparece para a equipe com consentimento', async () => {
-  await assertSucceeds(getDoc(doc(db('aowner'), `academyMemberStats/${A}_astu`)));
-  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyMembers/${A}_astu`), { consent: { adherence: false } }); });
-  await assertFails(getDoc(doc(db('aowner'), `academyMemberStats/${A}_astu`)));
+test('papéis: aderência (validUntil) só o próprio aluno lê; equipe e professor não, mesmo com consentimento', async () => {
   await assertSucceeds(getDoc(doc(db('astu'), `academyMemberStats/${A}_astu`)));
-  await assertFails(getDoc(doc(db('arecep'), `academyMemberStats/${A}_astu`)));
+  for (const u of ['aowner', 'aadmin', 'ateacher', 'arecep']) {
+    await assertFails(getDoc(doc(db(u), `academyMemberStats/${A}_astu`)));
+  }
 });
 
 test('papéis: aluno não promove a si mesmo nem muda papel de outro', async () => {
@@ -267,12 +265,12 @@ test('fluxo: revogar consentimento exige apagar a aderência no mesmo lote', asy
   const s = db('astu');
   const only = writeBatch(s);
   only.update(doc(s, `academyMembers/${A}_astu`), { consent: { adherence: false }, updatedAt: NOW, auditId: 'c1' });
-  only.set(doc(s, 'academyAuditLog/c1'), { academyId: A, actorId: 'astu', action: 'member.consent', targetType: 'member', targetId: 'astu', at: serverTimestamp() });
+  only.set(doc(s, 'academyAuditLog/c1'), { academyId: A, actorId: 'astu', action: 'member.consent', targetType: 'member', targetId: 'astu', at: serverTimestamp(), detail: 'revogado' });
   await assertFails(only.commit());
   const both = writeBatch(s);
   both.update(doc(s, `academyMembers/${A}_astu`), { consent: { adherence: false }, updatedAt: NOW, auditId: 'c2' });
   both.delete(doc(s, `academyMemberStats/${A}_astu`));
-  both.set(doc(s, 'academyAuditLog/c2'), { academyId: A, actorId: 'astu', action: 'member.consent', targetType: 'member', targetId: 'astu', at: serverTimestamp() });
+  both.set(doc(s, 'academyAuditLog/c2'), { academyId: A, actorId: 'astu', action: 'member.consent', targetType: 'member', targetId: 'astu', at: serverTimestamp(), detail: 'revogado' });
   await assertSucceeds(both.commit());
 });
 
@@ -340,13 +338,22 @@ test('revisão: equipe não lista aderência (consentimento mora em outro docume
   await assertSucceeds(getDocs(query(collection(db('astu'), 'academyMemberStats'), where('userId', '==', 'astu'))));
 });
 
-test('revisão: aluno sai da academia e a saída é auditada', async () => {
+test('saída: aluno sai, a aderência é apagada no mesmo lote e a saída é auditada', async () => {
   const s = db('astu');
-  const b = writeBatch(s);
-  b.update(doc(s, `academyMembers/${A}_astu`), { status: 'left', updatedAt: NOW, auditId: 'o1' });
-  b.set(...logDoc(s, 'o1', A, 'astu', 'member.left', 'member', 'astu'));
-  await assertSucceeds(b.commit());
+  const mk = (withDelete, id) => {
+    const b = writeBatch(s);
+    b.update(doc(s, `academyMembers/${A}_astu`), { status: 'left', consent: { adherence: false }, updatedAt: NOW, auditId: id });
+    b.set(...logDoc(s, id, A, 'astu', 'member.left', 'member', 'astu'));
+    if (withDelete) b.delete(doc(s, `academyMemberStats/${A}_astu`));
+    return b;
+  };
+  await assertFails(mk(false, 'o0').commit());
+  await assertSucceeds(mk(true, 'o1').commit());
   await assertFails(getDoc(doc(db('ateacher'), `academyMembers/${A}_astu`)));
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const x = await getDoc(doc(ctx.firestore(), `academyMemberStats/${A}_astu`));
+    if (x.exists()) throw new Error('aderência não foi apagada');
+  });
 });
 
 test('revisão: aluno não forja auditoria de ações da equipe', async () => {
@@ -391,4 +398,72 @@ test('revisão: aluno que sai e volta não reabre o acesso do professor antigo',
   };
   await assertFails(mk(false).commit());
   await assertSucceeds(mk(true).commit());
+});
+
+test('consentimento: sair encerra o consentimento (não pode sair mantendo adherence true)', async () => {
+  const s = db('astu');
+  const b = writeBatch(s);
+  b.update(doc(s, `academyMembers/${A}_astu`), { status: 'left', updatedAt: NOW, auditId: 'z1' });
+  b.set(...logDoc(s, 'z1', A, 'astu', 'member.left', 'member', 'astu'));
+  b.delete(doc(s, `academyMemberStats/${A}_astu`));
+  await assertFails(b.commit());
+});
+
+test('consentimento: ativar, revogar (apagando a aderência) e reativar, sempre auditado; o vínculo permanece', async () => {
+  const s = db('astu');
+  const toggle = (allowed, id, withDelete) => {
+    const b = writeBatch(s);
+    b.update(doc(s, `academyMembers/${A}_astu`), { consent: { adherence: allowed }, updatedAt: NOW, auditId: id });
+    if (withDelete) b.delete(doc(s, `academyMemberStats/${A}_astu`));
+    b.set(doc(s, `academyAuditLog/${id}`), { academyId: A, actorId: 'astu', action: 'member.consent', targetType: 'member', targetId: 'astu', at: serverTimestamp(), detail: allowed ? 'concedido' : 'revogado' });
+    return b;
+  };
+  await assertSucceeds(toggle(false, 'k1', true).commit());
+  const m = await getDoc(doc(s, `academyMembers/${A}_astu`));
+  if (m.data().status !== 'active' || m.data().role !== 'student') throw new Error('vínculo mudou');
+  await assertSucceeds(toggle(true, 'k2', false).commit());
+  await assertFails(toggle(true, 'k2', false).commit()); // auditoria já usada
+  // auditoria mentirosa: grava revogado enquanto concede
+  const lie = writeBatch(s);
+  lie.update(doc(s, `academyMembers/${A}_astu`), { consent: { adherence: false }, updatedAt: NOW, auditId: 'k3' });
+  lie.delete(doc(s, `academyMemberStats/${A}_astu`));
+  lie.set(doc(s, 'academyAuditLog/k3'), { academyId: A, actorId: 'astu', action: 'member.consent', targetType: 'member', targetId: 'astu', at: serverTimestamp(), detail: 'concedido' });
+  await assertFails(lie.commit());
+  await assertSucceeds(getDoc(doc(db('aowner'), `academyAuditLog/k1`)));
+});
+
+test('consentimento: revogar e sair funcionam mesmo sem aderência publicada', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await deleteDoc(doc(ctx.firestore(), `academyMemberStats/${A}_astu`)); });
+  const s = db('astu');
+  const rev = writeBatch(s);
+  rev.update(doc(s, `academyMembers/${A}_astu`), { consent: { adherence: false }, updatedAt: NOW, auditId: 'n1' });
+  rev.delete(doc(s, `academyMemberStats/${A}_astu`));
+  rev.set(doc(s, 'academyAuditLog/n1'), { academyId: A, actorId: 'astu', action: 'member.consent', targetType: 'member', targetId: 'astu', at: serverTimestamp(), detail: 'revogado' });
+  await assertSucceeds(rev.commit());
+  const out = writeBatch(s);
+  out.update(doc(s, `academyMembers/${A}_astu`), { status: 'left', consent: { adherence: false }, updatedAt: NOW, auditId: 'n2' });
+  out.delete(doc(s, `academyMemberStats/${A}_astu`));
+  out.set(...logDoc(s, 'n2', A, 'astu', 'member.left', 'member', 'astu'));
+  await assertSucceeds(out.commit());
+  // professor que sai (nunca teve aderência)
+  const t = db('ateacher');
+  const tl = writeBatch(t);
+  tl.update(doc(t, `academyMembers/${A}_ateacher`), { status: 'left', consent: { adherence: false }, updatedAt: NOW, auditId: 'n3' });
+  tl.delete(doc(t, `academyMemberStats/${A}_ateacher`));
+  tl.set(...logDoc(t, 'n3', A, 'ateacher', 'member.left', 'member', 'ateacher'));
+  await assertSucceeds(tl.commit());
+});
+
+test('consentimento: não apaga a aderência de outra pessoa nem de outra academia', async () => {
+  await assertFails(deleteDoc(doc(db('bstu'), `academyMemberStats/${A}_astu`)));
+  await assertFails(deleteDoc(doc(db('aowner'), `academyMemberStats/${A}_astu`)));
+});
+
+test('revisão: equipe não reativa quem saiu sem convite', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), `academyMembers/${A}_astu`), { status: 'left' }); });
+  const o = db('aowner');
+  const b = writeBatch(o);
+  b.update(doc(o, `academyMembers/${A}_astu`), { status: 'active', updatedAt: NOW, auditId: 'u1' });
+  b.set(...logDoc(o, 'u1', A, 'aowner', 'member.updated', 'member', 'astu'));
+  await assertFails(b.commit());
 });

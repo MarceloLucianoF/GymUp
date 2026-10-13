@@ -30,3 +30,14 @@ test('ids seguem o formato exigido pelas regras', () => {
   expect(isAcademyInviteId('i_abcdefghijklmnopqrst')).toBe(false);
   expect(memberId('abc', 'u1')).toBe('abc_u1');
 });
+
+test('estado do convite: ativo, cancelado, expirado e esgotado', () => {
+  const { academyInviteStatus } = require('./academyService');
+  const t = Date.now();
+  const base = { revoked: false, expiresAt: { toMillis: () => t + 1000 }, uses: 0, maxUses: 2 };
+  expect(academyInviteStatus(base, t)).toBe('ok');
+  expect(academyInviteStatus({ ...base, revoked: true }, t)).toBe('revoked');
+  expect(academyInviteStatus({ ...base, expiresAt: { toMillis: () => t - 1 } }, t)).toBe('expired');
+  expect(academyInviteStatus({ ...base, uses: 2 }, t)).toBe('exhausted');
+  expect(academyInviteStatus(null, t)).toBe('missing');
+});
