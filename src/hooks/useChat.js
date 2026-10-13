@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
     collection, query, where, orderBy, onSnapshot, 
     addDoc, setDoc, updateDoc, doc, serverTimestamp, getDoc 
@@ -6,13 +6,49 @@ import {
 import { db } from '../firebase/config';
 import toast from 'react-hot-toast';
 
+// O nome/foto gravados no chat na criação ficam velhos (perfil renomeado, nome de teste). Mostra sempre o perfil atual do outro
+// participante: aluno vinculado (users) ou treinador (publicCoachProfiles); sem acesso, cai no que está gravado no chat.
+const liveProfiles = new Map();
+export const resolveLiveProfile = async (id) => {
+    if (liveProfiles.has(id)) return liveProfiles.get(id);
+    let found = null;
+    for (const col of ['users', 'publicCoachProfiles']) {
+        try {
+            const snap = await getDoc(doc(db, col, id));
+            if (snap.exists() && snap.data().displayName) { found = { name: snap.data().displayName, photo: snap.data().photoURL || null }; break; }
+        } catch (e) { /* sem acesso a esta coleção: tenta a próxima */ }
+    }
+    liveProfiles.set(id, found);
+    return found;
+};
+export const withLiveNames = (chat, uid, names) => {
+    const other = chat?.participants?.find((p) => p !== uid);
+    const live = other && names[other];
+    if (!live) return chat;
+    return { ...chat, participantData: { ...chat.participantData, [other]: { ...chat.participantData?.[other], ...live } } };
+};
+
 export const useChat = (user) => {
-    const [chats, setChats] = useState([]);
-    const [activeChat, setActiveChat] = useState(null);
+    const [rawChats, setChats] = useState([]);
+    const [names, setNames] = useState({});
+    const [rawActive, setActiveChat] = useState(null);
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const userId = user?.uid;
+    const chats = useMemo(() => rawChats.map((c) => withLiveNames(c, userId, names)), [rawChats, userId, names]);
+    const activeChat = useMemo(() => (rawActive ? withLiveNames(rawActive, userId, names) : null), [rawActive, userId, names]);
+
+    useEffect(() => {
+        const ids = new Set();
+        [...rawChats, rawActive].forEach((c) => { const o = c?.participants?.find((p) => p !== userId); if (o) ids.add(o); });
+        let alive = true;
+        ids.forEach(async (id) => {
+            const live = await resolveLiveProfile(id);
+            if (alive && live) setNames((prev) => (prev[id]?.name === live.name && prev[id]?.photo === live.photo ? prev : { ...prev, [id]: live }));
+        });
+        return () => { alive = false; };
+    }, [rawChats, rawActive, userId]);
 
     // 1. Carregar Chats (Para o Coach ver a lista ordenada)
     useEffect(() => {
