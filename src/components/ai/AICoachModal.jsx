@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
-import { aiService } from '../../services/aiService';
+import { aiService, localFallbackText } from '../../services/aiService';
 import { modelLabel, failureMessage } from '../../services/aiMeta';
 import Markdown from '../common/Markdown';
 import { db } from '../../firebase/config';
@@ -33,6 +33,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
   const [inputPrompt, setInputPrompt] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [waitSeconds, setWaitSeconds] = useState(0);
+  const abortRef = useRef(null); // interrompe a chamada em andamento ao cancelar, estourar o prazo ou fechar
   const requestRef = useRef(0); // identifica o pedido em andamento: respostas de pedidos cancelados são ignoradas
 
   // Contador de espera (alimenta o aviso por etapas).
@@ -95,6 +96,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     }
   }, [messages, activeTab]);
 
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   if (!isOpen) return null;
 
   const handleClearHistory = () => {
@@ -114,6 +117,9 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     requestRef.current = requestId;
     if (addUserMessage) setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user', text: userText }]);
     setIsTyping(true);
+    abortRef.current?.abort();
+    const abortController = new AbortController();
+    abortRef.current = abortController;
 
     let metaSeen = null;
     const failMessage = (text, retry = true) => ({ id: `${Date.now()}-e`, sender: 'ai', text, retryText: retry ? userText : null });
@@ -126,6 +132,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
           historyDocs,
           conversationHistory: messages,
           customExercises,
+          signal: abortController.signal,
           onMeta: (meta) => { metaSeen = meta; if (requestRef.current === requestId) setAiMeta(meta); },
           onWorkout: (workout) => {
             if (requestRef.current !== requestId) return;
@@ -137,8 +144,9 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
       ]);
       if (requestRef.current !== requestId) return; // cancelado
       if (responseText?.timeout) {
+        abortController.abort(); // não deixa a chamada pendurada em segundo plano
         setAiMeta({ provider: 'local', reason: 'lento' });
-        setMessages(prev => [...prev, failMessage(failureMessage('lento'))]);
+        setMessages(prev => [...prev, failMessage(localFallbackText(userProfile, 'lento'))]);
       } else {
         setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText, retryText: metaSeen?.provider === 'local' ? userText : null }]);
       }
@@ -162,6 +170,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
   const cancelWaiting = () => {
     const last = [...messages].reverse().find((m) => m.sender === 'user');
     requestRef.current += 1;
+    abortRef.current?.abort();
     setIsTyping(false);
     if (last) setInputPrompt(last.text);
     toast('Pedido cancelado. A pergunta voltou ao campo para você reenviar.');
