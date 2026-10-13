@@ -66,6 +66,7 @@ export const draftForAction = (item, templates = DEFAULT_TEMPLATES) => {
   const tpl = templates.find((t) => t.id === id) || DEFAULT_TEMPLATES.find((t) => t.id === id);
   if (!tpl) return '';
   const s = item.student || {};
+  if (s.paymentStatus === 'exempt') return ''; // aluno isento não recebe cobrança
   return fillTemplate(tpl.text, {
     nome: firstName(s.displayName),
     valor: ` de ${money(s.monthlyFee || item.weight)}`,

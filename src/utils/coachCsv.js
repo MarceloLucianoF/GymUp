@@ -20,7 +20,7 @@ export const toCsv = (rows, columns, { delimiter = ',', bom = true } = {}) => {
 
 const fmtDate = (d) => (d instanceof Date && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('pt-BR') : '');
 const STATUS_LABEL = { active: 'Ativo', risk: 'Em risco', new: 'Sem treino' };
-const PAY_LABEL = { paid: 'Pago', pending: 'Pendente', overdue: 'Atrasado' };
+const PAY_LABEL = { paid: 'Pago', pending: 'Pendente', overdue: 'Atrasado', exempt: 'Isento' };
 
 export const studentsCsv = (rows, opts = {}) => toCsv(rows, [
   { header: 'Nome', value: (r) => r.displayName || '' },
@@ -28,7 +28,7 @@ export const studentsCsv = (rows, opts = {}) => toCsv(rows, [
   { header: 'Objetivo', value: (r) => r.goal || '' },
   { header: 'Último treino', value: (r) => fmtDate(r.lastWorkout) },
   { header: 'Status', value: (r) => STATUS_LABEL[r.status] || '' },
-  { header: 'Mensalidade (R$)', value: (r) => (r.monthlyFee === undefined || r.monthlyFee === null ? '' : Number(r.monthlyFee).toFixed(2).replace('.', ',')) }
+  { header: 'Mensalidade (R$)', value: (r) => (r.paymentStatus === 'exempt' ? 'Isento' : r.monthlyFee === undefined || r.monthlyFee === null ? '' : Number(r.monthlyFee).toFixed(2).replace('.', ',')) }
 ], opts);
 
 export const financeCsv = (rows, monthLabel, opts = {}) => toCsv(rows, [

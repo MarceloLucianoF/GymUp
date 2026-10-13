@@ -98,6 +98,15 @@ service cloud.firestore {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['monthlyFee'])
         || (request.resource.data.monthlyFee is number && request.resource.data.monthlyFee >= 0 && request.resource.data.monthlyFee <= 100000);
     }
+    // Situação de cobrança: pending | paid | overdue | exempt. "Isento" e mensalidade 0 andam juntos (um implica o outro) sempre
+    // que um dos dois campos muda; aluno antigo sem mudança de cobrança não é afetado.
+    function feeStatusOk() {
+      let d = request.resource.data;
+      return !d.diff(resource.data).affectedKeys().hasAny(['monthlyFee', 'paymentStatus'])
+        || (d.get('paymentStatus', 'pending') in ['pending', 'paid', 'overdue', 'exempt']
+          && ((d.get('paymentStatus', 'pending') == 'exempt') == (d.get('monthlyFee', 1) == 0)));
+    }
+
     // No aceite de um aluno novo a mensalidade, quando enviada, tem de ser maior que zero.
     function positiveFeeOnAccept() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['monthlyFee']) || request.resource.data.monthlyFee > 0;
@@ -148,7 +157,7 @@ service cloud.firestore {
             request.resource.data.role == resource.data.role
             && (
               (request.auth.uid == userId && ownProfileChanges())
-              || (linkedStudent(resource.data) && validCoachAssignment() && validFee()
+              || (linkedStudent(resource.data) && validCoachAssignment() && validFee() && feeStatusOk()
                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                   'currentTrainingId', 'monthlyFee', 'paymentStatus',
                   'paymentDate', 'lastPaymentUpdate', 'updatedAt'

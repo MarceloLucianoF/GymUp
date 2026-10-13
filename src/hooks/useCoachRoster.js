@@ -4,7 +4,7 @@ import { db } from '../firebase/config';
 import { cachedLoad } from '../services/ttlCache';
 
 const BATCH = 30; // limite de valores em "in"
-export const DEFAULT_FEE = 120;
+export { DEFAULT_FEE } from '../utils/billing';
 
 // Carrega alunos vinculados, fichas do treinador e check-ins recentes dos alunos.
 // As regras só permitem ler check-ins por userId de alunos vinculados, por isso o lote "in".
