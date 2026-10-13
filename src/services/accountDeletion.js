@@ -130,6 +130,8 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
       }
     } catch (error) { if (error?.code !== 'permission-denied') throw error; }
     await tryDelete(deps.doc(deps.db, 'publicStats', uid));
+    // Resumos semanais do aluno (números e texto): são dados dele.
+    for (const d of await refsOf(deps, 'weeklySummaries', deps.where('uid', '==', uid))) await tryDelete(d.ref);
     for (const field of ['userA', 'userB']) {
       const docs = await refsOf(deps, 'friendships', deps.where(field, '==', uid));
       for (const d of docs) {

@@ -15,6 +15,8 @@ import useMyCoach from '../../hooks/useMyCoach';
 import RecommendedWorkoutCard from '../../components/dashboard/RecommendedWorkoutCard';
 import WeeklyGoalCard from '../../components/dashboard/WeeklyGoalCard';
 import RecordsCard from '../../components/dashboard/RecordsCard';
+import WeeklySummaryCard from '../../components/dashboard/WeeklySummaryCard';
+import { useWeeklySummary } from '../../hooks/useWeeklySummary';
 import FriendsWeekCard from '../../components/dashboard/FriendsWeekCard';
 import CoachMessageCard from '../../components/dashboard/CoachMessageCard';
 import { useFriendsPreview, useCoachMessage } from '../../hooks/useHomeExtras';
@@ -57,6 +59,7 @@ export default function Home() {
   const friends = useFriendsPreview(user?.uid);
   const coachMsg = useCoachMessage(user?.uid, userProfile?.coachId);
   const records = useMemo(() => recentRecords(history), [history]);
+  const summary = useWeeklySummary({ uid: user?.uid, history, weeklyGoal: goal, ready: !loading && !errors.history });
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
@@ -204,6 +207,9 @@ export default function Home() {
             <Reveal delay={240}><StatCard icon={Trophy} label="Maior carga (PR)" value={stats.maxGlobalLoad} suffix=" kg" className="h-full" /></Reveal>
           </section>
         )}
+
+        {/* RESUMO DA SEMANA */}
+        {!loading && !errors.history && <Reveal><WeeklySummaryCard facts={summary.facts} narrative={summary.narrative} period={summary.period} onPeriod={summary.setPeriod} /></Reveal>}
 
         {/* NOVOS RECORDES */}
         {!loading && !errors.history && records.length > 0 && <Reveal><RecordsCard records={records} /></Reveal>}
