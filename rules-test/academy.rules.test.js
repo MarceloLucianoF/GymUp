@@ -773,3 +773,16 @@ test('fichas: ficha de 20 exercícios (limite do produto) cria, publica e atribu
   await assertSucceeds(editDraft('aowner', A, 'lim1', { name: 'Completa', exercises: [...full].reverse() }, 'elim1').commit());
   await assertFails(editDraft('aowner', A, 'lim1', { name: 'Completa', exercises: Array(21).fill(EX) }, 'elim2').commit());
 });
+
+test('execução: a versão atribuída continua legível pelo aluno após a série ser arquivada ou ganhar versão nova', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await updateDoc(doc(d, 'trainingSeries/s_a'), { status: 'archived', currentVersion: 2 });
+    await setDoc(doc(d, 'trainingVersions/s_a_2'), { academyId: A, seriesId: 's_a', version: 2, name: 'Série', exercises: [EX, EX], createdBy: 'aowner', createdAt: NOW });
+  });
+  const v1 = await getDoc(doc(db('astu'), 'trainingVersions/s_a_1'));
+  if (v1.data().exercises.length !== 1) throw new Error('a versão atribuída mudou');
+  await assertFails(getDoc(doc(db('astu'), 'trainingVersions/s_a_2')));   // a versão nova não é dele
+  await assertFails(getDoc(doc(db('astu'), 'trainingSeries/s_a')));       // nem o documento da série (rascunho)
+  await assertFails(getDoc(doc(db('bstu'), 'trainingVersions/s_a_1')));   // nem aluno de outra academia
+});
