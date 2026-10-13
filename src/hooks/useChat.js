@@ -61,6 +61,11 @@ export const useChat = (user) => {
                 ...doc.data()
             }));
             setMessages(msgs);
+        }, (error) => {
+            // Sem acesso à conversa (por exemplo, vínculo encerrado): nada de mensagens e um aviso genérico.
+            console.error('Erro mensagens:', error);
+            setMessages([]);
+            if (error.code === 'permission-denied') toast.error('Conversa indisponível no momento (o vínculo pode ter sido encerrado).', { id: 'chat-unavailable' });
         });
 
         return () => unsubscribe();

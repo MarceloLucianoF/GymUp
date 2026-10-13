@@ -33,6 +33,7 @@ export default function Privacidade() {
           <li>Seu treinador, quando você está vinculado a ele: vê seus treinos, medidas e mensagens. Cada aluno só vê os próprios dados.</li>
           <li>Google / Firebase (Authentication, Firestore, Hosting): armazenamento e autenticação.</li>
           <li>Cloudflare: entrega do site e proxy de requisições.</li>
+          <li>Google reCAPTCHA (Firebase App Check): confirma que as requisições vêm do aplicativo e não de robôs; pode tratar dados técnicos do dispositivo e do navegador. Valem a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline">Política de Privacidade do Google</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline">Termos de Serviço do Google</a>.</li>
           <li>Provedores de IA (Google Gemini e, quando habilitado, NVIDIA): processam as mensagens enviadas ao Coach de IA. Evite incluir dados que não deseja compartilhar.</li>
         </ul>
         <p>Alguns desses provedores podem tratar dados fora do Brasil, com as salvaguardas previstas na LGPD.</p>

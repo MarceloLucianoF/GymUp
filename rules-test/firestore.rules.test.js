@@ -761,3 +761,24 @@ test('aluno isento: o aluno não se isenta sozinho e outro treinador não mexe',
   await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { monthlyFee: 0, paymentStatus: 'exempt' }));
   await assertFails(updateDoc(doc(db('coach2'), 'users/stu1'), { monthlyFee: 0, paymentStatus: 'exempt' }));
 });
+
+test('chat: vínculo encerrado — o treinador deixa de ler e escrever nas mensagens; o aluno continua dono da conversa', async () => {
+  const id = 'coach1_stu1';
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const f = ctx.firestore();
+    await setDoc(doc(f, 'chats/' + id), { participants: ['coach1', 'stu1'], participantData: { coach1: { name: 'A', photo: '' }, stu1: { name: 'B', photo: '' } }, createdAt: Timestamp.now(), updatedAt: Timestamp.now(), lastMessage: 'oi' });
+    await setDoc(doc(f, 'chats/' + id + '/messages/m1'), { text: 'oi', senderId: 'stu1', createdAt: Timestamp.now(), senderName: 'B' });
+  });
+  const msg = (who) => setDoc(doc(db(who), 'chats/' + id + '/messages/' + who + '_novo'), { text: 'nova', senderId: who, createdAt: serverTimestamp(), senderName: 'x' });
+  await assertSucceeds(getDocs(collection(db('coach1'), 'chats/' + id + '/messages')));       // vinculado: lê
+  await assertSucceeds(msg('coach1'));
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'users/stu1'), { coachId: null }); });   // vínculo encerrado
+  await assertFails(getDocs(collection(db('coach1'), 'chats/' + id + '/messages')));          // ex-treinador não lê
+  await assertFails(getDoc(doc(db('coach1'), 'chats/' + id + '/messages/m1')));
+  await assertFails(msg('coach1'));                                                           // nem escreve
+  await assertFails(updateDoc(doc(db('coach1'), 'chats/' + id), { lastMessage: 'x', updatedAt: serverTimestamp() }));
+  await assertSucceeds(getDocs(collection(db('stu1'), 'chats/' + id + '/messages')));         // o aluno segue lendo (exclusão de conta, histórico)
+  await assertFails(msg('stu1'));                                                             // mas a conversa fica só para leitura: ele não escreve no ex-treinador
+  await assertFails(updateDoc(doc(db('stu1'), 'chats/' + id), { lastMessage: 'x', updatedAt: serverTimestamp() }));
+  await assertSucceeds(getDocs(query(collection(db('coach1'), 'chats'), where('participants', 'array-contains', 'coach1'))));   // a lista de conversas continua consultável
+});
