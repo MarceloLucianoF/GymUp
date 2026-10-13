@@ -13,7 +13,7 @@ describe('aiService.summarizeFacts', () => {
   afterEach(() => { delete process.env.REACT_APP_NVIDIA_PROXY; });
   const msgs = [{ role: 'system', content: 's' }, { role: 'user', content: '{"treinos_concluidos":3}' }];
 
-  it('chama o proxy com prazo curto, poucos tokens e devolve o texto', async () => {
+  it('chama o proxy com orçamento para modelo de raciocínio (1200 tokens) e devolve o texto', async () => {
     loadWith('true');
     fetchMock.mockReturnValue(reply({ model: 'm', choices: [{ message: { content: 'Resumo pronto.' } }] }));
     expect(await aiService.summarizeFacts(msgs)).toBe('Resumo pronto.');
@@ -21,7 +21,7 @@ describe('aiService.summarizeFacts', () => {
     expect(url).toBe('/api/nvidia');
     expect(init.headers.Authorization).toBe('Bearer tok');
     const body = JSON.parse(init.body);
-    expect(body).toMatchObject({ max_tokens: 260, temperature: 0.3 });
+    expect(body).toMatchObject({ max_tokens: 1200, temperature: 0.3 });
     expect(JSON.stringify(body)).not.toMatch(/@|email/i);
   });
 
