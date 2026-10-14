@@ -12,7 +12,7 @@
     { "name": "GESTAO_ACADEMY_LIMIT", "namespace_id": "42003", "simple": { "limit": 120, "period": 60 } }
   ],
   "d1_databases": [
-    { "binding": "DB", "database_name": "bohtreinar-gestao-hml", "database_id": "0624d1a9-a02a-4735-97d3-74763824c838", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "bohtreinar-gestao-hml", "database_id": "0f89816f-bec7-4a61-a7ee-512ba3b6eb39", "migrations_dir": "migrations" }
   ],
   "vars": {
     "FIREBASE_PROJECT_ID": "bohtreinar-gestao-hml",
