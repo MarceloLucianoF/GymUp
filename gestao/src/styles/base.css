@@ -136,8 +136,8 @@ input[readonly] { background: var(--surface-2); }
 .auth h1 { font-size: 1.4rem; }
 .auth-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 
-/* celular e tablet estreito: sem barra lateral; menu inferior; tabela vira cartões */
-@media (max-width: 899px) {
+/* celular e tablet (até 1099 px): sem barra lateral, menu inferior e tabela vira cartões (a tabela precisa de ~800 px de conteúdo) */
+@media (max-width: 1099px) {
   .frame { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'top' 'main'; grid-template-rows: auto 1fr; }
   .sidebar { display: none; }
   .topbar { grid-area: top; display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30; }
@@ -148,7 +148,7 @@ input[readonly] { background: var(--surface-2); }
   .bn { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; min-height: 56px; text-decoration: none; color: var(--muted); font-size: .72rem; font-weight: 700; }
   .bn.on { color: var(--ink); box-shadow: inset 0 3px 0 var(--brand); }
 }
-@media (max-width: 759px) {
+@media (max-width: 1099px) {
   .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
   .table tr { padding: 10px 6px; border-top: 1px solid var(--line); }
