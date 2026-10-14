@@ -35,6 +35,9 @@ export function createApi({ baseUrl, getToken, fetchImpl = fetch }) {
   }
   return {
     me: () => request('/v1/me'),
+    academies: () => request('/v1/academies'),
+    // A chave de idempotência acompanha a tentativa: repetir o envio (rede ruim, duplo clique) não cria duas academias.
+    createAcademy: (name, idempotencyKey) => request('/v1/academies', { method: 'POST', body: { name }, idempotencyKey }),
     academy: (id) => request(`/v1/academies/${encodeURIComponent(id)}`),
     members: (id) => request(`/v1/academies/${encodeURIComponent(id)}/members`)
   };
@@ -50,7 +53,11 @@ const MESSAGES = {
   forbidden_role: 'Seu papel não permite abrir esta área.',
   rate_limited: 'Muitas solicitações seguidas. Aguarde um minuto.',
   ops_disabled: 'As operações administrativas estão pausadas.',
-  upstream_error: 'O servidor não conseguiu consultar os dados. Tente novamente.'
+  upstream_error: 'O servidor não conseguiu consultar os dados. Tente novamente.',
+  limit_reached: 'Você já criou o máximo de academias permitido.',
+  conflict: 'Não foi possível concluir: os dados mudaram. Atualize e tente de novo.',
+  invalid_request: 'Confira os dados informados.',
+  idempotency_required: 'Não foi possível enviar. Atualize a página e tente de novo.'
 };
 export const friendlyError = (err) => MESSAGES[err?.code] || 'Algo deu errado. Tente novamente.';
 

@@ -1,8 +1,8 @@
-// Cadeia de autorização de toda rota autenticada: token -> uid -> vínculo real -> academia ativa -> papel.
+// Cadeia de autorização de toda rota autenticada: token -> uid -> vínculo real no D1 -> academia ativa -> papel.
 // academyId vem SEMPRE da URL e é conferido com o vínculo lido no banco; nada do corpo vale como autoridade.
 import { verifyFirebaseIdToken } from '../../shared/firebaseAuth.js';
 import { ApiError } from './contracts.js';
-import { firestoreClient, ID_RE } from './firestore.js';
+import { ID_RE, getAcademy, getMember } from './db.js';
 
 export async function authenticate(request, env, deps = {}) {
   const { fetchImpl = fetch, now = Date.now(), verify = verifyFirebaseIdToken } = deps;
@@ -10,21 +10,18 @@ export async function authenticate(request, env, deps = {}) {
   if (!match) throw new ApiError('no_token');
   let claims;
   try { claims = await verify(match[1], { projectId: env.FIREBASE_PROJECT_ID, fetchImpl, now }); } catch { throw new ApiError('invalid_token'); }
-  return { uid: claims.sub, email: claims.email || null, idToken: match[1], claims };
+  // email só vale como dado de exibição, e só gravado quando verificado; nunca é autoridade para convite, vínculo ou papel.
+  return { uid: claims.sub, email: claims.email || '', emailVerified: claims.email_verified === true, name: claims.name || '' };
 }
 
-/**
- * Lê o vínculo e a academia do usuário e valida o papel. Devolve { membership, academy, db }.
- * Academia suspensa ou inacessível pelas regras -> academy_unavailable; sem vínculo -> no_membership.
- */
-export async function requireAccess(ctx, academyId, roles, deps = {}) {
+/** Valida vínculo ativo, academia ativa e papel. Devolve { membership, academy }. */
+export async function requireAccess(db, ctx, academyId, roles) {
   if (!ID_RE.test(academyId)) throw new ApiError('invalid_request');
-  const db = firestoreClient({ projectId: ctx.projectId, idToken: ctx.idToken, fetchImpl: deps.fetchImpl });
-  const membership = await db.getDoc('academyMembers', `${academyId}_${ctx.uid}`);
-  if (!membership || membership.academyId !== academyId || membership.userId !== ctx.uid) throw new ApiError('no_membership');
+  const membership = await getMember(db, academyId, ctx.uid);
+  if (!membership) throw new ApiError('no_membership');
   if (membership.status !== 'active') throw new ApiError('membership_inactive');
-  const academy = await db.getDoc('academies', academyId);
+  const academy = await getAcademy(db, academyId);
   if (!academy || academy.status !== 'active') throw new ApiError('academy_unavailable');
   if (roles && !roles.includes(membership.role)) throw new ApiError('forbidden_role');
-  return { membership, academy, db };
+  return { membership, academy };
 }

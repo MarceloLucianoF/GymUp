@@ -41,6 +41,19 @@ function Home({ user }) {
 
   const mine = state.data?.memberships.filter((m) => MANAGEMENT_ROLES.includes(m.role) && m.status === 'active') || [];
   const onlyStudent = state.data && mine.length === 0;
+  const [name, setName] = useState('');
+  const [attempt, setAttempt] = useState(() => crypto.randomUUID());
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const create = async (e) => {
+    e.preventDefault();
+    setCreating(true); setCreateError('');
+    try {
+      await api.createAcademy(name.trim(), attempt);
+      setName(''); setAttempt(crypto.randomUUID());   // nova tentativa só depois do sucesso: repetir o envio reaproveita a chave
+      load();
+    } catch (err) { setCreateError(friendlyError(err)); } finally { setCreating(false); }
+  };
   return (
     <main className="page">
       <header className="bar">
@@ -58,7 +71,7 @@ function Home({ user }) {
       {onlyStudent && (
         <div className="card">
           <h2>Nenhuma academia para gerir</h2>
-          <p>Esta área é para proprietários, administradores, professores e recepção. Alunos usam o app BohTreinar.</p>
+          <p>Crie a sua academia abaixo, ou aceite um convite recebido. Alunos treinam no app BohTreinar.</p>
         </div>
       )}
       {mine.length > 0 && (
@@ -66,10 +79,19 @@ function Home({ user }) {
           {mine.map((m) => (
             <li key={m.academyId} className="card">
               <h2>{m.academy?.name || 'Academia'}</h2>
-              <p className="muted">{ROLE_LABELS[m.role]}{m.academy ? '' : ' · indisponível'}</p>
+              <p className="muted">{ROLE_LABELS[m.role]}{m.academy?.status === 'active' ? '' : ' · indisponível'}</p>
             </li>
           ))}
         </ul>
+      )}
+      {state.status === 'ready' && (
+        <form className="card" onSubmit={create}>
+          <h2>Criar academia</h2>
+          <label htmlFor="academy-name">Nome da academia</label>
+          <input id="academy-name" value={name} onChange={(e) => setName(e.target.value)} minLength={2} maxLength={80} required />
+          {createError && <p role="alert" className="error">{createError}</p>}
+          <button type="submit" disabled={creating || name.trim().length < 2}>{creating ? 'Criando...' : 'Criar academia'}</button>
+        </form>
       )}
     </main>
   );

@@ -15,7 +15,10 @@ export const ERRORS = {
   not_found: [404, 'Recurso não encontrado.'],
   method_not_allowed: [405, 'Método não permitido.'],
   conflict: [409, 'Conflito com o estado atual.'],
+  limit_reached: [409, 'Limite de academias atingido.'],
+  idempotency_required: [400, 'Cabeçalho Idempotency-Key obrigatório (8 a 64 caracteres).'],
   rate_limited: [429, 'Limite temporário de solicitações excedido.'],
+  payload_too_large: [413, 'Corpo da requisição grande demais.'],
   upstream_error: [502, 'Não foi possível consultar o banco de dados.'],
   ops_disabled: [503, 'Operações administrativas desativadas temporariamente.']
 };
