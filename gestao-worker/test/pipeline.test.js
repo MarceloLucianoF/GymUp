@@ -53,18 +53,18 @@ test('CORS: origem desconhecida 403; permitida recebe cabeçalhos; OPTIONS 204 s
   assert.match(pre.headers.get('Access-Control-Allow-Methods'), /PATCH/);
 });
 
-test('rate limit: por usuário (61ª chamada), por IP e por academia só para quem tem vínculo', async () => {
+test('rate limit: por usuário (121ª chamada), por IP e por academia só para quem tem vínculo', async () => {
   const d1 = world();
   const ip = { 'CF-Connecting-IP': '198.51.100.1' };
   let last;
-  for (let i = 0; i < 61; i += 1) last = await api(d1, 'spam', 'GET', '/v1/me', { headers: ip });
+  for (let i = 0; i < 121; i += 1) last = await api(d1, 'spam', 'GET', '/v1/me', { headers: ip });
   assert.equal(last.status, 429);
   assert.equal(last.res.headers.get('Retry-After'), '60');
   assert.equal((await api(d1, 'calmo', 'GET', '/v1/me', { headers: { 'CF-Connecting-IP': '203.0.113.9' } })).status, 200);   // outro usuário e IP seguem
   // por IP: muitos usuários diferentes no mesmo IP
   resetRateLimit();
   let r;
-  for (let i = 0; i < 61; i += 1) r = await api(d1, `u${i}`, 'GET', '/v1/me', { headers: ip });
+  for (let i = 0; i < 301; i += 1) r = await api(d1, `u${i}`, 'GET', '/v1/me', { headers: ip });
   assert.equal(r.status, 429);
   // um estranho não esgota o limite da academia de outra pessoa
   resetRateLimit();

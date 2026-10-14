@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth } from '../firebase';
-import { useSession } from '../session';
+import { profileReady, useSession } from '../session';
 import { safeNext } from '../lib/policy';
 import { Field } from '../components/ui';
 
@@ -27,7 +27,8 @@ export default function Login() {
       if (mode === 'entrar') await signInWithEmailAndPassword(auth, form.email.trim(), form.password);
       else if (mode === 'cadastro') {
         const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
-        if (form.name.trim()) await updateProfile(cred.user, { displayName: form.name.trim().slice(0, 80) }).then(() => cred.user.getIdToken(true)).catch(() => {});
+        // A tela já pode seguir para o app: qualquer chamada à API espera o nome ser gravado e o token ser renovado.
+        if (form.name.trim()) profileReady.promise = updateProfile(cred.user, { displayName: form.name.trim().slice(0, 80) }).then(() => cred.user.getIdToken(true)).catch(() => {});
       } else {
         await sendPasswordResetEmail(auth, form.email.trim()).catch(() => {});   // o resultado não muda a resposta
         setState({ status: 'done', message: GENERIC.reset });

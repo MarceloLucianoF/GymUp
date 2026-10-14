@@ -3,7 +3,8 @@ import { authenticate } from './authz.js';
 import { newId, nowIso } from './db.js';
 import { match } from './router.js';
 
-const RATE = { windowMs: 60_000, ip: 60, user: 60, academy: 120, maxEntries: 5000 };
+// Por IP vem ANTES do token (freia inundação sem credencial) e precisa tolerar uma recepção inteira atrás do mesmo IP (NAT); o limite que protege de verdade é o por usuário.
+const RATE = { windowMs: 60_000, ip: 300, user: 120, academy: 120, maxEntries: 5000 };
 const memory = new Map();
 export const resetRateLimit = () => memory.clear();
 

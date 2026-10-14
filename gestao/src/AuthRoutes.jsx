@@ -38,6 +38,7 @@ export default function AuthRoutes() {
             <Route path="academia/:academyId/alunos" element={<CoachStudents />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </SessionProvider>

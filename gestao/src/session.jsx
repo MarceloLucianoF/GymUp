@@ -5,6 +5,9 @@ import { API_URL, auth } from './firebase';
 import { createApi } from './api';
 import { useToast } from './components/Toast';
 
+// Cadastro: o nome da conta é gravado logo depois de criar o usuário. Qualquer chamada à API espera isso terminar, para o token já levar o nome.
+export const profileReady = { promise: Promise.resolve() };
+
 const Ctx = createContext(null);
 export const useSession = () => useContext(Ctx);
 
@@ -24,7 +27,7 @@ export function SessionProvider({ children }) {
   }, [toast, navigate]);
 
   const api = useMemo(
-    () => (user ? createApi({ baseUrl: API_URL, getToken: (force) => user.getIdToken(!!force), onSessionExpired }) : null),
+    () => (user ? createApi({ baseUrl: API_URL, getToken: async (force) => { await profileReady.promise; return user.getIdToken(!!force); }, onSessionExpired }) : null),
     [user, onSessionExpired]
   );
   return <Ctx.Provider value={{ user, api, signOut: () => signOut(auth) }}>{children}</Ctx.Provider>;

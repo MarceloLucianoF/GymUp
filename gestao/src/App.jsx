@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { Loading } from './components/ui';
 
 // JS dividido por rota: a landing não carrega Firebase nem o painel; cada tela do app vem sob demanda.
@@ -15,10 +15,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/termos" element={<Terms />} />
         <Route path="/privacidade" element={<Privacy />} />
-        <Route path="/login" element={<AuthRoutes />} />
-        <Route path="/convite/:code" element={<AuthRoutes />} />
-        <Route path="/app/*" element={<AuthRoutes />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/*" element={<AuthRoutes />} />   {/* login, convite e app: só esta árvore carrega o Firebase */}
       </Routes>
     </Suspense>
   );
