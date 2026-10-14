@@ -1,6 +1,6 @@
 // Regressões dos achados da revisão independente do Worker (cada teste prova uma correção).
 import test from 'node:test';
-import { A, DAY, T0, accept, api, assert, audit, code, count, data, key, makeInvite, resetRateLimit, row, rows, world } from './kit.js';
+import { A, B, DAY, T0, accept, api, assert, audit, code, count, data, key, makeInvite, resetRateLimit, row, rows, seedAcademy, seedMember, world } from './kit.js';
 import { parse, SCHEMAS } from '../../shared/academy-contracts/index.js';
 
 test.beforeEach(() => resetRateLimit());
@@ -152,4 +152,33 @@ test('idempotência expira em 24 h: a chave antiga é ignorada e apagada na pró
 test('esquema de validação: chaves herdadas do protótipo (constructor, __proto__, toString) são recusadas', () => {
   for (const k of ['constructor', 'toString', 'hasOwnProperty']) assert.equal(parse(SCHEMAS.createAcademy, { name: 'Ok', [k]: 1 }).ok, false, k);
   assert.equal(parse(SCHEMAS.createAcademy, JSON.parse('{"name":"Ok","__proto__":{"role":"owner"}}')).ok, false);
+});
+
+test('sair de todas as academias (exclusão de conta): cada saída auditada, consentimento revogado, único dono bloqueado', async () => {
+  const d1 = world();
+  seedAcademy(d1, 'academiaddddddddddd', 'ZZ TESTE D'); seedMember(d1, 'academiaddddddddddd', 'multi', 'owner');   // único dono: bloqueia
+  seedAcademy(d1, 'academiaeeeeeeeeeee', 'ZZ TESTE E'); seedMember(d1, 'academiaeeeeeeeeeee', 'multi', 'owner'); seedMember(d1, 'academiaeeeeeeeeeee', 'outro', 'owner');   // há outro dono: sai
+  seedMember(d1, A, 'multi', 'student'); seedMember(d1, B, 'multi', 'coach');
+  await api(d1, 'multi', 'PUT', `/v1/me/academies/${A}/consent`, { body: { shareAdherence: true } });
+  const r = await api(d1, 'multi', 'POST', '/v1/me/leave-all', { body: {} });
+  assert.equal(r.status, 200);
+  // tudo ou nada: o único dono bloqueia, então nada sai e nada é auditado
+  assert.deepEqual([data(r).left, data(r).blocked, data(r).more], [0, ['academiaddddddddddd'], false]);
+  const st = (aid) => row(d1, 'SELECT status, removed_by FROM academy_members WHERE academy_id = ? AND user_id = ?', aid, 'multi');
+  assert.deepEqual([st(A).status, st(B).status, st('academiaeeeeeeeeeee').status, st('academiaddddddddddd').status], ['active', 'active', 'active', 'active']);
+  assert.equal(audit(d1, 'member.left', A).length, 0);
+  // sem o bloqueio (dono transfere): sai de tudo, inclusive vínculo suspenso, com auditoria e consentimento revogado
+  d1.raw.prepare("UPDATE academy_members SET status = 'suspended', suspended_at = '2026-01-01T00:00:00.000Z' WHERE academy_id = ? AND user_id = 'multi'").run(B);
+  seedMember(d1, 'academiaddddddddddd', 'sucessor', 'owner');
+  const r2 = await api(d1, 'multi', 'POST', '/v1/me/leave-all', { body: {} });
+  assert.deepEqual([data(r2).left, data(r2).blocked], [4, []]);
+  assert.deepEqual([st(A).status, st(B).status, st('academiaeeeeeeeeeee').status, st('academiaddddddddddd').status], ['removed', 'removed', 'removed', 'removed']);
+  assert.equal(st(A).removed_by, 'multi');
+  assert.equal(row(d1, "SELECT status FROM academy_consents WHERE student_uid = 'multi'").status, 'revoked');
+  assert.equal(audit(d1, 'member.left', A).length + audit(d1, 'member.left', B).length + audit(d1, 'member.left', 'academiaeeeeeeeeeee').length + audit(d1, 'member.left', 'academiaddddddddddd').length, 4);
+  assert.equal(data(await api(d1, 'multi', 'POST', '/v1/me/leave-all', { body: {} })).left, 0);   // repetir é inofensivo
+  assert.equal(code(await api(d1, 'multi', 'POST', '/v1/me/leave-all', { body: { x: 1 } })), 'invalid_request');
+  assert.equal(code(await api(d1, null, 'POST', '/v1/me/leave-all', { body: {} })), 'no_token');
+  // com o kill switch ligado, sair continua funcionando (reduz acesso a dados)
+  assert.equal((await api(d1, 'dono', 'POST', '/v1/me/leave-all', { body: {}, env: { ADMIN_OPS_ENABLED: 'false' } })).status, 200);
 });

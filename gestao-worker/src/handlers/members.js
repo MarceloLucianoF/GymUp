@@ -154,3 +154,28 @@ export async function unassignedStudents(ctx) {
   ).bind(academyId).all());
   return { academyId, students: results.map((r) => ({ userId: r.user_id, displayName: r.display_name })) };
 }
+
+/**
+ * Sair de TODAS as academias (exclusão de conta no app). Cada saída tem a sua auditoria. Onde a pessoa é o único proprietário ativo a saída é
+ * recusada (a academia nunca fica sem dono) e a academia volta em `blocked`; o app avisa para transferir a propriedade antes.
+ * No máximo 25 vínculos por chamada (um batch só); `more` avisa se sobrou e a chamada pode ser repetida.
+ */
+export async function leaveAll(ctx) {
+  await readBody(ctx.request, SCHEMAS.empty);
+  const { results } = await guarded(() => ctx.db.prepare(
+    `SELECT m.academy_id, m.role,
+            (SELECT count(*) FROM academy_members o WHERE o.academy_id = m.academy_id AND o.role = 'owner' AND o.status = 'active' AND o.user_id <> m.user_id) AS other_owners
+       FROM academy_members m WHERE m.user_id = ? AND m.status IN ('active','suspended','pending') ORDER BY m.academy_id LIMIT 26`
+  ).bind(ctx.user.uid).all());
+  const mine = results.slice(0, 25);
+  const blocked = mine.filter((m) => m.role === 'owner' && m.other_owners === 0).map((m) => m.academy_id);
+  // Tudo ou nada: se algum vínculo bloqueia (único dono), nada sai, para a exclusão de conta não deixar o usuário pela metade.
+  const leaving = blocked.length ? [] : mine;
+  const stmts = leaving.flatMap((m) => [
+    ctx.db.prepare("UPDATE academy_members SET status = 'removed', removed_at = ?, removed_by = ?, updated_at = ? WHERE academy_id = ? AND user_id = ? AND status IN ('active','suspended','pending')")
+      .bind(ctx.nowIso, ctx.user.uid, ctx.nowIso, m.academy_id, ctx.user.uid),
+    auditStmt(ctx.db, ctx, { academyId: m.academy_id, action: 'member.left', targetType: 'member', targetId: ctx.user.uid, detail: m.role }, true)
+  ]);
+  if (stmts.length) await guarded(() => ctx.db.batch(stmts));
+  return { left: leaving.length, blocked, more: results.length > 25 };
+}

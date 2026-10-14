@@ -37,7 +37,8 @@ export const auditStmt = (db, ctx, { academyId, action, targetType, targetId, de
   : db.prepare('INSERT INTO academy_audit_log (id, academy_id, actor_uid, action, target_type, target_id, detail, created_at, request_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'))
   .bind(ctx.newId(24), academyId, ctx.user.uid, action, targetType, targetId, detail, ctx.nowIso, ctx.requestId);
 
-export const changed = (results, index = 0) => (results[index]?.meta?.changes ?? 0) === 1;
+// No D1 real, meta.changes inclui linhas mexidas por gatilhos (ex.: ficha apagada ao sair); o alvo é sempre uma chave primária, então "pelo menos 1" equivale a "aplicou".
+export const changed = (results, index = 0) => (results[index]?.meta?.changes ?? 0) >= 1;
 
 // ---------- consultas compartilhadas ----------
 export const getMember = (db, academyId, uid) => guarded(() => db

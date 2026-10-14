@@ -53,7 +53,8 @@ export const ROUTES = [
   route('PUT', '/v1/me/academies/:academyId/consent', consents.put),
   route('GET', '/v1/me/academies/:academyId/training', training.mine),
   // Sair da academia continua funcionando com o kill switch ligado (reduz acesso a dados; um incidente não pode prender o usuário).
-  route('POST', '/v1/me/academies/:academyId/leave', members.leave, { killSwitchExempt: true })
+  route('POST', '/v1/me/academies/:academyId/leave', members.leave, { killSwitchExempt: true }),
+  route('POST', '/v1/me/leave-all', members.leaveAll, { killSwitchExempt: true })
 ];
 
 export function match(method, pathname) {
