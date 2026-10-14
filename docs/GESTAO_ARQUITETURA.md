@@ -159,7 +159,7 @@ Tabela `audit_log`: `academy_id, actor_id, action, target_type, target_id, at (h
 |---|---|---|---|
 | local | emulador de Auth/Firestore do app | testes com `node:sqlite` (mesmo SQL) | testes do Worker e do esquema |
 | **homologação** | `bohtreinar-gestao-hml` | `bohtreinar-academy-worker-hml` + D1 `bohtreinar-gestao-hml` | toda operação nova |
-| produção | `workout-tracker-app-20e43` | Worker e D1 de produção (a criar) | só depois de aprovada em homologação; a HELL GYM só entra pela migração planejada |
+| produção | `workout-tracker-app-20e43` | Worker e D1 de produção (a criar) | só depois de aprovada em homologação; sem dados de academia hoje (a HELL GYM de teste foi apagada) |
 
 Domínio: `workers.dev` em desenvolvimento e homologação; domínio próprio (`gestao.bohtreinar.com`) antes do primeiro cliente pagante.
 
@@ -173,7 +173,7 @@ Limites e medição: rate limits próprios (`GESTAO_USER_LIMIT`, `GESTAO_ACADEMY
 
 Os 84 testes de regras da academia viram **testes de endpoint e de esquema**, com o mesmo conteúdo: duas academias, todos os papéis, convite cruzado, `academyId` do corpo ignorado, elevação de papel, auditoria não forjável, ficha arquivada em uso, lote parcial, duplicação sem permissão, tentativa de alterar versão publicada, consentimento e saída.
 
-Esquema (D1): chaves compostas, gatilhos e restrições (`schema.test.js`). Worker: token inválido/expirado, papel insuficiente, academia suspensa, vínculo suspenso, `academyId` da URL diferente do vínculo, idempotência (repetição e corpo diferente), rate limit, payload inválido ou com campo extra, falha parcial no lote, auditoria no mesmo batch (a operação falha se a auditoria falhar), último dono, kill switch. Interface: desktop (dono, recepção), celular (professor), estados vazios, erros de permissão, convite inválido, carregamento, cancelamento, revogação, acessibilidade e teclado. Homologação: duas academias fictícias, IDs registrados, limpeza ao final, smoke test depois do deploy. Produção: HELL GYM com contagem antes e depois da migração.
+Esquema (D1): chaves compostas, gatilhos e restrições (`schema.test.js`). Worker: token inválido/expirado, papel insuficiente, academia suspensa, vínculo suspenso, `academyId` da URL diferente do vínculo, idempotência (repetição e corpo diferente), rate limit, payload inválido ou com campo extra, falha parcial no lote, auditoria no mesmo batch (a operação falha se a auditoria falhar), último dono, kill switch. Interface: desktop (dono, recepção), celular (professor), estados vazios, erros de permissão, convite inválido, carregamento, cancelamento, revogação, acessibilidade e teclado. Homologação: duas academias fictícias, IDs registrados, limpeza ao final, smoke test depois do deploy. Produção: contagem de documentos de academia antes e depois de qualquer migração.
 
 ## 11. Decisões aprovadas
 
@@ -190,7 +190,7 @@ Esquema (D1): chaves compostas, gatilhos e restrições (`schema.test.js`). Work
 2. Worker: trocar a leitura de vínculos do Firestore pela do D1 em `/v1/me`, `/v1/academies/:id` e `/members` (acesso atrás de uma interface, testes com `node:sqlite`); remover `firestore.js`.
 3. Operações de escrita, uma por vez, cada uma com teste de duas academias e revisão de diff: criar academia, convite e aceite, papéis, vínculo professor-aluno, consentimento, fichas (rascunho, publicar, duplicar, arquivar), atribuição e lote, aderência.
 4. App do aluno: trocar `academyService` e `academyTrainingService` (Firestore) por um cliente da API; ficha atribuída com cópia local para offline; exclusão de conta chama `DELETE /v1/me`.
-5. **Migração dos dados existentes** (script revisável, com prévia): exportar `academies`, `academyMembers`, `academyInvites`, `academyAssignments`, `trainingSeries`, `trainingVersions`, `academyAssigned` e `academyAuditLog` do Firestore e importar no D1 de produção; conferir contagens antes e depois; a HELL GYM (1 academia, 1 membro, 2 auditorias, 1 convite) é a validação. Convites antigos viram hash do código.
+5. **Migração dos dados existentes** (script revisável, com prévia): exportar `academies`, `academyMembers`, `academyInvites`, `academyAssignments`, `trainingSeries`, `trainingVersions`, `academyAssigned` e `academyAuditLog` do Firestore e importar no D1 de produção; conferir contagens antes e depois; em 14/10/2026 a HELL GYM (academia de teste) foi apagada, então **a produção não tem nenhuma academia**: não há dado real a migrar e o script só será ensaiado com academias fictícias em homologação. Se surgir uma academia real antes do corte, o script a leva, e convites antigos viram hash do código.
 6. **Corte:** congelar as coleções de academia nas regras (`if false`), publicar o app do aluno e a Gestão apontando para a API, manter as coleções antigas sem leitura por um período para reversão, e só então apagá-las.
 7. Homologação com duas academias fictícias; depois produção.
 
