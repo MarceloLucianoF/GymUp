@@ -28,6 +28,14 @@ describe('createApi', () => {
     expect(seen).toEqual({ url: 'https://api.test/v1/academies', method: 'POST', key: 'chave-123456', body: '{"name":"Minha"}' });
   });
 
+  test('o código do convite vai no corpo e nunca na URL', async () => {
+    const seen = [];
+    const a = api(async (url, init) => { seen.push({ url, body: init.body }); return new Response(JSON.stringify({ ok: true, data: {}, requestId: 'r' })); });
+    await a.previewInvite('abc123');
+    await a.acceptInvite('abc123');
+    expect(seen).toEqual([{ url: 'https://api.test/v1/invites/preview', body: '{"code":"abc123"}' }, { url: 'https://api.test/v1/invites/accept', body: '{"code":"abc123"}' }]);
+  });
+
   test('o id da academia é codificado na URL', async () => {
     let url;
     await api(async (u) => { url = u; return new Response(JSON.stringify({ ok: true, data: {}, requestId: 'r' })); }).academy('a/b');

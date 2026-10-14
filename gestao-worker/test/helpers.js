@@ -21,8 +21,9 @@ export function makeD1() {
     prepare: statement,
     async batch(statements) {
       raw.exec('BEGIN');
-      try { for (const s of statements) raw.prepare(s.sql).run(...s.args); raw.exec('COMMIT'); } catch (error) { raw.exec('ROLLBACK'); throw error; }
-      return [];
+      const results = [];
+      try { for (const s of statements) results.push({ meta: { changes: Number(raw.prepare(s.sql).run(...s.args).changes) } }); raw.exec('COMMIT'); } catch (error) { raw.exec('ROLLBACK'); throw error; }
+      return results;
     }
   };
 }

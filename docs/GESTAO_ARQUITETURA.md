@@ -114,7 +114,8 @@ Erros: `400` payload, `401` token, `403` papel/vínculo/academia suspensa, `404`
 | `GET /v1/academies/:id` | membro ativo | dados básicos |
 | `PATCH /v1/academies/:id` | dono, admin | nome e dados permitidos |
 | `GET /v1/academies/:id/members` | dono, admin (recepção: cadastro) | lista sem consentimento nem saúde |
-| `POST /v1/academies/:id/invites`, `DELETE .../invites/:inviteId` | dono, admin, recepção (aluno) | cria e revoga convite |
+| `GET/POST /v1/academies/:id/invites`, `POST .../invites/:inviteId/revoke` | dono, admin, recepção (aluno) | cria, lista (cada função só vê os papéis que pode convidar) e revoga; o código só aparece na criação |
+| `GET /v1/academies/:id/audit` | dono, admin | últimas 100 entradas |
 | `POST /v1/academies/:id/members/:uid/role` | dono, admin | papel, suspender, reativar, remover; último dono protegido |
 | `POST /v1/academies/:id/assignments` | dono, admin | propõe professor; aceite é do aluno |
 | `GET/POST .../trainings`, `PATCH .../trainings/:id` | autores | rascunho, duplicar, arquivar, restaurar |
@@ -128,8 +129,8 @@ Erros: `400` payload, `401` token, `403` papel/vínculo/academia suspensa, `404`
 | Endpoint | Efeito |
 |---|---|
 | `GET /v1/me` | meus vínculos |
-| `GET /v1/invites/:code` e `POST /v1/invites/:code/accept` | ver e aceitar convite (o código vira hash; usos somados na mesma transação) |
-| `POST /v1/me/academies/:id/leave` | sair; apaga consentimento e aderência |
+| `POST /v1/invites/preview` e `POST /v1/invites/accept` | ver e aceitar convite. O código vai **no corpo** (não na URL, que aparece em logs); vira hash; erro único `invite_invalid` para inexistente, revogado, expirado e esgotado. O portão do uso e a entrada do membro vão no mesmo batch |
+| `POST /v1/me/academies/:id/leave` | sair (só quem está ativo: suspenso não escapa da suspensão); apaga consentimento e aderência; **funciona mesmo com o kill switch ligado** |
 | `PUT /v1/me/academies/:id/consent` | conceder ou revogar a aderência |
 | `POST /v1/me/assignments/:id/accept` | aceitar ou recusar o professor |
 | `GET /v1/me/academies/:id/training` | minha ficha atribuída com a **versão exata** (o app guarda uma cópia local para executar offline) |

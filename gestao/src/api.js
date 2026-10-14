@@ -39,7 +39,16 @@ export function createApi({ baseUrl, getToken, fetchImpl = fetch }) {
     // A chave de idempotência acompanha a tentativa: repetir o envio (rede ruim, duplo clique) não cria duas academias.
     createAcademy: (name, idempotencyKey) => request('/v1/academies', { method: 'POST', body: { name }, idempotencyKey }),
     academy: (id) => request(`/v1/academies/${encodeURIComponent(id)}`),
-    members: (id) => request(`/v1/academies/${encodeURIComponent(id)}/members`)
+    members: (id) => request(`/v1/academies/${encodeURIComponent(id)}/members`),
+    invites: (id) => request(`/v1/academies/${encodeURIComponent(id)}/invites`),
+    createInvite: (id, body) => request(`/v1/academies/${encodeURIComponent(id)}/invites`, { method: 'POST', body }),
+    revokeInvite: (id, inviteId) => request(`/v1/academies/${encodeURIComponent(id)}/invites/${encodeURIComponent(inviteId)}/revoke`, { method: 'POST', body: {} }),
+    updateMember: (id, userId, body) => request(`/v1/academies/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { method: 'POST', body }),
+    audit: (id) => request(`/v1/academies/${encodeURIComponent(id)}/audit`),
+    // O código do convite vai no corpo, nunca na URL (URLs aparecem em logs).
+    previewInvite: (code) => request('/v1/invites/preview', { method: 'POST', body: { code } }),
+    acceptInvite: (code) => request('/v1/invites/accept', { method: 'POST', body: { code } }),
+    leave: (id) => request(`/v1/me/academies/${encodeURIComponent(id)}/leave`, { method: 'POST', body: {} })
   };
 }
 
@@ -57,10 +66,18 @@ const MESSAGES = {
   limit_reached: 'Você já criou o máximo de academias permitido.',
   conflict: 'Não foi possível concluir: os dados mudaram. Atualize e tente de novo.',
   invalid_request: 'Confira os dados informados.',
+  invite_invalid: 'Este convite é inválido, expirou ou já foi usado.',
+  already_member: 'Você já faz parte desta academia.',
+  not_found: 'Não encontramos o que você procurou.',
   idempotency_required: 'Não foi possível enviar. Atualize a página e tente de novo.'
 };
 export const friendlyError = (err) => MESSAGES[err?.code] || 'Algo deu errado. Tente novamente.';
 
 export const ROLE_LABELS = { owner: 'Proprietário', admin: 'Administrador', teacher: 'Professor', reception: 'Recepção', student: 'Aluno' };
+export const STATUS_LABELS = { active: 'Ativo', suspended: 'Suspenso', removed: 'Removido', left: 'Saiu' };
+export const ACTION_LABELS = {
+  'academy.created': 'Academia criada', 'academy.updated': 'Academia atualizada', 'invite.created': 'Convite criado', 'invite.revoked': 'Convite revogado',
+  'member.joined': 'Entrou na academia', 'member.updated': 'Membro atualizado', 'member.left': 'Saiu da academia'
+};
 // Quem entra na Gestão: o aluno usa o app do aluno.
 export const MANAGEMENT_ROLES = ['owner', 'admin', 'teacher', 'reception'];

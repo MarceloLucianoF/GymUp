@@ -17,3 +17,25 @@ button { min-height: 44px; border-radius: 12px; border: 0; background: var(--bra
 button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
 button:disabled { opacity: .6; cursor: default; }
 :focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.bar-left { display: flex; align-items: center; gap: 16px; }
+.link, .card-link { color: var(--fg); font-weight: 600; text-underline-offset: 3px; }
+.card-link { text-decoration: none; }
+.card-link:hover { text-decoration: underline; }
+.title { font-size: 1.6rem; margin: 0 0 4px; }
+.wide { max-width: none; margin-bottom: 16px; }
+.grid3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.grid3 > div { display: flex; flex-direction: column; gap: 6px; }
+select { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); padding: 0 12px; font-size: 16px; background: var(--bg); color: var(--fg); }
+.tabs { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+.tab { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.tab.on { background: var(--brand); color: #111; border-color: var(--brand); }
+.rows { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+.row-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); }
+.badge-active { background: rgba(16, 185, 129, .15); }
+.badge-suspended { background: rgba(245, 158, 11, .2); }
+.badge-removed, .badge-left { background: rgba(239, 68, 68, .15); }
+button.danger { color: var(--danger); }
+input[readonly] { width: 100%; }

@@ -15,6 +15,8 @@ export const ERRORS = {
   not_found: [404, 'Recurso não encontrado.'],
   method_not_allowed: [405, 'Método não permitido.'],
   conflict: [409, 'Conflito com o estado atual.'],
+  invite_invalid: [404, 'Convite inválido, expirado ou esgotado.'],
+  already_member: [409, 'Você já faz parte desta academia.'],
   limit_reached: [409, 'Limite de academias atingido.'],
   idempotency_required: [400, 'Cabeçalho Idempotency-Key obrigatório (8 a 64 caracteres).'],
   rate_limited: [429, 'Limite temporário de solicitações excedido.'],

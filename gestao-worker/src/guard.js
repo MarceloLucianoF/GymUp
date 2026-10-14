@@ -11,7 +11,9 @@ export async function authenticate(request, env, deps = {}) {
   let claims;
   try { claims = await verify(match[1], { projectId: env.FIREBASE_PROJECT_ID, fetchImpl, now }); } catch { throw new ApiError('invalid_token'); }
   // email só vale como dado de exibição, e só gravado quando verificado; nunca é autoridade para convite, vínculo ou papel.
-  return { uid: claims.sub, email: claims.email || '', emailVerified: claims.email_verified === true, name: claims.name || '' };
+  // Nome de exibição: o nome da conta; sem ele, a parte local do e-mail (só texto de exibição, nunca autoridade).
+  const display = claims.name || String(claims.email || '').split('@')[0];
+  return { uid: claims.sub, email: claims.email || '', emailVerified: claims.email_verified === true, name: display };
 }
 
 /** Valida vínculo ativo, academia ativa e papel. Devolve { membership, academy }. */
