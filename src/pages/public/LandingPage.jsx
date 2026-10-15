@@ -23,10 +23,10 @@ const SWITCHES = [
 ];
 
 const STAGES = [
-  { clause: 'Primeiro, crie a conta.', name: 'Conta', src: '/landing/cadastro.webp', alt: 'Tela de cadastro do app' },
-  { clause: 'Depois, escolha a ficha.', name: 'Ficha', src: '/landing/fichas.webp', alt: 'Biblioteca de fichas de treino' },
-  { clause: 'Então, treine e descanse.', name: 'Treino', src: '/landing/treino.webp', alt: 'Treino em andamento com carga e repetições' },
-  { clause: 'Por fim, veja a semana.', name: 'Evolução', src: '/landing/inicio.webp', alt: 'Início do app com a meta semanal' }
+  { clause: 'Primeiro, crie a conta.', detail: 'Leva menos de um minuto e não pede cartão.', name: 'Conta', src: '/landing/cadastro.webp', alt: 'Tela de cadastro do app' },
+  { clause: 'Depois, escolha a ficha.', detail: 'Use uma ficha pronta, peça uma ao Coach de IA ou receba a do seu treinador.', name: 'Ficha', src: '/landing/fichas.webp', alt: 'Biblioteca de fichas de treino' },
+  { clause: 'Então, treine e descanse.', detail: 'Registre carga e repetições e deixe o descanso rodar sozinho, mesmo sem sinal.', name: 'Treino', src: '/landing/treino.webp', alt: 'Treino em andamento com carga e repetições' },
+  { clause: 'Por fim, veja a semana.', detail: 'Acompanhe a meta semanal, a sequência de dias e os recordes que você bateu.', name: 'Evolução', src: '/landing/inicio.webp', alt: 'Início do app com a meta semanal' }
 ];
 
 const QUESTIONS = [
@@ -77,6 +77,7 @@ export default function LandingPage() {
   const [js, setJs] = useState(false);
   const [sticky, setSticky] = useState(false);
   const [away, setAway] = useState(false);
+  const [ctaSeen, setCtaSeen] = useState(false);
   const [frame, setFrame] = useState(0);
   const [ask, setAsk] = useState(EXAMPLES[0]);
   const [on, setOn] = useState([true, false, true, false, false]);
@@ -103,12 +104,21 @@ export default function LandingPage() {
       if (!hero || !st) return;
       const range = hero.offsetHeight - window.innerHeight;
       const progress = reduce || range <= 0 ? 0 : Math.min(1, Math.max(0, -hero.getBoundingClientRect().top / range));
-      const position = Math.min(REEL.length - 1, (progress / 0.82) * (REEL.length - 1));   // a última tela fica parada nos 18% finais
+      const raw = Math.min(REEL.length - 1, (progress / 0.82) * (REEL.length - 1));   // a última tela fica parada nos 18% finais
+      // Cada tela repousa e a troca acontece num trecho curto: evita ficar parado entre duas telas.
+      const whole = Math.floor(raw); const part = raw - whole; const t = Math.min(1, Math.max(0, (part - 0.3) / 0.4));
+      const position = whole >= REEL.length - 1 ? REEL.length - 1 : whole + t * t * (3 - 2 * t);
       st.style.setProperty('--reel', position.toFixed(3));
       setFrame((f) => (f === Math.round(position) ? f : Math.round(position)));
       const y = window.scrollY;
-      setSticky(y > 700 && y + window.innerHeight < document.documentElement.scrollHeight - 700);
-      setAway((was) => { const down = y > lastY.current; lastY.current = y; return y > 120 ? down : false; });
+      // Rolando para baixo o cabeçalho e a barra do celular saem do caminho; ao rolar para cima eles voltam.
+      const down = y > lastY.current + 2; const up = y < lastY.current - 2;
+      if (down || up) {
+        lastY.current = y;
+        setAway(y > 120 ? down : false);
+        const inRange = y > 700 && y + window.innerHeight < document.documentElement.scrollHeight - 700;
+        setSticky(up && inRange);
+      }
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick); };
     tick();
@@ -123,6 +133,15 @@ export default function LandingPage() {
     if (!('IntersectionObserver' in window)) { nodes.forEach((n) => n.classList.add('in')); return undefined; }
     const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
     nodes.forEach((n) => io.observe(n));
+    return () => io.disconnect();
+  }, [js]);
+
+  // A barra fixa do celular some quando um botão de ação já está na tela (evita dois botões iguais empilhados).
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) return undefined;
+    const seen = new Set();
+    const io = new IntersectionObserver((entries) => { entries.forEach((e) => (e.isIntersecting ? seen.add(e.target) : seen.delete(e.target))); setCtaSeen(seen.size > 0); });
+    document.querySelectorAll('.lp main .btn').forEach((n) => io.observe(n));
     return () => io.disconnect();
   }, [js]);
 
@@ -177,6 +196,9 @@ export default function LandingPage() {
           <h2 className="sr-only">Peça uma ficha ao Coach de IA</h2>
           <p id="ask-title" className="ask-label" data-in style={{ '--i': 0 }}>Peça uma ficha como você pediria ao Coach de IA. A resposta aparece aqui, no seu aparelho.</p>
           <input className="ask-line" data-in style={{ '--i': 1 }} type="text" value={ask} onChange={(e) => setAsk(e.target.value)} maxLength={80} spellCheck="false" autoComplete="off" aria-label="Seu pedido de ficha" aria-describedby="ask-answer" />
+          <div className="examples" role="group" aria-label="Exemplos de pedido">
+            {EXAMPLES.map((ex, i) => <button key={ex} type="button" data-in style={{ '--i': i }} onClick={() => setAsk(ex)}>{ex}</button>)}
+          </div>
           <div id="ask-answer" className="answer" aria-live="polite" data-in style={{ '--i': 2 }}>
             {ficha.status === 'ready' && (
               <>
@@ -190,9 +212,6 @@ export default function LandingPage() {
             {ficha.status === 'error' && <p className="err">{ficha.message}</p>}
             {ficha.status === 'idle' && <p className="muted">Escreva um grupo muscular, como pernas, peito ou full body.</p>}
             <div><button type="button" className="btn" onClick={goPrimary}>{user ? 'Abrir meu painel' : 'Salvar essa ficha no app'}</button></div>
-          </div>
-          <div className="examples" role="group" aria-label="Exemplos de pedido">
-            {EXAMPLES.map((ex, i) => <button key={ex} type="button" data-in style={{ '--i': i }} onClick={() => setAsk(ex)}>{ex}</button>)}
           </div>
           <noscript><p>Ative o JavaScript para pedir uma ficha aqui. No app, o Coach de IA faz isso por você.</p></noscript>
         </section>
@@ -208,6 +227,7 @@ export default function LandingPage() {
               </div>
             </div>
             <p className="clause" aria-live="polite" data-in>{STAGES[stage].clause}</p>
+            <p className="detail">{STAGES[stage].detail}</p>
           </div>
           <div className="steps-right">
             <div className="step-shots">
@@ -262,7 +282,7 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {sticky && !user && (
+      {sticky && !ctaSeen && !user && (
         <div className="sticky-cta"><Link className="btn" to="/register">Criar conta grátis</Link></div>
       )}
     </div>

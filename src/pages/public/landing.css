@@ -56,7 +56,7 @@
 .lp .half.r { grid-column: 3; justify-self: end; text-align: right; }
 .lp .right { grid-column: 3; grid-row: 1; align-self: center; margin-top: calc(var(--d-l) + 56px); justify-self: end; display: grid; gap: 18px; justify-items: end; text-align: right; }
 .lp .right .half { grid-column: auto; grid-row: auto; }
-.lp .cap { font-size: var(--step-body); color: var(--muted); max-width: 22ch; min-height: 2.9em; }
+.lp .cap { font-size: var(--step-body); color: var(--muted); max-width: 30ch; }
 .lp .frame { --fw: min(30vw, 56svh * 0.8); --fh: calc(var(--fw) * 5 / 4); width: var(--fw); height: var(--fh); position: relative; grid-column: 2; grid-row: 1; z-index: 1; }
 .lp .reelwrap { position: absolute; left: 0; right: 0; top: -84px; bottom: -84px; overflow: hidden; }
 .lp .reel { position: absolute; left: 0; right: 0; top: 84px; height: var(--fh); transform: translateY(calc(var(--reel, 0) * -1 * (var(--fh) + 24px))); will-change: transform; }
@@ -75,13 +75,13 @@
 .lp .section-pad { padding: clamp(80px, 11vw, 180px) var(--margin); }
 
 /* campo de digitação (a frase é um input) */
-.lp .ask { min-height: 88svh; display: grid; align-content: start; gap: 48px; }
+.lp .ask { min-height: 100svh; display: grid; align-content: start; gap: 28px; padding-top: clamp(88px, 8vw, 120px); padding-bottom: clamp(56px, 6vw, 96px); }
 .lp .ask-line { width: 100%; font: 700 var(--d-xl)/0.95 var(--display); text-transform: uppercase; letter-spacing: -0.02em; background: transparent; border: 0; border-radius: 0; padding: 0; color: var(--field-1-ink); caret-color: var(--accent); caret-shape: block; outline: 0; overflow-x: auto; white-space: nowrap; }
 .lp .ask-line:focus-visible { outline: 3px solid var(--accent); outline-offset: 10px; }
 .lp .ask-label { font-size: var(--step-lead); font-weight: 500; max-width: 38ch; }
-.lp .answer { max-width: 560px; display: grid; gap: 14px; }
+.lp .answer { max-width: 880px; display: grid; gap: 14px; }
 .lp .answer-head { font-size: var(--step-lead); font-weight: 500; line-height: 1.25; }
-.lp .answer ul { display: grid; gap: 8px; }
+.lp .answer ul { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
 .lp .answer li { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; background: var(--field-1-tone); padding: 14px 18px; border-radius: 4px; font-weight: 500; transition: background-color .2s; }
 .lp .answer li span { font-weight: 400; color: var(--field-1-soft); white-space: nowrap; }
 .lp .answer .note { font-size: var(--step-small); color: var(--field-1-soft); }
@@ -109,8 +109,9 @@
 
 /* como funciona: dois campos e um controle deslizante */
 .lp .steps { display: grid; grid-template-columns: 1fr 1fr; min-height: 92svh; position: relative; }
-.lp .steps-left { position: relative; background: var(--surface); padding: clamp(32px, 5vw, 80px) var(--margin) 168px; display: grid; align-content: start; }
+.lp .steps-left { position: relative; background: var(--surface); padding: clamp(32px, 5vw, 80px) var(--margin) 168px; display: grid; align-content: center; }
 .lp .steps-right { background: var(--accent); display: grid; place-items: start center; overflow: hidden; position: relative; padding-top: 40px; }
+.lp .detail { margin-top: 22px; max-width: 34ch; font-size: var(--step-lead); line-height: 1.3; color: var(--muted); }
 .lp .clause { font: 700 var(--d-l)/0.92 var(--display); text-transform: uppercase; letter-spacing: -0.02em; max-width: 12ch; }
 .lp .step-shots { position: relative; width: min(390px, 80%); aspect-ratio: 390 / 844; }
 .lp .step-shots img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 4px 4px 0 0; opacity: 0; transition: opacity .25s; }
@@ -148,7 +149,7 @@
 .lp .close-row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; align-items: end; }
 .lp .close-row p { grid-column: 1 / 6; font-size: var(--step-lead); }
 .lp .close-row .btn { grid-column: 10 / 13; justify-self: end; min-height: 56px; }
-.lp .foot { background: var(--accent); color: var(--accent-ink); min-height: 90svh; padding: 40px var(--margin) 32px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 28px; }
+.lp .foot { background: var(--accent); color: var(--accent-ink); min-height: 72svh; padding: 40px var(--margin) 32px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 28px; }
 .lp .foot-top { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; font-size: var(--step-small); align-items: start; }
 .lp .foot-top .notes { grid-column: 1 / 8; display: flex; flex-wrap: wrap; gap: 8px 32px; }
 .lp .foot-top .top { grid-column: 11 / 13; justify-self: end; }
@@ -213,7 +214,7 @@
   .lp .close { min-height: 80svh; }
   .lp .close-row { grid-template-columns: 1fr; gap: 20px; }
   .lp .close-row p, .lp .close-row .btn { grid-column: 1; justify-self: stretch; }
-  .lp .foot { min-height: 80svh; }
+  .lp .foot { min-height: 70svh; }
   .lp .foot-top .notes { grid-column: 1 / 13; flex-direction: column; gap: 8px; } .lp .foot-top .top { grid-column: 1 / 13; justify-self: start; }
   .lp .foot .mail { font-size: 12vw; }
   .lp .ask-line { font-size: 9.4vw; }
