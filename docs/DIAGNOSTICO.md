@@ -624,3 +624,12 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Testes:** Worker 95; console 15; app do aluno 455 (69 suítes); API ponta a ponta com D1 e tokens reais 53/53; cliente real do app do aluno contra a API 22/22; interface 57/57; 6 viewports x ~11 telas 264/264 com axe WCAG 2.1 A/AA sem violações; Lighthouse mobile 98/100/100/50 (SEO por `noindex` intencional), desktop 100/100/100/50.
 - **Backup:** exportação do D1 de homologação restaurada em D1 descartável com contagens e gatilhos idênticos.
 - **Pendente:** revisão jurídica/LGPD; telas de alunos/fichas no console; teste do app do aluno no navegador com Firestore de homologação; revisão dos 4 exercícios aproximados por treinador.
+
+## Atualização — ajustes finais do PR 97 (14/10/2026)
+- **Documentação:** `docs/GESTAO_ARQUITETURA.md` reescrito para o estado construído (tabelas 0001 a 0004, papéis `coach`/`reception`, endpoints reais, `leave-all`, decisão de localização do D1); Firestore só aparece como dado pessoal do aluno.
+- **Mistura Firestore/D1 bloqueada:** com `REACT_APP_ACADEMY_API` ligada, `/academia/:id/fichas` mostra "Módulo em implantação".
+- **Firebase de homologação completo:** Firestore criado no projeto de homologação, regras publicadas, app do aluno compilado contra ele e testado no navegador: login, convite, aceite, professor, consentimento, ficha, offline por snapshot, saída e exclusão de conta, 15/15.
+- **Produção:** `gestao-worker/wrangler.production.example.jsonc` (sem localhost, sem `-hml`, sem `workers.dev`, sem o D1 de homologação) com teste em `config.test.js`.
+- **Auth de homologação conferido** por exportação: só a conta do dono; Firestore e D1 esvaziados ao final.
+- **Status:** a Gestão é apresentada como fundação operacional (landing e docs).
+- **Achado separado (PR 98):** o Coach IA ignorava "somente máquina" e apontava para uma aba inexistente; corrigido com filtro de equipamento e botão "Salvar em Meus treinos" na conversa.

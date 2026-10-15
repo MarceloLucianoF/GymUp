@@ -47,15 +47,25 @@ IP 300/min (antes do token, folgado por NAT), usuário 120/min, par (academia, u
 
 Ver `docs/DIAGNOSTICO.md` (seção da fundação). Resumo: Worker 95 testes; console 15; app do aluno 455 (69 suítes); API ponta a ponta com D1 e tokens reais 53/53; cliente real do app do aluno contra a API 22/22; interface 57/57; matriz 6 viewports 264/264 com axe sem violações; Lighthouse mobile 98/100/100 (SEO 50 por `noindex` intencional).
 
+## Validação do app do aluno com Firestore de homologação (14/10/2026)
+
+O projeto `bohtreinar-gestao-hml` agora tem Firestore (`southamerica-east1`) com as regras do app. O app do aluno foi compilado com `REACT_APP_FIREBASE_*` apontando para ele e `REACT_APP_ACADEMY_API` ligada, e testado no navegador (390x844, Playwright, usuários fictícios `zz.ui.*`): login, convite, aceite, professor pendente e aceite, consentimento (ativar e revogar), ficha atribuída, snapshot local, execução da ficha, leitura offline pelo snapshot, saída da academia, snapshot apagado ao sair e exclusão de conta pela tela. **15/15 aprovadas.** Ao final, Firestore e D1 de homologação foram esvaziados e o Auth ficou só com a conta do dono.
+
+Config do app do aluno: `src/firebase/config.js` aceita `REACT_APP_FIREBASE_*` para builds de teste; sem elas vale a produção.
+
+## Status do produto
+
+Fundação operacional, não sistema empresarial completo: membros, convites, professores, consentimento, auditoria e ficha atribuída funcionam; telas de Alunos e Fichas do console ainda são "Em breve". Com a API ligada, a rota `/academia/:id/fichas` (ainda em Firestore) fica fechada com "Módulo em implantação".
+
 ## Limitações e riscos aceitos
 
 - Telas de alunos e fichas do console aparecem como "Em breve"; a atribuição de ficha existe só na API.
 - Professor vê nomes de alunos sem professor para propor vínculo (sem dados de saúde).
-- `ALLOWED_ORIGINS` com localhost é só de homologação e não pode ir para produção.
-- D1 sem região na América do Sul; restauração ensaiada por exportação/importação (não por Time Travel).
-- App do aluno não foi testado no navegador em homologação (depende de Firestore do HML, não habilitado); coberto por testes unitários e pelo cliente real contra a API.
-- Landing sem vídeo (ambiente sem ffmpeg). Modo escuro não passou por axe.
-- Textos legais preliminares.
+- `ALLOWED_ORIGINS` com localhost é só de homologação; o modelo de produção (`wrangler.production.example.jsonc`) não os tem e há teste que garante isso.
+- D1 sem região confirmada na América do Sul; restauração ensaiada por exportação/importação (não por Time Travel). Confirmar a localização antes de vender.
+- Ainda falta o E2E conjunto com telas de Alunos e Fichas no console.
+- Landing sem vídeo. Modo escuro não passou por axe.
+- Textos legais preliminares; revisão jurídica/LGPD pendente.
 
 ## Próximo passo recomendado
 
