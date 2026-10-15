@@ -122,6 +122,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     abortRef.current = abortController;
 
     let metaSeen = null;
+    let workoutSeen = null;
     const failMessage = (text, retry = true) => ({ id: `${Date.now()}-e`, sender: 'ai', text, retryText: retry ? userText : null });
     try {
       // Teto de espera: além dele o pedido é tratado como lento (a resposta tardia é descartada).
@@ -136,8 +137,9 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
           onMeta: (meta) => { metaSeen = meta; if (requestRef.current === requestId) setAiMeta(meta); },
           onWorkout: (workout) => {
             if (requestRef.current !== requestId) return;
+            workoutSeen = workout;
             setGeneratedWorkout(workout);
-            toast.success('Treino gerado! Veja na aba Treino.');
+            toast.success('Treino gerado! Salve em Meus treinos pelo botão na conversa.');
           }
         }),
         new Promise((resolve) => setTimeout(() => resolve({ timeout: true }), 45000))
@@ -148,7 +150,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         setAiMeta({ provider: 'local', reason: 'lento' });
         setMessages(prev => [...prev, failMessage(localFallbackText(userProfile, 'lento'))]);
       } else {
-        setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText, retryText: metaSeen?.provider === 'local' ? userText : null }]);
+        setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText, workout: workoutSeen, retryText: metaSeen?.provider === 'local' && !workoutSeen ? userText : null }]);
       }
     } catch (err) {
       console.error(err);
@@ -195,18 +197,18 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     }
   };
 
-  const handleSaveWorkoutToFirestore = async () => {
-    if (!generatedWorkout || isSaving || !user) return;
+  const handleSaveWorkoutToFirestore = async (target = generatedWorkout) => {
+    if (!target || isSaving || !user) return;
     setIsSaving(true);
     const toastId = toast.loading('Salvando treino no seu perfil...');
 
     try {
       const workoutPayload = {
-        name: generatedWorkout.name,
-        category: generatedWorkout.category,
-        description: generatedWorkout.description,
-        estimatedTime: generatedWorkout.estimatedTime,
-        exercises: generatedWorkout.exercises,
+        name: target.name,
+        category: target.category,
+        description: target.description,
+        estimatedTime: target.estimatedTime,
+        exercises: target.exercises,
         createdAt: new Date().toISOString(),
         createdBy: user.uid,
         isAIGenerated: true
@@ -286,6 +288,18 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                       {msg.sender === 'user'
                         ? <p className="whitespace-pre-wrap text-left">{msg.text}</p>
                         : <Markdown text={msg.text} />}
+                      {msg.workout && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button type="button" onClick={() => handleSaveWorkoutToFirestore(msg.workout)} disabled={isSaving}
+                            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] px-3 text-xs font-black text-black disabled:opacity-60">
+                            Salvar em Meus treinos
+                          </button>
+                          <button type="button" onClick={() => { setGeneratedWorkout(msg.workout); setActiveTab('generator'); }}
+                            className="inline-flex min-h-[40px] items-center rounded-xl bg-gray-100 px-3 text-xs font-bold text-gray-800 dark:bg-white/10 dark:text-gray-100">
+                            Ver no Gerador
+                          </button>
+                        </div>
+                      )}
                       {msg.retryText && (
                         <button type="button" onClick={() => sendQuestion(msg.retryText, { addUserMessage: false })} disabled={isTyping}
                           className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] px-3 text-xs font-black text-black disabled:opacity-50">
@@ -461,7 +475,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
 
                   <button
                     type="button"
-                    onClick={handleSaveWorkoutToFirestore}
+                    onClick={() => handleSaveWorkoutToFirestore()}
                     disabled={isSaving}
                     className={`${btnPrimary} w-full min-h-[52px] text-sm`}
                   >

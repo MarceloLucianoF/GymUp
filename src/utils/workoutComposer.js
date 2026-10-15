@@ -82,6 +82,46 @@ export function normalizeLibrary(list) {
 export const catalogPayload = (cands) => cands.map(({ id, name, primaryGroup, subgroups, equipment, movementPattern, isCompound, difficulty }) =>
   ({ id, name, primaryGroup, subgroups, equipment, movementPattern, isCompound, difficulty }));
 
+
+// ---- restrição de equipamento pedida no texto ("somente máquina", "só halter", "sem máquina") ----
+const EQUIP_WORDS = [
+  ['maquina', /maquina|aparelho/],
+  ['halter', /halter/],
+  ['barra', /\bbarra/],
+  ['polia', /polia|cabo/],
+  ['livre', /peso (do )?corpo|calistenia/]
+];
+const EQUIP_LABEL = { maquina: 'máquina', halter: 'halter', barra: 'barra', polia: 'polia', livre: 'peso do corpo' };
+
+/** Devolve { only: [...equipamentos], without: [...] } ou null. "somente/apenas/só X" restringe; "sem X" exclui. */
+export function parseEquipmentConstraint(text) {
+  const t = plain(text);
+  if (!t) return null;
+  const only = new Set();
+  const without = new Set();
+  for (const [key, re] of EQUIP_WORDS) {
+    const word = re.source;
+    if (new RegExp(`(somente|apenas|so|exclusivamente|unicamente)\\b(?:(?!\\bsem\\b)[^.,;!?]){0,25}(${word})`).test(t)) only.add(key);
+    if (new RegExp(`\\b(sem|nada de|evitar|nao quero|nao use)\\b[^.,;!?]{0,12}(${word})`).test(t)) without.add(key);
+  }
+  if (only.has('maquina')) only.add('polia');   // polia/cabo é máquina de cabos
+  if (!only.size && !without.size) return null;
+  return { only: [...only], without: [...without] };
+}
+
+export const describeConstraint = (c) => (c.only.length ? `somente ${c.only.filter((k, _i, a) => !(k === 'polia' && a.includes('maquina'))).map((k) => EQUIP_LABEL[k]).join(' e ')}` : `sem ${c.without.map((k) => EQUIP_LABEL[k]).join(' nem ')}`);
+
+/** Filtra a biblioteca normalizada. Para "somente máquina", nomes ambíguos ("livre ou hack") não valem. */
+export function applyEquipmentConstraint(library, constraint) {
+  if (!constraint) return library;
+  return library.filter((e) => {
+    if (constraint.without.includes(e.equipment)) return false;
+    if (!constraint.only.length) return true;
+    if (!constraint.only.includes(e.equipment)) return false;
+    return !(e.equipment === 'maquina' && /\b(livre|halter|barra)\b/.test(plain(e.name)));
+  });
+}
+
 // ---- foco (spec) ----
 const LEG_FOCUS_LABEL = { completo: 'Pernas completas', quadriceps: 'Quadríceps', posterior: 'Posterior e glúteos', gluteos: 'Glúteos', panturrilhas: 'Panturrilhas' };
 const GROUP_LABEL = { peito: 'peito', costas: 'costas', ombros: 'ombros', bracos: 'braços', core: 'abdômen/core' };

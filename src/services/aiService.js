@@ -3,7 +3,7 @@ import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
 import { failureMessage } from './aiMeta';
 import {
-  canonicalGroup as composerGroup, composeLocalPlan, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseRequest,
+  canonicalGroup as composerGroup, applyEquipmentConstraint, composeLocalPlan, describeConstraint, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseEquipmentConstraint, parseRequest,
   setLegacyPicker, specFromFocus
 } from '../utils/workoutComposer';
 import officialTemplates from '../data/officialTemplates.json';
@@ -403,6 +403,17 @@ const planToWorkout = (plan, { goal, durationMinutes, requestedFocus }) => {
   };
 };
 
+// Biblioteca normalizada já filtrada pelo equipamento pedido no texto ("somente máquina"). Poucas opções = erro claro, nunca ficha fora do pedido.
+function libraryFor(exercises, userRequest) {
+  const constraint = parseEquipmentConstraint(userRequest);
+  const all = normalizeLibrary(exercises);
+  const library = applyEquipmentConstraint(all, constraint);
+  if (constraint && library.length < 6) {
+    throw new InsufficientExercisesError(`A biblioteca tem poucos exercícios com "${describeConstraint(constraint)}" (${library.length}). Cadastre mais exercícios ou peça sem essa restrição.`);
+  }
+  return { library, constraint };
+}
+
 export const aiService = {
   /**
    * Reescreve fatos já calculados em texto (resumo semanal). Só usa o proxy da NVIDIA e devolve null em qualquer
@@ -508,7 +519,8 @@ export const aiService = {
         onWorkout?.(workout);
         onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : 'indisponivel' });
         const lines = workout.exercises.map((ex, i) => `${i + 1}. ${ex.name} - ${ex.sets}x${ex.reps}`).join('\n');
-        return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}:\n${lines}\nEla está na aba Treino, onde você pode salvar em Meus treinos.`;
+        const limit = parseEquipmentConstraint(safePrompt);
+        return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}${limit ? `, ${describeConstraint(limit)}` : ''}:\n${lines}\nUse o botão abaixo para salvar em Meus treinos.`;
       } catch (error) {
         if (error instanceof InsufficientExercisesError) return error.message;
         console.error('Falha ao montar a ficha pelo chat:', error?.message || error);
@@ -581,15 +593,15 @@ export const aiService = {
   async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const library = normalizeLibrary([...customExercises, ...defaultExercises]);
-    const plan = await generatePlan({ spec, library, total, goal, durationMinutes, askModel: askWorkoutModel, references: templateReferences(spec) });
+    const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest);
+    const plan = await generatePlan({ spec, library, total, goal, durationMinutes, askModel: askWorkoutModel, references: constraint ? [] : templateReferences(spec) });
     return planToWorkout(plan, { goal, durationMinutes, requestedFocus: muscleFocus });
   },
   /** Mesma regra de composição, sem IA e sem rede. */
   generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const library = normalizeLibrary([...customExercises, ...defaultExercises]);
+    const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest);
     return planToWorkout(composeLocalPlan({ spec, library, total, goal }), { goal, durationMinutes, requestedFocus: muscleFocus });
   },
 
