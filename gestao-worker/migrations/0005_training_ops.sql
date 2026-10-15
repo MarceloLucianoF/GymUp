@@ -1,4 +1,4 @@
--- Migração 0005: novas ações de auditoria das fichas (editar, duplicar, arquivar, restaurar, lote).
+-- Migração 0005: novas ações de auditoria (fichas: editar, duplicar, arquivar, restaurar, lote; permissão do professor).
 -- O SQLite não altera CHECK: a tabela é refeita com a lista nova, copiando os registros, e os índices e gatilhos de imutabilidade voltam.
 CREATE TABLE academy_audit_log_new (
   id TEXT PRIMARY KEY,
@@ -8,7 +8,7 @@ CREATE TABLE academy_audit_log_new (
     'academy.created', 'academy.updated', 'member.joined', 'member.left', 'member.role_changed', 'member.suspended', 'member.reactivated',
     'member.removed', 'invite.created', 'invite.revoked', 'ownership.transferred', 'coach.proposed', 'coach.approved', 'coach.accepted',
     'coach.rejected', 'coach.revoked', 'consent.granted', 'consent.revoked', 'training.created', 'training.published', 'training.assigned',
-    'training.updated', 'training.duplicated', 'training.archived', 'training.restored', 'training.batch_assigned')),
+    'training.updated', 'training.duplicated', 'training.archived', 'training.restored', 'training.batch_assigned', 'member.permission_changed')),
   target_type TEXT NOT NULL CHECK (target_type IN ('academy', 'member', 'invite', 'assignment', 'consent', 'training')),
   target_id TEXT NOT NULL CHECK (length(target_id) BETWEEN 1 AND 120),
   detail TEXT NOT NULL DEFAULT '' CHECK (length(detail) <= 200),

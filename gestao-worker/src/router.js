@@ -27,6 +27,7 @@ export const ROUTES = [
   route('POST', '/v1/academies/:academyId/transfer-ownership', academies.transferOwnership),
   route('GET', '/v1/academies/:academyId/members', members.list),
   route('PATCH', '/v1/academies/:academyId/members/:uid/role', members.changeRole),
+  route('PATCH', '/v1/academies/:academyId/members/:uid/permissions', members.setPermissions),
   route('POST', '/v1/academies/:academyId/members/:uid/suspend', members.suspend),
   route('POST', '/v1/academies/:academyId/members/:uid/reactivate', members.reactivate),
   route('POST', '/v1/academies/:academyId/members/:uid/remove', members.remove),

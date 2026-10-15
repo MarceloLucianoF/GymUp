@@ -255,3 +255,24 @@ test('migração 0005 preserva a auditoria existente e mantém a imutabilidade',
   assert.throws(() => db.exec("INSERT INTO academy_audit_log (id, academy_id, actor_uid, action, target_type, target_id, detail, created_at, request_id) VALUES ('x3', 'academiaaaaaaaaaaaa', 'u', 'invented.action', 'training', 't', '', '2026-10-14T00:00:00.000Z', 'r')"), /CHECK/);
   assert.equal(db.prepare("SELECT count(*) n FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'academy_audit_log'").get().n, 2);
 });
+
+test('permissão de criar fichas: dono e admin concedem ao professor; some ao trocar de papel; auditada e isolada', async () => {
+  const d1 = world();
+  const perm = (uid, target, value, aid = A) => api(d1, uid, 'PATCH', `/v1/academies/${aid}/members/${target}/permissions`, { body: { canCreateTrainings: value } });
+  assert.equal(code(await api(d1, 'prof', 'POST', T(), { body: { name: 'Sem permissão', exercises: EX } })), 'forbidden_role');
+  assert.equal((await perm('adm', 'prof', true)).status, 200);
+  assert.equal((await api(d1, 'prof', 'POST', T(), { body: { name: 'Com permissão', exercises: EX } })).status, 200);
+  assert.equal(data(await api(d1, 'prof', 'GET', '/v1/me')).memberships.find((m) => m.academyId === A).canCreateTrainings, true);
+  assert.equal(data(await api(d1, 'dono', 'GET', `/v1/academies/${A}/members?role=coach`)).members.find((m) => m.userId === 'prof').canCreateTrainings, true);
+  assert.equal(code(await perm('adm', 'prof', true)), 'conflict');                       // mesmo valor
+  for (const uid of ['prof', 'prof2', 'rec', 'alu']) assert.equal(code(await perm(uid, 'prof2', true)), 'forbidden_role', uid);
+  assert.equal(code(await perm('dono', 'alu', true)), 'conflict');                       // não é professor
+  assert.equal(code(await perm('dono', 'dono', true)), 'forbidden_role');
+  assert.equal(code(await perm('donoB', 'prof', true, B)), 'not_found');                 // professor de A na URL de B
+  assert.equal(code(await perm('donoB', 'prof', true, A)), 'no_membership');
+  assert.equal((await api(d1, 'dono', 'POST', T(), { body: { name: 'x', exercises: EX, canCreateTrainings: true } })).status, 400);
+  assert.equal((await api(d1, 'dono', 'PATCH', `/v1/academies/${A}/members/prof/permissions`, { body: { canCreateTrainings: 'sim' } })).status, 400);
+  assert.equal((await api(d1, 'dono', 'PATCH', `/v1/academies/${A}/members/prof/role`, { body: { role: 'reception' } })).status, 200);
+  assert.equal(row(d1, "SELECT can_create_trainings c FROM academy_members WHERE academy_id = ? AND user_id = 'prof'", A).c, 0);   // trocar de papel zera a permissão
+  assert.equal(audit(d1, 'member.permission_changed').length, 1);
+});

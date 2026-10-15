@@ -11,7 +11,9 @@ const AcademyPage = lazy(() => import('./pages/app/AcademyPage'));
 const Members = lazy(() => import('./pages/app/Members'));
 const Invites = lazy(() => import('./pages/app/Invites'));
 const Audit = lazy(() => import('./pages/app/Audit'));
-const CoachStudents = lazy(() => import('./pages/app/CoachStudents'));
+const Students = lazy(() => import('./pages/app/Students'));
+const Trainings = lazy(() => import('./pages/app/Trainings'));
+const TrainingDetail = lazy(() => import('./pages/app/TrainingDetail'));
 
 function Private({ children }) {
   const { user } = useSession();
@@ -35,7 +37,9 @@ export default function AuthRoutes() {
             <Route path="academia/:academyId/membros" element={<Members />} />
             <Route path="academia/:academyId/convites" element={<Invites />} />
             <Route path="academia/:academyId/auditoria" element={<Audit />} />
-            <Route path="academia/:academyId/alunos" element={<CoachStudents />} />
+            <Route path="academia/:academyId/alunos" element={<Students />} />
+            <Route path="academia/:academyId/fichas" element={<Trainings />} />
+            <Route path="academia/:academyId/fichas/:templateId" element={<TrainingDetail />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

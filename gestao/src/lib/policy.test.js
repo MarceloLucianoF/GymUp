@@ -32,8 +32,11 @@ test('convite: papéis por função', () => {
   expect(INVITE_ROLES.coach).toBeUndefined();
 });
 
-test('menu por papel: coach só vê alunos; recepção não vê auditoria', () => {
-  expect(NAV_BY_ROLE.coach).toEqual(['alunos']);
+test('menu por papel: coach vê alunos e fichas; recepção vê alunos (cadastro) mas não fichas nem auditoria', () => {
+  expect(NAV_BY_ROLE.coach).toEqual(['alunos', 'fichas']);
+  expect(NAV_BY_ROLE.reception).toContain('alunos');
+  expect(NAV_BY_ROLE.reception).not.toContain('fichas');
+  expect(NAV_BY_ROLE.student).toEqual([]);
   expect(NAV_BY_ROLE.reception).not.toContain('auditoria');
   expect(NAV_BY_ROLE.owner).toContain('auditoria');
 });

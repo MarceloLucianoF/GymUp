@@ -118,6 +118,7 @@ export const SCHEMAS = {
     required: ['name', 'exercises']
   },
   assignTraining: { fields: { studentUid: UID, version: { type: 'int', min: 1, max: 100000 } }, required: ['studentUid'] },
+  setPermissions: { fields: { canCreateTrainings: { type: 'bool' } }, required: ['canCreateTrainings'] },
   updateTraining: null,   // definido abaixo: mesmos campos de createTraining, todos opcionais
   duplicateTraining: { fields: { name: str(2, 80) } },
   assignBatch: {
@@ -143,7 +144,7 @@ export const ACTION_LABELS = {
   'coach.rejected': 'Professor recusado', 'coach.revoked': 'Vínculo com professor encerrado',
   'consent.granted': 'Consentimento concedido', 'consent.revoked': 'Consentimento revogado',
   'training.created': 'Ficha criada', 'training.published': 'Versão de ficha publicada', 'training.assigned': 'Ficha atribuída', 'training.updated': 'Rascunho de ficha editado', 'training.duplicated': 'Ficha duplicada',
-  'training.archived': 'Ficha arquivada', 'training.restored': 'Ficha restaurada', 'training.batch_assigned': 'Ficha atribuída em lote'
+  'training.archived': 'Ficha arquivada', 'training.restored': 'Ficha restaurada', 'training.batch_assigned': 'Ficha atribuída em lote', 'member.permission_changed': 'Permissões do professor alteradas'
 };
 export const ERROR_MESSAGES = {
   network: 'Não foi possível falar com o servidor. Verifique a conexão e tente de novo.',
