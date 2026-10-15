@@ -1,285 +1,270 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import usePageMeta, { SITE_URL } from '../../hooks/usePageMeta';
-import {
-  Dumbbell, Flame, Sparkles, LineChart, MessageCircle, Timer, Users, Wallet, ClipboardList,
-  ArrowRight, Check, Play, Smartphone, WifiOff, Trophy, Zap
-} from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
-import Reveal from '../../components/ui/Reveal';
-import ProgressRing from '../../components/ui/ProgressRing';
 import { activeWorkoutService } from '../../services/activeWorkoutService';
-import { BrandMark, BrandWordmark } from '../../components/brand/Brand';
+import { CONTACT_EMAIL } from './LegalLayout';
+import './landing.css';
 
-const FEATURES = [
-  { icon: Timer, title: 'Treino guiado', text: 'Cronômetro, descanso automático e registro de carga série a série, pensado para usar com uma mão.' },
-  { icon: LineChart, title: 'Evolução real', text: 'Gráficos de carga, volume e medidas mostram o progresso que a balança sozinha não conta.' },
-  { icon: Sparkles, title: 'Coach com IA', text: 'Pergunte, receba macros e peça uma ficha pronta. A IA conhece o seu histórico.' },
-  { icon: MessageCircle, title: 'Chat com o treinador', text: 'Dúvidas e ajustes sem sair do app, com o contexto do treino ao lado.' },
-  { icon: WifiOff, title: 'Funciona offline', text: 'Sem sinal na academia? Seu treino é salvo e sincronizado quando a rede voltar.' },
-  { icon: Trophy, title: 'Metas e recordes', text: 'Sequência de dias, meta semanal e aviso de novos recordes pessoais.' }
+// Telas reais do app (conta fictícia, dados de exemplo), recortadas como fotografias.
+const REEL = [
+  { src: '/landing/descanso.webp', video: '/landing/descanso.webm', pos: '50% 48%', cap: 'Descanso automático entre as séries', alt: 'Tela do descanso: anel amarelo com a contagem 1:28 e botões de ajustar o tempo' },
+  { src: '/landing/treino.webp', pos: '50% 22%', cap: 'Carga e repetições com um toque', alt: 'Tela do treino em andamento: Supino Máquina, meta de 3 séries de 10 e botões de carga' },
+  { src: '/landing/coach-ia.webp', pos: '50% 62%', cap: 'O Coach de IA monta a ficha que você pede', alt: 'Conversa com o Coach de IA: ficha de pernas só com máquinas' },
+  { src: '/landing/fichas.webp', pos: '50% 38%', cap: 'Fichas prontas para começar hoje', alt: 'Biblioteca de fichas de treino do app' }
 ];
 
-const STEPS = [
-  { n: '01', title: 'Crie sua conta', text: 'Em menos de um minuto, sem cartão.' },
-  { n: '02', title: 'Receba sua ficha', text: 'Do treinador ou gerada pela IA.' },
-  { n: '03', title: 'Treine e evolua', text: 'Registre, acompanhe e bata recordes.' }
+const SWITCHES = [
+  { say: 'O descanso entre séries conta sozinho.', then: 'Registrou a série, o cronômetro de descanso já está rodando.' },
+  { say: 'Sem sinal, o treino continua salvo.', then: 'Tudo sincroniza sozinho quando a rede volta.' },
+  { say: 'A IA monta a ficha que você pede.', then: 'Só máquinas, o grupo que quiser, em segundos.' },
+  { say: 'Cada carga vira gráfico de evolução.', then: 'Carga, volume e medidas ao longo das semanas.' },
+  { say: 'Seu treinador ajusta e você recebe.', then: 'Chat e fichas atualizadas dentro do próprio app.' }
 ];
 
-const COACH_POINTS = [
-  { icon: Users, text: 'Carteira de alunos com status e alertas de risco' },
-  { icon: ClipboardList, text: 'Editor de fichas e biblioteca de exercícios' },
-  { icon: Wallet, text: 'Financeiro com mensalidades e inadimplência' },
-  { icon: MessageCircle, text: 'Chat integrado com cada aluno' }
+const STAGES = [
+  { clause: 'Primeiro, crie a conta.', name: 'Conta', src: '/landing/cadastro.webp', alt: 'Tela de cadastro do app' },
+  { clause: 'Depois, escolha a ficha.', name: 'Ficha', src: '/landing/fichas.webp', alt: 'Biblioteca de fichas de treino' },
+  { clause: 'Então, treine e descanse.', name: 'Treino', src: '/landing/treino.webp', alt: 'Treino em andamento com carga e repetições' },
+  { clause: 'Por fim, veja a semana.', name: 'Evolução', src: '/landing/inicio.webp', alt: 'Início do app com a meta semanal' }
 ];
 
-function PhoneMockup() {
-  return (
-    <div className="relative mx-auto w-[260px] animate-float sm:w-[290px]" aria-hidden="true">
-      <div className="absolute -inset-6 rounded-[3rem] bg-brand/30 blur-3xl" />
-      <div className="relative rounded-[2.4rem] border border-white/10 bg-gray-950 p-2.5 shadow-2xl ring-1 ring-black/40">
-        <div className="rounded-[1.9rem] bg-gradient-to-b from-[#FFF8E1] to-white p-4 dark:from-[#1a1608] dark:to-[#0B0F19]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Bom dia</p>
-              <p className="font-display text-lg font-black text-gray-900 dark:text-white">Ana</p>
-            </div>
-            <span className="flex items-center gap-1 rounded-full bg-orange-500/15 px-2.5 py-1 text-xs font-black text-orange-500"><Flame className="h-3.5 w-3.5" /> 12</span>
-          </div>
-          <div className="mt-4 flex items-center gap-4 rounded-2xl bg-white/80 p-3 dark:bg-white/5">
-            <ProgressRing value={75} size={64} stroke={7}><span className="text-sm font-black text-gray-900 dark:text-white">3/4</span></ProgressRing>
-            <div>
-              <p className="text-sm font-black text-gray-900 dark:text-white">Meta semanal</p>
-              <p className="text-xs text-gray-500">Falta 1 treino</p>
-            </div>
-          </div>
-          <div className="mt-3 rounded-2xl bg-gradient-to-br from-brand to-[#FF9800] p-4 text-black">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Treino de hoje</p>
-            <p className="mt-1 font-display text-base font-black leading-tight">Peito e Tríceps</p>
-            <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-black py-2.5 text-xs font-black text-brand"><Play className="h-3.5 w-3.5 fill-current" /> INICIAR</div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-white/80 p-2.5 dark:bg-white/5"><p className="font-display text-lg font-black text-gray-900 dark:text-white">18</p><p className="text-[10px] uppercase text-gray-500">treinos</p></div>
-            <div className="rounded-xl bg-white/80 p-2.5 dark:bg-white/5"><p className="font-display text-lg font-black text-gray-900 dark:text-white">52t</p><p className="text-[10px] uppercase text-gray-500">volume</p></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+const QUESTIONS = [
+  ['Preciso pagar para usar?', 'Criar a conta é grátis e você já começa a treinar. As fichas prontas, o cronômetro e o registro de cargas estão liberados desde o primeiro dia.'],
+  ['Funciona sem internet?', 'Sim. O treino é salvo no aparelho e sincroniza quando a rede volta. Abra o site no celular e adicione à tela inicial para usar como aplicativo.'],
+  ['Preciso ter um treinador?', 'Não. Você pode usar as fichas prontas, pedir uma ficha ao Coach de IA ou receber a do seu treinador, que ajusta e você recebe no app.'],
+  ['E os meus dados?', 'Você pode baixar uma cópia ou excluir a conta quando quiser, pelo seu Perfil. Os detalhes estão na Política de Privacidade.'],
+  ['O Coach de IA substitui meu treinador?', 'Não. Ele sugere fichas e macros a partir do seu perfil e do seu histórico. Revise com um profissional, principalmente se você tem lesão ou condição de saúde.'],
+  ['Sou treinador. Posso usar com meus alunos?', 'O app tem painel do treinador: carteira de alunos, editor de fichas, chat com cada aluno e financeiro com mensalidades. Para ativar o acesso, escreva para o contato no fim desta página.']
+];
+
+const EXAMPLES = ['Pernas só com máquinas', 'Full body somente máquinas', 'Treino de peito', 'Posterior e glúteos'];
 
 const JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'BohTreinar',
-  applicationCategory: 'HealthApplication',
-  operatingSystem: 'Web, Android, iOS (PWA)',
-  url: SITE_URL,
-  description: 'App de treinos com fichas, cronômetro, evolução, chat com o treinador e Coach de IA.',
+  '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'BohTreinar', applicationCategory: 'HealthApplication',
+  operatingSystem: 'Web, Android, iOS (PWA)', url: SITE_URL,
+  description: 'App de treinos com fichas, cronômetro de descanso, evolução, chat com o treinador e Coach de IA.',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' }
 };
 
+// A ficha da demonstração é gerada no aparelho, com a mesma montagem local do app (nada é enviado).
+function useFicha(text) {
+  const [state, setState] = useState({ status: 'idle' });
+  useEffect(() => {
+    const request = text.trim();
+    if (!request) { setState({ status: 'idle' }); return undefined; }
+    let live = true;
+    const timer = setTimeout(async () => {
+      try {
+        const [{ aiService }, composer] = await Promise.all([import('../../services/aiService'), import('../../utils/workoutComposer')]);
+        const workout = aiService.generateLocalWorkout({ userRequest: request, muscleFocus: 'Full Body (Corpo Todo)', goal: 'Hipertrofia' });
+        const limit = composer.parseEquipmentConstraint(request);
+        if (live) setState({ status: 'ready', workout, limit: limit ? composer.describeConstraint(limit) : '' });
+      } catch (error) {
+        if (live) setState({ status: 'error', message: error?.name === 'InsufficientExercisesError' ? error.message : 'Não consegui montar essa ficha. Tente outro pedido.' });
+      }
+    }, 250);
+    return () => { live = false; clearTimeout(timer); };
+  }, [text]);
+  return state;
+}
+
 export default function LandingPage() {
-  usePageMeta('Treine. Evolua. Supere.', 'BohTreinar: fichas, cronômetro, evolução, chat com o treinador e Coach de IA. Funciona offline e é grátis para começar.');
+  usePageMeta('Treine. Evolua. Supere.', 'BohTreinar: fichas, cronômetro de descanso, evolução, chat com o treinador e Coach de IA. Funciona offline e é grátis para começar.');
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const [activeSession, setActiveSession] = useState(null);
-  const [showStickyCta, setShowStickyCta] = useState(false);
+  const [js, setJs] = useState(false);
+  const [sticky, setSticky] = useState(false);
+  const [away, setAway] = useState(false);
+  const [frame, setFrame] = useState(0);
+  const [ask, setAsk] = useState(EXAMPLES[0]);
+  const [on, setOn] = useState([true, false, true, false, false]);
+  const [stage, setStage] = useState(0);
+  const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const lastY = useRef(0);
+  const heroRef = useRef(null);
+  const stageRef = useRef(null);
+  const ficha = useFicha(ask);
 
-  // CTA fixo no celular: aparece depois do início e some perto do fim da página (onde já há outro CTA).
+  useEffect(() => { setJs(true); }, []);
   useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      const nearEnd = y + window.innerHeight > document.documentElement.scrollHeight - 700;
-      setShowStickyCta(y > 600 && !nearEnd);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (user?.uid) {
-      try {
-        setActiveSession(activeWorkoutService.getActiveSession(user.uid));
-      } catch {
-        setActiveSession(null);
-      }
-    } else {
-      setActiveSession(null);
-    }
+    if (!user?.uid) { setActiveSession(null); return; }
+    try { setActiveSession(activeWorkoutService.getActiveSession(user.uid)); } catch { setActiveSession(null); }
   }, [user]);
 
-  const goPrimary = () => navigate(user ? '/dashboard' : '/register');
+  // O carretel da abertura avança com a rolagem enquanto a frase fica parada (a página rola normalmente; nada é sequestrado).
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let raf = 0;
+    const tick = () => {
+      raf = 0;
+      const hero = heroRef.current; const st = stageRef.current;
+      if (!hero || !st) return;
+      const range = hero.offsetHeight - window.innerHeight;
+      const progress = reduce || range <= 0 ? 0 : Math.min(1, Math.max(0, -hero.getBoundingClientRect().top / range));
+      const position = Math.min(REEL.length - 1, (progress / 0.82) * (REEL.length - 1));   // a última tela fica parada nos 18% finais
+      st.style.setProperty('--reel', position.toFixed(3));
+      setFrame((f) => (f === Math.round(position) ? f : Math.round(position)));
+      const y = window.scrollY;
+      setSticky(y > 700 && y + window.innerHeight < document.documentElement.scrollHeight - 700);
+      setAway((was) => { const down = y > lastY.current; lastY.current = y; return y > 120 ? down : false; });
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    tick();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [js]);
+
+  // Entrada das partes de cada seção, uma vez, na ordem de leitura.
+  useEffect(() => {
+    const nodes = [...document.querySelectorAll('.lp [data-in]')];
+    if (!('IntersectionObserver' in window)) { nodes.forEach((n) => n.classList.add('in')); return undefined; }
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    nodes.forEach((n) => io.observe(n));
+    return () => io.disconnect();
+  }, [js]);
+
+  const goPrimary = useCallback(() => navigate(user ? '/dashboard' : '/register'), [navigate, user]);
   const continueWorkout = () => navigate(`/execution/${activeSession.trainingId}`);
+  const primaryLabel = activeSession ? 'Continuar treino ativo' : user ? 'Ir para o meu painel' : 'Criar conta grátis';
+  const primary = activeSession ? continueWorkout : goPrimary;
+  const toggle = (i) => setOn((list) => list.map((v, k) => (k === i ? !v : v)));
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-gray-50 text-gray-900 dark:bg-[#0B0F19] dark:text-white">
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#0B0F19]/80">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
-          <button type="button" onClick={() => navigate('/')} className="flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="BohTreinar início">
-            <BrandMark className="h-10 w-10 shrink-0 rounded-xl shadow-sm" />
-            <span className="font-display text-lg font-black tracking-tight sm:text-xl"><BrandWordmark /></span>
-          </button>
-          <nav className="flex shrink-0 items-center gap-2" aria-label="Acesso">
-            {user ? (
-              <>
-                {activeSession && (
-                  <button type="button" onClick={continueWorkout} className="pressable hidden min-h-[44px] items-center gap-1.5 rounded-xl bg-orange-500/15 px-3 text-sm font-bold text-orange-500 sm:flex">
-                    <Flame className="h-4 w-4" /> Continuar treino
-                  </button>
-                )}
-                <button type="button" onClick={() => navigate('/dashboard')} className="pressable min-h-[44px] rounded-xl bg-brand px-4 text-sm font-black text-black shadow-lg shadow-brand/30">Meu painel</button>
-              </>
-            ) : (
-              <>
-                <button type="button" onClick={() => navigate('/login')} className="pressable min-h-[44px] rounded-xl px-3 text-sm font-bold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10">Entrar</button>
-                <button type="button" onClick={() => navigate('/register')} className="pressable min-h-[44px] rounded-xl bg-brand px-4 text-sm font-black text-black shadow-lg shadow-brand/30">Começar</button>
-              </>
-            )}
-          </nav>
-        </div>
+    <div className={`lp ${js ? 'js' : ''}`}>
+      <a className="skip" href="#main-content">Pular para o conteúdo</a>
+      <header className={`bar ${away ? 'away' : ''}`}>
+        <button type="button" className="brand" onClick={() => window.scrollTo({ top: 0 })} aria-label="BohTreinar, voltar ao topo">BOH<span>TREINAR</span></button>
+        <nav aria-label="Principal">
+          <a className="opt" href="#ficha">Ficha com IA</a>
+          <a className="opt" href="#recursos">Recursos</a>
+          <a className="opt" href="#duvidas">Dúvidas</a>
+          {!user && <Link to="/login">Entrar</Link>}
+          <button type="button" className="btn small" onClick={primary}>{user ? (activeSession ? 'Continuar treino' : 'Meu painel') : 'Criar conta'}</button>
+        </nav>
       </header>
 
-      <main id="main-content" tabIndex={-1} className="outline-none">
+      <main id="main-content" tabIndex={-1} style={{ outline: 'none' }}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
-        {/* HERO */}
-        <section className="aurora-bg relative">
-          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:pt-16 lg:grid-cols-2 lg:gap-8 lg:pb-24 lg:pt-24">
-            <div className="text-center lg:text-left">
-              <span className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-brand">
-                <Zap className="h-3.5 w-3.5" /> Treino inteligente para quem leva a sério
-              </span>
-              <h1 className="animate-fade-up mt-5 font-display text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl" style={{ animationDelay: '80ms' }}>
-                Treine com <span className="text-gradient-brand">método.</span><br />Evolua com <span className="text-gradient-brand">dados.</span>
-              </h1>
-              <p className="animate-fade-up mx-auto mt-5 max-w-xl text-base text-gray-600 dark:text-gray-300 sm:text-lg lg:mx-0" style={{ animationDelay: '160ms' }}>
-                Fichas, cronômetro, evolução, chat com o treinador e um coach de IA. Tudo num app feito para usar com uma mão, mesmo sem internet.
-              </p>
-              <div className="animate-fade-up mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start" style={{ animationDelay: '240ms' }}>
-                {activeSession ? (
-                  <button type="button" onClick={continueWorkout} className="pressable animate-pulse-ring flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] px-7 text-base font-black text-black shadow-xl shadow-brand/30">
-                    <Flame className="h-5 w-5" /> Continuar treino ativo
-                  </button>
-                ) : (
-                  <button type="button" onClick={goPrimary} className="pressable flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] px-7 text-base font-black text-black shadow-xl shadow-brand/30">
-                    {user ? 'Ir para meu painel' : 'Criar conta grátis'} <ArrowRight className="h-5 w-5" />
-                  </button>
-                )}
-                <button type="button" onClick={() => navigate(user ? '/trainings' : '/login')} className="pressable flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-gray-300 bg-white/70 px-7 text-base font-bold text-gray-800 backdrop-blur dark:border-white/15 dark:bg-white/5 dark:text-white">
-                  {user ? 'Ver minhas fichas' : 'Já tenho conta'}
-                </button>
+
+        <section ref={heroRef} className={`hero ${js ? 'pinned' : ''}`} aria-label="Apresentação">
+          <div className="stage" ref={stageRef}>
+            <h1 className="sentence"><span className="half l display">Seu treino</span><span className="half r display">cabe numa mão.</span></h1>
+            <div className="frame" role="group" aria-roledescription="carrossel" aria-label="Telas do app">
+              <div className="reelwrap">
+                <div className="reel">
+                  {REEL.map((s, i) => (
+                    <figure key={s.src} className={`shot ${i === frame ? 'now' : ''}`} aria-hidden={i !== frame}>
+                      {s.video && !reduceMotion
+                        ? <video src={s.video} poster={s.src} muted loop autoPlay playsInline preload="metadata" aria-label={s.alt} style={{ objectPosition: s.pos }} width="390" height="844" />
+                        : <img src={s.src} alt={i === frame ? s.alt : ''} style={{ objectPosition: s.pos }} width="780" height="1688" decoding="async" fetchpriority={i === 0 ? 'high' : undefined} loading={i === 0 ? 'eager' : 'lazy'} />}
+                    </figure>
+                  ))}
+                </div>
               </div>
-              <dl className="mx-auto mt-10 grid max-w-md grid-cols-3 gap-4 text-center lg:mx-0 lg:text-left">
-                {[['Offline', 'funciona sem rede'], ['Coach IA', 'macros e fichas'], ['Chat', 'com seu treinador']].map(([t, l]) => (
-                  <div key={t}>
-                    <dt className="font-display text-xl font-black text-gray-900 dark:text-white">{t}</dt>
-                    <dd className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{l}</dd>
-                  </div>
-                ))}
-              </dl>
             </div>
-            <div className="animate-scale-in" style={{ animationDelay: '200ms' }}><PhoneMockup /></div>
+            <div className="right"><p className="cap" aria-live="polite">{REEL[frame].cap}</p></div>
+            <div className="hero-copy">
+              <p>Fichas, cronômetro de descanso, evolução e Coach de IA. Funciona até sem sinal na academia.</p>
+            </div>
+            <div className="hero-action"><button type="button" className="btn" onClick={primary}>{primaryLabel}</button></div>
           </div>
         </section>
 
-        {/* FEATURES */}
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20" aria-labelledby="features-title">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand">Tudo em um lugar</p>
-            <h2 id="features-title" className="mt-2 font-display text-3xl font-black sm:text-4xl">Menos planilha, mais resultado</h2>
-            <p className="mt-3 text-gray-600 dark:text-gray-400">Cada detalhe foi pensado para o momento em que você está com o celular na mão entre uma série e outra.</p>
-          </Reveal>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, text }, i) => (
-              <Reveal key={title} delay={i * 70}>
-                <article className="surface surface-hover h-full p-6">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Icon className="h-6 w-6" aria-hidden="true" /></span>
-                  <h3 className="mt-4 font-display text-lg font-black">{title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">{text}</p>
-                </article>
-              </Reveal>
+        <section id="ficha" className="field section-pad ask" aria-labelledby="ask-title">
+          <h2 className="sr-only">Peça uma ficha ao Coach de IA</h2>
+          <p id="ask-title" className="ask-label" data-in style={{ '--i': 0 }}>Peça uma ficha como você pediria ao Coach de IA. A resposta aparece aqui, no seu aparelho.</p>
+          <input className="ask-line" data-in style={{ '--i': 1 }} type="text" value={ask} onChange={(e) => setAsk(e.target.value)} maxLength={80} spellCheck="false" autoComplete="off" aria-label="Seu pedido de ficha" aria-describedby="ask-answer" />
+          <div id="ask-answer" className="answer" aria-live="polite" data-in style={{ '--i': 2 }}>
+            {ficha.status === 'ready' && (
+              <>
+                <p className="answer-head">{ficha.workout.name}{ficha.limit ? `, ${ficha.limit}` : ''}</p>
+                <ul>
+                  {ficha.workout.exercises.map((e, i) => <li key={e.name} style={{ '--i': i }}>{e.name}<span>{e.sets}x{e.reps} · {e.rest}s</span></li>)}
+                </ul>
+                <p className="note">Montada com a biblioteca de exercícios do app. No app você salva, ajusta e treina com o cronômetro.</p>
+              </>
+            )}
+            {ficha.status === 'error' && <p className="err">{ficha.message}</p>}
+            {ficha.status === 'idle' && <p className="muted">Escreva um grupo muscular, como pernas, peito ou full body.</p>}
+            <div><button type="button" className="btn" onClick={goPrimary}>{user ? 'Abrir meu painel' : 'Salvar essa ficha no app'}</button></div>
+          </div>
+          <div className="examples" role="group" aria-label="Exemplos de pedido">
+            {EXAMPLES.map((ex, i) => <button key={ex} type="button" data-in style={{ '--i': i }} onClick={() => setAsk(ex)}>{ex}</button>)}
+          </div>
+          <noscript><p>Ative o JavaScript para pedir uma ficha aqui. No app, o Coach de IA faz isso por você.</p></noscript>
+        </section>
+
+        <section className="steps" aria-labelledby="steps-title">
+          <h2 id="steps-title" className="sr-only">Como começar</h2>
+          <div className="steps-left">
+            <div className="rail" data-in>
+              <ol aria-hidden="true">{STAGES.map((s, i) => <li key={s.name} className={i === stage ? 'now' : ''}>{s.name}</li>)}</ol>
+              <div className="track">
+                <span className="base" /><span className="fill" style={{ '--p': `${(stage / (STAGES.length - 1)) * 100}%` }} />
+                <input type="range" min="0" max={STAGES.length - 1} step="1" value={stage} onChange={(e) => setStage(Number(e.target.value))} aria-label="Etapa" aria-valuetext={STAGES[stage].clause} />
+              </div>
+            </div>
+            <p className="clause" aria-live="polite" data-in>{STAGES[stage].clause}</p>
+          </div>
+          <div className="steps-right">
+            <div className="step-shots">
+              {STAGES.map((s, i) => <img key={s.src} src={s.src} alt={i === stage ? s.alt : ''} className={i === stage ? 'on' : ''} width="780" height="1688" loading="lazy" decoding="async" />)}
+            </div>
+          </div>
+        </section>
+
+        <section id="recursos" className="bands" aria-labelledby="bands-title">
+          <h2 id="bands-title" className="sr-only">O que o app faz</h2>
+          {SWITCHES.map((s, i) => (
+            <div key={s.say} className={`band c${i} ${on[i] ? 'on' : ''}`} data-in style={{ '--i': i % 2 }}>
+              <h3>{s.say}</h3>
+              <button type="button" role="switch" aria-checked={on[i]} aria-label={s.say} className="switch" onClick={() => toggle(i)} />
+              <p aria-hidden={!on[i]}>{s.then}</p>
+            </div>
+          ))}
+        </section>
+
+        <section id="duvidas" className="field section-pad faq" aria-labelledby="faq-title">
+          <h2 id="faq-title" data-in>Dúvidas antes de começar</h2>
+          <div className="qs">
+            {QUESTIONS.map(([q, a], i) => (
+              <details key={q} data-in style={{ '--i': i % 3 }}>
+                <summary>{q}</summary>
+                <p>{a} {q === 'E os meus dados?' && <Link to="/privacidade">Política de Privacidade</Link>}</p>
+              </details>
             ))}
           </div>
         </section>
 
-        {/* COMO FUNCIONA */}
-        <section className="border-y border-gray-200/70 bg-white/60 py-16 dark:border-white/10 dark:bg-white/[0.02]" aria-labelledby="steps-title">
-          <div className="mx-auto max-w-6xl px-4">
-            <Reveal className="text-center">
-              <h2 id="steps-title" className="font-display text-3xl font-black sm:text-4xl">Comece em 3 passos</h2>
-            </Reveal>
-            <ol className="mt-10 grid gap-4 md:grid-cols-3">
-              {STEPS.map((step, i) => (
-                <Reveal key={step.n} delay={i * 100} as="li">
-                  <div className="surface h-full p-6">
-                    <span className="font-display text-4xl font-black text-gradient-brand">{step.n}</span>
-                    <h3 className="mt-2 font-display text-lg font-black">{step.title}</h3>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{step.text}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </ol>
+        <section className="close" aria-labelledby="close-title">
+          <h2 id="close-title" className="display" data-in><span>A próxima</span> <span>série é sua.</span></h2>
+          <div className="close-row" data-in style={{ '--i': 1 }}>
+            <p>Crie a conta grátis e comece com uma ficha pronta ou pedida ao Coach de IA.</p>
+            <button type="button" className="btn" onClick={primary}>{primaryLabel}</button>
           </div>
-        </section>
-
-        {/* PARA TREINADORES */}
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20" aria-labelledby="coach-title">
-          <div className="grid items-center gap-8 lg:grid-cols-2">
-            <Reveal>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand">Para treinadores</p>
-              <h2 id="coach-title" className="mt-2 font-display text-3xl font-black sm:text-4xl">Gerencie sua consultoria sem sair do celular</h2>
-              <p className="mt-3 text-gray-600 dark:text-gray-400">Veja quem treinou hoje, quem está sumindo e quem está com mensalidade em atraso. Ajuste uma ficha e o aluno já recebe.</p>
-              <button type="button" onClick={() => navigate('/register')} className="pressable mt-6 inline-flex min-h-[48px] items-center gap-2 rounded-2xl bg-gray-900 px-6 text-sm font-black text-white dark:bg-white dark:text-black">
-                Quero ser treinador <ArrowRight className="h-4 w-4" />
-              </button>
-            </Reveal>
-            <Reveal delay={120}>
-              <ul className="surface divide-y divide-gray-100 p-2 dark:divide-white/10">
-                {COACH_POINTS.map(({ icon: Icon, text }) => (
-                  <li key={text} className="flex items-center gap-4 p-4">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand"><Icon className="h-5 w-5" aria-hidden="true" /></span>
-                    <span className="text-sm font-semibold sm:text-base">{text}</span>
-                    <Check className="ml-auto h-5 w-5 shrink-0 text-emerald-500" aria-hidden="true" />
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* CTA FINAL */}
-        <section className="px-4 pb-20">
-          <Reveal>
-            <div className="aurora-bg mx-auto max-w-4xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-brand to-[#FF9800] p-8 text-center text-black shadow-2xl shadow-brand/20 sm:p-12">
-              <Dumbbell className="mx-auto h-10 w-10" aria-hidden="true" />
-              <h2 className="mt-3 font-display text-3xl font-black sm:text-4xl">Seu próximo treino começa agora</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm font-medium opacity-80 sm:text-base">Crie sua conta gratuita e monte sua primeira ficha em minutos.</p>
-              <button type="button" onClick={goPrimary} className="pressable mt-6 inline-flex min-h-[56px] items-center gap-2 rounded-2xl bg-black px-8 text-base font-black text-brand shadow-xl">
-                {user ? 'Abrir meu painel' : 'Começar agora'} <ArrowRight className="h-5 w-5" />
-              </button>
-            </div>
-          </Reveal>
         </section>
       </main>
 
-      {showStickyCta && !user && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200/70 bg-white/90 px-4 pt-3 backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-[#0B0F19]/90" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-          <Link to="/register" className="pressable flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] px-5 text-base font-black text-black shadow-lg shadow-brand/25">
-            Criar conta grátis <ArrowRight className="h-5 w-5" aria-hidden="true" />
-          </Link>
+      <footer className="foot">
+        <div className="foot-top" data-in>
+          <div className="notes"><span>BohTreinar</span><span>Treine. Evolua. Supere.</span><span>Telas do app com dados de exemplo.</span></div>
+          <button type="button" className="link top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Voltar ao topo</button>
         </div>
-      )}
-
-      <footer className="border-t border-gray-200/70 py-8 text-center text-xs text-gray-600 dark:border-white/10 dark:text-gray-300">
-        <p className="flex items-center justify-center gap-1.5"><Smartphone className="h-4 w-4" aria-hidden="true" /> Instale na tela inicial do celular para a melhor experiência.</p>
-        <nav aria-label="Documentos legais" className="mt-2 flex justify-center gap-4 font-bold">
-          <Link to="/privacidade" className="inline-flex min-h-[44px] items-center underline hover:text-brand">Privacidade</Link>
-          <Link to="/termos" className="inline-flex min-h-[44px] items-center underline hover:text-brand">Termos de Uso</Link>
-        </nav>
-        <p className="mt-1">© {new Date().getFullYear()} BohTreinar · Treine · Evolua · Supere</p>
+        <span />
+        <a className="mail" data-in href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL.split('@')[0]}<wbr />@{CONTACT_EMAIL.split('@')[1]}</a>
+        <div className="foot-meta" data-in style={{ '--i': 1 }}>
+          <nav aria-label="Documentos legais"><Link to="/privacidade">Privacidade</Link><Link to="/termos">Termos de Uso</Link></nav>
+          <span className="mid">Instale na tela inicial do celular</span>
+          <span className="end">© {new Date().getFullYear()}</span>
+        </div>
       </footer>
+
+      {sticky && !user && (
+        <div className="sticky-cta"><Link className="btn" to="/register">Criar conta grátis</Link></div>
+      )}
     </div>
   );
 }
