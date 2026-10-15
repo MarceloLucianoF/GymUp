@@ -18,6 +18,7 @@ export async function runIdempotent(ctx, scope, hashInput, build) {
     return JSON.parse(saved.response_json);   // repetição: mesmo resultado, nada novo é gravado
   }
   const { stmts, response, storable } = await build();
+  if (!stmts.length) return response;   // nada a gravar (ex.: lote sem ninguém a atribuir): a chave não é guardada
   let results;
   try {
     results = await guarded(() => ctx.db.batch([idempotencyCleanupStmt(ctx.db, ctx), ...stmts, idempotencyStmt(ctx.db, ctx, scope, key, requestHash, storable ?? response)]));

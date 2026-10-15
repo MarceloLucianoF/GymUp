@@ -33,7 +33,7 @@ const consent = (run, aid, uid, status = 'granted') => run(
   aid, uid, status === 'granted' ? 1 : 0, status, NOW, status === 'revoked' ? NOW : null, NOW);
 
 test('migrações: aplicam em ordem, são idempotentes por arquivo e criam todas as tabelas do domínio', () => {
-  assert.deepEqual(MIGRATIONS, ['0001_core.sql', '0002_coaching.sql', '0003_training.sql', '0004_business.sql']);
+  assert.deepEqual(MIGRATIONS, ['0001_core.sql', '0002_coaching.sql', '0003_training.sql', '0004_business.sql', '0005_training_ops.sql']);
   const db = new DatabaseSync(':memory:');
   db.exec(SQL);
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((r) => r.name);
