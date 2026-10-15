@@ -51,8 +51,9 @@ export async function list(ctx) {
   const { results } = await guarded(() => ctx.db.prepare(
     `SELECT t.id, t.name, t.description, t.status, t.current_version, t.created_by, t.updated_at,
             (SELECT count(*) FROM training_assignments a WHERE a.academy_id = t.academy_id AND a.template_id = t.id) AS assigned
-       FROM training_templates t WHERE t.academy_id = ? AND (? = '' OR t.status = ?) ORDER BY t.updated_at DESC, t.rowid DESC LIMIT 100`
-  ).bind(academyId, status || '', status || '').all());
+       FROM training_templates t WHERE t.academy_id = ? AND (? = '' OR t.status = ?) AND (? = 0 OR t.created_by = ? OR t.current_version >= 1)
+      ORDER BY t.updated_at DESC, t.rowid DESC LIMIT 100`
+  ).bind(academyId, status || '', status || '', membership.role === 'coach' ? 1 : 0, ctx.user.uid).all());
   return {
     academyId,
     templates: results.map((t) => ({
@@ -67,20 +68,22 @@ export async function detail(ctx) {
   const { academyId, id } = ctx.params;
   const { membership } = await reader(ctx, academyId);
   const t = await loadTemplate(ctx, academyId, id);
+  const foreign = !ownsOrManages(membership, t, ctx.user.uid);   // professor vendo ficha de outra pessoa: só o que foi publicado
+  if (foreign && t.current_version === 0) throw new ApiError('not_found');
   const { results: versions } = await guarded(() => ctx.db.prepare(
     `SELECT v.version, v.name, v.content_hash, v.created_by, v.created_at,
             (SELECT count(*) FROM training_assignments a WHERE a.academy_id = v.academy_id AND a.template_id = v.template_id AND a.version = v.version) AS assigned
        FROM training_versions v WHERE v.academy_id = ? AND v.template_id = ? ORDER BY v.version DESC LIMIT 100`
   ).bind(academyId, id).all());
   const names = await nameOf(ctx, academyId, [t.created_by, ...versions.map((v) => v.created_by)]);
-  const draft = JSON.parse(t.draft_json).exercises;
   const latest = versions[0];
+  const draft = foreign ? JSON.parse((await guarded(() => ctx.db.prepare('SELECT exercises_json FROM training_versions WHERE academy_id = ? AND template_id = ? AND version = ?').bind(academyId, id, latest.version).first())).exercises_json) : JSON.parse(t.draft_json).exercises;
   const draftHash = await sha256Hex(canonical(t.name, t.description, draft));
   return {
     template: {
       templateId: t.id, name: t.name, description: t.description, status: t.status, currentVersion: t.current_version, exercises: draft,
       createdByName: names.get(t.created_by) || '', createdAt: t.created_at, updatedAt: t.updated_at,
-      unpublishedChanges: !latest || latest.content_hash !== draftHash, canEdit: ownsOrManages(membership, t, ctx.user.uid)
+      unpublishedChanges: !foreign && (!latest || latest.content_hash !== draftHash), canEdit: ownsOrManages(membership, t, ctx.user.uid)
     },
     versions: versions.map((v) => ({ version: v.version, name: v.name, versionHash: v.content_hash, createdAt: v.created_at, createdByName: names.get(v.created_by) || '', assignedCount: membership.role === 'coach' ? undefined : v.assigned }))
   };
@@ -117,9 +120,12 @@ const pick = (e) => ({ muscleGroup: e.muscleGroup || '', sets: String(e.sets ?? 
 
 export async function compare(ctx) {
   const { academyId, id } = ctx.params;
-  await reader(ctx, academyId);
+  const { membership } = await reader(ctx, academyId);
   const t = await loadTemplate(ctx, academyId, id);
+  const foreign = !ownsOrManages(membership, t, ctx.user.uid);
+  if (foreign && t.current_version === 0) throw new ApiError('not_found');
   const side = async (raw) => {
+    if (raw === 'draft' && foreign) throw new ApiError('forbidden_role');   // rascunho alheio não é lido
     if (raw === 'draft') return { label: 'rascunho', name: t.name, description: t.description, exercises: JSON.parse(t.draft_json).exercises };
     const n = Number(raw);
     if (!Number.isInteger(n) || n < 1) throw new ApiError('invalid_request');
@@ -150,8 +156,8 @@ export async function update(ctx) {
   const description = body.description ?? t.description;
   const draft = JSON.stringify({ exercises: body.exercises ?? JSON.parse(t.draft_json).exercises });
   const results = await guarded(() => ctx.db.batch([
-    ctx.db.prepare("UPDATE training_templates SET name = ?, description = ?, draft_json = ?, updated_at = ? WHERE id = ? AND academy_id = ? AND status = 'active' AND updated_at = ?")
-      .bind(name, description, draft, ctx.nowIso, id, academyId, t.updated_at),
+    ctx.db.prepare("UPDATE training_templates SET name = ?, description = ?, draft_json = ?, updated_at = ? WHERE id = ? AND academy_id = ? AND status = 'active' AND updated_at = ? AND draft_json = ? AND name = ? AND description = ?")
+      .bind(name, description, draft, ctx.nowIso, id, academyId, t.updated_at, t.draft_json, t.name, t.description),
     auditStmt(ctx.db, ctx, { academyId, action: 'training.updated', targetType: 'training', targetId: id }, true)
   ]));
   if (!changed(results)) throw new ApiError('conflict');
@@ -160,9 +166,10 @@ export async function update(ctx) {
 
 export async function duplicate(ctx) {
   const { academyId, id } = ctx.params;
-  await author(ctx, academyId);
+  const membership = await author(ctx, academyId);
   const body = await readBody(ctx.request, SCHEMAS.duplicateTraining);
   const t = await loadTemplate(ctx, academyId, id);
+  if (!ownsOrManages(membership, t, ctx.user.uid)) throw new ApiError('forbidden_role');   // professor só duplica a própria (o rascunho alheio não é lido)
   const name = body.name || `${t.name} (cópia)`.slice(0, 80);
   const copyId = ctx.newId(24);
   await guarded(() => ctx.db.batch([
@@ -223,10 +230,12 @@ export async function assign(ctx) {
   }
   const t = await guarded(() => ctx.db.prepare('SELECT id, current_version, status FROM training_templates WHERE academy_id = ? AND id = ?').bind(academyId, id).first());
   if (!t) throw new ApiError('not_found');
+  if (t.status !== 'active') throw new ApiError('conflict');   // arquivada não recebe atribuição
   const version = body.version ?? t.current_version;
   if (version < 1 || version > t.current_version) throw new ApiError('conflict');
   const student = await getMember(ctx.db, academyId, body.studentUid);
   if (!student) throw new ApiError('not_found');
+  if (student.role !== 'student' || student.status !== 'active') throw new ApiError('conflict');
   const results = await guarded(() => ctx.db.batch([
     ctx.db.prepare(
       `INSERT INTO training_assignments (assignment_id, academy_id, student_uid, template_id, version, assigned_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -282,8 +291,9 @@ async function planBatch(ctx, { academyId, membership, templateId, version, stud
     const m = byUid.get(uid);
     if (!m) return { studentUid: uid, displayName: '', outcome: 'skip', reason: 'not_found' };
     const base = { studentUid: uid, displayName: m.display_name };
-    if (m.role !== 'student' || m.status !== 'active') return { ...base, outcome: 'skip', reason: 'not_active_student' };
-    if (membership.role === 'coach' && !m.mine) return { ...base, outcome: 'skip', reason: 'not_your_student' };
+    // Sem nome para quem não é aluno ativo ou não é do professor: a prévia não serve para descobrir quem é quem.
+    if (m.role !== 'student' || m.status !== 'active') return { studentUid: uid, displayName: '', outcome: 'skip', reason: 'not_active_student' };
+    if (membership.role === 'coach' && !m.mine) return { studentUid: uid, displayName: '', outcome: 'skip', reason: 'not_your_student' };
     if (!m.cur_template) return { ...base, outcome: 'assign' };
     const current = { templateId: m.cur_template, version: m.cur_version, name: m.cur_name || '' };
     if (m.cur_template === templateId && m.cur_version === v) return { ...base, outcome: 'skip', reason: 'already_assigned', current };
@@ -310,15 +320,21 @@ export async function assignBatch(ctx) {
     const todo = plan.rows.filter((r) => r.outcome !== 'skip');
     const response = { dryRun: false, templateId: id, version: plan.version, templateName: plan.template.name, summary: summarize(plan.rows), results: plan.rows };
     if (!todo.length) return { stmts: [], response };
+    const isCoach = membership.role === 'coach';
+    const link = "EXISTS (SELECT 1 FROM coach_assignments c WHERE c.academy_id = ? AND c.coach_uid = ? AND c.student_uid = ? AND c.status = 'active')";
+    // Guarda: se a instrução anterior não mudou nenhuma linha (corrida), esta insere uma ação inválida, o CHECK falha e o batch INTEIRO é desfeito (conflito).
+    const guard = (uid) => ctx.db.prepare("INSERT INTO academy_audit_log (id, academy_id, actor_uid, action, target_type, target_id, detail, created_at, request_id) SELECT ?, ?, ?, '__corrida__', 'member', ?, '', ?, '' WHERE changes() = 0")
+      .bind(ctx.newId(24), academyId, ctx.user.uid, uid, ctx.nowIso);
     const stmts = todo.flatMap((r) => [
       r.outcome === 'assign'
-        ? ctx.db.prepare('INSERT INTO training_assignments (assignment_id, academy_id, student_uid, template_id, version, assigned_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (academy_id, student_uid) DO NOTHING')
-          .bind(ctx.newId(24), academyId, r.studentUid, id, plan.version, ctx.user.uid, ctx.nowIso)
-        : ctx.db.prepare('UPDATE training_assignments SET assignment_id = ?, template_id = ?, version = ?, assigned_by = ?, updated_at = ? WHERE academy_id = ? AND student_uid = ? AND template_id = ? AND version = ?')
-          .bind(ctx.newId(24), id, plan.version, ctx.user.uid, ctx.nowIso, academyId, r.studentUid, r.current.templateId, r.current.version),
-      auditStmt(ctx.db, ctx, { academyId, action: 'training.assigned', targetType: 'member', targetId: r.studentUid, detail: `v${plan.version} lote` }, true)
+        ? ctx.db.prepare(`INSERT INTO training_assignments (assignment_id, academy_id, student_uid, template_id, version, assigned_by, updated_at) SELECT ?, ?, ?, ?, ?, ?, ? WHERE (? = 0 OR ${link}) ON CONFLICT (academy_id, student_uid) DO NOTHING`)
+          .bind(ctx.newId(24), academyId, r.studentUid, id, plan.version, ctx.user.uid, ctx.nowIso, isCoach ? 1 : 0, academyId, ctx.user.uid, r.studentUid)
+        : ctx.db.prepare(`UPDATE training_assignments SET assignment_id = ?, template_id = ?, version = ?, assigned_by = ?, updated_at = ? WHERE academy_id = ? AND student_uid = ? AND template_id = ? AND version = ? AND (? = 0 OR (assigned_by = ? AND ${link}))`)
+          .bind(ctx.newId(24), id, plan.version, ctx.user.uid, ctx.nowIso, academyId, r.studentUid, r.current.templateId, r.current.version, isCoach ? 1 : 0, ctx.user.uid, academyId, ctx.user.uid, r.studentUid),
+      guard(r.studentUid),
+      auditStmt(ctx.db, ctx, { academyId, action: 'training.assigned', targetType: 'member', targetId: r.studentUid, detail: `v${plan.version} lote` })
     ]);
-    // O resumo SEMPRE entra: é a última instrução e dá o "1 linha" que a chave de idempotência exige, mesmo se algum aluno mudou no meio.
+    // O resumo é a última instrução e sempre insere 1 linha (a chave de idempotência só é guardada se o lote inteiro passou).
     stmts.push(auditStmt(ctx.db, ctx, { academyId, action: 'training.batch_assigned', targetType: 'training', targetId: id, detail: `v${plan.version}: ${todo.length} de ${plan.rows.length}` }));
     return { stmts, response };
   });

@@ -21,10 +21,12 @@ test('lista e detalhe: dono, admin e qualquer professor leem; recepção e aluno
   const id = await make(d1);
   for (const uid of ['dono', 'adm', 'prof']) assert.equal((await api(d1, uid, 'GET', T())).status, 200, uid);
   for (const uid of ['rec', 'alu']) assert.equal(code(await api(d1, uid, 'GET', T())), 'forbidden_role', uid);
-  assert.equal(code(await api(d1, 'prof', 'GET', `${T()}/${id}`)), undefined);
+  assert.equal(code(await api(d1, 'prof', 'GET', `${T()}/${id}`)), 'not_found');   // rascunho de outra pessoa, sem versão publicada, não aparece para o professor
+  assert.equal(data(await api(d1, 'prof', 'GET', T())).templates.length, 0);
   assert.equal(code(await api(d1, 'donoB', 'GET', `${T(A)}/${id}`)), 'no_membership');          // dono de B na URL de A
   assert.equal(code(await api(d1, 'donoB', 'GET', `${T(B)}/${id}`)), 'not_found');               // id de A na URL de B
   assert.equal(data(await api(d1, 'donoB', 'GET', T(B))).templates.length, 0);
+  await publish(d1, id);
   assert.equal(data(await api(d1, 'prof', 'GET', T())).templates[0].assignedCount, undefined);   // professor não vê contagens
 });
 
@@ -275,4 +277,57 @@ test('permissão de criar fichas: dono e admin concedem ao professor; some ao tr
   assert.equal((await api(d1, 'dono', 'PATCH', `/v1/academies/${A}/members/prof/role`, { body: { role: 'reception' } })).status, 200);
   assert.equal(row(d1, "SELECT can_create_trainings c FROM academy_members WHERE academy_id = ? AND user_id = 'prof'", A).c, 0);   // trocar de papel zera a permissão
   assert.equal(audit(d1, 'member.permission_changed').length, 1);
+});
+
+test('professor não lê nem copia o rascunho de outra pessoa: só o publicado', async () => {
+  const d1 = world();
+  canCreate(d1, 'prof');
+  const id = await make(d1);
+  await publish(d1, id);
+  await api(d1, 'dono', 'PATCH', `${T()}/${id}`, { body: { exercises: [{ name: 'Segredo do rascunho', sets: '3', reps: '10', rest: 60 }] } });   // rascunho novo, não publicado
+  const d = data(await api(d1, 'prof', 'GET', `${T()}/${id}`));
+  assert.deepEqual([d.template.exercises.map((e) => e.name), d.template.unpublishedChanges, d.template.canEdit], [['Agachamento', 'Leg Press'], false, false]);
+  assert.equal(code(await api(d1, 'prof', 'GET', `${T()}/${id}/compare?from=1&to=draft`)), 'forbidden_role');
+  assert.equal(code(await api(d1, 'prof', 'POST', `${T()}/${id}/duplicate`, { body: {} })), 'forbidden_role');
+  assert.equal(data(await api(d1, 'dono', 'GET', `${T()}/${id}/compare?from=1&to=draft`)).summary.added, 1);
+  assert.equal((await api(d1, 'prof', 'GET', `${T()}/${id}/versions/1`)).status, 200);
+});
+
+test('atribuir individual: arquivada e não-aluno recusados', async () => {
+  const d1 = world();
+  const id = await ready(d1);
+  assert.equal(code(await api(d1, 'dono', 'POST', `${T()}/${id}/assign`, { body: { studentUid: 'prof' } })), 'conflict');
+  await api(d1, 'dono', 'POST', `${T()}/${id}/archive`, { body: {} });
+  assert.equal(code(await api(d1, 'dono', 'POST', `${T()}/${id}/assign`, { body: { studentUid: 'alu' } })), 'conflict');
+  assert.equal(count(d1, 'training_assignments'), 0);
+});
+
+test('lote: corrida (alguém atribuiu antes ou o vínculo caiu) desfaz o lote inteiro e não guarda a chave', async () => {
+  const d1 = world();
+  const id = await ready(d1);
+  const real = d1.batch.bind(d1);
+  let fire = () => {};
+  d1.batch = async (stmts) => { fire(); return real(stmts); };
+  // 1) outra atribuição aparece entre a prévia e a escrita
+  fire = () => { d1.raw.prepare("INSERT INTO training_assignments (assignment_id, academy_id, student_uid, template_id, version, assigned_by, updated_at) VALUES ('aaaaaaaaaaaaaaaaaaaa', ?, 'alu2', ?, 1, 'adm', '2026-10-14T00:00:00.000Z')").run(A, id); };
+  const k = key();
+  assert.equal(code(await batch(d1, 'dono', id, { studentUids: ['alu', 'alu2'] }, { key: k })), 'conflict');
+  assert.equal(count(d1, 'training_assignments', "WHERE student_uid = 'alu'"), 0);          // nada parcial
+  assert.equal(count(d1, 'idempotency_keys'), 0);
+  assert.equal(audit(d1, 'training.batch_assigned').length, 0);
+  d1.raw.prepare("DELETE FROM training_assignments").run();
+  // 2) o vínculo do professor cai (ele deixa de ser professor) entre a prévia e a escrita
+  fire = () => {};
+  await link(d1, 'alu', 'prof');
+  fire = () => { d1.raw.prepare("UPDATE academy_members SET role = 'reception' WHERE academy_id = ? AND user_id = 'prof'").run(A); };   // gatilho revoga o vínculo
+  assert.equal(code(await batch(d1, 'prof', id, { studentUids: ['alu'] }, { key: key() })), 'conflict');
+  assert.equal(count(d1, 'training_assignments'), 0);
+});
+
+test('alunos: professor pedindo status diferente continua restrito aos seus alunos', async () => {
+  const d1 = world();
+  await link(d1, 'alu', 'prof');
+  d1.raw.prepare("UPDATE academy_members SET status = 'suspended', suspended_at = '2026-10-14T00:00:00.000Z' WHERE academy_id = ? AND user_id = 'alu2'").run(A);
+  const r = data(await api(d1, 'prof', 'GET', `/v1/academies/${A}/students?status=suspended`));
+  assert.equal(r.total, 0);
 });
