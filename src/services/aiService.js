@@ -289,7 +289,14 @@ REGRAS:
 7. Seja conciso: no máximo 180 palavras, com listas curtas. Respostas longas demoram e o aluno desiste.`;
 
 // Pedidos que exigem as funções do Gemini (montar/gerar ficha): não passam pela NVIDIA.
-export const needsTools = (prompt) => /\b(mont[ae]r?|ger[ae]r?|cri[ae]r?)\b[^.?!]*\b(treino|ficha)\b/i.test(String(prompt || ''));
+// Também vale o pedido direto de um grupo com restrição de equipamento ("Pernas só com máquinas") ou "quero um treino de peito".
+export const needsTools = (prompt) => {
+  const text = String(prompt || '');
+  if (/\b(mont[ae]r?|ger[ae]r?|cri[ae]r?)\b[^.?!]*\b(treino|ficha)\b/i.test(text)) return true;
+  const spec = parseRequest(text);
+  if (!spec) return false;
+  return !!parseEquipmentConstraint(text) || /\b(quero|preciso|me d[aeê]|fa[cç]a)\b[^.?!]*\b(treino|ficha)\b/i.test(text);
+};
 
 // Alguns modelos "fingem" chamar funções e devolvem JSON de ação: isso nunca deve ser mostrado ao aluno.
 export const looksLikeToolCall = (text) => {
@@ -368,6 +375,8 @@ const askWorkoutModel = async (prompt) => {
       return text;
     } catch (error) {
       console.warn('NVIDIA indisponível no gerador de treino:', error?.message || error);
+      // Com a NVIDIA como principal não se espera o Gemini (pode travar): o compositor cai na montagem local, que é instantânea.
+      if (NVIDIA_FIRST) throw error;
     }
   }
   return withModelFallback(async (modelName) => {

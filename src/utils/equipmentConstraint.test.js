@@ -1,5 +1,5 @@
 import { applyEquipmentConstraint, normalizeLibrary, parseEquipmentConstraint } from './workoutComposer';
-import { aiService } from '../services/aiService';
+import { aiService, needsTools } from '../services/aiService';
 import { exercises as defaultExercises } from '../data/exercises';
 
 describe('restrição de equipamento no pedido', () => {
@@ -24,4 +24,11 @@ describe('restrição de equipamento no pedido', () => {
     w.exercises.forEach((ex) => expect(lib.find((e) => e.name === ex.name)?.equipment).not.toBe('maquina'));
     expect(applyEquipmentConstraint(lib, null)).toBe(lib);
   });
+});
+
+test('pedido direto de grupo com restrição de equipamento vira ficha (não conversa)', () => {
+  expect(needsTools('Pernas só com máquinas, sem halteres.')).toBe(true);
+  expect(needsTools('Quero um treino de peito')).toBe(true);
+  expect(needsTools('Qual a melhor hora para treinar pernas?')).toBe(false);
+  expect(needsTools('Quanto de proteína devo consumir?')).toBe(false);
 });
