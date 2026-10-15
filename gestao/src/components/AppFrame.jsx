@@ -21,9 +21,10 @@ const ICONS = {
   convites: 'M3 5h18v14H3V5zm2 2v.5l7 5 7-5V7H5z',
   auditoria: 'M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z',
   academia: 'M12 3l9 6v12H3V9l9-6zm-2 10v6h4v-6h-4z',
-  alunos: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 9a8 8 0 0 1 16 0H4z'
+  alunos: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 9a8 8 0 0 1 16 0H4z',
+  fichas: 'M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8V12zm0 3.5h8V17H8v-1.5z'
 };
-const LABELS = { dashboard: 'Início', membros: 'Membros', convites: 'Convites', auditoria: 'Auditoria', academia: 'Academia', alunos: 'Meus alunos' };
+const LABELS = { dashboard: 'Início', membros: 'Membros', convites: 'Convites', auditoria: 'Auditoria', academia: 'Academia', alunos: 'Alunos', fichas: 'Fichas' };
 const Icon = ({ name }) => <svg className="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d={ICONS[name]} fill="currentColor" /></svg>;
 
 function CreateAcademyModal({ onClose, onCreated }) {
@@ -68,6 +69,7 @@ export default function AppFrame() {
     [me.data]
   );
   const routeId = routeMatch?.params.academyId;
+  const noAccess = !!routeId && !academies.some((a) => a.academyId === routeId);   // URL de uma academia que não é sua: nunca cai em outra por engano
   const current = academies.find((a) => a.academyId === routeId) || academies.find((a) => a.academyId === stored) || academies[0] || null;
   useEffect(() => { if (current && current.academyId !== stored) { write(current.academyId); setStored(current.academyId); } }, [current, stored]);
 
@@ -127,7 +129,13 @@ export default function AppFrame() {
           <button type="button" className="btn ghost" onClick={signOut}>Sair</button>
         </header>
         <main id="conteudo" className="content" tabIndex={-1}>
-          {current ? <Outlet context={ctx} /> : (
+          {current && noAccess ? (
+            <div role="alert" className="error-state">
+              <h1 className="h-small">Você não tem acesso a esta academia</h1>
+              <p>O endereço não corresponde a nenhuma academia em que você tenha um papel de gestão.</p>
+              <button type="button" className="btn" onClick={() => navigate('/app')}>Ir para o início</button>
+            </div>
+          ) : current ? <Outlet context={ctx} /> : (
             <div className="empty big">
               <h1>{studentOnly ? 'Você é aluno nesta conta' : 'Nenhuma academia para gerir'}</h1>
               <p className="muted">{studentOnly ? 'Alunos treinam no app BohTreinar. Esta área é para proprietários, administradores, professores e recepção.' : 'Crie a sua academia ou abra o link de um convite recebido. Alunos treinam no app BohTreinar.'}</p>
@@ -137,7 +145,7 @@ export default function AppFrame() {
         </main>
         {current && nav.length > 0 && (
           <nav className="bottomnav" aria-label="Seções (celular)">
-            {nav.slice(0, 5).map((item) => (
+            {nav.map((item) => (
               <NavLink key={item} to={to(item)} end={item === 'dashboard' || item === 'academia'} className={({ isActive }) => (isActive ? 'bn on' : 'bn')}>
                 <Icon name={item} /><span>{LABELS[item]}</span>
               </NavLink>

@@ -19,7 +19,7 @@ export const ADMIN_MANAGES = ['coach', 'reception', 'student'];
 
 export const LIMITS = {
   academyName: [2, 80], description: 500, contactEmail: 120, maxOwnedAcademies: 5,
-  inviteMaxUses: 500, inviteMaxDays: 30, pageSizeMax: 50, auditPageMax: 50, exercisesMax: 20, bodyBytes: 8 * 1024
+  inviteMaxUses: 500, inviteMaxDays: 30, pageSizeMax: 50, auditPageMax: 50, exercisesMax: 20, batchMax: 50, bodyBytes: 8 * 1024
 };
 
 // ---------- erros: código estável -> [status HTTP, mensagem em português sem detalhes internos] ----------
@@ -117,8 +117,19 @@ export const SCHEMAS = {
     },
     required: ['name', 'exercises']
   },
-  assignTraining: { fields: { studentUid: UID, version: { type: 'int', min: 1, max: 100000 } }, required: ['studentUid'] }
+  assignTraining: { fields: { studentUid: UID, version: { type: 'int', min: 1, max: 100000 } }, required: ['studentUid'] },
+  setPermissions: { fields: { canCreateTrainings: { type: 'bool' } }, required: ['canCreateTrainings'] },
+  updateTraining: null,   // definido abaixo: mesmos campos de createTraining, todos opcionais
+  duplicateTraining: { fields: { name: str(2, 80) } },
+  assignBatch: {
+    fields: {
+      studentUids: { type: 'array', min: 1, max: LIMITS.batchMax, of: UID }, version: { type: 'int', min: 1, max: 100000 },
+      replace: { type: 'bool' }, dryRun: { type: 'bool' }
+    },
+    required: ['studentUids']
+  }
 };
+SCHEMAS.updateTraining = { fields: SCHEMAS.createTraining.fields, atLeastOne: true };
 
 // ---------- textos em português (rótulos, mensagens e ações de auditoria) ----------
 export const ROLE_LABELS = { owner: 'Proprietário', admin: 'Administrador', coach: 'Professor', reception: 'Recepção', student: 'Aluno' };
@@ -132,7 +143,8 @@ export const ACTION_LABELS = {
   'coach.proposed': 'Professor proposto', 'coach.approved': 'Proposta aprovada', 'coach.accepted': 'Professor aceito pelo aluno',
   'coach.rejected': 'Professor recusado', 'coach.revoked': 'Vínculo com professor encerrado',
   'consent.granted': 'Consentimento concedido', 'consent.revoked': 'Consentimento revogado',
-  'training.created': 'Ficha criada', 'training.published': 'Versão de ficha publicada', 'training.assigned': 'Ficha atribuída'
+  'training.created': 'Ficha criada', 'training.published': 'Versão de ficha publicada', 'training.assigned': 'Ficha atribuída', 'training.updated': 'Rascunho de ficha editado', 'training.duplicated': 'Ficha duplicada',
+  'training.archived': 'Ficha arquivada', 'training.restored': 'Ficha restaurada', 'training.batch_assigned': 'Ficha atribuída em lote', 'member.permission_changed': 'Permissões do professor alteradas'
 };
 export const ERROR_MESSAGES = {
   network: 'Não foi possível falar com o servidor. Verifique a conexão e tente de novo.',

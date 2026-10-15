@@ -18,14 +18,23 @@ export function memberActions(me, target) {
 
 // O que cada papel enxerga no menu (o servidor continua sendo a barreira).
 export const NAV_BY_ROLE = {
-  owner: ['dashboard', 'membros', 'convites', 'auditoria', 'academia'],
-  admin: ['dashboard', 'membros', 'convites', 'auditoria', 'academia'],
-  reception: ['dashboard', 'membros', 'convites'],
-  coach: ['alunos'],
+  owner: ['dashboard', 'membros', 'alunos', 'fichas', 'convites', 'auditoria', 'academia'],
+  admin: ['dashboard', 'membros', 'alunos', 'fichas', 'convites', 'auditoria', 'academia'],
+  reception: ['dashboard', 'membros', 'alunos', 'convites'],
+  coach: ['alunos', 'fichas'],
   student: []
 };
+
+// Quem vê e usa as telas de fichas e atribuição (o servidor confere de novo; coach sem permissão de criar recebe recusa).
+export const canAssignTrainings = (role) => ['owner', 'admin', 'coach'].includes(role);
+export const canSeeStudentDetails = (role) => ['owner', 'admin', 'coach'].includes(role);
 
 export const canAssignCoach = (role) => ['owner', 'admin'].includes(role);
 
 // Só caminho interno vira destino pós-login (nunca URL externa).
 export const safeNext = (value) => (typeof value === 'string' && /^\/(?!\/)[A-Za-z0-9/_?=&.%-]*$/.test(value) ? value : '/app');
+
+// Quem cria e edita fichas: dono e admin; professor só com a permissão concedida (o servidor confere).
+export const canCreateTrainings = (membership) => ['owner', 'admin'].includes(membership?.role) || (membership?.role === 'coach' && membership.canCreateTrainings === true);
+// Conceder ou retirar a permissão de criar fichas de um professor.
+export const canTogglePermission = (me, target) => !!me && ['owner', 'admin'].includes(me.role) && target.role === 'coach' && ['active', 'suspended'].includes(target.status);

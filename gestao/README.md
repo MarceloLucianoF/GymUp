@@ -12,7 +12,7 @@ npm run build
 
 Variáveis: `VITE_API_URL` (Worker), `VITE_FIREBASE_*` (config web pública). Nenhum segredo vai no bundle.
 
-Rotas: `/` landing; `/login`; `/convite/:codigo`; `/app/...` painel, `academia/:id` (perfil), `academia/:id/{membros,convites,auditoria,alunos}`; `/termos`, `/privacidade`.
+Rotas: `/` landing; `/login`; `/convite/:codigo`; `/app/...` painel, `academia/:id` (perfil), `academia/:id/{membros,alunos,fichas,convites,auditoria}`, `academia/:id/fichas/:fichaId`; `/termos`, `/privacidade`.
 
 Arquitetura, endpoints, papéis, consentimento e limites: `docs/GESTAO_FUNDACAO.md` e `docs/GESTAO_ARQUITETURA.md`. Worker e migrações: `gestao-worker/` (`node --test test/*.test.js`).
 

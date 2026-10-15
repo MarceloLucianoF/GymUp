@@ -125,9 +125,19 @@ Implementado (todos sob `/v1`, `academyId` sempre da URL):
 | `GET/POST .../coach-assignments` | dono, admin, coach (propõe) | lista / propõe vínculo professor-aluno |
 | `POST /coach-assignments/:id/{approve,revoke}` | dono, admin (aprova) / partes (revoga) | aprovação e encerramento |
 | `GET .../coach/students`, `.../coach/unassigned-students` | coach | só alunos com vínculo ativo / alunos sem professor, só nome |
-| `GET/POST .../trainings`, `POST .../trainings/:id/{publish,assign}` | dono, admin, coach (autores) | ficha, versão imutável, atribuição a um aluno com vínculo e consentimento válidos |
+| `GET .../students` | dono, admin (todos), coach (só os seus), recepção (cadastro) | alunos com filtros (`q`, `status`, `coach`, `training`) e paginação; coach e ficha atual com `outdated`; nunca saúde, desempenho ou consentimento |
+| `PATCH .../members/:uid/permissions` | dono, admin | concede ou retira `canCreateTrainings` de um professor (auditado; some ao trocar de papel) |
+| `GET .../trainings` (`?status=`), `GET .../trainings/:id` | dono, admin, qualquer professor | lista e detalhe (rascunho, mudança não publicada, linha do tempo de versões; contagens só para dono e admin) |
+| `POST .../trainings` | dono, admin, coach com permissão | cria o rascunho (até 20 exercícios) |
+| `PATCH .../trainings/:id` | autor (dono e admin em qualquer uma) | edita só o rascunho, com conferência de edição concorrente; versão publicada não muda |
+| `POST .../trainings/:id/publish` | autor | versão nova imutável com `content_hash` |
+| `GET .../trainings/:id/versions/:n`, `GET .../trainings/:id/compare?from=&to=` | dono, admin, professor | uma versão / diferença entre duas versões ou contra o rascunho (incluído, removido, alterado, mudou de posição) |
+| `POST .../trainings/:id/duplicate` | quem pode criar | cópia em rascunho, sem versões nem alunos |
+| `POST .../trainings/:id/{archive,restore}` | autor | arquivada não recebe atribuição nem edição; quem já tem a ficha continua com ela |
+| `POST .../trainings/:id/assign` | dono, admin, coach (aluno com vínculo ativo) | atribui a um aluno |
+| `POST .../trainings/:id/assign-batch` | dono, admin, coach | até 50 alunos; `dryRun: true` devolve a prévia sem gravar; aplicar exige `Idempotency-Key`; quem já tem outra ficha só é trocado com `replace: true`; o professor nunca troca ficha atribuída por outra pessoa; tudo num único batch (atômico) |
 
-Ainda não implementado (planejado): editar/duplicar/arquivar ficha pelo Worker, aplicação em lote, relatórios agregados e as telas de Alunos e Fichas no console.
+Ainda não implementado (planejado): relatórios agregados, aderência individual e exclusão de rascunhos.
 
 ### 6.2 Escopo do aluno (o próprio `uid`, nunca outro)
 
@@ -200,11 +210,12 @@ Esquema (D1): chaves compostas, gatilhos e restrições (`schema.test.js`). Work
 ## 12. Próximos passos e migração
 
 1. **Esquema D1** (feito): migrações 0001 a 0004 em homologação (D1 recriado limpo ao fim de cada rodada).
-2. **Worker no D1** (feito): domínios academias, membros, convites, professor-aluno, consentimento, fichas (criar, publicar, atribuir) e auditoria; 97 testes. Sem credencial do Firestore.
+2. **Worker no D1** (feito): domínios academias, membros, convites, professor-aluno, consentimento, fichas (criar, editar, publicar, duplicar, arquivar, comparar, atribuir individual e em lote), alunos e auditoria; 115 testes. Sem credencial do Firestore.
 3. **App do aluno** (feito, atrás de `REACT_APP_ACADEMY_API`): convite, professor, consentimento, ficha com snapshot local, saída e exclusão de conta. Rotas que ainda leem o Firestore (`/academia/:id/fichas`) ficam **fechadas** ("Módulo em implantação") com a API ligada, para nunca misturar as duas fontes.
-4. **Próximo:** telas de Alunos e Fichas no console (e editar/duplicar/arquivar/lote no Worker), E2E conjunto Gestão, D1 e app do aluno com Firestore de homologação, revisão jurídica/LGPD e preparação comercial.
-5. **Sem migração de dados reais:** a HELL GYM foi apagada em 14/10/2026 e a produção não tem nenhuma academia. O D1 de produção nasce limpo. Se surgir uma academia real antes do corte, um script revisável, com prévia e conferência de contagens, a leva (convites antigos viram hash do código).
-6. **Corte:** nenhuma escrita empresarial nova no Firestore; homologação executa todos os fluxos; produção começa com uma academia fictícia; depois as coleções de academia do Firestore passam a `if false` e, após um período de reversão, são removidas, mantendo exportação e plano de rollback.
-7. Homologação com duas academias fictícias; depois produção.
+4. **Telas de Alunos e Fichas no console** (feito em homologação): lista de alunos com filtros e seleção, fichas com versões e comparação, atribuição individual e em lote com prévia, permissão de criar fichas do professor. E2E conjunto Gestão, D1 e app do aluno executado em homologação (40/40).
+5. **Próximo:** exercícios da ficha vindos da biblioteca do app (hoje texto livre), revisão jurídica/LGPD e preparação comercial.
+6. **Sem migração de dados reais:** a HELL GYM foi apagada em 14/10/2026 e a produção não tem nenhuma academia. O D1 de produção nasce limpo. Se surgir uma academia real antes do corte, um script revisável, com prévia e conferência de contagens, a leva (convites antigos viram hash do código).
+7. **Corte:** nenhuma escrita empresarial nova no Firestore; homologação executa todos os fluxos; produção começa com uma academia fictícia; depois as coleções de academia do Firestore passam a `if false` e, após um período de reversão, são removidas, mantendo exportação e plano de rollback.
+8. Homologação com duas academias fictícias; depois produção.
 
 Critério de saída da V2.0: lista de validação do roadmap, em homologação, com todas as garantias do esquema e do Worker testadas.

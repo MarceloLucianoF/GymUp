@@ -5,9 +5,10 @@ import * as coaching from './handlers/coaching.js';
 import * as consents from './handlers/consents.js';
 import * as audit from './handlers/audit.js';
 import * as training from './handlers/training.js';
+import * as students from './handlers/students.js';
 
 // Tabela de rotas: método, caminho e handler. Os parâmetros do caminho têm formato fechado; nenhum caminho de coleção vem do cliente.
-const P = { academyId: '[A-Za-z0-9_]{1,40}', uid: '[A-Za-z0-9_-]{1,128}', id: '[A-Za-z0-9_]{1,64}' };
+const P = { academyId: '[A-Za-z0-9_]{1,40}', uid: '[A-Za-z0-9_-]{1,128}', id: '[A-Za-z0-9_]{1,64}', version: '[0-9]{1,6}' };
 const route = (method, path, handler, opts = {}) => {
   const names = [];
   const source = path.replace(/:(\w+)/g, (_, n) => { names.push(n); return `(${P[n]})`; });
@@ -26,6 +27,7 @@ export const ROUTES = [
   route('POST', '/v1/academies/:academyId/transfer-ownership', academies.transferOwnership),
   route('GET', '/v1/academies/:academyId/members', members.list),
   route('PATCH', '/v1/academies/:academyId/members/:uid/role', members.changeRole),
+  route('PATCH', '/v1/academies/:academyId/members/:uid/permissions', members.setPermissions),
   route('POST', '/v1/academies/:academyId/members/:uid/suspend', members.suspend),
   route('POST', '/v1/academies/:academyId/members/:uid/reactivate', members.reactivate),
   route('POST', '/v1/academies/:academyId/members/:uid/remove', members.remove),
@@ -43,8 +45,17 @@ export const ROUTES = [
   route('POST', '/v1/coach-assignments/:id/accept', coaching.accept),
   route('POST', '/v1/coach-assignments/:id/reject', coaching.reject),
   route('POST', '/v1/coach-assignments/:id/revoke', coaching.revoke),
+  route('GET', '/v1/academies/:academyId/students', students.list),
   route('GET', '/v1/academies/:academyId/trainings', training.list),
   route('POST', '/v1/academies/:academyId/trainings', training.create),
+  route('GET', '/v1/academies/:academyId/trainings/:id', training.detail),
+  route('PATCH', '/v1/academies/:academyId/trainings/:id', training.update),
+  route('GET', '/v1/academies/:academyId/trainings/:id/versions/:version', training.version),
+  route('GET', '/v1/academies/:academyId/trainings/:id/compare', training.compare),
+  route('POST', '/v1/academies/:academyId/trainings/:id/duplicate', training.duplicate),
+  route('POST', '/v1/academies/:academyId/trainings/:id/archive', training.archive),
+  route('POST', '/v1/academies/:academyId/trainings/:id/restore', training.restore),
+  route('POST', '/v1/academies/:academyId/trainings/:id/assign-batch', training.assignBatch),
   route('POST', '/v1/academies/:academyId/trainings/:id/publish', training.publish),
   route('POST', '/v1/academies/:academyId/trainings/:id/assign', training.assign),
   // Escopo do aluno (o próprio uid, nunca outro)

@@ -29,7 +29,7 @@ export async function list(ctx) {
   const W = where.join(' AND ');
   const total = await guarded(async () => (await ctx.db.prepare(`SELECT count(*) AS n FROM academy_members m WHERE ${W}`).bind(...params).first()).n);
   const { results } = await guarded(() => ctx.db.prepare(
-    `SELECT m.user_id, m.role, m.status, m.display_name, m.created_at,
+    `SELECT m.user_id, m.role, m.status, m.display_name, m.created_at, m.can_create_trainings,
             (SELECT c.coach_uid FROM coach_assignments c WHERE c.academy_id = m.academy_id AND c.student_uid = m.user_id AND c.status = 'active') AS coach_uid,
             (SELECT c.id FROM coach_assignments c WHERE c.academy_id = m.academy_id AND c.student_uid = m.user_id AND c.status = 'active') AS coach_assignment_id,
             (SELECT p.display_name FROM coach_assignments c JOIN academy_members p ON p.academy_id = c.academy_id AND p.user_id = c.coach_uid
@@ -42,6 +42,7 @@ export async function list(ctx) {
     academyId, page, pageSize, total,
     members: results.map((r) => ({
       userId: r.user_id, role: r.role, status: r.status, displayName: r.display_name, joinedAt: r.created_at,
+      ...(r.role === 'coach' && membership.role !== 'reception' ? { canCreateTrainings: r.can_create_trainings === 1 } : {}),
       coach: r.coach_uid ? { userId: r.coach_uid, displayName: r.coach_name || '', assignmentId: r.coach_assignment_id } : null,
       openAssignment: r.open_assignment ? { status: r.open_assignment, assignmentId: r.open_assignment_id } : null
     }))
@@ -52,7 +53,7 @@ export async function list(ctx) {
 async function mutate(ctx, { roles, verdictFor, set, expectStatus, audit, label }) {
   const { academyId, uid } = ctx.params;
   const { membership } = await requireAccess(ctx, academyId, roles);
-  await readBody(ctx.request, label === 'role' ? SCHEMAS.changeRole : SCHEMAS.empty).then((b) => { ctx.body = b; });
+  await readBody(ctx.request, { role: SCHEMAS.changeRole, permissions: SCHEMAS.setPermissions }[label] || SCHEMAS.empty).then((b) => { ctx.body = b; });
   const target = await getMember(ctx.db, academyId, uid);
   if (!target) throw new ApiError('not_found');
   const change = verdictFor(ctx.body);
@@ -77,9 +78,21 @@ export async function changeRole(ctx) {
     roles: ['owner', 'admin'], label: 'role', audit: 'member.role_changed',
     verdictFor: (b) => ({ role: b.role }),
     expectStatus: (t) => ['active', 'suspended', 'pending'].includes(t.status) && t.role !== ctx.body.role,   // trocar pelo mesmo papel é conflito, não sucesso
-    set: (t, b) => ({ sql: 'UPDATE academy_members SET role = ?, updated_at = ? WHERE academy_id = ? AND user_id = ? AND role = ? AND status = ?', args: [b.role, ctx.nowIso, academyId, uid, t.role, t.status], detail: `${t.role}>${b.role}` })
+    set: (t, b) => ({ sql: 'UPDATE academy_members SET role = ?, can_create_trainings = 0, updated_at = ? WHERE academy_id = ? AND user_id = ? AND role = ? AND status = ?', args: [b.role, ctx.nowIso, academyId, uid, t.role, t.status], detail: `${t.role}>${b.role}` })
   });
   return { userId: uid, role: ctx.body.role };
+}
+
+// Permissão de criar fichas: só para professor (dono e admin concedem ou retiram). Vale na hora e é auditada.
+export async function setPermissions(ctx) {
+  const { academyId, uid } = ctx.params;
+  await mutate(ctx, {
+    roles: ['owner', 'admin'], label: 'permissions', audit: 'member.permission_changed',
+    verdictFor: () => ({}),
+    expectStatus: (t) => t.role === 'coach' && ['active', 'suspended'].includes(t.status) && (t.can_create_trainings === 1) !== ctx.body.canCreateTrainings,   // repetir o mesmo valor é conflito
+    set: (t, b) => ({ sql: "UPDATE academy_members SET can_create_trainings = ?, updated_at = ? WHERE academy_id = ? AND user_id = ? AND role = 'coach' AND status = ?", args: [b.canCreateTrainings ? 1 : 0, ctx.nowIso, academyId, uid, t.status], detail: b.canCreateTrainings ? 'criar fichas: sim' : 'criar fichas: não' })
+  });
+  return { userId: uid, canCreateTrainings: ctx.body.canCreateTrainings };
 }
 
 export async function suspend(ctx) {

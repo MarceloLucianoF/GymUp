@@ -8,7 +8,7 @@ const view = (r) => ({ academyId: r.academy_id, name: r.academy_name, status: r.
 
 export async function me(ctx) {
   const { rows, truncated } = await listMemberships(ctx.db, ctx.user.uid);
-  return { uid: ctx.user.uid, memberships: rows.map((r) => ({ academyId: r.academy_id, role: r.role, status: r.status, academy: { name: r.academy_name, status: r.academy_status } })), truncated };
+  return { uid: ctx.user.uid, memberships: rows.map((r) => ({ academyId: r.academy_id, role: r.role, status: r.status, canCreateTrainings: r.role === 'coach' ? r.can_create_trainings === 1 : undefined, academy: { name: r.academy_name, status: r.academy_status } })), truncated };
 }
 
 export async function listMine(ctx) {

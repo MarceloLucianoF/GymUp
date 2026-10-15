@@ -144,7 +144,7 @@ input[readonly] { background: var(--surface-2); }
   .topbar .brand { margin-right: auto; }
   .topbar select { width: auto; max-width: 46vw; }
   .content { padding: 20px 16px 96px; }
-  .bottomnav { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  .bottomnav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(64px, 1fr); overflow-x: auto; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
   .bn { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; min-height: 56px; text-decoration: none; color: var(--muted); font-size: .72rem; font-weight: 700; }
   .bn.on { color: var(--ink); box-shadow: inset 0 3px 0 var(--brand); }
 }
@@ -164,3 +164,44 @@ input[readonly] { background: var(--surface-2); }
 }
 .legal { max-width: 720px; width: 100%; }
 .legal h2 { font-size: 1.05rem; margin-top: 8px; }
+
+/* alunos e fichas */
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 0; padding: 10px 16px; min-height: 44px; font: inherit; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; }
+.tab.on { color: var(--ink); border-bottom-color: var(--brand); }
+.tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 10px; align-content: start; }
+.card-link { display: grid; gap: 4px; color: inherit; text-decoration: none; }
+.card-link:hover strong { text-decoration: underline; }
+.card-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 4px; }
+.card-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.meta-line { margin: 0; }
+.h-small { font-size: 1rem; margin: 4px 0 0; }
+.ex-list, .ex-read, .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ex { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+.ex legend { font-weight: 700; padding: 0 6px; }
+.ex-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.ex-grid .field:first-child { grid-column: 1 / -1; }
+.ex-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ex-read li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; background: var(--surface-2); border-radius: 8px; padding: 10px 14px; }
+.timeline li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; padding: 10px 14px; background: var(--surface-2); border-radius: 8px; }
+.hash { font-size: .78rem; color: var(--muted); }
+.check { display: flex; gap: 8px; align-items: center; font-weight: 600; cursor: pointer; }
+.check input { width: 20px; height: 20px; flex: none; }
+.check-col { width: 1%; }
+.picker { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+.picker-list { max-height: 240px; overflow: auto; }
+.preview .row-main { display: grid; gap: 2px; }
+.outcome-assign, .outcome-replace { background: var(--ok-bg, #d9f2e1); color: var(--ok-ink, #12532a); }
+.outcome-skip { background: var(--surface-2); color: var(--muted); }
+.diff-badge-added { background: var(--ok-bg, #d9f2e1); color: var(--ok-ink, #12532a); }
+.diff-badge-removed { background: #fbdcdc; color: #7a1414; }
+.diff-badge-changed, .diff-badge-moved { background: #fdf0c4; color: #5c4400; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .outcome-assign, :root:not([data-theme="light"]) .outcome-replace, :root:not([data-theme="light"]) .diff-badge-added { background: #123a22; color: #b6ecc8; }
+  :root:not([data-theme="light"]) .diff-badge-removed { background: #4a1818; color: #f6c4c4; }
+  :root:not([data-theme="light"]) .diff-badge-changed, :root:not([data-theme="light"]) .diff-badge-moved { background: #4a3a08; color: #f6e2a0; }
+}
+@media (max-width: 1099px) { .table td.check-col { width: 100%; justify-content: flex-start; } .table td.check-col::before { content: none; } }

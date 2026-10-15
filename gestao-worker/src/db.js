@@ -50,7 +50,7 @@ export const getAcademy = (db, academyId) => guarded(() => db
 
 export const listMemberships = (db, uid, limit = 50) => guarded(async () => {
   const { results } = await db.prepare(
-    `SELECT m.academy_id, m.role, m.status, a.name AS academy_name, a.status AS academy_status
+    `SELECT m.academy_id, m.role, m.status, m.can_create_trainings, a.name AS academy_name, a.status AS academy_status
        FROM academy_members m JOIN academies a ON a.id = m.academy_id
       WHERE m.user_id = ? AND m.status <> 'removed' ORDER BY a.name LIMIT ?`
   ).bind(uid, limit + 1).all();

@@ -8,7 +8,7 @@ import Modal, { ConfirmModal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 import { AssignmentBadge, Avatar, EmptyState, ErrorState, Field, PageHeader, Pagination, RoleBadge, StatusBadge, TableSkeleton } from '../../components/ui';
 import { dateOf } from '../../lib/format';
-import { canAssignCoach, memberActions } from '../../lib/policy';
+import { canAssignCoach, canTogglePermission, memberActions } from '../../lib/policy';
 import { useApi } from '../../session';
 
 const PAGE_SIZE = 20;
@@ -129,6 +129,7 @@ export default function Members() {
       suspend: { title: `Suspender ${name}?`, label: 'Suspender', danger: true, text: 'A pessoa perde o acesso até ser reativada. Os dados e o histórico ficam preservados.', fn: () => api.suspend(academyId, m.userId), ok: 'Membro suspenso.' },
       reactivate: { title: `Reativar ${name}?`, label: 'Reativar', text: 'A pessoa volta a ter acesso com o mesmo papel.', fn: () => api.reactivate(academyId, m.userId), ok: 'Membro reativado.' },
       remove: { title: `Remover ${name}?`, label: 'Remover', danger: true, text: 'A pessoa sai da academia. Vínculos com professor e consentimento são encerrados. Só o proprietário pode reativá-la, e ela não volta por convite.', fn: () => api.remove(academyId, m.userId), ok: 'Membro removido.' },
+      permission: { title: m?.canCreateTrainings ? `Retirar de ${name} a permissão de criar fichas?` : `Permitir que ${name} crie fichas?`, label: m?.canCreateTrainings ? 'Retirar permissão' : 'Permitir', danger: !!m?.canCreateTrainings, text: m?.canCreateTrainings ? 'O professor deixa de criar e editar fichas. As fichas que já criou e as atribuições continuam.' : 'O professor poderá criar, editar e publicar as próprias fichas e atribuí-las a alunos com vínculo ativo. Ele nunca altera fichas de outras pessoas.', fn: () => api.setPermissions(academyId, m.userId, !m.canCreateTrainings), ok: m?.canCreateTrainings ? 'Permissão retirada.' : 'Permissão concedida.' },
       revokeCoach: { title: `Encerrar o vínculo de ${name} com o professor?`, label: 'Encerrar vínculo', danger: true, text: 'O professor perde o acesso ao aluno na hora.', fn: () => api.revokeAssignment(m.coach.assignmentId), ok: 'Vínculo encerrado.' },
       approve: { title: 'Aprovar proposta?', label: 'Aprovar', text: `${a?.coachName} passa a aguardar o aceite de ${a?.studentName}. O professor só vê o aluno depois do aceite.`, fn: () => api.approveAssignment(a.assignmentId), ok: 'Proposta aprovada. Aguardando o aluno.' },
       reject: { title: a?.status === 'proposed' ? 'Recusar proposta?' : 'Retirar proposta?', label: a?.status === 'proposed' ? 'Recusar' : 'Retirar', danger: true, text: 'A proposta é encerrada e não pode ser reaberta (uma nova proposta pode ser feita).', fn: () => api.rejectAssignment(a.assignmentId), ok: 'Proposta encerrada.' },
@@ -171,6 +172,7 @@ export default function Members() {
                     act.suspend && { label: 'Suspender', danger: true, onClick: () => setAction({ kind: 'suspend', member: m }) },
                     act.reactivate && { label: 'Reativar', onClick: () => setAction({ kind: 'reactivate', member: m }) },
                     act.roles.length > 0 && { label: 'Alterar papel', onClick: () => setAction({ kind: 'role', member: m }) },
+                    canTogglePermission(me, m) && { label: m.canCreateTrainings ? 'Retirar permissão de criar fichas' : 'Permitir criar fichas', onClick: () => setAction({ kind: 'permission', member: m }) },
                     act.remove && { label: 'Remover', danger: true, onClick: () => setAction({ kind: 'remove', member: m }) },
                     staff && isStudent && !m.openAssignment && !m.coach && { label: 'Propor professor', onClick: () => setAction({ kind: 'propose', member: m }) },
                     staff && isStudent && !m.openAssignment && m.coach && { label: 'Transferir professor', onClick: () => setAction({ kind: 'transfer', member: m }) },
@@ -181,7 +183,7 @@ export default function Members() {
                   return (
                     <tr key={m.userId}>
                       <td data-label="Nome"><span className="person"><Avatar name={m.displayName} /><span>{m.displayName || 'Sem nome'}{m.userId === user.uid && <span className="muted"> (você)</span>}</span></span></td>
-                      <td data-label="Papel"><RoleBadge role={m.role} /></td>
+                      <td data-label="Papel"><span className="stack-tight"><RoleBadge role={m.role} />{m.role === 'coach' && m.canCreateTrainings && <span className="muted small">Cria fichas</span>}</span></td>
                       <td data-label="Status"><StatusBadge status={m.status} /></td>
                       <td data-label="Entrada">{dateOf(m.joinedAt)}</td>
                       <td data-label="Professor">
