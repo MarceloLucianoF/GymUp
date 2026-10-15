@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useApp } from '../../components/AppFrame';
 import { useToast } from '../../components/Toast';
 import TrainingEditor from '../../components/TrainingEditor';
-import { EmptyState, ErrorState, PageHeader, TableSkeleton } from '../../components/ui';
+import { EmptyState, ErrorState, Field, PageHeader, TableSkeleton } from '../../components/ui';
 import { dateOf, plural } from '../../lib/format';
 import { canCreateTrainings } from '../../lib/policy';
 import { TEMPLATE_STATUS } from '../../lib/trainings';
@@ -17,9 +17,11 @@ export default function Trainings() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('active');
   const [creating, setCreating] = useState(false);
+  const [q, setQ] = useState('');
   const [list, reload] = useApi(() => api.trainings(academyId, { status: tab }), [api, academyId, tab]);
   if (!['owner', 'admin', 'coach'].includes(role)) return <Navigate to="/app" replace />;
   const d = list.data;
+  const shown = d ? d.templates.filter((t) => `${t.name} ${t.description}`.toLowerCase().includes(q.trim().toLowerCase())) : [];
   const create = async (payload) => {
     const r = await api.createTraining(academyId, payload);
     toast('Ficha criada como rascunho. Publique para criar a versão 1.');
@@ -33,12 +35,14 @@ export default function Trainings() {
       <div className="tabs" role="tablist" aria-label="Situação das fichas">
         {['active', 'archived'].map((t) => <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? 'tab on' : 'tab'} onClick={() => setTab(t)}>{t === 'active' ? 'Ativas' : 'Arquivadas'}</button>)}
       </div>
+      {d && d.templates.length > 4 && <form className="filters" role="search" aria-label="Buscar fichas" onSubmit={(e) => e.preventDefault()}><Field id="t-q" label="Buscar por nome"><input id="t-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={60} /></Field></form>}
       {list.status === 'loading' && <TableSkeleton rows={4} />}
       {list.status === 'error' && <ErrorState error={list.error} onRetry={reload} />}
       {d && d.templates.length === 0 && <EmptyState title={tab === 'active' ? 'Nenhuma ficha ativa' : 'Nenhuma ficha arquivada'} action={tab === 'active' && mayCreate ? <button type="button" className="btn primary" onClick={() => setCreating(true)}>Criar a primeira ficha</button> : null}>{tab === 'active' ? mayCreate ? 'Crie uma ficha, publique e atribua aos alunos.' : 'Peça ao dono ou a um administrador a permissão de criar fichas.' : 'Fichas arquivadas ficam aqui e podem ser restauradas.'}</EmptyState>}
-      {d && d.templates.length > 0 && (
+      {d && d.templates.length > 0 && shown.length === 0 && <EmptyState title="Nenhuma ficha com esse nome">Tente outro termo.</EmptyState>}
+      {d && shown.length > 0 && (
         <ul className="cards" aria-label="Fichas">
-          {d.templates.map((t) => (
+          {shown.map((t) => (
             <li key={t.templateId} className="card">
               <Link to={`/app/academia/${academyId}/fichas/${t.templateId}`} className="card-link">
                 <strong>{t.name}</strong>

@@ -129,7 +129,7 @@ test('dashboard: contagens operacionais; recepção não vê auditoria nem propo
   assert.equal(inv.status, 200);
   await api(d1, 'dono', 'POST', `/v1/academies/${A}/coach-assignments`, { body: { studentUid: 'alu', coachUid: 'prof' }, key: key() });
   const d = data(await api(d1, 'dono', 'GET', `/v1/academies/${A}/dashboard`));
-  assert.deepEqual(d.counts, { members: 7, students: 2, coaches: 2, studentsWithoutCoach: 2, pendingInvites: 1, pendingAssignments: 1 });
+  assert.deepEqual(d.counts, { members: 7, students: 2, coaches: 2, studentsWithoutCoach: 2, pendingInvites: 1, pendingAssignments: 1, studentsWithoutTraining: 2, studentsOutdated: 0, activeTrainings: 0 });
   assert.ok(d.recentActivity.length >= 2 && d.recentActivity.length <= 5);
   const rec = data(await api(d1, 'rec', 'GET', `/v1/academies/${A}/dashboard`));
   assert.equal(rec.counts.pendingAssignments, null);

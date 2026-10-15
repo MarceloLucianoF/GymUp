@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LIMITS } from '../../../shared/academy-contracts/index.js';
 import { friendlyError } from '../api';
+import { LIBRARY, fromLibrary } from '../lib/library';
 import { emptyExercise, fromTemplate, emptyDraft, hasErrors, move, toPayload, validateDraft } from '../lib/trainings';
 import Modal from './Modal';
 import { Field } from './ui';
@@ -12,6 +13,11 @@ export default function TrainingEditor({ template, onSave, onClose }) {
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState('');
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
+  // Escolher um nome da biblioteca preenche grupo, séries, repetições e descanso (a pessoa ajusta depois); nome livre não mexe em nada.
+  const pickName = (i, name) => {
+    const lib = fromLibrary(name);
+    setEx(i, lib ? { name: lib.name, muscleGroup: lib.muscleGroup, sets: lib.sets, reps: lib.reps, rest: lib.rest } : { name });
+  };
   const setEx = (i, patch) => setDraft((d) => ({ ...d, exercises: d.exercises.map((e, k) => (k === i ? { ...e, ...patch } : e)) }));
   const view = errors || { name: '', description: '', exercises: {}, list: '' };
 
@@ -32,13 +38,14 @@ export default function TrainingEditor({ template, onSave, onClose }) {
         <Field id="t-desc" label="Descrição (opcional)" hint={`${draft.description.length}/300`} error={view.description}><textarea id="t-desc" rows={2} maxLength={300} value={draft.description} onChange={(e) => set({ description: e.target.value })} /></Field>
         <h3 className="h-small">Exercícios ({draft.exercises.length}/{LIMITS.exercisesMax})</h3>
         {view.list && <p role="alert" className="error">{view.list}</p>}
+        <datalist id="exercise-library">{LIBRARY.map((e) => <option key={e.name} value={e.name} />)}</datalist>
         <ol className="ex-list">
           {draft.exercises.map((ex, i) => (
             <li key={i}>
               <fieldset className="ex">
                 <legend>Exercício {i + 1}</legend>
                 <div className="ex-grid">
-                  <Field id={`e${i}-name`} label="Nome"><input id={`e${i}-name`} value={ex.name} maxLength={120} onChange={(e) => setEx(i, { name: e.target.value })} aria-invalid={!!view.exercises[i]} /></Field>
+                  <Field id={`e${i}-name`} label="Nome" hint={fromLibrary(ex.name) ? 'Da biblioteca do BohTreinar' : ex.name.trim() ? 'Exercício personalizado' : 'Escolha da biblioteca ou escreva um nome'}><input id={`e${i}-name`} list="exercise-library" value={ex.name} maxLength={120} onChange={(e) => pickName(i, e.target.value)} aria-invalid={!!view.exercises[i]} aria-describedby={`e${i}-name-hint`} autoComplete="off" /></Field>
                   <Field id={`e${i}-group`} label="Grupo (opcional)"><input id={`e${i}-group`} value={ex.muscleGroup} maxLength={40} onChange={(e) => setEx(i, { muscleGroup: e.target.value })} /></Field>
                   <Field id={`e${i}-sets`} label="Séries"><input id={`e${i}-sets`} value={ex.sets} maxLength={10} onChange={(e) => setEx(i, { sets: e.target.value })} /></Field>
                   <Field id={`e${i}-reps`} label="Repetições"><input id={`e${i}-reps`} value={ex.reps} maxLength={20} onChange={(e) => setEx(i, { reps: e.target.value })} /></Field>
