@@ -25,7 +25,7 @@ import {
 } from '../../utils/training';
 import { invalidateCheckIns } from '../../services/checkInsCache';
 import { saveCheckIn } from '../../services/checkInService';
-import { getMyAssignedTraining } from '../../services/academyTrainingService';
+import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
@@ -87,7 +87,7 @@ export default function TrainingExecutionPage() {
 
                 if (academyRef) {
                     // Ficha da academia: lê SÓ a versão atribuída a este aluno (as regras negam o rascunho e versões de outros).
-                    const mine = await getMyAssignedTraining(academyRef.academyId, user.uid).catch(() => null);
+                    const mine = await loadAssignedTraining(academyRef.academyId, user.uid).catch(() => null);
                     const saved = activeWorkoutService.getActiveSession(user.uid);
                     if (mine && mine.assignment.versionId === academyRef.versionId) {
                         trainingData = { name: mine.version.name, exercises: mine.version.exercises, coachId: '', academyId: academyRef.academyId, versionId: academyRef.versionId };

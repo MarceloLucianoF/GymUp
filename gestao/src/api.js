@@ -1,0 +1,92 @@
+// Cliente da API da Gestão. Sempre envia o ID token do usuário; o servidor decide papel e academia (nada daqui é autoridade).
+import { friendlyError } from '../../shared/academy-contracts/index.js';
+
+export { friendlyError };
+
+export class ApiRequestError extends Error {
+  constructor(code, status, requestId, message) {
+    super(message || code);
+    this.code = code;
+    this.status = status;
+    this.requestId = requestId;
+  }
+}
+
+const q = (params) => {
+  const s = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '')).toString();
+  return s ? `?${s}` : '';
+};
+const enc = encodeURIComponent;
+export const newIdempotencyKey = () => `k-${crypto.randomUUID()}`;
+
+export function createApi({ baseUrl, getToken, onSessionExpired, fetchImpl = fetch }) {
+  async function once(path, { method, body, idempotencyKey }, forceRefresh) {
+    let token;
+    try { token = await getToken(forceRefresh); } catch { throw new ApiRequestError('invalid_token', 401, null); }
+    let res;
+    try {
+      res = await fetchImpl(`${baseUrl}${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined
+      });
+    } catch {
+      throw new ApiRequestError('network', 0, null, 'Sem conexão com o servidor.');
+    }
+    let json = null;
+    try { json = await res.json(); } catch { /* corpo não é JSON */ }
+    if (!json || json.ok !== true) {
+      const err = json?.error;
+      throw new ApiRequestError(err?.code || 'unknown', res.status, json?.requestId || null, err?.message);
+    }
+    return json.data;
+  }
+
+  // Sessão expirada: tenta renovar o token UMA vez; se ainda for 401, avisa o app (que volta ao login) sem repetir a operação.
+  async function request(path, opts = {}) {
+    const o = { method: opts.method || 'GET', body: opts.body, idempotencyKey: opts.idempotencyKey };
+    try { return await once(path, o, false); } catch (error) {
+      if (error.status !== 401) throw error;
+      try { return await once(path, o, true); } catch (second) {
+        if (second.status === 401) onSessionExpired?.();
+        throw second;
+      }
+    }
+  }
+
+  const A = (id) => `/v1/academies/${enc(id)}`;
+  return {
+    health: () => request('/v1/health'),
+    me: () => request('/v1/me'),
+    academies: () => request('/v1/academies'),
+    createAcademy: (name, key) => request('/v1/academies', { method: 'POST', body: { name }, idempotencyKey: key }),
+    academy: (id) => request(A(id)),
+    profile: (id) => request(`${A(id)}/profile`),
+    updateAcademy: (id, body) => request(A(id), { method: 'PATCH', body }),
+    dashboard: (id) => request(`${A(id)}/dashboard`),
+    transferOwnership: (id, toUid, key) => request(`${A(id)}/transfer-ownership`, { method: 'POST', body: { toUid, confirm: true }, idempotencyKey: key }),
+    members: (id, params) => request(`${A(id)}/members${q(params)}`),
+    changeRole: (id, uid, role) => request(`${A(id)}/members/${enc(uid)}/role`, { method: 'PATCH', body: { role } }),
+    suspend: (id, uid) => request(`${A(id)}/members/${enc(uid)}/suspend`, { method: 'POST', body: {} }),
+    reactivate: (id, uid) => request(`${A(id)}/members/${enc(uid)}/reactivate`, { method: 'POST', body: {} }),
+    remove: (id, uid) => request(`${A(id)}/members/${enc(uid)}/remove`, { method: 'POST', body: {} }),
+    leave: (id) => request(`/v1/me/academies/${enc(id)}/leave`, { method: 'POST', body: {} }),
+    coachStudents: (id) => request(`${A(id)}/coach/students`),
+    unassignedStudents: (id) => request(`${A(id)}/coach/unassigned-students`),
+    invites: (id, params) => request(`${A(id)}/invites${q(params)}`),
+    createInvite: (id, body, key) => request(`${A(id)}/invites`, { method: 'POST', body, idempotencyKey: key }),
+    revokeInvite: (id, inviteId) => request(`${A(id)}/invites/${enc(inviteId)}/revoke`, { method: 'POST', body: {} }),
+    previewInvite: (code) => request('/v1/invites/preview', { method: 'POST', body: { code } }),
+    acceptInvite: (code) => request('/v1/invites/accept', { method: 'POST', body: { code } }),
+    audit: (id, params) => request(`${A(id)}/audit${q(params)}`),
+    assignments: (id) => request(`${A(id)}/coach-assignments`),
+    proposeCoach: (id, body, key) => request(`${A(id)}/coach-assignments`, { method: 'POST', body, idempotencyKey: key }),
+    approveAssignment: (aid) => request(`/v1/coach-assignments/${enc(aid)}/approve`, { method: 'POST', body: {} }),
+    rejectAssignment: (aid) => request(`/v1/coach-assignments/${enc(aid)}/reject`, { method: 'POST', body: {} }),
+    revokeAssignment: (aid) => request(`/v1/coach-assignments/${enc(aid)}/revoke`, { method: 'POST', body: {} })
+  };
+}

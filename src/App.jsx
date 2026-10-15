@@ -7,6 +7,7 @@ import Navbar from './components/layout/Navbar';
 import PwaLayer from './components/pwa/PwaLayer';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import usePageMeta from './hooks/usePageMeta';
+import { ACADEMY_API_ENABLED } from './services/academyApi';   // com a API da academia ativa, o aluno usa o Worker/D1; sem ela, o caminho antigo (Firestore)
 
 // --- PÁGINAS: AUTH ---
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -16,7 +17,10 @@ const AuthAction = lazy(() => import('./pages/auth/AuthAction'));
 const InviteRedirect = lazy(() => import('./pages/public/InviteRedirect'));
 const AcademyPage = lazy(() => import('./pages/academy/AcademyPage'));
 const AcademyTrainingsPage = lazy(() => import('./pages/academy/AcademyTrainingsPage'));
+const ModuleInDeployment = lazy(() => import('./pages/academy/ModuleInDeployment'));
 const AcademyInvitePage = lazy(() => import('./pages/academy/AcademyInvitePage'));
+const MinhaAcademiaApi = lazy(() => import('./pages/academy/MinhaAcademiaApi'));
+const AcademyInviteApiPage = lazy(() => import('./pages/academy/AcademyInviteApiPage'));
 const Friends = lazy(() => import('./pages/user/Friends'));
 
 // --- PÁGINAS: USER (ALUNO) ---
@@ -246,9 +250,9 @@ function AppRoutes() {
           <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
           <Route path="/amigos" element={<ProtectedRoute allowedRoles={['user']}><Friends /></ProtectedRoute>} />
           <Route path="/convite/:code" element={<InviteRedirect />} />
-          <Route path="/academia/convite/:id" element={<AcademyInvitePage />} />
-          <Route path="/academia" element={<ProtectedRoute><AcademyPage /></ProtectedRoute>} />
-          <Route path="/academia/:academyId/fichas" element={<ProtectedRoute><AcademyTrainingsPage /></ProtectedRoute>} />
+          <Route path="/academia/convite/:id" element={ACADEMY_API_ENABLED ? <AcademyInviteApiPage /> : <AcademyInvitePage />} />
+          <Route path="/academia" element={<ProtectedRoute>{ACADEMY_API_ENABLED ? <MinhaAcademiaApi /> : <AcademyPage />}</ProtectedRoute>} />
+          <Route path="/academia/:academyId/fichas" element={<ProtectedRoute>{ACADEMY_API_ENABLED ? <ModuleInDeployment /> : <AcademyTrainingsPage />}</ProtectedRoute>} />
           <Route path="/auth/action" element={<main id="main-content" tabIndex={-1} className="outline-none"><AuthAction /></main>} />
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           

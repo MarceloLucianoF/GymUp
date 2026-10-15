@@ -158,3 +158,25 @@ describe('providerOf e mensagens', () => {
     expect(DELETION_STEPS.map((s) => s.id)).toEqual(['reauth', 'checkIns', 'measurements', 'chats', 'trainings', 'notes', 'social', 'profile', 'login']);
   });
 });
+
+describe('leaveAcademies (vínculos com academias antes de apagar a conta)', () => {
+  const { leaveAcademies } = require('./accountDeletion');
+  test('API desligada não faz nada', async () => {
+    const api = { leaveAll: jest.fn() };
+    expect(await leaveAcademies({ api, enabled: false })).toEqual({ left: 0, blocked: [] });
+    expect(api.leaveAll).not.toHaveBeenCalled();
+  });
+  test('sai de tudo; repete enquanto houver mais de 25', async () => {
+    const api = { leaveAll: jest.fn().mockResolvedValueOnce({ left: 25, blocked: [], more: true }).mockResolvedValueOnce({ left: 3, blocked: [], more: false }) };
+    expect(await leaveAcademies({ api, enabled: true })).toEqual({ left: 3, blocked: [], more: false });
+    expect(api.leaveAll).toHaveBeenCalledTimes(2);
+  });
+  test('único proprietário bloqueia com mensagem clara (a conta não é apagada)', async () => {
+    const api = { leaveAll: jest.fn().mockResolvedValue({ left: 1, blocked: ['acad1'], more: false }) };
+    await expect(leaveAcademies({ api, enabled: true })).rejects.toMatchObject({ step: 'academies', blocked: ['acad1'], message: expect.stringMatching(/único proprietário/) });
+  });
+  test('falha de rede interrompe para não deixar vínculo para trás', async () => {
+    const api = { leaveAll: jest.fn().mockRejectedValue(new Error('off')) };
+    await expect(leaveAcademies({ api, enabled: true })).rejects.toMatchObject({ step: 'academies', message: expect.stringMatching(/Tente de novo/) });
+  });
+});

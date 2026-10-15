@@ -24,6 +24,14 @@ jobs:
           CI: 'true'
       - run: node --test test/*.test.js
         working-directory: worker
+      - run: node --test test/*.test.js
+        working-directory: gestao-worker
+      - run: npm ci
+        working-directory: gestao
+      - run: npm test
+        working-directory: gestao
+      - run: npm run build
+        working-directory: gestao
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

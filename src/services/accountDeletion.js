@@ -5,6 +5,7 @@ import {
   EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, deleteUser, browserPopupRedirectResolver
 } from 'firebase/auth';
 import { db } from '../firebase/config';
+import { ACADEMY_API_ENABLED, academyApi } from './academyApi';
 
 const BATCH_SIZE = 400; // limite do Firestore é 500 operações por lote
 
@@ -195,7 +196,26 @@ export const friendlyDeletionError = (error) => {
 };
 
 // Fluxo completo: reautentica → apaga dados → limpa o navegador → apaga o login.
-export async function deleteAccount({ user, password, onStep = () => {}, deps } = {}) {
+// Vínculos com academias (Worker/D1): a conta só é apagada depois de sair de todas. Quem é o único proprietário de uma academia precisa
+// transferir a propriedade antes (a academia nunca fica sem dono); falha de rede também interrompe, para não deixar vínculo para trás.
+export async function leaveAcademies({ api = academyApi, enabled = ACADEMY_API_ENABLED, rounds = 20 } = {}) {
+  if (!enabled) return { left: 0, blocked: [] };
+  let result;
+  try { result = await api.leaveAll(); } catch (error) {
+    const wrapped = new Error('Não foi possível encerrar seus vínculos com academias agora. Tente de novo em instantes.');
+    wrapped.cause = error; wrapped.step = 'academies';
+    throw wrapped;
+  }
+  if (result.blocked?.length) {
+    const blocked = new Error('Você é o único proprietário de uma academia. Transfira a propriedade no BohTreinar Gestão antes de excluir a conta.');
+    blocked.step = 'academies'; blocked.blocked = result.blocked;
+    throw blocked;
+  }
+  if (result.more && rounds > 1) return leaveAcademies({ api, enabled, rounds: rounds - 1 });   // mais de 25 vínculos: repete até acabar
+  return result;
+}
+
+export async function deleteAccount({ user, password, onStep = () => {}, deps, academy } = {}) {
   if (!user?.uid) throw new Error('Sessão inválida.');
   onStep('reauth', 'running');
   try {
@@ -206,6 +226,7 @@ export async function deleteAccount({ user, password, onStep = () => {}, deps } 
   }
   onStep('reauth', 'done');
 
+  await leaveAcademies(academy);
   const counts = await deleteUserData(user.uid, { onStep, deps });
   purgeLocalData(user.uid);
 
