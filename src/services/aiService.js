@@ -3,7 +3,7 @@ import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
 import { failureMessage } from './aiMeta';
 import {
-  canonicalGroup as composerGroup, composeLocalPlan, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseRequest,
+  canonicalGroup as composerGroup, applyEquipmentConstraint, composeLocalPlan, describeConstraint, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseEquipmentConstraint, parseRequest,
   setLegacyPicker, specFromFocus
 } from '../utils/workoutComposer';
 import officialTemplates from '../data/officialTemplates.json';
@@ -289,7 +289,14 @@ REGRAS:
 7. Seja conciso: no máximo 180 palavras, com listas curtas. Respostas longas demoram e o aluno desiste.`;
 
 // Pedidos que exigem as funções do Gemini (montar/gerar ficha): não passam pela NVIDIA.
-export const needsTools = (prompt) => /\b(mont[ae]r?|ger[ae]r?|cri[ae]r?)\b[^.?!]*\b(treino|ficha)\b/i.test(String(prompt || ''));
+// Também vale o pedido direto de um grupo com restrição de equipamento ("Pernas só com máquinas") ou "quero um treino de peito".
+export const needsTools = (prompt) => {
+  const text = String(prompt || '');
+  if (/\b(mont[ae]r?|ger[ae]r?|cri[ae]r?)\b[^.?!]*\b(treino|ficha)\b/i.test(text)) return true;
+  const spec = parseRequest(text);
+  if (!spec) return false;
+  return !!parseEquipmentConstraint(text) || /\b(quero|preciso|me d[aeê]|fa[cç]a)\b[^.?!]*\b(treino|ficha)\b/i.test(text);
+};
 
 // Alguns modelos "fingem" chamar funções e devolvem JSON de ação: isso nunca deve ser mostrado ao aluno.
 export const looksLikeToolCall = (text) => {
@@ -368,6 +375,8 @@ const askWorkoutModel = async (prompt) => {
       return text;
     } catch (error) {
       console.warn('NVIDIA indisponível no gerador de treino:', error?.message || error);
+      // Com a NVIDIA como principal não se espera o Gemini (pode travar): o compositor cai na montagem local, que é instantânea.
+      if (NVIDIA_FIRST) throw error;
     }
   }
   return withModelFallback(async (modelName) => {
@@ -402,6 +411,17 @@ const planToWorkout = (plan, { goal, durationMinutes, requestedFocus }) => {
     composition: { focus: plan.spec.label, requestedFocus, source: plan.source, division: plan.division || null, reason: plan.reason || null }
   };
 };
+
+// Biblioteca normalizada já filtrada pelo equipamento pedido no texto ("somente máquina"). Poucas opções = erro claro, nunca ficha fora do pedido.
+function libraryFor(exercises, userRequest) {
+  const constraint = parseEquipmentConstraint(userRequest);
+  const all = normalizeLibrary(exercises);
+  const library = applyEquipmentConstraint(all, constraint);
+  if (constraint && library.length < 6) {
+    throw new InsufficientExercisesError(`A biblioteca tem poucos exercícios com "${describeConstraint(constraint)}" (${library.length}). Cadastre mais exercícios ou peça sem essa restrição.`);
+  }
+  return { library, constraint };
+}
 
 export const aiService = {
   /**
@@ -508,7 +528,8 @@ export const aiService = {
         onWorkout?.(workout);
         onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : 'indisponivel' });
         const lines = workout.exercises.map((ex, i) => `${i + 1}. ${ex.name} - ${ex.sets}x${ex.reps}`).join('\n');
-        return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}:\n${lines}\nEla está na aba Treino, onde você pode salvar em Meus treinos.`;
+        const limit = parseEquipmentConstraint(safePrompt);
+        return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}${limit ? `, ${describeConstraint(limit)}` : ''}:\n${lines}\nUse o botão abaixo para salvar em Meus treinos.`;
       } catch (error) {
         if (error instanceof InsufficientExercisesError) return error.message;
         console.error('Falha ao montar a ficha pelo chat:', error?.message || error);
@@ -581,15 +602,15 @@ export const aiService = {
   async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const library = normalizeLibrary([...customExercises, ...defaultExercises]);
-    const plan = await generatePlan({ spec, library, total, goal, durationMinutes, askModel: askWorkoutModel, references: templateReferences(spec) });
+    const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest);
+    const plan = await generatePlan({ spec, library, total, goal, durationMinutes, askModel: askWorkoutModel, references: constraint ? [] : templateReferences(spec) });
     return planToWorkout(plan, { goal, durationMinutes, requestedFocus: muscleFocus });
   },
   /** Mesma regra de composição, sem IA e sem rede. */
   generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const library = normalizeLibrary([...customExercises, ...defaultExercises]);
+    const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest);
     return planToWorkout(composeLocalPlan({ spec, library, total, goal }), { goal, durationMinutes, requestedFocus: muscleFocus });
   },
 
