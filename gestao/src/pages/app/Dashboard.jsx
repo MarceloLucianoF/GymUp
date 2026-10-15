@@ -29,13 +29,18 @@ export default function Dashboard() {
             <Stat label="Membros ativos" value={d.counts.members} to={`${base}/membros`} />
             <Stat label="Convites pendentes" value={d.counts.pendingInvites} to={`${base}/convites`} />
             <Stat label="Professores ativos" value={d.counts.coaches} to={staff ? `${base}/membros?role=coach` : undefined} />
-            <Stat label="Alunos sem professor" value={d.counts.studentsWithoutCoach} to={`${base}/membros?coach=none`} hint={`de ${d.counts.students} alunos`} />
+            <Stat label="Alunos sem professor" value={d.counts.studentsWithoutCoach} to={`${base}/alunos?coach=none`} hint={`de ${d.counts.students} alunos`} />
+            {staff && <Stat label="Alunos sem ficha" value={d.counts.studentsWithoutTraining} to={`${base}/alunos?training=none`} hint="ainda sem treino atribuído" />}
+            {staff && <Stat label="Fichas desatualizadas" value={d.counts.studentsOutdated} to={`${base}/alunos?training=outdated`} hint="aluno numa versão antiga" />}
+            {staff && <Stat label="Fichas ativas" value={d.counts.activeTrainings} to={`${base}/fichas`} hint="com versão publicada" />}
             {staff && <Stat label="Vínculos aguardando" value={d.counts.pendingAssignments} to={`${base}/membros`} hint="proposta ou aceite do aluno" />}
           </section>
           <section aria-labelledby="atalhos">
             <h2 id="atalhos">Atalhos</h2>
             <div className="shortcuts">
               <Link className="btn primary" to={`${base}/convites`}>Criar convite</Link>
+              <Link className="btn" to={`${base}/alunos`}>Ver alunos</Link>
+              {staff && <Link className="btn" to={`${base}/fichas`}>Ver fichas</Link>}
               <Link className="btn" to={`${base}/membros`}>Gerenciar membros</Link>
               {staff && <Link className="btn" to={base}>Configurar academia</Link>}
               {staff && <Link className="btn" to={`${base}/auditoria`}>Ver auditoria</Link>}

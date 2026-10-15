@@ -29,6 +29,7 @@ export async function list(ctx) {
   if (coach === 'none') where.push("NOT EXISTS (SELECT 1 FROM coach_assignments c WHERE c.academy_id = m.academy_id AND c.student_uid = m.user_id AND c.status = 'active')");
   else if (coach) { where.push("EXISTS (SELECT 1 FROM coach_assignments c WHERE c.academy_id = m.academy_id AND c.student_uid = m.user_id AND c.status = 'active' AND c.coach_uid = ?)"); params.push(coach); }
   if (training === 'none') where.push('NOT EXISTS (SELECT 1 FROM training_assignments a WHERE a.academy_id = m.academy_id AND a.student_uid = m.user_id)');
+  else if (training === 'outdated') where.push('EXISTS (SELECT 1 FROM training_assignments a JOIN training_templates t ON t.id = a.template_id AND t.academy_id = a.academy_id WHERE a.academy_id = m.academy_id AND a.student_uid = m.user_id AND a.version < t.current_version)');
   else if (training) { where.push('EXISTS (SELECT 1 FROM training_assignments a WHERE a.academy_id = m.academy_id AND a.student_uid = m.user_id AND a.template_id = ?)'); params.push(training); }
   const W = where.join(' AND ');
   const total = await guarded(async () => (await ctx.db.prepare(`SELECT count(*) AS n FROM academy_members m WHERE ${W}`).bind(...params).first()).n);

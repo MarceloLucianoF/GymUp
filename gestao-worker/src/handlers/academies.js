@@ -65,14 +65,20 @@ export async function dashboard(ctx) {
   const { membership } = await requireAccess(ctx, academyId, ['owner', 'admin', 'reception']);
   const one = (sql, ...p) => guarded(async () => (await ctx.db.prepare(sql).bind(...p).first()).n);
   const staff = membership.role !== 'reception';
-  const [members, students, coaches, withoutCoach, pendingInvites, pendingAssignments] = await Promise.all([
+  const [members, students, coaches, withoutCoach, pendingInvites, pendingAssignments, withoutTraining, outdated, activeTrainings] = await Promise.all([
     one("SELECT count(*) AS n FROM academy_members WHERE academy_id = ? AND status = 'active'", academyId),
     one("SELECT count(*) AS n FROM academy_members WHERE academy_id = ? AND status = 'active' AND role = 'student'", academyId),
     one("SELECT count(*) AS n FROM academy_members WHERE academy_id = ? AND status = 'active' AND role = 'coach'", academyId),
     one(`SELECT count(*) AS n FROM academy_members m WHERE m.academy_id = ? AND m.status = 'active' AND m.role = 'student'
            AND NOT EXISTS (SELECT 1 FROM coach_assignments c WHERE c.academy_id = m.academy_id AND c.student_uid = m.user_id AND c.status = 'active')`, academyId),
     one(`SELECT count(*) AS n FROM academy_invites WHERE academy_id = ? AND revoked = 0 AND uses < max_uses AND expires_at > ? AND role IN (${INVITE_ROLES[membership.role].map(() => '?').join(', ')})`, academyId, ctx.nowIso, ...INVITE_ROLES[membership.role]),
-    staff ? one("SELECT count(*) AS n FROM coach_assignments WHERE academy_id = ? AND status IN ('proposed', 'pending_student')", academyId) : Promise.resolve(null)
+    staff ? one("SELECT count(*) AS n FROM coach_assignments WHERE academy_id = ? AND status IN ('proposed', 'pending_student')", academyId) : Promise.resolve(null),
+    staff ? one(`SELECT count(*) AS n FROM academy_members m WHERE m.academy_id = ? AND m.status = 'active' AND m.role = 'student'
+           AND NOT EXISTS (SELECT 1 FROM training_assignments a WHERE a.academy_id = m.academy_id AND a.student_uid = m.user_id)`, academyId) : Promise.resolve(null),
+    staff ? one(`SELECT count(*) AS n FROM training_assignments a JOIN training_templates t ON t.id = a.template_id AND t.academy_id = a.academy_id
+           JOIN academy_members m ON m.academy_id = a.academy_id AND m.user_id = a.student_uid AND m.status = 'active'
+          WHERE a.academy_id = ? AND a.version < t.current_version`, academyId) : Promise.resolve(null),
+    staff ? one("SELECT count(*) AS n FROM training_templates WHERE academy_id = ? AND status = 'active' AND current_version >= 1", academyId) : Promise.resolve(null)
   ]);
   const recent = staff ? (await guarded(() => ctx.db.prepare(
     `SELECT l.id, l.action, l.target_type, l.created_at, a.display_name AS actor_name
@@ -80,7 +86,7 @@ export async function dashboard(ctx) {
       WHERE l.academy_id = ? ORDER BY l.created_at DESC, l.rowid DESC LIMIT 5`).bind(academyId).all())).results : [];
   return {
     academyId, myRole: membership.role,
-    counts: { members, students, coaches, studentsWithoutCoach: withoutCoach, pendingInvites, pendingAssignments },
+    counts: { members, students, coaches, studentsWithoutCoach: withoutCoach, pendingInvites, pendingAssignments, studentsWithoutTraining: withoutTraining, studentsOutdated: outdated, activeTrainings },
     recentActivity: recent.map((e) => ({ id: e.id, action: e.action, actorName: e.actor_name || '', at: e.created_at }))
   };
 }

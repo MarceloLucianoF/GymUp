@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { LIMITS, STATUS_LABELS } from '../../../../shared/academy-contracts/index.js';
 import ActionMenu from '../../components/ActionMenu';
 import { useApp } from '../../components/AppFrame';
@@ -25,7 +26,8 @@ export default function Students() {
   const toast = useToast();
   const [q, setQ] = useState('');
   const dq = useDebounced(q.trim());
-  const [f, setF] = useState({ status: '', coach: '', training: '' });
+  const [params] = useSearchParams();
+  const [f, setF] = useState(() => ({ status: '', coach: params.get('coach') || '', training: params.get('training') || '' }));
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(() => new Map());
   const [assign, setAssign] = useState(null);
@@ -56,7 +58,7 @@ export default function Students() {
         <Field id="s-q" label="Buscar por nome"><input id="s-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome" maxLength={60} /></Field>
         <Field id="s-status" label="Status"><select id="s-status" value={f.status} onChange={setFilter('status')}><option value="">{role === 'coach' ? 'Ativos' : 'Todos'}</option>{role !== 'coach' && Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
         {staff && <Field id="s-coach" label="Professor"><select id="s-coach" value={f.coach} onChange={setFilter('coach')}><option value="">Todos</option><option value="none">Sem professor</option>{(coaches.data?.members || []).map((c) => <option key={c.userId} value={c.userId}>{c.displayName}</option>)}</select></Field>}
-        {showTraining && <Field id="s-training" label="Ficha"><select id="s-training" value={f.training} onChange={setFilter('training')}><option value="">Todas</option><option value="none">Sem ficha</option></select></Field>}
+        {showTraining && <Field id="s-training" label="Ficha"><select id="s-training" value={f.training} onChange={setFilter('training')}><option value="">Todas</option><option value="none">Sem ficha</option><option value="outdated">Versão desatualizada</option></select></Field>}
       </form>
       {list.status === 'loading' && <TableSkeleton />}
       {list.status === 'error' && <ErrorState error={list.error} onRetry={reload} />}

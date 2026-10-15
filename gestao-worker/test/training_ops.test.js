@@ -331,3 +331,19 @@ test('alunos: professor pedindo status diferente continua restrito aos seus alun
   const r = data(await api(d1, 'prof', 'GET', `/v1/academies/${A}/students?status=suspended`));
   assert.equal(r.total, 0);
 });
+
+test('painel: contagens de fichas só para dono e admin; filtro de alunos com versão desatualizada', async () => {
+  const d1 = world();
+  const id = await ready(d1);
+  await api(d1, 'dono', 'POST', `${T()}/${id}/assign`, { body: { studentUid: 'alu' } });
+  await publish(d1, id);   // v2: alu fica desatualizado
+  const dash = (uid, aid = A) => api(d1, uid, 'GET', `/v1/academies/${aid}/dashboard`);
+  const c = data(await dash('adm')).counts;
+  assert.deepEqual([c.studentsWithoutTraining, c.studentsOutdated, c.activeTrainings], [1, 1, 1]);
+  const r = data(await dash('rec')).counts;
+  assert.deepEqual([r.studentsWithoutTraining, r.studentsOutdated, r.activeTrainings], [null, null, null]);   // recepção não vê
+  assert.deepEqual(data(await dash('donoB', B)).counts.activeTrainings, 0);                                      // outra academia: zero
+  const S = `/v1/academies/${A}/students`;
+  assert.deepEqual(data(await api(d1, 'dono', 'GET', `${S}?training=outdated`)).students.map((s) => s.userId), ['alu']);
+  assert.equal(data(await api(d1, 'rec', 'GET', `/v1/academies/${A}/students`)).students.length, 2);
+});
