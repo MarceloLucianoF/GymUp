@@ -109,7 +109,12 @@ export function parseEquipmentConstraint(text) {
   return { only: [...only], without: [...without] };
 }
 
-export const describeConstraint = (c) => (c.only.length ? `somente ${c.only.filter((k, _i, a) => !(k === 'polia' && a.includes('maquina'))).map((k) => EQUIP_LABEL[k]).join(' e ')}` : `sem ${c.without.map((k) => EQUIP_LABEL[k]).join(' nem ')}`);
+// "Máquina" inclui polias e cabos (máquinas de cabos); a descrição mostrada ao aluno diz isso para não haver surpresa.
+export const describeConstraint = (c) => {
+  if (!c.only.length) return `sem ${c.without.map((k) => EQUIP_LABEL[k]).join(' nem ')}`;
+  const labels = c.only.filter((k, _i, a) => !(k === 'polia' && a.includes('maquina'))).map((k) => EQUIP_LABEL[k]);
+  return `somente ${labels.join(' e ')}${c.only.includes('maquina') ? ' (inclui polias e cabos)' : ''}`;
+};
 
 /** Filtra a biblioteca normalizada. Para "somente máquina", nomes ambíguos ("livre ou hack") não valem. */
 export function applyEquipmentConstraint(library, constraint) {
