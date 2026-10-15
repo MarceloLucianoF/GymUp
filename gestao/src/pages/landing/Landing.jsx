@@ -130,6 +130,7 @@ export default function Landing() {
           <div className="hero-bottom">
             <h1 className="h1"><span className="mask"><span className="line">A gestão da sua academia</span></span><span className="mask"><span className="line l2">em um só lugar.</span></span></h1>
             <p className="lead">Membros, professores, convites e auditoria, cada pessoa vendo só o que o papel permite.</p>
+            <p className="lead small" style={{ opacity: 0.75 }}>Fundação operacional em homologação: membros, convites, professores e auditoria já funcionam; telas de alunos e fichas chegam em seguida.</p>
             <Link className="btn-lp" to="/login?modo=cadastro">Criar academia</Link>
           </div>
         </div>

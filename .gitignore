@@ -36,3 +36,5 @@ firestore-debug.log
 /artifacts/
 gestao/dist
 .taste-skill/
+
+gestao-worker/wrangler.production.jsonc

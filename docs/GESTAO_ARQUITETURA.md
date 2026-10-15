@@ -1,6 +1,6 @@
-# BohTreinar Gestão: arquitetura e contratos (Fase 0)
+# BohTreinar Gestão: arquitetura e contratos
 
-Status: **revisão 2 (14/10/2026): o domínio da academia passa para Cloudflare D1** (decisão A). As seções 1, 2, 5, 6, 9 e 12 foram reescritas; a revisão 1 (modelo híbrido com Firestore e service account) está superada. Fecha os contratos antes do código, como pedido na Fase 0.
+Status: **revisão 3 (14/10/2026): fundação construída em homologação (PR 97).** O domínio da academia vive no Cloudflare D1 (decisão A); o Firestore guarda só dados pessoais do aluno. O estado entregue, os resultados e os riscos estão em `docs/GESTAO_FUNDACAO.md`; este documento fixa decisões e contratos.
 Complementa `docs/V2_ACADEMIAS.md` (desenho do produto e decisões da V2.0) e substitui a ideia de um painel da academia dentro do app do aluno.
 
 ## 1. Decisões assumidas
@@ -19,7 +19,7 @@ Complementa `docs/V2_ACADEMIAS.md` (desenho do produto e decisões da V2.0) e su
 Todo dado da academia é escrito **somente** pelo Worker; o cliente (Gestão e app do aluno) nunca escreve nele. Isso elimina a dupla autoridade e a necessidade de service account. A segurança tem quatro camadas:
 
 1. **Worker:** endpoints explícitos (nunca caminho arbitrário), token validado, `uid` derivado do token, vínculo e papel lidos do D1 a cada chamada, `academyId` só da URL, campos permitidos por operação, idempotência, rate limit por usuário e por academia, kill switch (`ADMIN_OPS_ENABLED`).
-2. **Banco (D1):** chaves compostas impedem cruzar academias (versão de outra academia, professor de outra academia, aluno de outra academia); gatilhos garantem versão imutável, auditoria imutável, último dono protegido, ficha arquivada sem novas atribuições, aderência só com consentimento e apagada ao revogar ou sair. Um bug no Worker não consegue desfazer essas garantias. Está em `gestao-worker/migrations/0001_init.sql` e é testado em `gestao-worker/test/schema.test.js` (15 testes, mesmo SQL do D1). Tabelas: `academies`, `academy_members`, `academy_consents`, `academy_invites`, `coach_assignments`, `training_templates`, `training_versions`, `training_assignments`, `academy_adherence`, `academy_plans`, `academy_billing`, `academy_audit_log`, `idempotency_keys`. Todas as tabelas empresariais têm `academy_id`; datas em UTC (ISO 8601 com Z); estados controlados por `CHECK`; convite guarda só o hash do código; nenhuma tabela guarda peso, medidas, cargas ou histórico detalhado de treino; sem exclusão física onde há auditoria (status `removed`/`left`, ficha `archived`).
+2. **Banco (D1):** chaves compostas impedem cruzar academias (versão de outra academia, professor de outra academia, aluno de outra academia); gatilhos garantem versão imutável, auditoria imutável, último dono protegido, ficha arquivada sem novas atribuições, aderência só com consentimento e apagada ao revogar ou sair. Um bug no Worker não consegue desfazer essas garantias. Está em `gestao-worker/migrations/0001_core.sql` a `0004_business.sql` (12 tabelas, 32 gatilhos, 22 índices) e é testado em `gestao-worker/test/schema.test.js` (mesmo SQL do D1). Tabelas: `academies`, `academy_members`, `academy_invites`, `academy_audit_log`, `idempotency_keys` (0001); `coach_assignments`, `academy_consents` (0002); `training_templates`, `training_versions`, `training_assignments` (0003); `academy_plans`, `academy_billing` (0004, reservadas). A aderência individual (`academy_adherence`) **não existe ainda** (V2.1). Todas as tabelas empresariais têm `academy_id`; datas em UTC (ISO 8601 com Z); estados controlados por `CHECK`; convite guarda só o hash do código; nenhuma tabela guarda peso, medidas, cargas ou histórico detalhado de treino; sem exclusão física onde há auditoria (status `removed`, ficha `archived`). Observação do D1 real: `meta.changes` inclui linhas alteradas por gatilhos, então a conferência de escrita é "pelo menos 1" sobre chave primária.
 3. **Transações:** cada operação e sua auditoria vão no mesmo `batch` do D1 (atômico). Isso remove o limite de 20 acessos do Firestore: o lote de atribuições vira uma transação.
 4. **Revisão e testes:** `revisor-diff` em toda mudança do Worker e do esquema, testes com duas academias, kill switch e rotação de credenciais (seção 9).
 
@@ -55,9 +55,9 @@ shared/                   verificação de token e contratos; páginas do app do
 ## 3. Contrato de identidade
 
 - `users/{uid}` (Firestore): conta global do produto pessoal. `role` (`user`, `coach`, `admin`) não representa função em academia.
-- Tabela `academy_members` (D1), chave `(academy_id, user_id)`: `role (owner|admin|teacher|reception|student)`, `status (active|suspended|removed|left)`, `display_name`, `email`, `can_create_trainings`, `branch_id`, datas. O consentimento mora em `academy_consents`. É a única fonte de papel.
+- Tabela `academy_members` (D1), chave `(academy_id, user_id)`: `role (owner|admin|coach|reception|student)`, `status (active|pending|suspended|removed)`, `display_name` (sem e-mail), `removed_by` (o próprio uid marca saída voluntária, que pode voltar por convite), datas. O consentimento mora em `academy_consents`. É a única fonte de papel.
 - Um uid pode ter vínculos diferentes em academias diferentes. O Worker **sempre** resolve o papel lendo o vínculo da academia em questão; `role`, `userId` e `academyId` vindos do cliente nunca são autoridade.
-- Dono, admin, professor e recepção usam a Gestão; o aluno usa o app do aluno. A mesma pessoa pode ter os dois acessos com o mesmo login.
+- Dono, admin, professor (`coach`) e recepção usam a Gestão; o aluno usa o app do aluno. A mesma pessoa pode ter os dois acessos com o mesmo login.
 
 ## 4. Matriz de papéis (operações)
 
@@ -92,10 +92,10 @@ Pontos de atenção: hoje o professor **vê** nome do aluno e a ficha atribuída
 
 | Dado | Onde | Quem escreve | Observação |
 |---|---|---|---|
-| academias, vínculos/papéis, convites, professor-aluno, fichas, versões, atribuições, consentimento, auditoria, idempotência | **D1** | só o Worker | tabelas em `0001_init.sql` |
-| aderência (resumo: status, treinos da semana, dias ativos, sequência) | **D1** | Worker, a pedido do próprio aluno | só com consentimento; apagada ao revogar ou sair (gatilho) |
+| academias, vínculos/papéis, convites, professor-aluno, fichas, versões, atribuições, consentimento, auditoria, idempotência | **D1** | só o Worker | tabelas em `0001` a `0004` |
+| aderência (resumo informado pelo aluno) | **D1** (V2.1, ainda não implementada) | Worker, a pedido do próprio aluno | só com consentimento; apagada ao revogar ou sair |
 | planos, mensalidades (V2.2), filiais (V2.4) | **D1** | só o Worker | tabelas futuras, mesma regra |
-| treinos pessoais, check-ins, medidas, preferências, chat, execução | Firestore | o aluno, sob as regras | como hoje; o check-in da ficha da academia leva `academyId` e `versionId` só como referência |
+| treinos pessoais, check-ins, medidas, preferências, chat, execução | Firestore | o aluno, sob as regras | como hoje; o check-in da ficha da academia leva `academyId` e `trainingVersionId` só como referência |
 | modelos oficiais globais (`trainingTemplates`) | Firestore | só o admin da plataforma | leitura por qualquer usuário logado; a Gestão copia para uma ficha da academia pela API |
 
 As coleções de academia do Firestore (`academies`, `academyMembers`, `academyInvites`, `academyAssignments`, `trainingSeries`, `trainingVersions`, `academyAssigned`, `academyAuditLog`, `academyMemberStats`) **ficam congeladas** durante a migração e depois passam a `allow read, write: if false`. Toda tabela do D1 tem `academy_id`, e nenhuma consulta confia só em `uid`.
@@ -108,34 +108,38 @@ Erros: `400` payload, `401` token, `403` papel/vínculo/academia suspensa, `404`
 
 ### 6.1 Escopo da gestão (dono, admin, professor, recepção)
 
+Implementado (todos sob `/v1`, `academyId` sempre da URL):
+
 | Endpoint | Papel | Efeito |
 |---|---|---|
-| `POST /v1/academies` | autenticado | cria academia e vínculo de dono |
-| `GET /v1/academies/:id` | membro ativo | dados básicos |
-| `PATCH /v1/academies/:id` | dono, admin | nome e dados permitidos |
-| `GET /v1/academies/:id/members` | dono, admin (recepção: cadastro) | lista sem consentimento nem saúde |
-| `GET/POST /v1/academies/:id/invites`, `POST .../invites/:inviteId/revoke` | dono, admin, recepção (aluno) | cria, lista (cada função só vê os papéis que pode convidar) e revoga; o código só aparece na criação |
-| `GET /v1/academies/:id/audit` | dono, admin | últimas 100 entradas |
-| `POST /v1/academies/:id/members/:uid/role` | dono, admin | papel, suspender, reativar, remover; último dono protegido |
-| `POST /v1/academies/:id/assignments` | dono, admin | propõe professor; aceite é do aluno |
-| `GET/POST .../trainings`, `PATCH .../trainings/:id` | autores | rascunho, duplicar, arquivar, restaurar |
-| `POST .../trainings/:id/publish` | autores | versão nova imutável |
-| `POST .../trainings/:id/assign` | dono, admin, professor (P) | atribui a um aluno |
-| `POST .../trainings/:id/batch` (`dryRun`) | dono, admin, professor (P) | prévia ou aplicação, resultado por aluno, `expectedVersion` por aluno |
-| `GET .../reports?type=` | dono, admin | só agregados |
+| `GET /health` | público | estado do serviço |
+| `GET /me` | autenticado | identidade e vínculos |
+| `GET/POST /academies` | autenticado | lista as minhas / cria (vira dono; limite de 5 como dono; `Idempotency-Key`) |
+| `GET/PATCH /academies/:id` | membro / dono, admin | dados básicos / nome, descrição, contato |
+| `GET /academies/:id/profile`, `.../dashboard` | membro (conteúdo por papel) | perfil e contagens (a recepção vê só convites) |
+| `POST /academies/:id/transfer-ownership` | dono | transfere a propriedade (confirmação explícita, auditado) |
+| `GET /academies/:id/members` | dono, admin, recepção (cadastro) | lista sem consentimento nem saúde |
+| `PATCH .../members/:uid/role`, `POST .../members/:uid/{suspend,reactivate,remove}` | dono, admin (abaixo de admin) | gestão do vínculo; último dono protegido pelo banco |
+| `GET/POST .../invites`, `POST .../invites/:id/revoke` | dono, admin, recepção (aluno) | cria (código mostrado uma vez), lista e revoga; o criador precisa continuar ativo |
+| `GET .../audit` | dono, admin | auditoria paginada (cursor `before`, até 50) |
+| `GET/POST .../coach-assignments` | dono, admin, coach (propõe) | lista / propõe vínculo professor-aluno |
+| `POST /coach-assignments/:id/{approve,revoke}` | dono, admin (aprova) / partes (revoga) | aprovação e encerramento |
+| `GET .../coach/students`, `.../coach/unassigned-students` | coach | só alunos com vínculo ativo / alunos sem professor, só nome |
+| `GET/POST .../trainings`, `POST .../trainings/:id/{publish,assign}` | dono, admin, coach (autores) | ficha, versão imutável, atribuição a um aluno com vínculo e consentimento válidos |
+
+Ainda não implementado (planejado): editar/duplicar/arquivar ficha pelo Worker, aplicação em lote, relatórios agregados e as telas de Alunos e Fichas no console.
 
 ### 6.2 Escopo do aluno (o próprio `uid`, nunca outro)
 
 | Endpoint | Efeito |
 |---|---|
-| `GET /v1/me` | meus vínculos |
-| `POST /v1/invites/preview` e `POST /v1/invites/accept` | ver e aceitar convite. O código vai **no corpo** (não na URL, que aparece em logs); vira hash; erro único `invite_invalid` para inexistente, revogado, expirado e esgotado. O portão do uso e a entrada do membro vão no mesmo batch |
-| `POST /v1/me/academies/:id/leave` | sair (só quem está ativo: suspenso não escapa da suspensão); apaga consentimento e aderência; **funciona mesmo com o kill switch ligado** |
-| `PUT /v1/me/academies/:id/consent` | conceder ou revogar a aderência |
-| `POST /v1/me/assignments/:id/accept` | aceitar ou recusar o professor |
-| `GET /v1/me/academies/:id/training` | minha ficha atribuída com a **versão exata** (o app guarda uma cópia local para executar offline) |
-| `PUT /v1/me/academies/:id/adherence` | envia o resumo semanal calculado no app, só com consentimento |
-| `DELETE /v1/me` | exclusão de conta: marca `left`, apaga consentimento e aderência em todas as academias (o fluxo de exclusão de conta do app chama este endpoint) |
+| `POST /invites/preview` e `POST /invites/accept` | ver e aceitar convite. O código vai **no corpo** (não na URL, que aparece em logs); vira hash; erro único `invite_invalid` para inexistente, revogado, expirado e esgotado. O portão do uso e a entrada do membro vão no mesmo batch |
+| `GET /me/coach-assignments` | vínculos de professor pendentes ou ativos |
+| `POST /coach-assignments/:id/{accept,reject,revoke}` | aceitar, recusar ou encerrar o professor (só o aluno do vínculo) |
+| `GET/PUT /me/academies/:id/consent` | consultar, conceder ou revogar o compartilhamento de aderência |
+| `GET /me/academies/:id/training` | minha ficha atribuída com a **versão exata**, `versionHash`, `trainingVersionId` e `assignmentId` (base do snapshot offline) |
+| `POST /me/academies/:id/leave` | sair (só quem está ativo: suspenso não escapa da suspensão); revoga consentimento e apaga a atribuição; **funciona mesmo com o kill switch ligado** |
+| `POST /me/leave-all` | exclusão de conta: sai de todas as academias de uma vez (tudo ou nada: o único dono de uma academia bloqueia e deve transferir antes); também funciona com o kill switch ligado |
 
 **Aderência (decisão fechada):** não é dado verificado. **V2.0: sem aderência individual no painel.** V2.1: resumo enviado pelo app do aluno, gravado com `source = 'client_report'` (o banco só aceita esse valor), só com consentimento `granted`, e mostrado como "informado pelo aluno". Nenhuma decisão financeira, cobrança, punição ou ranking oficial pode usar esse resumo. Aderência **confiável** exige, no futuro, uma ponte confiável entre Firestore e D1 (função, fila ou Worker com credencial restrita e escopo mínimo), decisão separada.
 
@@ -145,7 +149,7 @@ Erros: `400` payload, `401` token, `403` papel/vínculo/academia suspensa, `404`
 
 ## 7. Modelo de auditoria
 
-Tabela `academy_audit_log`: `academy_id, actor_id, action, target_type, target_id, at (hora do servidor), detail (<=200)`. Ações atuais: `academy.*`, `member.*`, `invite.*`, `assignment.*`, `training.created|updated|published|archived|restored|deleted|assigned|unassigned`. Novas: `training.batch` (resumo do lote: total, ok, falhas), `billing.*` (V2.2), `report.generated` (V2.3).
+Tabela `academy_audit_log`: `academy_id, actor_uid, action, target_type, target_id, detail, created_at, request_id`, com lista fechada de 21 ações (`CHECK`). Planejadas: `training.batch`, `billing.*` (V2.2), `report.generated` (V2.3).
 
 - Só o Worker grava, no mesmo `batch` da operação, com `actorId` = uid do token; nunca aceita ator do corpo. O banco impede alterar ou apagar registros (`academy_audit_log` imutável).
 - Leitura de dados **não** é auditada nesta versão (decisão anterior mantida).
@@ -164,13 +168,15 @@ Tabela `academy_audit_log`: `academy_id, actor_id, action, target_type, target_i
 |---|---|---|---|
 | local | emulador de Auth/Firestore do app | testes com `node:sqlite` (mesmo SQL) | testes do Worker e do esquema |
 | **homologação** | `bohtreinar-gestao-hml` | `bohtreinar-academy-worker-hml` + D1 `bohtreinar-gestao-hml` | toda operação nova |
-| produção | `workout-tracker-app-20e43` | Worker e D1 de produção (a criar) | só depois de aprovada em homologação; sem dados de academia hoje (a HELL GYM de teste foi apagada) |
+| produção | `workout-tracker-app-20e43` | Worker e D1 de produção (a criar a partir de `gestao-worker/wrangler.production.example.jsonc`) | só depois de aprovada em homologação; sem dados de academia hoje |
 
 Domínio: `workers.dev` em desenvolvimento e homologação; domínio próprio (`gestao.bohtreinar.com`) antes do primeiro cliente pagante.
 
+**Configuração de produção:** `ALLOWED_ORIGINS` só com domínios oficiais em https; `localhost` e `workers.dev` de homologação existem apenas no ambiente de homologação; D1, namespaces de limite e projeto Firebase de homologação não aparecem no modelo de produção. O teste `gestao-worker/test/config.test.js` falha se o modelo de produção contiver localhost, `-hml`, `workers.dev` ou o id do D1 de homologação. O arquivo real (`wrangler.production.jsonc`) não é versionado.
+
 **Segredos:** `bohtreinar` guarda `NVIDIA_API_KEY` (como hoje); o Worker da academia **não tem segredo de banco** (o D1 é um binding, sem chave) nem credencial do Firebase; só variáveis públicas (`FIREBASE_PROJECT_ID`, origens permitidas, kill switch). Nenhum segredo no bundle nem em log. Se uma integração futura exigir segredo (gateway, IA administrativa), ele entra por `wrangler secret`, separado por ambiente, com rotação documentada. **Acesso ao D1:** só pelo Worker e pelo `wrangler` do dono da conta; backup e restauração por D1 Time Travel e exportação antes de cada migração.
 
-**Localização e LGPD:** o D1 permite dica de localização e jurisdição, mas a lista de regiões não inclui a América do Sul (a homologação usa `enam`). O local de armazenamento entra na revisão jurídica antes do primeiro cliente. **Recuperação:** Time Travel e exportação existem, mas o procedimento de restauração precisa ser **ensaiado em homologação** antes do primeiro cliente (pendente). Se a réplica de leitura for habilitada no futuro, leituras logo após gravações importantes devem usar a sessão consistente ou o primário.
+**Localização e LGPD:** o D1 permite dica de localização e jurisdição, mas a lista de regiões não inclui a América do Sul (a homologação usa `enam`). O local de armazenamento entra na revisão jurídica antes do primeiro cliente. **Decisão de localização (registrada):** a disponibilidade de região deve ser confirmada na documentação de localização de dados do D1 (https://developers.cloudflare.com/d1/configuration/data-location/) antes de vender a academias brasileiras; hoje o banco de homologação está em `ENAM`. **Recuperação:** a restauração por exportação e importação foi ensaiada em homologação (banco descartável, contagens e gatilhos idênticos); o ensaio com Time Travel segue pendente. Se a réplica de leitura for habilitada no futuro, leituras logo após gravações importantes devem usar a sessão consistente ou o primário.
 
 **Migrações do esquema:** arquivos numerados em `gestao-worker/migrations/`, aplicados primeiro em homologação. Mudança de esquema passa por `revisor-diff` e pelos testes de `schema.test.js`.
 
@@ -178,7 +184,7 @@ Limites e medição: rate limits próprios (`GESTAO_USER_LIMIT`, `GESTAO_ACADEMY
 
 ## 10. Testes obrigatórios
 
-Os 84 testes de regras da academia viram **testes de endpoint e de esquema**, com o mesmo conteúdo: duas academias, todos os papéis, convite cruzado, `academyId` do corpo ignorado, elevação de papel, auditoria não forjável, ficha arquivada em uso, lote parcial, duplicação sem permissão, tentativa de alterar versão publicada, consentimento e saída.
+Os testes de regras da academia viram **testes de endpoint e de esquema**, com o mesmo conteúdo: duas academias, todos os papéis, convite cruzado, `academyId` do corpo ignorado, elevação de papel, auditoria não forjável, ficha arquivada em uso, lote parcial, duplicação sem permissão, tentativa de alterar versão publicada, consentimento e saída.
 
 Esquema (D1): chaves compostas, gatilhos e restrições (`schema.test.js`). Worker: token inválido/expirado, papel insuficiente, academia suspensa, vínculo suspenso, `academyId` da URL diferente do vínculo, idempotência (repetição e corpo diferente), rate limit, payload inválido ou com campo extra, falha parcial no lote, auditoria no mesmo batch (a operação falha se a auditoria falhar), último dono, kill switch. Interface: desktop (dono, recepção), celular (professor), estados vazios, erros de permissão, convite inválido, carregamento, cancelamento, revogação, acessibilidade e teclado. Homologação: duas academias fictícias, IDs registrados, limpeza ao final, smoke test depois do deploy. Produção: contagem de documentos de academia antes e depois de qualquer migração.
 
@@ -193,10 +199,10 @@ Esquema (D1): chaves compostas, gatilhos e restrições (`schema.test.js`). Work
 
 ## 12. Próximos passos e migração
 
-1. **Esquema D1** (feito, revisão 2): `0001_init.sql` em homologação (D1 recriado vazio), 15 testes de integridade.
-2. **Worker no D1** (feito): `GET /v1/health`, `/v1/me`, `/v1/academies` (lista), `POST /v1/academies` (com `Idempotency-Key`, esquema fechado, limite de 5 academias como dono, academia + dono + auditoria + chave no mesmo batch), `GET /v1/academies/:id` e `/members`. `firestore.js` removido; o Worker não tem credencial do Firestore.
-3. **Fundação empresarial** (próximo), uma operação por vez, cada uma com teste de duas academias e `revisor-diff`: convites e entrada de membro, papéis, suspensão e reativação, saída, auditoria (consulta), vínculo professor-aluno e consentimento.
-4. **Fichas:** modelos, versões (com `content_hash`), atribuições (com `assignment_id`), cópia de modelos oficiais, lote, snapshot de execução. O app do aluno troca apenas `academyService` e `academyTrainingService` por um cliente da API; o resto do domínio pessoal fica no Firestore. Exclusão de conta chama `DELETE /v1/me`.
+1. **Esquema D1** (feito): migrações 0001 a 0004 em homologação (D1 recriado limpo ao fim de cada rodada).
+2. **Worker no D1** (feito): domínios academias, membros, convites, professor-aluno, consentimento, fichas (criar, publicar, atribuir) e auditoria; 97 testes. Sem credencial do Firestore.
+3. **App do aluno** (feito, atrás de `REACT_APP_ACADEMY_API`): convite, professor, consentimento, ficha com snapshot local, saída e exclusão de conta. Rotas que ainda leem o Firestore (`/academia/:id/fichas`) ficam **fechadas** ("Módulo em implantação") com a API ligada, para nunca misturar as duas fontes.
+4. **Próximo:** telas de Alunos e Fichas no console (e editar/duplicar/arquivar/lote no Worker), E2E conjunto Gestão, D1 e app do aluno com Firestore de homologação, revisão jurídica/LGPD e preparação comercial.
 5. **Sem migração de dados reais:** a HELL GYM foi apagada em 14/10/2026 e a produção não tem nenhuma academia. O D1 de produção nasce limpo. Se surgir uma academia real antes do corte, um script revisável, com prévia e conferência de contagens, a leva (convites antigos viram hash do código).
 6. **Corte:** nenhuma escrita empresarial nova no Firestore; homologação executa todos os fluxos; produção começa com uma academia fictícia; depois as coleções de academia do Firestore passam a `if false` e, após um período de reversão, são removidas, mantendo exportação e plano de rollback.
 7. Homologação com duas academias fictícias; depois produção.

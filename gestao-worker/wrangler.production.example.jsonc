@@ -1,0 +1,23 @@
+{
+  // MODELO de produção: copie para wrangler.production.jsonc (não versionado) e preencha. Nada daqui vem da homologação.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bohtreinar-academy-worker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "ratelimits": [
+    { "name": "GESTAO_IP_LIMIT", "namespace_id": "PREENCHER", "simple": { "limit": 300, "period": 60 } },
+    { "name": "GESTAO_USER_LIMIT", "namespace_id": "PREENCHER", "simple": { "limit": 120, "period": 60 } },
+    { "name": "GESTAO_ACADEMY_LIMIT", "namespace_id": "PREENCHER", "simple": { "limit": 120, "period": 60 } }
+  ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "PREENCHER", "database_id": "PREENCHER", "migrations_dir": "migrations" }
+  ],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "PREENCHER_PROJETO_DE_PRODUCAO",
+    // Somente domínios oficiais, https, sem localhost e sem workers.dev de homologação.
+    "ALLOWED_ORIGINS": "https://PREENCHER-DOMINIO-OFICIAL",
+    "ADMIN_OPS_ENABLED": "true"
+  }
+}

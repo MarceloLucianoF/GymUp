@@ -5,7 +5,7 @@ import { getFirestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { withTokenTimeout } from './appCheckProvider';
 
-const firebaseConfig = {
+const productionConfig = {
   apiKey: "AIzaSyCb6DbkDHLrvMnyYFaNEKU8VsXrG3A7c80",
   authDomain: "workout-tracker-app-20e43.firebaseapp.com",
   projectId: "workout-tracker-app-20e43",
@@ -14,6 +14,19 @@ const firebaseConfig = {
   appId: "1:701946803421:web:faca2d5f6bcee4535f1734",
   measurementId: "G-FJX5V1ZML9"
 };
+
+// Homologação: um build de teste pode apontar para outro projeto Firebase (valores públicos). Sem as variáveis, vale a produção.
+const env = process.env;
+const firebaseConfig = env.REACT_APP_FIREBASE_PROJECT_ID
+  ? {
+      apiKey: env.REACT_APP_FIREBASE_API_KEY,
+      authDomain: env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+      projectId: env.REACT_APP_FIREBASE_PROJECT_ID,
+      storageBucket: env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+      appId: env.REACT_APP_FIREBASE_APP_ID
+    }
+  : productionConfig;
 
 const app = initializeApp(firebaseConfig);
 
