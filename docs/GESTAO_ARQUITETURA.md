@@ -210,7 +210,7 @@ Esquema (D1): chaves compostas, gatilhos e restrições (`schema.test.js`). Work
 ## 12. Próximos passos e migração
 
 1. **Esquema D1** (feito): migrações 0001 a 0004 em homologação (D1 recriado limpo ao fim de cada rodada).
-2. **Worker no D1** (feito): domínios academias, membros, convites, professor-aluno, consentimento, fichas (criar, editar, publicar, duplicar, arquivar, comparar, atribuir individual e em lote), alunos e auditoria; 111 testes. Sem credencial do Firestore.
+2. **Worker no D1** (feito): domínios academias, membros, convites, professor-aluno, consentimento, fichas (criar, editar, publicar, duplicar, arquivar, comparar, atribuir individual e em lote), alunos e auditoria; 115 testes. Sem credencial do Firestore.
 3. **App do aluno** (feito, atrás de `REACT_APP_ACADEMY_API`): convite, professor, consentimento, ficha com snapshot local, saída e exclusão de conta. Rotas que ainda leem o Firestore (`/academia/:id/fichas`) ficam **fechadas** ("Módulo em implantação") com a API ligada, para nunca misturar as duas fontes.
 4. **Telas de Alunos e Fichas no console** (feito em homologação): lista de alunos com filtros e seleção, fichas com versões e comparação, atribuição individual e em lote com prévia, permissão de criar fichas do professor. E2E conjunto Gestão, D1 e app do aluno executado em homologação (40/40).
 5. **Próximo:** exercícios da ficha vindos da biblioteca do app (hoje texto livre), revisão jurídica/LGPD e preparação comercial.

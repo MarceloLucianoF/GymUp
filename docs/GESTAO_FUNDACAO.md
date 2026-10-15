@@ -46,13 +46,13 @@ IP 300/min (antes do token, folgado por NAT), usuário 120/min, par (academia, u
 
 ## Resultados em homologação
 
-Ver `docs/DIAGNOSTICO.md` (seção da fundação). Resumo: Worker 111 testes; console 21; app do aluno 455 (69 suítes); API ponta a ponta com D1 e tokens reais 53/53; cliente real do app do aluno contra a API 22/22; interface 57/57; matriz 6 viewports 264/264 com axe sem violações; Lighthouse mobile 98/100/100 (SEO 50 por `noindex` intencional).
+Ver `docs/DIAGNOSTICO.md` (seção da fundação). Resumo: Worker 115 testes; console 21; app do aluno 455 (69 suítes); API ponta a ponta com D1 e tokens reais 53/53; cliente real do app do aluno contra a API 22/22; interface 57/57; matriz 6 viewports 264/264 com axe sem violações; Lighthouse mobile 98/100/100 (SEO 50 por `noindex` intencional).
 
 ## Alunos e Fichas (homologação)
 
 Console: **Alunos** (filtros por nome, status, professor e ficha; seleção para lote; atribuir ou trocar ficha por aluno) e **Fichas** (ativas e arquivadas, editor de rascunho, publicar versão, linha do tempo, comparar versões, duplicar, arquivar e restaurar, atribuir em lote com prévia). Regras de produto: arquivar impede novas atribuições mas não tira a ficha de quem já tem; publicar não muda a ficha de quem já a recebeu (aparece "Versão desatualizada"); quem já tem outra ficha só é trocado se a pessoa marcar "Substituir"; o professor nunca troca a ficha atribuída por outra pessoa.
 
-Resultados: Worker 111 testes (duas academias e todos os papéis); E2E Gestão (console) para D1 e app do aluno, 40/40, com contas fictícias; matriz de 5 viewports (360x740, 390x844, 768x1024, 1280x800, 1440x900) em 3 papéis, com axe WCAG 2.1 A/AA e modo escuro em 390 px: 204/204.
+Resultados: Worker 115 testes (duas academias e todos os papéis); E2E Gestão (console) para D1 e app do aluno, 40/40, com contas fictícias; matriz de 5 viewports (360x740, 390x844, 768x1024, 1280x800, 1440x900) em 3 papéis, com axe WCAG 2.1 A/AA e modo escuro em 390 px: 204/204.
 
 ## Validação do app do aluno com Firestore de homologação (14/10/2026)
 
