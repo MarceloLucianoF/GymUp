@@ -1,29 +1,22 @@
-import React from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { SessionProvider, useSession } from './session';
-import Login from './pages/Login';
-import Home from './pages/Home';
-import AcademyPage from './pages/AcademyPage';
-import InvitePage from './pages/InvitePage';
+import React, { Suspense, lazy } from 'react';
+import { Route, Routes } from 'react-router-dom';
+import { Loading } from './components/ui';
 
-function Private({ children }) {
-  const { user } = useSession();
-  const location = useLocation();
-  if (user === undefined) return <p role="status" className="center">Carregando...</p>;
-  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;   // volta ao convite depois de entrar
-  return children;
-}
+// JS dividido por rota: a landing não carrega Firebase nem o painel; cada tela do app vem sob demanda.
+const Landing = lazy(() => import('./pages/landing/Landing'));
+const Terms = lazy(() => import('./pages/legal/Terms'));
+const Privacy = lazy(() => import('./pages/legal/Privacy'));
+const AuthRoutes = lazy(() => import('./AuthRoutes'));
 
 export default function App() {
   return (
-    <SessionProvider>
+    <Suspense fallback={<div className="center"><Loading /></div>}>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Private><Home /></Private>} />
-        <Route path="/academia/:academyId" element={<Private><AcademyPage /></Private>} />
-        <Route path="/convite/:code" element={<Private><InvitePage /></Private>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/termos" element={<Terms />} />
+        <Route path="/privacidade" element={<Privacy />} />
+        <Route path="/*" element={<AuthRoutes />} />   {/* login, convite e app: só esta árvore carrega o Firebase */}
       </Routes>
-    </SessionProvider>
+    </Suspense>
   );
 }

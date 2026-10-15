@@ -7,12 +7,12 @@
   "preview_urls": false,
   // Homologação. Produção terá config própria (nome, projeto Firebase, origens e secrets diferentes).
   "ratelimits": [
-    { "name": "GESTAO_IP_LIMIT", "namespace_id": "42001", "simple": { "limit": 60, "period": 60 } },
-    { "name": "GESTAO_USER_LIMIT", "namespace_id": "42002", "simple": { "limit": 60, "period": 60 } },
-    { "name": "GESTAO_ACADEMY_LIMIT", "namespace_id": "42003", "simple": { "limit": 300, "period": 60 } }
+    { "name": "GESTAO_IP_LIMIT", "namespace_id": "42001", "simple": { "limit": 300, "period": 60 } },
+    { "name": "GESTAO_USER_LIMIT", "namespace_id": "42002", "simple": { "limit": 120, "period": 60 } },
+    { "name": "GESTAO_ACADEMY_LIMIT", "namespace_id": "42003", "simple": { "limit": 120, "period": 60 } }
   ],
   "d1_databases": [
-    { "binding": "DB", "database_name": "bohtreinar-gestao-hml", "database_id": "facf4904-734e-419a-9483-539d3057c046", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "bohtreinar-gestao-hml", "database_id": "a136a64c-438f-45ae-a377-daf139acec25", "migrations_dir": "migrations" }
   ],
   "vars": {
     "FIREBASE_PROJECT_ID": "bohtreinar-gestao-hml",
