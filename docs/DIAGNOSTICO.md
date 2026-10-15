@@ -633,3 +633,13 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Auth de homologação conferido** por exportação: só a conta do dono; Firestore e D1 esvaziados ao final.
 - **Status:** a Gestão é apresentada como fundação operacional (landing e docs).
 - **Achado separado (PR 98):** o Coach IA ignorava "somente máquina" e apontava para uma aba inexistente; corrigido com filtro de equipamento e botão "Salvar em Meus treinos" na conversa.
+
+## Atualização — smoke do Coach IA e publicação (15/10/2026)
+- **PR 96 (Gestão) e PR 98 (Coach IA) mesclados em `main`.** Deploy do app feito (`make deploy`); a Gestão segue só em homologação e a API da academia fica desligada no app publicado (`REACT_APP_ACADEMY_API` vazia).
+- **Smoke com conta fictícia em produção** (390 px; antes do merge com build local contra os serviços de produção, depois na URL publicada; conta e dados apagados pela exclusão de conta, login confirmado como recusado):
+  - "Monte um treino full body somente com máquinas": só máquinas e polias, todos da biblioteca. NVIDIA: 6,6 s a 11,6 s (build local) e 8,7 s (publicado).
+  - "Pernas só com máquinas, sem halteres": 10,1 s (publicado), só máquinas, salvo por "Salvar em Meus treinos", na lista, persistiu após recarregar e abriu na execução.
+  - NVIDIA indisponível (requisição bloqueada): montagem local em 1,1 a 1,6 s, só máquinas, da biblioteca.
+- **Dois achados do smoke, corrigidos antes do merge:** (1) "Pernas só com máquinas..." sem a palavra "treino" caía na conversa livre da NVIDIA (sem ficha nem botão de salvar): o pedido direto de grupo com restrição agora vira ficha; (2) com a NVIDIA fora do ar o gerador esperava o Gemini e o chat estourava os 45 s com texto genérico: com a NVIDIA como principal, a falha cai direto na montagem local.
+- **Limites da biblioteca:** "somente halter" (3 exercícios) e "costas só máquinas" (2) são recusados com mensagem clara em vez de gerar ficha fora do pedido; a biblioteca precisa de mais exercícios por equipamento.
+- **Não executado:** teste em aparelho físico (o smoke usou Chromium em 390 px).
