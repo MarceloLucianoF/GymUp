@@ -1,4 +1,4 @@
-import { applyEquipmentConstraint, normalizeLibrary, parseEquipmentConstraint } from './workoutComposer';
+import { applyEquipmentConstraint, describeConstraint, normalizeLibrary, parseEquipmentConstraint } from './workoutComposer';
 import { aiService, needsTools } from '../services/aiService';
 import { exercises as defaultExercises } from '../data/exercises';
 
@@ -31,4 +31,10 @@ test('pedido direto de grupo com restrição de equipamento vira ficha (não con
   expect(needsTools('Quero um treino de peito')).toBe(true);
   expect(needsTools('Qual a melhor hora para treinar pernas?')).toBe(false);
   expect(needsTools('Quanto de proteína devo consumir?')).toBe(false);
+});
+
+test('a descrição de "somente máquina" diz que inclui polias e cabos; as demais não', () => {
+  expect(describeConstraint(parseEquipmentConstraint('somente máquinas'))).toBe('somente máquina (inclui polias e cabos)');
+  expect(describeConstraint(parseEquipmentConstraint('só halter'))).toBe('somente halter');
+  expect(describeConstraint(parseEquipmentConstraint('treino sem máquina'))).toBe('sem máquina');
 });
