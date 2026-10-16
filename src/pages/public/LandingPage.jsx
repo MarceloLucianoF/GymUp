@@ -47,6 +47,24 @@ const JSON_LD = {
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' }
 };
 
+// Aparelho desenhado em CSS (peças chapadas, sem sombra nem degradê) que guarda uma tela real do app; as telas trocam por fusão.
+function Phone({ slides, active, className = '' }) {
+  return (
+    <div className={`phone ${className}`}>
+      <span className="island" aria-hidden="true" />
+      <div className="screen">
+        {slides.map((s, i) => (
+          <figure key={s.src} className={`slide ${i === active ? 'now' : ''}`} aria-hidden={i !== active}>
+            {s.video
+              ? <video src={s.video} poster={s.src} muted loop autoPlay playsInline preload="metadata" aria-label={s.alt} width="390" height="844" />
+              : <img src={s.src} alt={i === active ? s.alt : ''} width="780" height="1688" decoding="async" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />}
+          </figure>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // A ficha da demonstração é gerada no aparelho, com a mesma montagem local do app (nada é enviado).
 function useFicha(text) {
   const [state, setState] = useState({ status: 'idle' });
@@ -84,6 +102,7 @@ export default function LandingPage() {
   const [stage, setStage] = useState(0);
   const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const lastY = useRef(0);
+  const reducedSlides = REEL.map((s) => (reduceMotion ? { ...s, video: undefined } : s));
   const heroRef = useRef(null);
   const stageRef = useRef(null);
   const ficha = useFicha(ask);
@@ -94,7 +113,7 @@ export default function LandingPage() {
     try { setActiveSession(activeWorkoutService.getActiveSession(user.uid)); } catch { setActiveSession(null); }
   }, [user]);
 
-  // O carretel da abertura avança com a rolagem enquanto a frase fica parada (a página rola normalmente; nada é sequestrado).
+  // A abertura fica parada e a tela do aparelho troca conforme a rolagem; o aparelho gira um pouco. A página rola normalmente (nada é sequestrado).
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let raf = 0;
@@ -104,12 +123,9 @@ export default function LandingPage() {
       if (!hero || !st) return;
       const range = hero.offsetHeight - window.innerHeight;
       const progress = reduce || range <= 0 ? 0 : Math.min(1, Math.max(0, -hero.getBoundingClientRect().top / range));
-      const raw = Math.min(REEL.length - 1, (progress / 0.82) * (REEL.length - 1));   // a última tela fica parada nos 18% finais
-      // Cada tela repousa e a troca acontece num trecho curto: evita ficar parado entre duas telas.
-      const whole = Math.floor(raw); const part = raw - whole; const t = Math.min(1, Math.max(0, (part - 0.3) / 0.4));
-      const position = whole >= REEL.length - 1 ? REEL.length - 1 : whole + t * t * (3 - 2 * t);
-      st.style.setProperty('--reel', position.toFixed(3));
-      setFrame((f) => (f === Math.round(position) ? f : Math.round(position)));
+      st.style.setProperty('--p', progress.toFixed(3));
+      const index = Math.min(REEL.length - 1, Math.floor((progress / 0.86) * REEL.length));
+      setFrame((f) => (f === index ? f : index));
       const y = window.scrollY;
       // Rolando para baixo o cabeçalho e a barra do celular saem do caminho; ao rolar para cima eles voltam.
       const down = y > lastY.current + 2; const up = y < lastY.current - 2;
@@ -172,17 +188,9 @@ export default function LandingPage() {
           <div className="stage" ref={stageRef}>
             <h1 className="sentence"><span className="half l display">Seu treino</span><span className="half r display">cabe numa mão.</span></h1>
             <div className="frame" role="group" aria-roledescription="carrossel" aria-label="Telas do app">
-              <div className="reelwrap">
-                <div className="reel">
-                  {REEL.map((s, i) => (
-                    <figure key={s.src} className={`shot ${i === frame ? 'now' : ''}`} aria-hidden={i !== frame}>
-                      {s.video && !reduceMotion
-                        ? <video src={s.video} poster={s.src} muted loop autoPlay playsInline preload="metadata" aria-label={s.alt} style={{ objectPosition: s.pos }} width="390" height="844" />
-                        : <img src={s.src} alt={i === frame ? s.alt : ''} style={{ objectPosition: s.pos }} width="780" height="1688" decoding="async" fetchpriority={i === 0 ? 'high' : undefined} loading={i === 0 ? 'eager' : 'lazy'} />}
-                    </figure>
-                  ))}
-                </div>
-              </div>
+              <span className="disc" aria-hidden="true" />
+              <Phone slides={reducedSlides} active={frame} className="tilt" />
+              <span className="dots" aria-hidden="true">{REEL.map((s, i) => <i key={s.src} className={i === frame ? 'on' : ''} />)}</span>
             </div>
             <div className="right"><p className="cap" aria-live="polite">{REEL[frame].cap}</p></div>
             <div className="hero-copy">
@@ -230,9 +238,7 @@ export default function LandingPage() {
             <p className="detail">{STAGES[stage].detail}</p>
           </div>
           <div className="steps-right">
-            <div className="step-shots">
-              {STAGES.map((s, i) => <img key={s.src} src={s.src} alt={i === stage ? s.alt : ''} className={i === stage ? 'on' : ''} width="780" height="1688" loading="lazy" decoding="async" />)}
-            </div>
+            <Phone slides={STAGES} active={stage} className="dark" />
           </div>
         </section>
 
