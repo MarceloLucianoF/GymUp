@@ -38,3 +38,4 @@ gestao/dist
 .taste-skill/
 
 gestao-worker/wrangler.production.jsonc
+gestao/wrangler.production.jsonc
