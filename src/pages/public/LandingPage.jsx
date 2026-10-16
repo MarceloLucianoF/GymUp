@@ -283,7 +283,7 @@ export default function LandingPage() {
         <a className="mail" data-in href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL.split('@')[0]}<wbr />@{CONTACT_EMAIL.split('@')[1]}</a>
         <div className="foot-meta" data-in style={{ '--i': 1 }}>
           <nav aria-label="Documentos legais"><Link to="/privacidade">Privacidade</Link><Link to="/termos">Termos de Uso</Link></nav>
-          <span className="mid">Instale na tela inicial do celular</span>
+          <Link className="mid" to="/instalar">Como instalar no iPhone e no Android</Link>
           <span className="end">© {new Date().getFullYear()}</span>
         </div>
       </footer>
