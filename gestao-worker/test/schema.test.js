@@ -33,11 +33,11 @@ const consent = (run, aid, uid, status = 'granted') => run(
   aid, uid, status === 'granted' ? 1 : 0, status, NOW, status === 'revoked' ? NOW : null, NOW);
 
 test('migrações: aplicam em ordem, são idempotentes por arquivo e criam todas as tabelas do domínio', () => {
-  assert.deepEqual(MIGRATIONS, ['0001_core.sql', '0002_coaching.sql', '0003_training.sql', '0004_business.sql', '0005_training_ops.sql', '0006_export_close.sql']);
+  assert.deepEqual(MIGRATIONS, ['0001_core.sql', '0002_coaching.sql', '0003_training.sql', '0004_business.sql', '0005_training_ops.sql', '0006_export_close.sql', '0007_finance.sql']);
   const db = new DatabaseSync(':memory:');
   db.exec(SQL);
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((r) => r.name);
-  assert.deepEqual(tables, ['academies', 'academy_audit_log', 'academy_billing', 'academy_consents', 'academy_invites', 'academy_members', 'academy_plans', 'coach_assignments', 'idempotency_keys', 'training_assignments', 'training_templates', 'training_versions']);
+  assert.deepEqual(tables, ['academies', 'academy_audit_log', 'academy_billing', 'academy_consents', 'academy_invites', 'academy_members', 'academy_plans', 'coach_assignments', 'idempotency_keys', 'student_contracts', 'training_assignments', 'training_templates', 'training_versions']);
   assert.throws(() => db.exec(SQL), /already exists/);   // reaplicar a mesma migração falha: o controle de versão do D1 evita duplicar
 });
 
@@ -57,7 +57,7 @@ test('índices pedidos existem (academy_id, status, role, updated_at, únicos de
   const { db } = fresh();
   const idx = db.prepare("SELECT name, tbl_name, sql FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'").all();
   const names = idx.map((i) => i.name);
-  for (const n of ['members_role', 'members_status', 'invites_academy_active', 'invites_academy_updated', 'audit_academy_created', 'coach_one_open', 'coach_one_active', 'coach_by_coach', 'consents_status', 'billing_academy_status', 'templates_academy']) assert.ok(names.includes(n), n);
+  for (const n of ['members_role', 'members_status', 'invites_academy_active', 'invites_academy_updated', 'audit_academy_created', 'coach_one_open', 'coach_one_active', 'coach_by_coach', 'consents_status', 'billing_academy_due', 'templates_academy']) assert.ok(names.includes(n), n);
   assert.ok(idx.find((i) => i.name === 'coach_one_active').sql.includes('UNIQUE'));
   // as consultas quentes usam índice (não varrem a tabela)
   const plan = (sql, ...p) => db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...p).map((r) => r.detail).join(' ');
@@ -261,19 +261,32 @@ test('auditoria: imutável, só ações conhecidas, só de academia existente, d
   fails(() => log('l5', A, 'academy.updated', 'academy', 'ontem'), /CHECK/);
 });
 
-test('planos e cobrança: isolados por academia, só de aluno, estados controlados', () => {
+test('planos, contratos e cobranças: isolados por academia, só de aluno ativo, estados e valores controlados', () => {
   const { run } = fresh();
   const plan = (id, aid) => run('INSERT INTO academy_plans (id, academy_id, name, monthly_fee_cents, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)', id, aid, 'Mensal', 9900, NOW, NOW);
-  const bill = (id, aid, stu, planId, st = 'pending', due = '2026-11-05') => run('INSERT INTO academy_billing (id, academy_id, student_uid, plan_id, billing_status, amount_cents, due_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', id, aid, stu, planId, st, 9900, due, NOW, NOW);
+  const contract = (id, aid, stu, planId, extra = {}) => run('INSERT INTO student_contracts (id, academy_id, student_uid, plan_id, fee_cents, due_day, start_date, status, end_date, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', id, aid, stu, planId, 9900, extra.day ?? 5, '2026-10-01', extra.status ?? 'active', extra.end ?? null, 'dono', NOW, NOW);
+  const bill = (id, aid, stu, planId, st = 'pending', due = '2026-11-05', month = '2026-11', contractId = 'c1', extra = '') => run(`INSERT INTO academy_billing (id, academy_id, student_uid, contract_id, plan_id, reference_month, amount_cents, due_date, billing_status, ${st === 'paid' ? 'paid_at, paid_amount_cents, payment_method, registered_by, ' : ''}created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${st === 'paid' ? "'2026-11-04', 9900, 'pix', 'dono', " : ''}?, ?)`, id, aid, stu, contractId, planId, month, 9900, due, st, NOW, NOW);
   plan('pl_a', A); plan('pl_b', B);
+  fails(() => contract('c0', A, 'acoach', 'pl_a'), 'not_active_student');
+  fails(() => contract('c0', A, 'astu', 'pl_b'), /FOREIGN KEY/);
+  fails(() => contract('c0', A, 'astu', 'pl_a', { day: 29 }), /CHECK/);
+  contract('c1', A, 'astu', 'pl_a');
+  fails(() => contract('c2', A, 'astu', 'pl_a'), /UNIQUE/);                                   // um contrato aberto por aluno
+  fails(() => contract('c2', A, 'astu2', 'pl_a', { status: 'ended' }), /CHECK/);              // encerrado exige data
   bill('b1', A, 'astu', 'pl_a');
-  fails(() => bill('b2', A, 'astu', 'pl_b'), /FOREIGN KEY/);
-  fails(() => bill('b3', A, 'bstu', 'pl_a'), /FOREIGN KEY|student_only/);
-  fails(() => bill('b4', A, 'acoach', 'pl_a'), 'student_only');
-  fails(() => bill('b5', A, 'astu', 'pl_a', 'calote'), /CHECK/);
-  fails(() => bill('b6', A, 'astu', 'pl_a', 'paid', '05/11/2026'), /CHECK/);
-  for (const s of ['paid', 'exempt', 'overdue']) bill(`ok_${s}`, A, 'astu2', 'pl_a', s);
+  fails(() => bill('b2', A, 'astu', 'pl_a', 'pending', '2026-11-05', '2026-11'), /UNIQUE/);   // uma cobrança por contrato e mês
+  fails(() => bill('b3', A, 'astu', 'pl_b', 'pending', '2026-11-05', '2026-12'), /FOREIGN KEY/);
+  fails(() => bill('b4', A, 'astu2', 'pl_a', 'pending', '2026-11-05', '2026-12'), /FOREIGN KEY/);   // contrato de outro aluno
+  fails(() => bill('b5', A, 'astu', 'pl_a', 'calote', '2026-11-05', '2026-12'), /CHECK/);
+  fails(() => bill('b6', A, 'astu', 'pl_a', 'pending', '05/11/2026', '2026-12'), /CHECK/);
+  fails(() => run("UPDATE academy_billing SET billing_status = 'paid' WHERE id = 'b1'"), /CHECK/);   // pago exige data, valor, forma e quem registrou
+  fails(() => run('UPDATE academy_billing SET discount_cents = 99999 WHERE id = \'b1\''), /CHECK/);
+  bill('ok_paid', A, 'astu', 'pl_a', 'paid', '2026-11-05', '2026-12');
   fails(() => run("UPDATE academy_billing SET student_uid = 'astu2' WHERE id = 'b1'"), 'immutable_identity');
+  run("UPDATE academy_billing SET billing_status = 'canceled' WHERE id = 'b1'");
+  fails(() => run("UPDATE academy_billing SET billing_status = 'pending' WHERE id = 'b1'"), 'billing_final');
+  run("UPDATE student_contracts SET status = 'ended', end_date = '2026-11-30' WHERE id = 'c1'");
+  fails(() => run("UPDATE student_contracts SET status = 'active' WHERE id = 'c1'"), 'contract_ended');
 });
 
 test('rollback: se uma instrução do batch falha, nada do batch fica gravado', async () => {

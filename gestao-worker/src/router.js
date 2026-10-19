@@ -7,6 +7,7 @@ import * as audit from './handlers/audit.js';
 import * as training from './handlers/training.js';
 import * as students from './handlers/students.js';
 import * as dataRights from './handlers/dataRights.js';
+import * as finance from './handlers/finance.js';
 
 // Tabela de rotas: método, caminho e handler. Os parâmetros do caminho têm formato fechado; nenhum caminho de coleção vem do cliente.
 const P = { academyId: '[A-Za-z0-9_]{1,40}', uid: '[A-Za-z0-9_-]{1,128}', id: '[A-Za-z0-9_]{1,64}', version: '[0-9]{1,6}' };
@@ -25,6 +26,21 @@ export const ROUTES = [
   route('PATCH', '/v1/academies/:academyId', academies.update),
   route('GET', '/v1/academies/:academyId/profile', academies.profile),
   route('GET', '/v1/academies/:academyId/dashboard', academies.dashboard),
+  route('GET', '/v1/academies/:academyId/plans', finance.listPlans),
+  route('POST', '/v1/academies/:academyId/plans', finance.createPlan),
+  route('PATCH', '/v1/academies/:academyId/plans/:id', finance.updatePlan),
+  route('GET', '/v1/academies/:academyId/contracts', finance.listContracts),
+  route('POST', '/v1/academies/:academyId/contracts', finance.createContract),
+  route('PATCH', '/v1/academies/:academyId/contracts/:id', finance.updateContract),
+  route('GET', '/v1/academies/:academyId/charges', finance.listCharges),
+  route('POST', '/v1/academies/:academyId/charges/generate', finance.generateCharges),
+  route('POST', '/v1/academies/:academyId/charges/:id/pay', finance.payCharge),
+  route('POST', '/v1/academies/:academyId/charges/:id/revert', finance.revertPayment),
+  route('POST', '/v1/academies/:academyId/charges/:id/cancel', finance.cancelCharge),
+  route('POST', '/v1/academies/:academyId/charges/:id/exempt', finance.exemptCharge),
+  route('PATCH', '/v1/academies/:academyId/charges/:id', finance.adjustCharge),
+  route('GET', '/v1/academies/:academyId/finance/summary', finance.summary),
+  route('POST', '/v1/academies/:academyId/finance/export', finance.exportFinance),
   route('POST', '/v1/academies/:academyId/export', dataRights.exportAcademy),
   route('POST', '/v1/academies/:academyId/close', dataRights.closeAcademy),
   route('POST', '/v1/academies/:academyId/transfer-ownership', academies.transferOwnership),

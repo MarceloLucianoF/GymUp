@@ -16,7 +16,7 @@ export async function sha256Hex(text) {
 
 // Violações de gatilhos e restrições do banco viram erro estável, sem a mensagem do banco (que fica só no log do servidor).
 const TRIGGER_CONFLICTS = ['archived_template', 'immutable_version', 'immutable_audit', 'immutable_identity', 'immutable_academy', 'not_active_student', 'no_consent',
-  'student_only', 'version_step', 'version_mismatch', 'published_template', 'invalid_roles', 'invalid_transition', 'role_in_use', 'academy_closed'];
+  'student_only', 'version_step', 'version_mismatch', 'published_template', 'invalid_roles', 'invalid_transition', 'role_in_use', 'academy_closed', 'contract_ended', 'billing_final'];
 export function mapDbError(error) {
   if (error instanceof ApiError) return error;
   const message = String(error?.message || '');
