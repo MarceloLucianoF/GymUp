@@ -118,6 +118,7 @@ Implementado (todos sob `/v1`, `academyId` sempre da URL):
 | `GET/PATCH /academies/:id` | membro / dono, admin | dados básicos / nome, descrição, contato |
 | `GET /academies/:id/profile`, `.../dashboard` | membro (conteúdo por papel) | perfil e contagens (a recepção vê só convites) |
 | `POST /academies/:id/transfer-ownership` | dono | transfere a propriedade (confirmação explícita, auditado) |
+| `POST /academies/:id/export`, `POST /academies/:id/close` | dono | exportação completa em JSON (sem código de convite nem e-mail; teto de 5000 linhas por lista, com aviso; auditada) / encerramento definitivo (nome digitado, `Idempotency-Key`): minimiza dados e trava a academia |
 | `GET /academies/:id/members` | dono, admin, recepção (cadastro) | lista sem consentimento nem saúde |
 | `PATCH .../members/:uid/role`, `POST .../members/:uid/{suspend,reactivate,remove}` | dono, admin (abaixo de admin) | gestão do vínculo; último dono protegido pelo banco |
 | `GET/POST .../invites`, `POST .../invites/:id/revoke` | dono, admin, recepção (aluno) | cria (código mostrado uma vez), lista e revoga; o criador precisa continuar ativo |
@@ -139,6 +140,8 @@ Implementado (todos sob `/v1`, `academyId` sempre da URL):
 
 Ainda não implementado (planejado): relatórios agregados, aderência individual e exclusão de rascunhos.
 
+**Encerramento (migração 0006):** `academies.closed_at` com gatilhos que impedem reabrir, editar e receber membros, convites ou modelos. No mesmo batch: membros (exceto proprietários) saem (vínculos, consentimentos e fichas atribuídas caem por gatilho), nomes de todos são apagados, convites revogados, fichas arquivadas e chaves de idempotência da academia apagadas. Permanecem: a auditoria (só identificadores, para defesa e integridade) e as versões publicadas (trabalho da academia, sem dado pessoal). Depois de encerrada, só o titular exporta o próprio histórico por `/me/export`.
+
 ### 6.2 Escopo do aluno (o próprio `uid`, nunca outro)
 
 | Endpoint | Efeito |
@@ -149,6 +152,7 @@ Ainda não implementado (planejado): relatórios agregados, aderência individua
 | `GET/PUT /me/academies/:id/consent` | consultar, conceder ou revogar o compartilhamento de aderência |
 | `GET /me/academies/:id/training` | minha ficha atribuída com a **versão exata**, `versionHash`, `trainingVersionId` e `assignmentId` (base do snapshot offline) |
 | `POST /me/academies/:id/leave` | sair (só quem está ativo: suspenso não escapa da suspensão); revoga consentimento e apaga a atribuição; **funciona mesmo com o kill switch ligado** |
+| `GET /me/export` | dados do próprio titular nas academias (vínculos, consentimentos, professor, ficha atribuída e atividade); funciona com o desligador ligado |
 | `POST /me/leave-all` | exclusão de conta: sai de todas as academias de uma vez (tudo ou nada: o único dono de uma academia bloqueia e deve transferir antes); também funciona com o kill switch ligado |
 
 **Aderência (decisão fechada):** não é dado verificado. **V2.0: sem aderência individual no painel.** V2.1: resumo enviado pelo app do aluno, gravado com `source = 'client_report'` (o banco só aceita esse valor), só com consentimento `granted`, e mostrado como "informado pelo aluno". Nenhuma decisão financeira, cobrança, punição ou ranking oficial pode usar esse resumo. Aderência **confiável** exige, no futuro, uma ponte confiável entre Firestore e D1 (função, fila ou Worker com credencial restrita e escopo mínimo), decisão separada.
