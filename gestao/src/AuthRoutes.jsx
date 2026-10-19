@@ -12,6 +12,7 @@ const Members = lazy(() => import('./pages/app/Members'));
 const Invites = lazy(() => import('./pages/app/Invites'));
 const Audit = lazy(() => import('./pages/app/Audit'));
 const Students = lazy(() => import('./pages/app/Students'));
+const Finance = lazy(() => import('./pages/app/Finance'));
 const Trainings = lazy(() => import('./pages/app/Trainings'));
 const TrainingDetail = lazy(() => import('./pages/app/TrainingDetail'));
 
@@ -39,6 +40,7 @@ export default function AuthRoutes() {
             <Route path="academia/:academyId/auditoria" element={<Audit />} />
             <Route path="academia/:academyId/alunos" element={<Students />} />
             <Route path="academia/:academyId/fichas" element={<Trainings />} />
+            <Route path="academia/:academyId/financeiro" element={<Finance />} />
             <Route path="academia/:academyId/fichas/:templateId" element={<TrainingDetail />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Route>

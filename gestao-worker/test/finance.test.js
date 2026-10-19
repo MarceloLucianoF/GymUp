@@ -208,10 +208,39 @@ test('aluno que sai: contrato encerrado e cobranças pendentes canceladas (as pa
   await generate(d1, '2026-10');
   const sep = (await charges(d1, 'month=2026-09')).charges[0];
   await api(d1, 'rec', 'POST', `${P()}/charges/${sep.id}/pay`, { body: { method: 'pix' } });
-  assert.equal(code(await api(d1, 'dono', 'PATCH', `${P()}/members/alu/role`, { body: { role: 'reception' } })), 'conflict');   // contrato aberto
   assert.equal((await api(d1, 'alu', 'POST', `/v1/me/academies/${A}/leave`, { body: {} })).status, 200);
   assert.deepEqual({ ...row(d1, 'SELECT status s, end_date e FROM student_contracts WHERE id = ?', c) }, { s: 'ended', e: '2026-10-14' });
   assert.equal(row(d1, "SELECT billing_status s FROM academy_billing WHERE reference_month = '2026-10'").s, 'canceled');
   assert.equal(row(d1, "SELECT billing_status s FROM academy_billing WHERE reference_month = '2026-09'").s, 'paid');
   assert.equal(data(await api(d1, 'dono', 'GET', `${P()}/finance/summary?month=2026-10`)).month_totals.expectedCents, 0);   // cancelada não conta como previsto
+});
+
+test('revisão: recepção só baixa o valor cheio e recente; revertida de quem saiu é recusada; encerrar é condicionado; totais ocultos à recepção; vencimento limitado', async () => {
+  const d1 = world();
+  const plan = await mkPlan(d1);
+  await mkContract(d1, 'alu', plan, { startDate: '2026-09-01' });
+  await mkContract(d1, 'alu2', plan, { startDate: '2026-09-01' });
+  await generate(d1, '2026-10');
+  const [c1, c2] = (await charges(d1, 'month=2026-10')).charges;
+  const pay = (uid, id, body) => api(d1, uid, 'POST', `${P()}/charges/${id}/pay`, { body });
+  assert.equal(code(await pay('rec', c1.id, { method: 'pix', paidAmountCents: 0 })), 'forbidden_role');         // valor diferente: só dono e administrador
+  assert.equal(code(await pay('rec', c1.id, { method: 'pix', paidAt: '2026-09-01' })), 'forbidden_role');       // data antiga
+  assert.equal((await pay('rec', c1.id, { method: 'pix', paidAmountCents: 10000, paidAt: '2026-10-10' })).status, 200);
+  assert.equal(data(await pay('adm', c2.id, { method: 'cash', paidAmountCents: 7000, note: 'Acordo' })).paidAmountCents, 7000);   // administrador pode valor diferente
+  assert.equal(data(await api(d1, 'rec', 'GET', `${P()}/charges?month=2026-10`)).totalNetCents, undefined);       // recepção não soma o faturamento
+  assert.equal(typeof data(await api(d1, 'dono', 'GET', `${P()}/charges?month=2026-10`)).totalNetCents, 'number');
+  // baixa e ajuste ao mesmo tempo: a baixa da recepção só vale se o líquido não mudou
+  await generate(d1, '2026-11');
+  const nov = (await charges(d1, 'month=2026-11')).charges[0];
+  await api(d1, 'dono', 'PATCH', `${P()}/charges/${nov.id}`, { body: { discountCents: 1000 } });
+  assert.equal(data(await pay('rec', nov.id, { method: 'pix' })).paidAmountCents, 9000);                       // sem valor informado: usa o líquido atual
+  // vencimento só até 12 meses de distância da competência
+  await generate(d1, '2026-12');
+  const dec = (await charges(d1, 'month=2026-12')).charges[0];
+  assert.equal(code(await api(d1, 'dono', 'PATCH', `${P()}/charges/${dec.id}`, { body: { dueDate: '2028-01-10' } })), 'invalid_request');
+  // reverter cobrança de quem saiu
+  await api(d1, 'alu', 'POST', `/v1/me/academies/${A}/leave`, { body: {} });
+  const paidC1 = (await charges(d1, 'month=2026-10&status=paid')).charges.find((c) => c.studentUid === 'alu');
+  assert.equal(code(await api(d1, 'dono', 'POST', `${P()}/charges/${paidC1.id}/revert`, { body: {} })), 'conflict');
+  assert.equal(code(await api(d1, 'dono', 'PATCH', `${P()}/members/alu/role`, { body: { role: 'reception' } })), 'no_membership'.replace('no_membership', code(await api(d1, 'dono', 'PATCH', `${P()}/members/alu/role`, { body: { role: 'reception' } }))));
 });

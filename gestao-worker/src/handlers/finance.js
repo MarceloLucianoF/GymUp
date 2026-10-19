@@ -131,7 +131,7 @@ export async function updateContract(ctx) {
     auditStmt(ctx.db, ctx, { academyId, action: 'contract.updated', targetType: 'contract', targetId: id, detail: Object.keys(body).join(',') }, true)
   ];
   // Encerrar: cobranças pendentes que vencem depois do último dia deixam de valer (as vencidas e as pagas permanecem).
-  if (ending) stmts.push(ctx.db.prepare("UPDATE academy_billing SET billing_status = 'canceled', updated_at = ? WHERE contract_id = ? AND academy_id = ? AND billing_status = 'pending' AND due_date > ?").bind(ctx.nowIso, id, academyId, endDate));
+  if (ending) stmts.push(ctx.db.prepare("UPDATE academy_billing SET billing_status = 'canceled', updated_at = ? WHERE contract_id = ? AND academy_id = ? AND billing_status = 'pending' AND due_date > ? AND EXISTS (SELECT 1 FROM student_contracts WHERE id = ? AND academy_id = ? AND status = 'ended' AND end_date = ? AND updated_at = ?)").bind(ctx.nowIso, id, academyId, endDate, id, academyId, endDate, ctx.nowIso));
   const results = await guarded(() => ctx.db.batch(stmts));
   if (!changed(results)) throw new ApiError('conflict');
   return { contractId: id, updated: Object.keys(body) };
@@ -148,7 +148,7 @@ const FILTERS = ['open', 'pending', 'overdue', 'paid', 'exempt', 'canceled'];
 
 export async function listCharges(ctx) {
   const { academyId } = ctx.params;
-  await requireAccess(ctx, academyId, FRONT);
+  const { membership } = await requireAccess(ctx, academyId, FRONT);
   const today = todayBrt(ctx.now);
   const month = ctx.url.searchParams.get('month') === 'all' ? null : monthParam(ctx, 'month', monthOf(today));
   const status = enumParam(ctx.url, 'status', FILTERS);
@@ -166,7 +166,7 @@ export async function listCharges(ctx) {
   const base = `FROM academy_billing b JOIN academy_members m ON m.academy_id = b.academy_id AND m.user_id = b.student_uid WHERE ${W}`;
   const totals = await first(ctx, `SELECT count(*) AS n, COALESCE(sum(b.amount_cents - b.discount_cents), 0) AS net ${base}`, ...params);
   const rows = await all(ctx, `SELECT b.*, m.display_name AS student_name, (SELECT name FROM academy_plans p WHERE p.id = b.plan_id AND p.academy_id = b.academy_id) AS plan_name ${base} ORDER BY b.due_date, m.display_name COLLATE NOCASE LIMIT ? OFFSET ?`, ...params, pageSize, (page - 1) * pageSize);
-  return { academyId, today, month, page, pageSize, total: totals.n, totalNetCents: totals.net, charges: rows.map((r) => view(r, today)) };
+  return { academyId, today, month, page, pageSize, total: totals.n, ...(STAFF.includes(membership.role) ? { totalNetCents: totals.net } : {}), charges: rows.map((r) => view(r, today)) };
 }
 
 // Gera as cobranças do mês para todos os contratos ativos (uma por contrato e mês; repetir não duplica). dryRun só conta.
@@ -203,30 +203,37 @@ async function loadCharge(ctx, academyId, id) {
 
 export async function payCharge(ctx) {
   const { academyId, id } = ctx.params;
-  await requireAccess(ctx, academyId, FRONT);
+  const { membership } = await requireAccess(ctx, academyId, FRONT);
   const body = await readBody(ctx.request, SCHEMAS.payCharge);
   const c = await loadCharge(ctx, academyId, id);
   if (c.billing_status !== 'pending') throw new ApiError('conflict');
   const today = todayBrt(ctx.now);
   const paidAt = body.paidAt ?? today;
   if (!validDate(paidAt) || paidAt > today || paidAt < '2000-01-01') throw new ApiError('invalid_request');
-  const paid = body.paidAmountCents ?? net(c);
+  // Recepção só dá baixa do valor cheio da cobrança (líquido) e de pagamentos recentes; valor diferente ou data antiga é com dono e administrador.
+  const front = membership.role === 'reception';
+  if (front && ((body.paidAmountCents !== undefined && body.paidAmountCents !== net(c)) || paidAt < todayBrt(ctx.now - 7 * 86400000))) throw new ApiError('forbidden_role');
+  // O valor líquido é lido no próprio UPDATE: um ajuste de desconto concorrente não grava valor antigo (a baixa da recepção só vale se o líquido não mudou).
   const results = await guarded(() => ctx.db.batch([
-    ctx.db.prepare("UPDATE academy_billing SET billing_status = 'paid', paid_at = ?, paid_amount_cents = ?, payment_method = ?, note = ?, registered_by = ?, updated_at = ? WHERE id = ? AND academy_id = ? AND billing_status = 'pending'")
-      .bind(paidAt, paid, body.method, body.note ?? c.note, ctx.user.uid, ctx.nowIso, id, academyId),
-    auditStmt(ctx.db, ctx, { academyId, action: 'payment.registered', targetType: 'billing', targetId: id, detail: `${body.method} ${money(paid)}` }, true)
+    ctx.db.prepare("UPDATE academy_billing SET billing_status = 'paid', paid_at = ?, paid_amount_cents = COALESCE(?, amount_cents - discount_cents), payment_method = ?, note = ?, registered_by = ?, updated_at = ? WHERE id = ? AND academy_id = ? AND billing_status = 'pending' AND (? IS NULL OR ? = 0 OR (amount_cents - discount_cents) = ?)")
+      .bind(paidAt, body.paidAmountCents ?? null, body.method, body.note ?? c.note, ctx.user.uid, ctx.nowIso, id, academyId, front ? 1 : null, front ? 1 : 0, net(c)),
+    auditStmt(ctx.db, ctx, { academyId, action: 'payment.registered', targetType: 'billing', targetId: id, detail: `${body.method} ${money(body.paidAmountCents ?? net(c))}` }, true)
   ]));
-  if (!changed(results)) throw new ApiError('conflict');   // outra pessoa registrou ao mesmo tempo
-  return { chargeId: id, status: 'paid', paidAt, paidAmountCents: paid };
+  if (!changed(results)) throw new ApiError('conflict');   // outra pessoa registrou, ou o valor mudou, ao mesmo tempo
+  return { chargeId: id, status: 'paid', paidAt, paidAmountCents: body.paidAmountCents ?? net(c) };
 }
 
 // Mudanças de estado só do dono e do administrador: desfazer pagamento, cancelar, isentar e ajustar.
-async function transition(ctx, { from, to, action, extraSql = '', extraArgs = [], detail = '' }) {
+async function transition(ctx, { from, to, action, extraSql = '', extraArgs = [], detail = '', requireActiveStudent = false }) {
   const { academyId, id } = ctx.params;
   await requireAccess(ctx, academyId, STAFF);
   const body = await readBody(ctx.request, SCHEMAS.chargeNote);
   const c = await loadCharge(ctx, academyId, id);
   if (c.billing_status !== from) throw new ApiError('conflict');
+  if (requireActiveStudent) {   // reabrir cobrança de quem já saiu criaria uma pendência que ninguém mais cancela
+    const m = await first(ctx, "SELECT status FROM academy_members WHERE academy_id = ? AND user_id = ?", academyId, c.student_uid);
+    if (!m || m.status !== 'active') throw new ApiError('conflict');
+  }
   const results = await guarded(() => ctx.db.batch([
     ctx.db.prepare(`UPDATE academy_billing SET billing_status = ?, ${extraSql} note = ?, updated_at = ? WHERE id = ? AND academy_id = ? AND billing_status = ?`).bind(to, ...extraArgs, body.note ?? c.note, ctx.nowIso, id, academyId, from),
     auditStmt(ctx.db, ctx, { academyId, action, targetType: 'billing', targetId: id, detail: detail || (body.note || '').slice(0, 80) }, true)
@@ -234,7 +241,7 @@ async function transition(ctx, { from, to, action, extraSql = '', extraArgs = []
   if (!changed(results)) throw new ApiError('conflict');
   return { chargeId: id, status: to };
 }
-export const revertPayment = (ctx) => transition(ctx, { from: 'paid', to: 'pending', action: 'payment.reverted', extraSql: 'paid_at = NULL, paid_amount_cents = NULL, payment_method = NULL, registered_by = NULL,' });
+export const revertPayment = (ctx) => transition(ctx, { requireActiveStudent: true, from: 'paid', to: 'pending', action: 'payment.reverted', extraSql: 'paid_at = NULL, paid_amount_cents = NULL, payment_method = NULL, registered_by = NULL,' });
 export const cancelCharge = (ctx) => transition(ctx, { from: 'pending', to: 'canceled', action: 'billing.canceled' });
 export const exemptCharge = (ctx) => transition(ctx, { from: 'pending', to: 'exempt', action: 'billing.exempted' });
 
@@ -246,7 +253,7 @@ export async function adjustCharge(ctx) {
   if (c.billing_status !== 'pending') throw new ApiError('conflict');
   const discount = body.discountCents ?? c.discount_cents;
   if (discount > c.amount_cents) throw new ApiError('invalid_request');
-  if (body.dueDate !== undefined && !validDate(body.dueDate)) throw new ApiError('invalid_request');
+  if (body.dueDate !== undefined && (!validDate(body.dueDate) || monthOf(body.dueDate) < addMonths(c.reference_month, -12) || monthOf(body.dueDate) > addMonths(c.reference_month, 12))) throw new ApiError('invalid_request');
   const results = await guarded(() => ctx.db.batch([
     ctx.db.prepare("UPDATE academy_billing SET discount_cents = ?, due_date = ?, note = ?, updated_at = ? WHERE id = ? AND academy_id = ? AND billing_status = 'pending'").bind(discount, body.dueDate ?? c.due_date, body.note ?? c.note, ctx.nowIso, id, academyId),
     auditStmt(ctx.db, ctx, { academyId, action: 'billing.adjusted', targetType: 'billing', targetId: id, detail: `desconto ${money(discount)}${body.dueDate ? `, vence ${body.dueDate}` : ''}` }, true)
@@ -276,7 +283,7 @@ export async function summary(ctx) {
       FROM academy_billing b WHERE b.academy_id = ? AND b.reference_month = ?`, today, today, today, today, academyId, month),
     all(ctx, `SELECT b.reference_month AS month, COALESCE(sum(CASE WHEN ${live} THEN b.amount_cents - b.discount_cents END), 0) AS expected, COALESCE(sum(CASE WHEN b.billing_status = 'paid' THEN b.paid_amount_cents END), 0) AS received
       FROM academy_billing b WHERE b.academy_id = ? AND b.reference_month BETWEEN ? AND ? GROUP BY b.reference_month ORDER BY b.reference_month`, academyId, from6, month),
-    all(ctx, `SELECT p.id, p.name, COALESCE(sum(CASE WHEN ${live} THEN b.amount_cents - b.discount_cents END), 0) AS expected, COALESCE(sum(CASE WHEN b.billing_status = 'paid' THEN b.paid_amount_cents END), 0) AS received, count(*) AS n
+    all(ctx, `SELECT p.id, p.name, COALESCE(sum(CASE WHEN ${live} THEN b.amount_cents - b.discount_cents END), 0) AS expected, COALESCE(sum(CASE WHEN b.billing_status = 'paid' THEN b.paid_amount_cents END), 0) AS received, count(CASE WHEN ${live} THEN 1 END) AS n
       FROM academy_billing b JOIN academy_plans p ON p.id = b.plan_id AND p.academy_id = b.academy_id WHERE b.academy_id = ? AND b.reference_month = ? GROUP BY p.id ORDER BY expected DESC LIMIT 20`, academyId, month),
     first(ctx, `SELECT count(CASE WHEN status = 'active' THEN 1 END) AS active_n, COALESCE(sum(CASE WHEN status = 'active' THEN fee_cents END), 0) AS mrr, count(CASE WHEN status = 'paused' THEN 1 END) AS paused_n,
         count(CASE WHEN created_at >= ? THEN 1 END) AS new_30, count(CASE WHEN status = 'ended' AND end_date >= ? THEN 1 END) AS ended_30

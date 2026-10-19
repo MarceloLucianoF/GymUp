@@ -22,9 +22,10 @@ const ICONS = {
   auditoria: 'M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z',
   academia: 'M12 3l9 6v12H3V9l9-6zm-2 10v6h4v-6h-4z',
   alunos: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 9a8 8 0 0 1 16 0H4z',
+  financeiro: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15.5V19h-2v-1.5c-1.4-.2-2.5-1-2.8-2.3l1.9-.6c.2.7.8 1.1 1.7 1.1 1 0 1.6-.4 1.6-1 0-.6-.5-.9-1.8-1.3-1.7-.5-3.1-1.1-3.1-2.9 0-1.4 1-2.4 2.5-2.7V7h2v1.5c1.2.2 2.1.9 2.4 2l-1.8.7c-.2-.6-.7-1-1.4-1-.8 0-1.4.4-1.4.9 0 .6.6.8 1.8 1.2 1.6.5 3.1 1.1 3.1 3 0 1.5-1.1 2.5-2.7 2.9z',
   fichas: 'M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8V12zm0 3.5h8V17H8v-1.5z'
 };
-const LABELS = { dashboard: 'Início', membros: 'Membros', convites: 'Convites', auditoria: 'Auditoria', academia: 'Academia', alunos: 'Alunos', fichas: 'Fichas' };
+const LABELS = { dashboard: 'Início', membros: 'Membros', convites: 'Convites', auditoria: 'Auditoria', academia: 'Academia', alunos: 'Alunos', fichas: 'Fichas', financeiro: 'Financeiro' };
 const Icon = ({ name }) => <svg className="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d={ICONS[name]} fill="currentColor" /></svg>;
 
 function CreateAcademyModal({ onClose, onCreated }) {

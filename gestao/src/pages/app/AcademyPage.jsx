@@ -180,7 +180,7 @@ export default function AcademyPage() {
                 <div><button type="button" className="btn danger" onClick={() => { setLeaveError(''); setLeaving(true); }}>Sair da academia</button></div>
               </div>
             )}
-            <p className="muted small">Configurações de planos e mensalidades: <span className="soon">Em breve</span></p>
+            <p className="muted small">Planos, mensalidades e cobranças ficam em Financeiro, no menu.</p>
           </section>
           {role === 'owner' && (
             <section className="panel" aria-labelledby="dados-academia">

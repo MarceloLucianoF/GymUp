@@ -18,9 +18,9 @@ export function memberActions(me, target) {
 
 // O que cada papel enxerga no menu (o servidor continua sendo a barreira).
 export const NAV_BY_ROLE = {
-  owner: ['dashboard', 'membros', 'alunos', 'fichas', 'convites', 'auditoria', 'academia'],
-  admin: ['dashboard', 'membros', 'alunos', 'fichas', 'convites', 'auditoria', 'academia'],
-  reception: ['dashboard', 'membros', 'alunos', 'convites'],
+  owner: ['dashboard', 'membros', 'alunos', 'fichas', 'financeiro', 'convites', 'auditoria', 'academia'],
+  admin: ['dashboard', 'membros', 'alunos', 'fichas', 'financeiro', 'convites', 'auditoria', 'academia'],
+  reception: ['dashboard', 'membros', 'alunos', 'financeiro', 'convites'],
   coach: ['alunos', 'fichas'],
   student: []
 };
@@ -38,3 +38,7 @@ export const safeNext = (value) => (typeof value === 'string' && /^\/(?!\/)[A-Za
 export const canCreateTrainings = (membership) => ['owner', 'admin'].includes(membership?.role) || (membership?.role === 'coach' && membership.canCreateTrainings === true);
 // Conceder ou retirar a permissão de criar fichas de um professor.
 export const canTogglePermission = (me, target) => !!me && ['owner', 'admin'].includes(me.role) && target.role === 'coach' && ['active', 'suspended'].includes(target.status);
+
+// Financeiro: dono e administrador fazem tudo; a recepção vê cobranças e contratos e registra pagamento (o servidor confere).
+export const canManageFinance = (role) => ['owner', 'admin'].includes(role);
+export const canSeeFinance = (role) => ['owner', 'admin', 'reception'].includes(role);

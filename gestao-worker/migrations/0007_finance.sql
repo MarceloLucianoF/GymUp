@@ -82,6 +82,7 @@ WHEN OLD.role = 'student' AND NEW.role <> 'student' AND (
   EXISTS (SELECT 1 FROM training_assignments WHERE academy_id = OLD.academy_id AND student_uid = OLD.user_id)
   OR EXISTS (SELECT 1 FROM academy_consents WHERE academy_id = OLD.academy_id AND student_uid = OLD.user_id)
   OR EXISTS (SELECT 1 FROM student_contracts WHERE academy_id = OLD.academy_id AND student_uid = OLD.user_id AND status IN ('active', 'paused'))
+  OR EXISTS (SELECT 1 FROM academy_billing WHERE academy_id = OLD.academy_id AND student_uid = OLD.user_id)
   OR EXISTS (SELECT 1 FROM coach_assignments WHERE academy_id = OLD.academy_id AND student_uid = OLD.user_id AND status IN ('proposed', 'pending_student', 'active')))
 BEGIN SELECT RAISE(ABORT, 'role_in_use'); END;
 

@@ -207,3 +207,35 @@ input[readonly] { background: var(--surface-2); }
 @media (max-width: 1099px) { .table td.check-col { width: 100%; justify-content: flex-start; } .table td.check-col::before { content: none; } }
 .plain-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 .plain-list li { list-style: disc; }
+
+/* financeiro */
+.month-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.month-label { font-weight: 700; text-transform: capitalize; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.block { display: block; }
+.stat.tone-ok .stat-value { color: var(--ok-ink, #12532a); }
+.stat.tone-bad .stat-value { color: #a21616; }
+.badge.pay-paid { background: #d9f2e1; color: #12532a; }
+.badge.pay-pending { background: var(--surface-2); color: var(--ink); }
+.badge.pay-overdue { background: #fbdcdc; color: #7a1414; }
+.badge.pay-exempt { background: #e3e8f5; color: #26356b; }
+.badge.pay-canceled { background: var(--surface-2); color: var(--muted); text-decoration: line-through; }
+.badge.contract-active { background: #d9f2e1; color: #12532a; }
+.badge.contract-paused { background: #fdf0c4; color: #5c4400; }
+.badge.contract-ended { background: var(--surface-2); color: var(--muted); }
+.bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; align-items: end; height: 180px; }
+.bar-col { display: grid; grid-template-rows: 1fr auto; gap: 6px; height: 100%; text-align: center; }
+.bar-pair { display: flex; gap: 4px; align-items: end; justify-content: center; height: 100%; }
+.bar { display: block; width: 40%; min-height: 2px; border-radius: 2px 2px 0 0; }
+.bar.exp { background: #8f9bb3; } .bar.rec { background: var(--brand); }
+.bar-label { font-size: .8rem; text-transform: capitalize; color: var(--muted); }
+.legend { display: flex; gap: 14px; align-items: center; font-size: .85rem; color: var(--muted); margin: 0; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; } .dot.exp { background: #8f9bb3; } .dot.rec { background: var(--brand); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .badge.pay-paid, :root:not([data-theme="light"]) .badge.contract-active { background: #123a22; color: #b6ecc8; }
+  :root:not([data-theme="light"]) .badge.pay-overdue { background: #4a1818; color: #f6c4c4; }
+  :root:not([data-theme="light"]) .badge.pay-exempt { background: #1e2a52; color: #c9d4f6; }
+  :root:not([data-theme="light"]) .badge.contract-paused { background: #4a3a08; color: #f6e2a0; }
+  :root:not([data-theme="light"]) .stat.tone-ok .stat-value { color: #b6ecc8; }
+  :root:not([data-theme="light"]) .stat.tone-bad .stat-value { color: #f6a3a3; }
+}
