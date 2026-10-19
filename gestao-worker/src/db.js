@@ -16,7 +16,7 @@ export async function sha256Hex(text) {
 
 // Violações de gatilhos e restrições do banco viram erro estável, sem a mensagem do banco (que fica só no log do servidor).
 const TRIGGER_CONFLICTS = ['archived_template', 'immutable_version', 'immutable_audit', 'immutable_identity', 'immutable_academy', 'not_active_student', 'no_consent',
-  'student_only', 'version_step', 'version_mismatch', 'published_template', 'invalid_roles', 'invalid_transition', 'role_in_use'];
+  'student_only', 'version_step', 'version_mismatch', 'published_template', 'invalid_roles', 'invalid_transition', 'role_in_use', 'academy_closed'];
 export function mapDbError(error) {
   if (error instanceof ApiError) return error;
   const message = String(error?.message || '');
@@ -52,7 +52,7 @@ export const listMemberships = (db, uid, limit = 50) => guarded(async () => {
   const { results } = await db.prepare(
     `SELECT m.academy_id, m.role, m.status, m.can_create_trainings, a.name AS academy_name, a.status AS academy_status
        FROM academy_members m JOIN academies a ON a.id = m.academy_id
-      WHERE m.user_id = ? AND m.status <> 'removed' ORDER BY a.name LIMIT ?`
+      WHERE m.user_id = ? AND m.status <> 'removed' AND a.closed_at IS NULL ORDER BY a.name LIMIT ?`
   ).bind(uid, limit + 1).all();
   return { rows: results.slice(0, limit), truncated: results.length > limit };
 });

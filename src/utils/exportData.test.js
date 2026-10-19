@@ -40,3 +40,12 @@ describe('exportData', () => {
     expect(decodeURIComponent(link)).toContain('a@b.com');
   });
 });
+
+describe('exportação com academias (Gestão)', () => {
+  it('inclui o bloco "academy" quando existe e omite quando a integração está desligada', () => {
+    const base = { user: { uid: 'u1', email: 'a@b.c' }, profile: {} };
+    expect(buildExportPayload(base)).not.toHaveProperty('academy');
+    const withAcademy = buildExportPayload({ ...base, academy: { memberships: [{ academy_id: 'x' }] } });
+    expect(withAcademy.academy.memberships).toHaveLength(1);
+  });
+});

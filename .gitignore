@@ -38,3 +38,8 @@ gestao/dist
 .taste-skill/
 
 gestao-worker/wrangler.production.jsonc
+
+# arquivos locais e configuracao real de producao
+gestao/wrangler.production.jsonc
+.agents/
+skills-lock.json
