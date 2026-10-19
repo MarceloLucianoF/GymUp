@@ -40,6 +40,7 @@ export default function Dashboard() {
             <div className="shortcuts">
               <Link className="btn primary" to={`${base}/convites`}>Criar convite</Link>
               <Link className="btn" to={`${base}/alunos`}>Ver alunos</Link>
+              <Link className="btn" to={`${base}/financeiro`}>Financeiro</Link>
               {staff && <Link className="btn" to={`${base}/fichas`}>Ver fichas</Link>}
               <Link className="btn" to={`${base}/membros`}>Gerenciar membros</Link>
               {staff && <Link className="btn" to={base}>Configurar academia</Link>}

@@ -95,6 +95,10 @@ export function parse(schema, input) {
 
 const str = (min, max, extra = {}) => ({ type: 'string', min, max, ...extra });
 const UID = str(1, 128, { pattern: /^[A-Za-z0-9_-]+$/ });
+const ID = str(1, 64, { pattern: /^[A-Za-z0-9_]+$/ });
+const DATE = str(10, 10, { pattern: /^\d{4}-\d{2}-\d{2}$/ });
+const MONTH = str(7, 7, { pattern: /^\d{4}-(0[1-9]|1[0-2])$/ });
+export const PAYMENT_METHODS = ['pix', 'cash', 'card', 'transfer', 'other'];
 const CODE = { type: 'string', trim: false, min: 32, max: 32, pattern: /^[a-z0-9]{32}$/ };
 
 export const SCHEMAS = {
@@ -120,6 +124,15 @@ export const SCHEMAS = {
   assignTraining: { fields: { studentUid: UID, version: { type: 'int', min: 1, max: 100000 } }, required: ['studentUid'] },
   setPermissions: { fields: { canCreateTrainings: { type: 'bool' } }, required: ['canCreateTrainings'] },
   closeAcademy: { fields: { confirmName: str(2, 80, { trim: false }), confirm: { type: 'literal', value: true } }, required: ['confirmName', 'confirm'] },
+  createPlan: { fields: { name: str(2, 60), monthlyFeeCents: { type: 'int', min: 0, max: 10000000 }, description: str(0, 200) }, required: ['name', 'monthlyFeeCents'] },
+  updatePlan: { fields: { name: str(2, 60), monthlyFeeCents: { type: 'int', min: 0, max: 10000000 }, description: str(0, 200), active: { type: 'bool' } }, atLeastOne: true },
+  createContract: { fields: { studentUid: UID, planId: ID, feeCents: { type: 'int', min: 0, max: 10000000 }, dueDay: { type: 'int', min: 1, max: 28 }, startDate: DATE }, required: ['studentUid', 'planId', 'dueDay', 'startDate'] },
+  updateContract: { fields: { planId: ID, feeCents: { type: 'int', min: 0, max: 10000000 }, dueDay: { type: 'int', min: 1, max: 28 }, status: { type: 'string', enum: ['active', 'paused', 'ended'] }, endDate: DATE }, atLeastOne: true },
+  generateCharges: { fields: { month: MONTH, dryRun: { type: 'bool' } }, required: ['month'] },
+  payCharge: { fields: { method: { type: 'string', enum: PAYMENT_METHODS }, paidAmountCents: { type: 'int', min: 0, max: 10000000 }, paidAt: DATE, note: str(0, 120) }, required: ['method'] },
+  adjustCharge: { fields: { discountCents: { type: 'int', min: 0, max: 10000000 }, dueDate: DATE, note: str(0, 120) }, atLeastOne: true },
+  chargeNote: { fields: { note: str(0, 120) } },
+  exportFinance: { fields: { fromMonth: MONTH, toMonth: MONTH }, required: ['fromMonth', 'toMonth'] },
   updateTraining: null,   // definido abaixo: mesmos campos de createTraining, todos opcionais
   duplicateTraining: { fields: { name: str(2, 80) } },
   assignBatch: {
@@ -133,6 +146,7 @@ export const SCHEMAS = {
 SCHEMAS.updateTraining = { fields: SCHEMAS.createTraining.fields, atLeastOne: true };
 
 // ---------- textos em português (rótulos, mensagens e ações de auditoria) ----------
+export const PAYMENT_LABELS = { pix: 'Pix', cash: 'Dinheiro', card: 'Cartão', transfer: 'Transferência', other: 'Outro' };
 export const ROLE_LABELS = { owner: 'Proprietário', admin: 'Administrador', coach: 'Professor', reception: 'Recepção', student: 'Aluno' };
 export const STATUS_LABELS = { active: 'Ativo', pending: 'Pendente', suspended: 'Suspenso', removed: 'Removido' };
 export const ASSIGNMENT_LABELS = { proposed: 'Aguardando aprovação', pending_student: 'Aguardando o aluno', active: 'Ativo', rejected: 'Recusado', revoked: 'Encerrado' };
@@ -146,6 +160,9 @@ export const ACTION_LABELS = {
   'consent.granted': 'Consentimento concedido', 'consent.revoked': 'Consentimento revogado',
   'training.created': 'Ficha criada', 'training.published': 'Versão de ficha publicada', 'training.assigned': 'Ficha atribuída', 'training.updated': 'Rascunho de ficha editado', 'training.duplicated': 'Ficha duplicada',
   'training.archived': 'Ficha arquivada', 'training.restored': 'Ficha restaurada', 'training.batch_assigned': 'Ficha atribuída em lote', 'member.permission_changed': 'Permissões do professor alteradas',
+  'plan.created': 'Plano criado', 'plan.updated': 'Plano alterado', 'contract.created': 'Aluno matriculado em plano', 'contract.updated': 'Contrato alterado',
+  'billing.generated': 'Cobranças do mês geradas', 'billing.adjusted': 'Cobrança ajustada', 'billing.canceled': 'Cobrança cancelada', 'billing.exempted': 'Cobrança isenta',
+  'payment.registered': 'Pagamento registrado', 'payment.reverted': 'Pagamento desfeito', 'finance.exported': 'Financeiro exportado',
   'academy.exported': 'Dados da academia exportados', 'academy.closed': 'Academia encerrada'
 };
 export const ERROR_MESSAGES = {
