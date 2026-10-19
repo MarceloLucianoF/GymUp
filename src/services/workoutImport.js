@@ -27,7 +27,7 @@ export function checkPdfHeader(file, head) {
 }
 
 // ---- higienização do texto que vai para a IA ----
-const INVISIBLE = new RegExp('[' + '\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff'+ ']', 'g');
+const INVISIBLE = new RegExp('[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]', 'g');
 const URL_RE = /\b(?:https?:\/\/|www\.|ftp:\/\/)\S+|\b[a-z0-9-]+\.(?:com|net|org|br|io|app|me|ly|gl|link|xyz|info|co)(?:\/\S*)?\b/gi;
 const EMAIL_RE = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
 const PHONE_RE = /(?:\+?55\s?)?\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4}\b/g;
