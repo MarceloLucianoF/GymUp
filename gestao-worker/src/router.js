@@ -6,6 +6,7 @@ import * as consents from './handlers/consents.js';
 import * as audit from './handlers/audit.js';
 import * as training from './handlers/training.js';
 import * as students from './handlers/students.js';
+import * as dataRights from './handlers/dataRights.js';
 
 // Tabela de rotas: método, caminho e handler. Os parâmetros do caminho têm formato fechado; nenhum caminho de coleção vem do cliente.
 const P = { academyId: '[A-Za-z0-9_]{1,40}', uid: '[A-Za-z0-9_-]{1,128}', id: '[A-Za-z0-9_]{1,64}', version: '[0-9]{1,6}' };
@@ -24,6 +25,8 @@ export const ROUTES = [
   route('PATCH', '/v1/academies/:academyId', academies.update),
   route('GET', '/v1/academies/:academyId/profile', academies.profile),
   route('GET', '/v1/academies/:academyId/dashboard', academies.dashboard),
+  route('POST', '/v1/academies/:academyId/export', dataRights.exportAcademy),
+  route('POST', '/v1/academies/:academyId/close', dataRights.closeAcademy),
   route('POST', '/v1/academies/:academyId/transfer-ownership', academies.transferOwnership),
   route('GET', '/v1/academies/:academyId/members', members.list),
   route('PATCH', '/v1/academies/:academyId/members/:uid/role', members.changeRole),
@@ -59,6 +62,7 @@ export const ROUTES = [
   route('POST', '/v1/academies/:academyId/trainings/:id/publish', training.publish),
   route('POST', '/v1/academies/:academyId/trainings/:id/assign', training.assign),
   // Escopo do aluno (o próprio uid, nunca outro)
+  route('GET', '/v1/me/export', dataRights.exportMine, { killSwitchExempt: true }),
   route('GET', '/v1/me/coach-assignments', coaching.mine),
   route('GET', '/v1/me/academies/:academyId/consent', consents.get),
   route('PUT', '/v1/me/academies/:academyId/consent', consents.put),

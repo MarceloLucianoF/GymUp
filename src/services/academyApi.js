@@ -61,6 +61,7 @@ export function createAcademyApi({ baseUrl, getToken, fetchImpl = (...a) => fetc
     setConsent: (academyId, shareAdherence) => request(`/v1/me/academies/${enc(academyId)}/consent`, 'PUT', { shareAdherence }),
     leave: (academyId) => request(`/v1/me/academies/${enc(academyId)}/leave`, 'POST', {}),
     leaveAll: () => request('/v1/me/leave-all', 'POST', {}),
+    exportMine: () => request('/v1/me/export', 'GET'),
     training: (academyId) => request(`/v1/me/academies/${enc(academyId)}/training`)
   };
 }

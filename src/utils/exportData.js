@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { academyApi, ACADEMY_API_ENABLED } from '../services/academyApi';
 
 // Exportação dos dados do PRÓPRIO usuário (LGPD, art. 18). A montagem é pura; a leitura usa só userId == uid.
 
@@ -12,13 +13,14 @@ const toPlain = (value) => {
   return value;
 };
 
-export const buildExportPayload = ({ user, profile, checkIns = [], measurements = [] }, now = new Date()) => ({
+export const buildExportPayload = ({ user, profile, checkIns = [], measurements = [], academy }, now = new Date()) => ({
   exportedAt: now.toISOString(),
   app: 'BohTreinar',
   account: { uid: user?.uid || null, email: user?.email || null },
   profile: toPlain(profile || {}),
   checkIns: toPlain(checkIns),
-  measurements: toPlain(measurements)
+  measurements: toPlain(measurements),
+  ...(academy !== undefined ? { academy } : {})   // vínculos com academias (Gestão), quando a integração está ligada
 });
 
 export const exportFileName = (uid, now = new Date()) =>
@@ -42,11 +44,17 @@ export const exportMyData = async (user) => {
     getDoc(doc(db, 'users', user.uid)), own('checkIns'), own('measurements')
   ]);
   const mapDocs = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Dados que a academia guarda sobre a pessoa (vínculos, consentimentos, professor, ficha atribuída). Falha aqui não impede o resto.
+  let academy;
+  if (ACADEMY_API_ENABLED) {
+    try { academy = await academyApi.exportMine(); } catch (error) { academy = { error: 'indisponivel', message: 'Não foi possível ler os dados das academias agora. Tente exportar de novo mais tarde.' }; }
+  }
   const payload = buildExportPayload({
     user,
     profile: profileSnap.exists() ? profileSnap.data() : {},
     checkIns: mapDocs(checkSnap),
-    measurements: mapDocs(measSnap)
+    measurements: mapDocs(measSnap),
+    academy
   });
   downloadJson(payload, exportFileName(user.uid));
   return payload;

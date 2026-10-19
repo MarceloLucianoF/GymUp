@@ -9,6 +9,45 @@ import { ErrorState, Field, Loading, PageHeader, RoleBadge } from '../../compone
 import { dateOf } from '../../lib/format';
 import { useApi } from '../../session';
 
+// Encerrar a academia: definitivo. Exige o nome digitado e uma confirmação marcada; a exportação é oferecida antes.
+function CloseModal({ academy, onClose, onDone }) {
+  const { api, academyId } = useApp();
+  const [typed, setTyped] = useState('');
+  const [sure, setSure] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [attempt] = useState(newIdempotencyKey);
+  const ready = typed === academy.name && sure;
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!ready) return;
+    setBusy(true); setError('');
+    try { await api.closeAcademy(academyId, typed, attempt); onDone(); } catch (err) { setError(friendlyError(err)); setBusy(false); }
+  };
+  return (
+    <Modal title="Encerrar a academia?" onClose={onClose} busy={busy}>
+      <form onSubmit={submit} className="stack">
+        <p><strong>Isto é definitivo.</strong> Baixe a exportação dos dados antes: depois de encerrar, ninguém mais acessa a academia.</p>
+        <ul className="plain-list">
+          <li>Todas as pessoas saem da academia, inclusive os proprietários; vínculos com professor, consentimentos e fichas atribuídas deixam de valer.</li>
+          <li>Os nomes das pessoas, a descrição e o contato da academia são apagados, e os convites são revogados.</li>
+          <li>As fichas são arquivadas. Ficam guardados o nome da academia, as versões de ficha já publicadas e a auditoria (que só tem identificadores).</li>
+          <li>A academia não pode ser reaberta nem receber novas pessoas.</li>
+        </ul>
+        <Field id="close-name" label={`Digite o nome da academia para confirmar: ${academy.name}`}>
+          <input id="close-name" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" data-autofocus />
+        </Field>
+        <label className="check"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} /> Entendo que não dá para desfazer.</label>
+        {error && <p role="alert" className="error">{error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn ghost" onClick={onClose} disabled={busy}>Cancelar</button>
+          <button type="submit" className="btn danger-fill" disabled={!ready || busy}>{busy ? 'Encerrando...' : 'Encerrar academia'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function TransferModal({ academy, onClose, onDone }) {
   const { api, academyId } = useApp();
   const [admins, setAdmins] = useState(null);
@@ -65,6 +104,9 @@ export default function AcademyPage() {
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [leaveError, setLeaveError] = useState('');
+  const [closing, setClosing] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const p = state.data;
   useEffect(() => { if (p) setForm({ name: p.name, description: p.description, contactEmail: p.contactEmail }); }, [p]);
 
@@ -77,6 +119,20 @@ export default function AcademyPage() {
     if (form.contactEmail !== p.contactEmail) body.contactEmail = form.contactEmail.trim();
     setSaving(true); setError('');
     try { await api.updateAcademy(academyId, body); toast('Dados da academia atualizados.'); reload(); reloadMe(); } catch (err) { setError(friendlyError(err)); } finally { setSaving(false); }
+  };
+  const exportData = async () => {
+    setExporting(true); setExportError('');
+    try {
+      const data = await api.exportAcademy(academyId);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = `bohtreinar-academia-${data.exportedAt.slice(0, 10)}.json`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const cut = Object.entries(data.truncated || {}).filter(([, v]) => v).map(([k]) => k);
+      toast(cut.length ? `Arquivo gerado, mas estas listas foram cortadas em 5000 linhas: ${cut.join(', ')}.` : 'Arquivo gerado. Verifique seus downloads.');
+    } catch (err) { setExportError(friendlyError(err)); } finally { setExporting(false); }
   };
   const leave = async () => {
     setBusy(true); setLeaveError('');
@@ -126,8 +182,19 @@ export default function AcademyPage() {
             )}
             <p className="muted small">Configurações de planos e mensalidades: <span className="soon">Em breve</span></p>
           </section>
+          {role === 'owner' && (
+            <section className="panel" aria-labelledby="dados-academia">
+              <h2 id="dados-academia">Dados e encerramento</h2>
+              <p className="muted">Exporte todos os dados da academia (membros, vínculos, fichas e versões, atribuições, consentimentos e auditoria) em um arquivo JSON. Códigos de convite e e-mails não entram no arquivo, e cada exportação fica registrada na auditoria.</p>
+              <div><button type="button" className="btn" onClick={exportData} disabled={exporting} aria-busy={exporting}>{exporting ? 'Gerando...' : 'Exportar dados da academia'}</button></div>
+              {exportError && <p role="alert" className="error">{exportError}</p>}
+              <p className="muted">Encerrar a academia apaga os nomes, remove todos os membros e trava tudo para sempre. Só o proprietário pode, e é preciso digitar o nome da academia.</p>
+              <div><button type="button" className="btn danger" onClick={() => setClosing(true)}>Encerrar academia</button></div>
+            </section>
+          )}
         </>
       )}
+      {closing && p && <CloseModal academy={p} onClose={() => setClosing(false)} onDone={() => { setClosing(false); toast('Academia encerrada.'); reloadMe(); navigate('/app', { replace: true }); }} />}
       {transfer && p && <TransferModal academy={p} onClose={() => setTransfer(false)} onDone={() => { setTransfer(false); toast('Propriedade transferida. Você agora é administrador.'); reloadMe(); reload(); }} />}
       {leaving && <ConfirmModal title="Sair da academia?" confirmLabel="Sair da academia" danger busy={busy} error={leaveError} onConfirm={leave} onClose={() => setLeaving(false)}><p>Você perde o acesso a esta academia e os vínculos com alunos são encerrados.</p></ConfirmModal>}
     </>
