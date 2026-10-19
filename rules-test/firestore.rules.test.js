@@ -153,6 +153,23 @@ test('trainings: ficha de treinador só é editada por ele; aluno não cria fich
   await assertFails(updateDoc(doc(db('coach2'), 'trainings/t1'), { coachId: 'coach2' }));
 });
 
+test('myWorkouts: treino pessoal é privado, só o dono lê e grava, com formato fechado', async () => {
+  const ok = { name: 'Meu treino', exercises: [{ name: 'Supino' }], source: 'pdf', createdAt: '2026-10-19' };
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1'), ok));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1')));
+  await assertFails(getDoc(doc(db('stu2'), 'users/stu1/myWorkouts/w1')));
+  await assertFails(getDoc(doc(db('coach1'), 'users/stu1/myWorkouts/w1')));
+  await assertFails(getDocs(collection(db('coach1'), 'users/stu1/myWorkouts')));
+  await assertFails(setDoc(doc(db('stu2'), 'users/stu1/myWorkouts/w2'), ok));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w3'), { ...ok, extra: 'x' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w4'), { ...ok, exercises: [] }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w5'), { ...ok, name: 'x'.repeat(81) }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w6'), { ...ok, source: 'golpe' }));
+  await assertFails(setDoc(doc(db('coach1'), 'users/coach1/myWorkouts/w7'), ok));   // só o papel aluno
+  await assertFails(deleteDoc(doc(db('stu2'), 'users/stu1/myWorkouts/w1')));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1')));
+});
+
 test('atribuição de ficha: treinador só atribui ficha própria a aluno vinculado', async () => {
   await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { currentTrainingId: 's1' }));
   await assertFails(updateDoc(doc(db('coach1'), 'users/stu1'), { currentTrainingId: 's2' }));

@@ -1,10 +1,11 @@
+import { saveMyWorkout } from '../../services/myWorkouts';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { aiService, InsufficientExercisesError, localFallbackText } from '../../services/aiService';
 import { modelLabel, failureMessage } from '../../services/aiMeta';
 import Markdown from '../common/Markdown';
 import { db } from '../../firebase/config';
-import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { btnPrimary, btnGhost, iconBtn } from '../coach/styles';
 
@@ -203,18 +204,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     const toastId = toast.loading('Salvando treino no seu perfil...');
 
     try {
-      const workoutPayload = {
-        name: target.name,
-        category: target.category,
-        description: target.description,
-        estimatedTime: target.estimatedTime,
-        exercises: target.exercises,
-        createdAt: new Date().toISOString(),
-        createdBy: user.uid,
-        isAIGenerated: true
-      };
-
-      await addDoc(collection(db, 'trainings'), workoutPayload);
+      // Treino gerado para o aluno é pessoal: vai para "Meus treinos" (privado), não para a loja de fichas aberta a todos.
+      await saveMyWorkout(user.uid, { name: target.name, category: target.category, description: target.description, exercises: target.exercises, source: 'ai' });
       toast.success('Treino IA salvo em "Meus Treinos"!', { id: toastId });
       if (onWorkoutSaved) onWorkoutSaved();
       onClose();

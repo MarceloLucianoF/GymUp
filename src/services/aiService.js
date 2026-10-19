@@ -1,6 +1,7 @@
 import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
+import { buildCardioWorkout, isCardioRequest } from '../utils/cardioWorkout';
 import { failureMessage } from './aiMeta';
 import {
   canonicalGroup as composerGroup, applyEquipmentConstraint, composeLocalPlan, describeConstraint, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseEquipmentConstraint, parseRequest,
@@ -339,6 +340,13 @@ const askNvidiaProxy = async (messages, { timeoutMs = 46000, maxTokens = 1800, t
 };
 
 
+/** Importação de treino por PDF: só texto higienizado, temperatura baixa, resposta validada fora daqui. Sem proxy não há importação por IA. */
+export const askWorkoutImport = async (messages) => {
+  if (!USE_NVIDIA_PROXY || !auth.currentUser) throw new Error('IA indisponível.');
+  const { text } = await askNvidiaProxy(messages, { timeoutMs: 40000, maxTokens: 2200, temperature: 0.1 });
+  return text;
+};
+
 /** Texto sem IA com o ponto de partida calculado do perfil: usado quando a IA falha, demora ou o aluno cancela. */
 export const localFallbackText = (userProfile, reason = 'indisponivel') => {
   const goal = userProfile?.goal || 'Emagrecimento';
@@ -526,8 +534,8 @@ export const aiService = {
           workout = aiService.generateLocalWorkout(request);
         }
         onWorkout?.(workout);
-        onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : 'indisponivel' });
-        const lines = workout.exercises.map((ex, i) => `${i + 1}. ${ex.name} - ${ex.sets}x${ex.reps}`).join('\n');
+        onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : workout.composition?.source === 'regras' ? 'regras' : 'indisponivel' });
+        const lines = workout.exercises.map((ex, i) => (ex.muscleGroup === 'Cardio' ? `${i + 1}. ${ex.name}` : `${i + 1}. ${ex.name} - ${ex.sets}x${ex.reps}`)).join('\n');
         const limit = parseEquipmentConstraint(safePrompt);
         return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}${limit ? `, ${describeConstraint(limit)}` : ''}:\n${lines}\nUse o botão abaixo para salvar em Meus treinos.`;
       } catch (error) {
@@ -600,6 +608,8 @@ export const aiService = {
    * não tem exercícios do grupo pedido.
    */
   async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
+    // Pedido aeróbico (esteira, bicicleta...) sem grupo muscular: a biblioteca não tem cardio, a ficha vem de regras.
+    if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
     const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest);
@@ -608,6 +618,7 @@ export const aiService = {
   },
   /** Mesma regra de composição, sem IA e sem rede. */
   generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
+    if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
     const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest);

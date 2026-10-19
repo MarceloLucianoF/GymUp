@@ -25,6 +25,7 @@ import {
 } from '../../utils/training';
 import { invalidateCheckIns } from '../../services/checkInsCache';
 import { saveCheckIn } from '../../services/checkInService';
+import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
 import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
@@ -81,7 +82,9 @@ export default function TrainingExecutionPage() {
         const initTraining = async () => {
             try {
                 const academyRef = parseAcademyTrainingId(trainingId);
-                let docSnap = academyRef ? null : await getDoc(doc(db, 'trainings', trainingId));
+                const isMine = isMyTrainingId(trainingId);
+                let docSnap = (academyRef || isMine) ? null : await getDoc(doc(db, 'trainings', trainingId));
+                if (isMine) docSnap = await getDoc(doc(db, 'users', user.uid, 'myWorkouts', fromMyTrainingId(trainingId)));
                 let trainingData = null;
                 let trainingDocId = null;
 
@@ -102,8 +105,8 @@ export default function TrainingExecutionPage() {
                     trainingDocId = trainingId;
                 } else if (docSnap.exists()) {
                     trainingData = docSnap.data();
-                    trainingDocId = docSnap.id;
-                } else {
+                    trainingDocId = isMine ? trainingId : docSnap.id;
+                } else if (!isMine) {
                     const q = query(collection(db, 'trainings'), where('firestoreId', '==', trainingId));
                     const qSnap = await getDocs(q);
                     if (!qSnap.empty) {
@@ -114,6 +117,10 @@ export default function TrainingExecutionPage() {
                         navigate('/home');
                         return;
                     }
+                } else {
+                    toast.error('Treino não encontrado.');
+                    navigate('/trainings');
+                    return;
                 }
 
                 // Busca biblioteca do Firestore para resolver IDs de documentos (ex: amtIl9nD3xmjp1nZ65vt)
