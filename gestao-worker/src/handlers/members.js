@@ -178,7 +178,7 @@ export async function leaveAll(ctx) {
   const { results } = await guarded(() => ctx.db.prepare(
     `SELECT m.academy_id, m.role,
             (SELECT count(*) FROM academy_members o WHERE o.academy_id = m.academy_id AND o.role = 'owner' AND o.status = 'active' AND o.user_id <> m.user_id) AS other_owners
-       FROM academy_members m WHERE m.user_id = ? AND m.status IN ('active','suspended','pending') ORDER BY m.academy_id LIMIT 26`
+       FROM academy_members m WHERE m.user_id = ? AND m.status IN ('active','suspended','pending') AND NOT EXISTS (SELECT 1 FROM academies x WHERE x.id = m.academy_id AND x.closed_at IS NOT NULL) ORDER BY m.academy_id LIMIT 26`
   ).bind(ctx.user.uid).all());
   const mine = results.slice(0, 25);
   const blocked = mine.filter((m) => m.role === 'owner' && m.other_owners === 0).map((m) => m.academy_id);
