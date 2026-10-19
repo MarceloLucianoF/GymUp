@@ -1,6 +1,7 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ACCESS, AREAS, FACTS, FAQ, ROLE_NAMES, ROLE_ORDER, STAGES } from './data';
+import { formatBRL } from '../../lib/money';
+import { CAPS, DEMO, FAQ, ROLES, SHOTS, SOON, STEPS } from './data';
 import './landing.css';
 
 // Entrada de cada parte da seção (título, texto, imagem), uma vez; nada fica escondido se o script falhar.
@@ -16,168 +17,108 @@ function useReveal() {
   }, []);
 }
 
-const MARK = { yes: 'Pode', part: 'Em parte', no: 'Não' };
-
-// O controle do herói: o papel escolhido muda, na hora, o que a pessoa alcança. Os dados vêm da política real do produto.
-function RoleControl() {
-  const [role, setRole] = useState('coach');
-  const name = useId();
-  const rows = ACCESS[role];
-  const open = rows.filter(([s]) => s !== 'no').length;
+// A coisa viva do herói: o quadro de mensalidades do mês. Dar baixa muda os totais na hora, como no produto.
+function Board() {
+  const [paid, setPaid] = useState([]);
+  const sum = (list) => list.reduce((t, c) => t + c.cents, 0);
+  const received = sum(DEMO.filter((c) => paid.includes(c.id)));
+  const late = sum(DEMO.filter((c) => c.late && !paid.includes(c.id)));
+  const open = sum(DEMO.filter((c) => !c.late && !paid.includes(c.id)));
   return (
-    <div className="ui roles" data-ui>
-      <fieldset>
-        <legend>Quem é a pessoa na academia?</legend>
-        <div className="seg">
-          {ROLE_ORDER.map((r) => (
-            <label key={r} className={role === r ? 'on' : ''}>
-              <input type="radio" name={name} value={r} checked={role === r} onChange={() => setRole(r)} />
-              <span>{ROLE_NAMES[r]}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <ul className="access" aria-live="polite">
-        {AREAS.map((area, i) => (
-          <li key={area} className={`s-${rows[i][0]}`}>
-            <span className="area">{area}</span>
-            <span className="state"><b>{MARK[rows[i][0]]}</b> {rows[i][1]}</span>
-          </li>
-        ))}
+    <div className="board" data-ui>
+      <p className="board-title">Mensalidades de outubro <span>exemplo</span></p>
+      <dl className="totals" aria-live="polite">
+        <div><dt>Recebido</dt><dd>{formatBRL(received)}</dd></div>
+        <div><dt>A receber</dt><dd>{formatBRL(open)}</dd></div>
+        <div className="bad"><dt>Em atraso</dt><dd>{formatBRL(late)}</dd></div>
+      </dl>
+      <ul className="brows">
+        {DEMO.map((c) => {
+          const done = paid.includes(c.id);
+          return (
+            <li key={c.id} className={done ? 'done' : c.late ? 'late' : ''}>
+              <span className="who"><b>{c.name}</b> <span>{c.plan} · vence dia {c.due}</span></span>
+              <span className="amt">{formatBRL(c.cents)}</span>
+              {done
+                ? <span className="stamp">Pago</span>
+                : <button type="button" onClick={() => setPaid((p) => [...p, c.id])}>Dar baixa<span className="visually-hidden"> de {c.name}</span></button>}
+            </li>
+          );
+        })}
       </ul>
-      <p className="readout">{ROLE_NAMES[role]}: {open} de {AREAS.length} áreas liberadas</p>
-    </div>
-  );
-}
-
-// Trechos de interface por etapa: o que a pessoa realmente vê em cada passo.
-function StageFragment({ stage }) {
-  if (stage === 0) return (
-    <div className="ui frag" data-ui>
-      <p className="frag-title">Novo convite</p>
-      <div className="frag-row"><span>Papel</span><b>Professor</b></div>
-      <div className="frag-row"><span>Usos</span><b>1</b></div>
-      <div className="frag-row"><span>Validade</span><b>7 dias</b></div>
-      <p className="frag-note">Copie agora: o link não será mostrado de novo.</p>
-      <p className="frag-code">bohtreinar.app/convite/x7k2m9q4…</p>
-    </div>
-  );
-  if (stage === 1) return (
-    <div className="ui frag" data-ui>
-      <p className="frag-title">Convite para Academia Exemplo</p>
-      <p>Você entrará como <b>Professor</b>. A equipe verá seu nome e seu papel.</p>
-      <p className="frag-note">Nada é gravado até você confirmar.</p>
-      <div className="frag-actions"><span className="fake-btn primary">Aceitar convite</span><span className="fake-btn">Agora não</span></div>
-    </div>
-  );
-  if (stage === 2) return (
-    <div className="ui frag" data-ui>
-      <p className="frag-title">No app do aluno</p>
-      <p><b>Beatriz Nunes</b> quer acompanhar você na Academia Exemplo.</p>
-      <p className="frag-note">Ela só vê seu nome e a data do vínculo.</p>
-      <div className="frag-actions"><span className="fake-btn primary">Aceitar professor</span><span className="fake-btn">Recusar</span></div>
-    </div>
-  );
-  return (
-    <div className="ui frag" data-ui>
-      <p className="frag-title">Perna A · versão 1</p>
-      <ul className="frag-list"><li>Agachamento <span>3 x 10</span></li><li>Leg press <span>4 x 8-12</span></li><li>Mesa flexora <span>3 x 12</span></li></ul>
-      <p className="frag-note">Versão publicada: não muda depois que o aluno a recebe.</p>
-    </div>
-  );
-}
-
-function HowItWorks() {
-  const [i, setI] = useState(0);
-  return (
-    <section className="how" aria-labelledby="how-title">
-      <div className="how-left">
-        <h2 id="how-title" className="clause" aria-live="polite" key={i}>{STAGES[i].clause}</h2>
-      </div>
-      <div className="how-right"><div className="frag-wrap" key={i}><StageFragment stage={i} /></div></div>
-      <div className="slider">
-        <label htmlFor="stage" className="visually-hidden">Etapa do fluxo</label>
-        <div className="range">
-          <span className="fill" style={{ width: `${(i / (STAGES.length - 1)) * 100}%` }} aria-hidden="true" />
-          <input id="stage" type="range" min="0" max={STAGES.length - 1} step="1" value={i} onChange={(e) => setI(Number(e.target.value))} aria-valuetext={STAGES[i].name} />
-        </div>
-        <ol className="stops">{STAGES.map((s, n) => <li key={s.name}><button type="button" className={n === i ? 'on' : ''} onClick={() => setI(n)} aria-current={n === i ? 'step' : undefined}>{s.name}</button></li>)}</ol>
-      </div>
-    </section>
-  );
-}
-
-function Module({ img, w, h, alt, title, children, crop }) {
-  return (
-    <div className="mod" data-reveal>
-      <div className={`thumb ${crop || ''}`}><img src={img} width={w} height={h} alt={alt} loading="lazy" decoding="async" /></div>
-      <div className="mod-text"><h3>{title}</h3>{children}</div>
     </div>
   );
 }
 
 export default function Landing() {
   useReveal();
-  useEffect(() => { document.body.classList.add('lp-body'); document.title = 'BohTreinar Gestão: a gestão da sua academia em um só lugar'; return () => document.body.classList.remove('lp-body'); }, []);
-  const faqRef = useRef(null);
+  useEffect(() => { document.body.classList.add('lp-body'); document.title = 'BohTreinar Gestão: mensalidades, alunos e professores da sua academia'; return () => document.body.classList.remove('lp-body'); }, []);
   return (
     <div className="lp">
-      <a className="skip" href="#principal">Pular para o conteúdo</a>
       <header className="hero">
-        <div className="hero-ctrl"><RoleControl /></div>
-        <div className="hero-copy">
-          <p className="logo">BohTreinar <span>Gestão</span></p>
-          <div className="hero-bottom">
-            <h1 className="h1"><span className="mask"><span className="line">A gestão da sua academia</span></span><span className="mask"><span className="line l2">em um só lugar.</span></span></h1>
-            <p className="lead">Membros, professores, convites e auditoria, cada pessoa vendo só o que o papel permite.</p>
-            <p className="lead small" style={{ opacity: 0.75 }}>Fundação operacional em homologação: membros, convites, professores e auditoria já funcionam; telas de alunos e fichas chegam em seguida.</p>
-            <Link className="btn-lp" to="/login?modo=cadastro">Criar academia</Link>
-          </div>
+        <nav className="lpbar" aria-label="Principal">
+          <p className="logo">BohTreinar Gestão</p>
+          <ul>
+            <li><a href="#mensalidades">Mensalidades</a></li>
+            <li><a href="#como">Como funciona</a></li>
+            <li><a href="#perguntas">Perguntas</a></li>
+          </ul>
+          <Link className="lpbar-cta" to="/login">Entrar</Link>
+        </nav>
+        <h1 className="h1"><span className="mask"><span className="line">Mensalidade</span></span><span className="mask"><span className="line l2">em dia.</span></span></h1>
+        <div className="hero-foot">
+          <p className="lead">Alunos, professores e cobranças da sua academia em um só painel, sem planilha e sem caderno.</p>
+          <Link className="btn-lp" to="/login?modo=cadastro">Criar academia</Link>
+          <p className="note">Em testes fechados: ainda sem preço público.</p>
         </div>
-        <Link className="top-link" to="/login">Entrar</Link>
+        <div className="hero-board"><Board /></div>
       </header>
 
       <main id="principal">
-        <section className="features" aria-labelledby="f-title">
-          <h2 id="f-title" data-reveal>O que a Gestão faz hoje</h2>
-          <Module img="/landing/membros.jpg" w={716} h={860} crop="h280" alt="Tabela de membros com papel, status e professor responsável" title="Cada pessoa no papel certo">
-            <p>Proprietário, administrador, professor, recepção e aluno. Filtre por papel, status ou professor e mude papéis com confirmação.</p>
-            <p>O administrador não cria nem promove outro administrador, e a academia nunca fica sem proprietário.</p>
-          </Module>
-          <Module img="/landing/convite-uma-vez.jpg" w={716} h={814} alt="Aviso de convite criado: o link não será mostrado de novo" title="O código do convite aparece uma vez">
-            <p>Defina o papel, os usos e a validade. Depois de copiar, o link some: o servidor guarda só uma impressão digital dele.</p>
-            <p>Convite revogado, vencido ou esgotado dá sempre a mesma mensagem, sem revelar o motivo.</p>
-          </Module>
-          <Module img="/landing/vinculos.jpg" w={716} h={494} alt="Vínculos aguardando aprovação e aceite do aluno" title="O aluno aceita o professor">
-            <p>A equipe propõe, ou o professor pede e a equipe aprova. O professor só enxerga o aluno depois do aceite, e perde o acesso quando o vínculo acaba.</p>
-            <p>Transferir de professor encerra o anterior na mesma operação.</p>
-          </Module>
-          <Module img="/landing/auditoria.jpg" w={716} h={860} crop="h260" alt="Registro de auditoria com quem fez, a ação e o alvo" title="Toda mudança deixa rastro">
-            <p>Quem fez, quando e o quê, em português. O registro não pode ser editado nem apagado, nem por quem administra.</p>
-            <p>Só mudanças são registradas, com nomes públicos e nunca dados de saúde.</p>
-          </Module>
-          <Module img="/landing/professor-celular.jpg" w={780} h={1688} crop="h300 drift" alt="Tela do professor no celular com a lista dos seus alunos" title="O professor vê só os seus alunos, no celular">
-            <p>A visão do professor é pensada para o celular: os alunos que aceitaram o vínculo e as propostas dele, nada além disso.</p>
-          </Module>
-          <Module img="/landing/resumo.jpg" w={716} h={600} crop="h220" alt="Indicadores da academia: membros, convites, professores e alunos sem professor" title="O painel conta pessoas, não treinos">
-            <p>Membros ativos, convites pendentes, professores e alunos sem professor. Nenhuma tela mostra peso, medidas, cargas ou frequência individual.</p>
-          </Module>
-          <div className="mod soon-mod" data-reveal>
-            <div className="mod-text solo"><h3>Fichas versionadas pela Gestão: em breve</h3><p>Hoje a ficha publicada já chega ao app do aluno com a versão exata e nunca muda depois de entregue. O editor de fichas na Gestão vem em uma próxima versão.</p></div>
-          </div>
-        </section>
-
-        <HowItWorks />
-
-        <section className="proof" aria-labelledby="p-title">
-          <ul className="tiles">
-            <li className="tile accent"><h2 id="p-title">Regras que valem sempre</h2></li>
-            {FACTS.map(([n, t]) => <li key={t} className="tile" data-reveal><span className="n">{n}</span><span className="t">{t}</span></li>)}
+        <section className="caps" aria-labelledby="caps-title" id="mensalidades">
+          <h2 id="caps-title" className="caps-title">Tudo da academia em um lugar</h2>
+          <ul className="caps-list">
+            {CAPS.map(([name, text]) => (
+              <li key={name} data-reveal><h3>{name}</h3><p>{text}</p></li>
+            ))}
           </ul>
         </section>
 
-        <section className="faq" aria-labelledby="q-title" ref={faqRef}>
-          <h2 id="q-title">Perguntas frequentes</h2>
+        <section className="how" aria-labelledby="how-title" id="como">
+          <h2 id="how-title" className="visually-hidden">Como funciona</h2>
+          <ol className="stairs">
+            {STEPS.map(([line, text]) => (
+              <li key={line} data-reveal><h3>{line}</h3><p>{text}</p></li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="roles" aria-labelledby="roles-title">
+          <h2 id="roles-title" className="visually-hidden">Quem faz o quê</h2>
+          {ROLES.map(([t, p], i) => (
+            <div key={t} className={`stmt p${i}`} data-reveal><h3>{t}</h3><p>{p}</p></div>
+          ))}
+        </section>
+
+        <section className="shots" aria-labelledby="shots-title">
+          <h2 id="shots-title" className="shots-title">O dia a dia, na tela</h2>
+          <div className="shot-grid">
+            {SHOTS.map((s, i) => (
+              <figure key={s.title} className={`shot sh${i}`} data-reveal>
+                <div className="pic"><img src={s.img} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" /></div>
+                <figcaption><b>{s.title}</b> {s.text}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+
+        <section className="next" aria-labelledby="next-title">
+          <h2 id="next-title" data-reveal>Vem aí</h2>
+          <ul>{SOON.map((s) => <li key={s} data-reveal>{s}</li>)}</ul>
+        </section>
+
+        <section className="faq" aria-labelledby="q-title" id="perguntas">
+          <h2 id="q-title">Perguntas</h2>
           <div className="qa">
             {FAQ.map(([q, a]) => (
               <details key={q} name="faq"><summary>{q}<span className="plus" aria-hidden="true" /></summary><p>{a}</p></details>
@@ -185,21 +126,20 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="cta" aria-labelledby="c-title">
-          <div className="side l" aria-hidden="true" />
-          <div className="center-tile">
-            <h2 id="c-title">Crie sua academia</h2>
-            <p>Em minutos você cria a academia, convida a equipe e define quem vê o quê. Alunos continuam treinando no app BohTreinar.</p>
-            <div className="cta-actions"><Link className="btn-lp dark" to="/login?modo=cadastro">Criar academia</Link><Link className="link-lp" to="/login">Já tenho conta</Link></div>
-          </div>
-          <div className="side r" aria-hidden="true" />
-        </section>
+        <Link className="cta" to="/login?modo=cadastro" aria-label="Criar academia: cadastre os planos, convide a equipe e matricule o primeiro aluno">
+          <span className="cta-note">Crie a academia, convide a equipe e cadastre o primeiro plano.</span>
+          <svg className="cta-arrow" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><path d="M14 34 34 14M18 14h16v16" fill="none" stroke="currentColor" strokeWidth="4" /></svg>
+          <span className="cta-word" aria-hidden="true">Criar</span>
+        </Link>
       </main>
 
       <footer className="foot">
-        <p>BohTreinar Gestão, gestão de academias</p>
-        <nav aria-label="Rodapé"><Link to="/termos">Termos</Link><Link to="/privacidade">Privacidade</Link><Link to="/login">Entrar</Link><Link to="/login?modo=cadastro">Criar academia</Link></nav>
-        <p className="r">2026 · Versão de homologação</p>
+        <div className="foot-top">
+          <p>Gestão de academias para o app BohTreinar.</p>
+          <p>Versão de testes fechados.</p>
+          <nav aria-label="Rodapé"><Link to="/termos">Termos</Link><Link to="/privacidade">Privacidade</Link><Link to="/login">Entrar</Link></nav>
+        </div>
+        <p className="foot-name">BohTreinar Gestão</p>
       </footer>
     </div>
   );
