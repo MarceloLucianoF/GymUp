@@ -57,6 +57,7 @@ const CoachSettings = lazy(() => import('./pages/coach/CoachSettings'));
 const LandingPage = lazy(() => import('./pages/public/LandingPage'));
 const Privacidade = lazy(() => import('./pages/public/Privacidade'));
 const Termos = lazy(() => import('./pages/public/Termos'));
+const InstallGuide = lazy(() => import('./pages/public/InstallGuide'));
 const NotFound = lazy(() => import('./pages/public/NotFound'));
 
 // Título/descrição por rota. Privacidade, Termos e 404 definem os próprios metadados.
@@ -257,6 +258,7 @@ function AppRoutes() {
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           
           <Route path="/" element={<LandingPage />} />
+          <Route path="/instalar" element={<InstallGuide />} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/termos" element={<Termos />} />
           <Route path="/home" element={<RoleRedirect />} />
