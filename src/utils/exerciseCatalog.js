@@ -114,7 +114,7 @@ export function auditCatalog(embedded = [], remote = []) {
     if (!e.difficulty) add('aviso', 'dificuldade-invalida', e, `valor "${e.rawDifficulty}"`);
     else if (String(e.rawDifficulty) !== STORED_DIFFICULTY[e.difficulty]) add('info', 'dificuldade-fora-do-padrao', e, `"${e.rawDifficulty}" (padrão: ${STORED_DIFFICULTY[e.difficulty]})`);
     if (e.group === 'geral' || !GROUPS.includes(e.group)) add('erro', 'grupo-desconhecido', e, `"${e.rawGroup}"`);
-    if (/^braco/.test(plainGroup(e.rawGroup))) add('aviso', 'grupo-generico', e, `"${e.rawGroup}" -> ${e.group}`);
+    if (/^braco/.test(plainGroup(e.rawGroup))) add('info', 'grupo-generico', e, `"${e.rawGroup}" (rótulo do editor do treinador) -> ${e.group}`);
     if (e.source === 'firestore' && e.repsType === 'string') add('info', 'reps-em-texto', e, `"${e.reps}"`);
     if (!e.equipmentExplicit) add('info', 'equipamento-deduzido', e, e.equipment.join('|'));
     if (e.approxMedia) add('aviso', 'midia-aproximada', e);

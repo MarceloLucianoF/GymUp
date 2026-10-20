@@ -47,20 +47,7 @@ Gerada por `node scripts/audit-catalog.cjs --remote <exportação do Firestore>`
 
 Nenhum.
 
-## Avisos (corrigir): 25
-
-### grupo-generico (10)
-
-- Rosca Alternada Máquina [firestore]: "braços" -> biceps
-- Rosca Martelo na Polia [firestore]: "braços" -> biceps
-- Tríceps Unilateral na Polia [firestore]: "braços" -> triceps
-- Rosca Scott Máquina [firestore]: "braços" -> biceps
-- Tríceps Supinado com Halteres [firestore]: "braços" -> triceps
-- Rosca Direta Banco Inclinado [firestore]: "braços" -> biceps
-- Tríceps Máquina [firestore]: "braços" -> triceps
-- Rosca Scott com Barra W [firestore]: "braços" -> biceps
-- Tríceps Barra Encostado na Polia [firestore]: "braços" -> triceps
-- Rosca Direta na Polia Baixa com Corda [firestore]: "braços" -> biceps
+## Avisos (corrigir): 15
 
 ### midia-aproximada (4)
 
@@ -89,7 +76,7 @@ Nenhum.
 - Abdominal Canivete Alternado [embutida x firestore]: grupo core/core; dificuldade intermediario/iniciante
 - Pullover Máquina [embutida x firestore]: grupo costas/costas; dificuldade intermediario/iniciante
 
-## Informações: 221
+## Informações: 231
 
 ### sem-video (116)
 
@@ -126,6 +113,16 @@ Nenhum.
 - Crucifixo no Cabo [firestore]: polia
 - Rosca Martelo na Polia [firestore]: polia
 - ... e mais 45
+
+### grupo-generico (10)
+
+- Rosca Alternada Máquina [firestore]: "braços" (rótulo do editor do treinador) -> biceps
+- Rosca Martelo na Polia [firestore]: "braços" (rótulo do editor do treinador) -> biceps
+- Tríceps Unilateral na Polia [firestore]: "braços" (rótulo do editor do treinador) -> triceps
+- Rosca Scott Máquina [firestore]: "braços" (rótulo do editor do treinador) -> biceps
+- Tríceps Supinado com Halteres [firestore]: "braços" (rótulo do editor do treinador) -> triceps
+- Rosca Direta Banco Inclinado [firestore]: "braços" (rótulo do editor do treinador) -> biceps
+- ... e mais 4
 
 ## Fichas na loja: 13 achados em 8 fichas
 
