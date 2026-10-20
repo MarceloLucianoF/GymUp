@@ -2,6 +2,7 @@ import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
 import { buildCardioWorkout, isCardioRequest } from '../utils/cardioWorkout';
+import { buildStretchWorkout, isStretchRequest } from '../utils/stretchWorkout';
 import { prescriptionLabel } from '../utils/exerciseKind';
 import { describeEquipment, filterByEquipment, sanitizeEquipment } from '../utils/equipment';
 import { failureMessage } from './aiMeta';
@@ -620,6 +621,7 @@ export const aiService = {
   async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [] }) {
     // Pedido aeróbico (esteira, bicicleta...) sem grupo muscular: a biblioteca não tem cardio, a ficha vem de regras.
     if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
+    if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
     const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment);
@@ -629,6 +631,7 @@ export const aiService = {
   /** Mesma regra de composição, sem IA e sem rede. */
   generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [] }) {
     if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
+    if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
     const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment);
