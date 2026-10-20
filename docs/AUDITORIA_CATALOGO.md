@@ -102,28 +102,9 @@ Nenhum.
 - Rosca Direta Banco Inclinado [firestore]: "braços" (rótulo do editor do treinador) -> biceps
 - ... e mais 4
 
-## Fichas na loja: 12 achados em 8 fichas
+## Fichas na loja: 0 achados em 4 fichas
 
-### ficha-demonstracao (4)
-
-- Treino A — Peito e Tríceps: 5 de 5 itens com id demo_*
-- Treino B — Costas e Bíceps: 5 de 5 itens com id demo_*
-- Treino C — Pernas e Ombros: 5 de 5 itens com id demo_*
-- Full Body Express: 4 de 4 itens com id demo_*
-
-### exercicio-fora-do-catalogo (4)
-
-- Treino A — Peito e Tríceps: 3 de 5 sem correspondência no catálogo
-- Treino B — Costas e Bíceps: 5 de 5 sem correspondência no catálogo
-- Treino C — Pernas e Ombros: 2 de 5 sem correspondência no catálogo
-- Full Body Express: 4 de 4 sem correspondência no catálogo
-
-### exercicio-sem-imagem (4)
-
-- Treino A — Peito e Tríceps: 3 de 5
-- Treino B — Costas e Bíceps: 5 de 5
-- Treino C — Pernas e Ombros: 2 de 5
-- Full Body Express: 4 de 4
+Nenhum.
 
 ## Catálogo final
 
