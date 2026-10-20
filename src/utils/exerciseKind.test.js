@@ -24,3 +24,14 @@ test('padrões por tipo e dificuldade sem acento', () => {
   expect(sameDifficulty('avancado', 'Avançado')).toBe(true);
   expect(sameDifficulty('iniciante', 'Intermediário')).toBe(false);
 });
+
+test('gerador: prancha sai em segundos e cardio em minutos, não com as repetições do objetivo', () => {
+  const { composeLocalPlan, normalizeLibrary, specFromFocus } = require('./workoutComposer');
+  const { exercises } = require('../data/exercises');
+  const plan = composeLocalPlan({ spec: specFromFocus('Ombros e ABS'), library: normalizeLibrary(exercises), total: 6, goal: 'Hipertrofia' });
+  const prancha = plan.exercises.find((e) => /Prancha/.test(e.name));
+  if (prancha) expect(prancha.reps).toBe('30');
+  plan.exercises.filter((e) => !/Prancha/.test(e.name)).forEach((e) => expect(e.reps).toMatch(/\d/));
+  const full = composeLocalPlan({ spec: specFromFocus('Full Body (Corpo Todo)'), library: normalizeLibrary(exercises), total: 12, goal: 'Hipertrofia' });
+  full.exercises.filter((e) => /Prancha/.test(e.name)).forEach((e) => expect(e.reps).toBe('30'));
+});

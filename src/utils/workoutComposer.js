@@ -1,4 +1,5 @@
 import { equipmentOf } from './equipment';
+import { defaultsForKind, exerciseKind } from './exerciseKind';
 // Composição de fichas por IA com a biblioteca como fonte de verdade.
 // Fluxo: pedido -> foco (spec) -> filtro determinístico da biblioteca -> candidatos enviados à IA (só metadados necessários)
 // -> resposta validada por ID e por composição -> se falhar, montagem determinística (a ficha é válida mesmo sem IA).
@@ -343,7 +344,14 @@ function prepare({ spec, library, total, goal }) {
   const finish = (picks, source, extra = {}) => ({
     spec, source, ...extra,
     division: divisionText(spec, total, picks),
-    exercises: picks.map((e) => ({ ...e, sets: String(e.sets ?? base.sets), reps: String(e.reps ?? base.reps), rest: e.rest ?? base.rest }))
+    // Prancha e cardio não seguem as repetições do objetivo: usam a prescrição do próprio exercício (segundos ou minutos).
+    exercises: picks.map((e) => {
+      const kind = exerciseKind(e.ref || e);
+      if (kind === 'strength') return { ...e, sets: String(e.sets ?? base.sets), reps: String(e.reps ?? base.reps), rest: e.rest ?? base.rest };
+      const own = defaultsForKind(kind);
+      const refReps = parseInt(e.ref?.reps, 10);
+      return { ...e, kind, sets: String(e.ref?.sets > 0 ? e.ref.sets : own.sets), reps: String(refReps > 0 ? refReps : own.reps), rest: kind === 'cardio' ? 0 : (e.ref?.rest ?? own.rest) };
+    })
   });
   return { lib, counts, candidates, need, det, expected, base, finish };
 }
