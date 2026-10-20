@@ -1,5 +1,6 @@
 import { prescriptionLabel } from '../../utils/exerciseKind';
 import { saveMyWorkout } from '../../services/myWorkouts';
+import { describeEquipment } from '../../utils/equipment';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { aiService, InsufficientExercisesError, localFallbackText } from '../../services/aiService';
@@ -187,7 +188,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         goal: selectedGoal,
         muscleFocus: selectedFocus,
         durationMinutes: selectedDuration,
-        customExercises
+        customExercises,
+        equipment: userProfile?.gymEquipment
       });
       setGeneratedWorkout(workout);
       toast.success(workout.composition?.division ? `Treino gerado (${workout.composition.division}).` : 'Treino com IA gerado com sucesso!');
@@ -380,6 +382,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                     <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
                     </div>
                   </div>
+
+                  <p className="text-xs text-gray-300">Equipamentos: <b>{describeEquipment(userProfile?.gymEquipment)}</b>. <a href="/profile" className="font-bold text-brand underline">Alterar no perfil</a></p>
 
                   <div>
                     <label htmlFor="gen-870" className={fieldLabel}>Foco Muscular</label>

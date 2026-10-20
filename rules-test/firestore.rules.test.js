@@ -153,6 +153,15 @@ test('trainings: ficha de treinador só é editada por ele; aluno não cria fich
   await assertFails(updateDoc(doc(db('coach2'), 'trainings/t1'), { coachId: 'coach2' }));
 });
 
+test('perfil: aluno grava os equipamentos da academia, só valores conhecidos e no máximo 6', async () => {
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: ['halter', 'livre'], updatedAt: '2026-10-19' }));
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: [] }));
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: ['laser'] }));
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: 'halter' }));
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: ['maquina', 'polia', 'halter', 'barra', 'livre', 'cardio', 'maquina'] }));
+  await assertFails(updateDoc(doc(db('stu2'), 'users/stu1'), { gymEquipment: ['halter'] }));
+});
+
 test('myWorkouts: treino pessoal é privado, só o dono lê e grava, com formato fechado', async () => {
   const ok = { name: 'Meu treino', exercises: [{ name: 'Supino' }], source: 'pdf', createdAt: '2026-10-19' };
   await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1'), ok));

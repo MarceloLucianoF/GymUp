@@ -1,3 +1,4 @@
+import { EQUIPMENT, EQUIPMENT_LABELS, sanitizeEquipment } from '../../utils/equipment';
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useTheme } from '../../hooks/ThemeContext';
@@ -48,7 +49,8 @@ export default function Profile() {
     weight: '',
     age: '',
     photoURL: '',
-    phone: ''
+    phone: '',
+    gymEquipment: []
   });
 
   const [isDirty, setIsDirty] = useState(false);
@@ -70,7 +72,8 @@ export default function Profile() {
             weight: data.weight || '',
             age: data.age || '',
             photoURL: data.photoURL || '',
-            phone: data.phone || ''
+            phone: data.phone || '',
+            gymEquipment: sanitizeEquipment(data.gymEquipment)
           };
           setFormData(initialData);
           setOriginalData(initialData);
@@ -96,6 +99,8 @@ export default function Profile() {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+
+  const toggleEquipment = (key) => setFormData((f) => ({ ...f, gymEquipment: f.gymEquipment.includes(key) ? f.gymEquipment.filter((k) => k !== key) : [...f.gymEquipment, key] }));
 
   const handleDecimalChange = (e) => {
     let value = e.target.value.replace(',', '.');
@@ -143,6 +148,7 @@ export default function Profile() {
           height: formData.height ? parseFloat(formData.height) : null,
           age: formData.age ? parseInt(formData.age) : null,
           phone: String(formData.phone || '').replace(/[^0-9+() -]/g, '').slice(0, 20),
+          gymEquipment: sanitizeEquipment(formData.gymEquipment),
           updatedAt: new Date().toISOString()
       };
 
@@ -281,6 +287,20 @@ export default function Profile() {
                             </select>
                         </div>
                     </div>
+
+                    {/* --- O que tem na minha academia: a IA e o gerador só montam fichas com isso --- */}
+                    <fieldset className="mt-6 rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
+                        <legend className="px-1 text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Equipamentos da minha academia</legend>
+                        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">Marque o que você tem. Treinos gerados pela IA usam só esses equipamentos. Sem nenhuma marcação, vale tudo.</p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            {EQUIPMENT.map((key) => (
+                                <label key={key} className="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-xl bg-white p-3 text-sm font-bold text-gray-800 dark:bg-white/5 dark:text-gray-100">
+                                    <input type="checkbox" checked={formData.gymEquipment.includes(key)} onChange={() => toggleEquipment(key)} className="h-5 w-5 accent-[#FFC107]" />
+                                    {EQUIPMENT_LABELS[key]}
+                                </label>
+                            ))}
+                        </div>
+                    </fieldset>
 
                     {/* --- MEU TREINADOR: estados, pedido por busca/código e encerramento --- */}
                     <MyCoachCard user={user} profile={{ ...userProfile, ...formData, coachId: userProfile?.coachId }} initialOpen={!!initialCoachCode} initialCode={initialCoachCode} />

@@ -4,6 +4,7 @@ export const exercises = [
   {
     id: "ex1",
     name: "Supino Reto Máquina",
+    equipment: "maquina",
     sets: 4,
     reps: 10,
     rest: 90,
@@ -17,6 +18,7 @@ export const exercises = [
   {
     id: "ex2",
     name: "Supino Inclinado Halter",
+    equipment: "halter",
     sets: 3,
     reps: 10,
     rest: 90,
@@ -30,6 +32,7 @@ export const exercises = [
   {
     id: "ex3",
     name: "Peck Deck (Voador)",
+    equipment: "maquina",
     sets: 3,
     reps: 12,
     rest: 60,
@@ -43,6 +46,7 @@ export const exercises = [
   {
     id: "ex4",
     name: "Desenvolvimento Halter",
+    equipment: "halter",
     sets: 3,
     reps: 10,
     rest: 90,
@@ -56,6 +60,7 @@ export const exercises = [
   {
     id: "ex5",
     name: "Elevação Lateral",
+    equipment: "halter",
     sets: 3,
     reps: 12,
     rest: 60,
@@ -69,6 +74,7 @@ export const exercises = [
   {
     id: "ex6",
     name: "Tríceps Corda",
+    equipment: "polia",
     sets: 3,
     reps: 12,
     rest: 60,
@@ -82,6 +88,7 @@ export const exercises = [
   {
     id: "ex7",
     name: "Tríceps Barra (Pushdown)",
+    equipment: "polia",
     sets: 3,
     reps: 10,
     rest: 60,
@@ -96,6 +103,7 @@ export const exercises = [
   {
     id: "ex8",
     name: "Puxada Aberta (Lat Pulldown)",
+    equipment: "polia",
     sets: 4,
     reps: 10,
     rest: 90,
@@ -109,6 +117,7 @@ export const exercises = [
   {
     id: "ex9",
     name: "Remada Máquina (Sentado)",
+    equipment: "maquina",
     sets: 3,
     reps: 10,
     rest: 90,
@@ -122,6 +131,7 @@ export const exercises = [
   {
     id: "ex10",
     name: "Puxada Triângulo (Pegada Fechada)",
+    equipment: "polia",
     sets: 3,
     reps: 12,
     rest: 60,
@@ -135,6 +145,7 @@ export const exercises = [
   {
     id: "ex11",
     name: "Rosca Direta Barra",
+    equipment: "barra",
     sets: 3,
     reps: 10,
     rest: 60,
@@ -148,6 +159,7 @@ export const exercises = [
   {
     id: "ex12",
     name: "Rosca Alternada Halter",
+    equipment: "halter",
     sets: 3,
     reps: 12,
     rest: 60,
@@ -161,6 +173,7 @@ export const exercises = [
   {
     id: "ex13",
     name: "Rosca Concentrada",
+    equipment: "halter",
     sets: 2,
     reps: 12,
     rest: 60,
@@ -175,6 +188,7 @@ export const exercises = [
   {
     id: "ex14",
     name: "Agachamento Livre ou Hack",
+    equipment: ["barra", "maquina"],
     sets: 4,
     reps: 10,
     rest: 120,
@@ -188,6 +202,7 @@ export const exercises = [
   {
     id: "ex15",
     name: "Leg Press",
+    equipment: "maquina",
     sets: 4,
     reps: 12,
     rest: 90,
@@ -201,6 +216,7 @@ export const exercises = [
   {
     id: "ex16",
     name: "Mesa Flexora",
+    equipment: "maquina",
     sets: 3,
     reps: 12,
     rest: 60,
@@ -214,6 +230,7 @@ export const exercises = [
   {
     id: "ex17",
     name: "Cadeira Extensora",
+    equipment: "maquina",
     sets: 3,
     reps: 12,
     rest: 60,
@@ -227,6 +244,7 @@ export const exercises = [
   {
     id: "ex18",
     name: "Elevação Pélvica (Glúteo)",
+    equipment: ["livre", "barra"],
     sets: 4,
     reps: 12,
     rest: 90,
@@ -240,6 +258,7 @@ export const exercises = [
   {
     id: "ex19",
     name: "Panturrilha em Pé (Máquina)",
+    equipment: "maquina",
     sets: 4,
     reps: 15,
     rest: 60,
@@ -254,6 +273,7 @@ export const exercises = [
   {
     id: "ex20",
     name: "Esteira / Bike / Escada",
+    equipment: "cardio",
     kind: "cardio", // duração em minutos (campo reps)
     sets: 1,
     reps: 25,
@@ -268,6 +288,7 @@ export const exercises = [
   {
     id: "ex21",
     name: "HIIT (Cardio de Alta Intensidade)",
+    equipment: "cardio",
     kind: "cardio",
     sets: 1,
     reps: 15, // minutos
@@ -282,6 +303,7 @@ export const exercises = [
   {
     id: "ex22",
     name: "Prancha Abdominal",
+    equipment: "livre",
     kind: "timed", // segundos por série (campo reps)
     sets: 3,
     reps: 30,
@@ -296,6 +318,7 @@ export const exercises = [
   {
     id: "ex23",
     name: "Abdominal Infra",
+    equipment: "livre",
     sets: 3,
     reps: 15,
     rest: 60,
@@ -309,6 +332,7 @@ export const exercises = [
   {
     id: "ex24",
     name: "Abdominal Oblíquo (Bicicleta)",
+    equipment: "livre",
     sets: 3,
     reps: 15,
     rest: 60,
@@ -323,6 +347,7 @@ export const exercises = [
   {
     id: "ex25",
     name: "Chest Press Convergente",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 75,
@@ -336,6 +361,7 @@ export const exercises = [
   {
     id: "ex26",
     name: "Supino Inclinado Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 75,
@@ -349,6 +375,7 @@ export const exercises = [
   {
     id: "ex27",
     name: "Supino Declinado Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 75,
@@ -362,6 +389,7 @@ export const exercises = [
   {
     id: "ex28",
     name: "Crossover na Polia",
+    equipment: "polia",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -375,6 +403,7 @@ export const exercises = [
   {
     id: "ex29",
     name: "Crucifixo no Cabo",
+    equipment: "polia",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -388,6 +417,7 @@ export const exercises = [
   {
     id: "ex30",
     name: "Remada Articulada",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 75,
@@ -401,6 +431,7 @@ export const exercises = [
   {
     id: "ex31",
     name: "Remada Cavalinho Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 10,
     rest: 90,
@@ -414,6 +445,7 @@ export const exercises = [
   {
     id: "ex32",
     name: "Remada Neutra Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 75,
@@ -427,6 +459,7 @@ export const exercises = [
   {
     id: "ex33",
     name: "Face Pull na Polia",
+    equipment: "polia",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -440,6 +473,7 @@ export const exercises = [
   {
     id: "ex34",
     name: "Desenvolvimento Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 75,
@@ -453,6 +487,7 @@ export const exercises = [
   {
     id: "ex35",
     name: "Crucifixo Inverso Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -466,6 +501,7 @@ export const exercises = [
   {
     id: "ex36",
     name: "Tríceps Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -479,6 +515,7 @@ export const exercises = [
   {
     id: "ex37",
     name: "Rosca Scott Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -492,6 +529,7 @@ export const exercises = [
   {
     id: "ex38",
     name: "Rosca Martelo na Polia",
+    equipment: "polia",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -505,6 +543,7 @@ export const exercises = [
   {
     id: "ex39",
     name: "Rosca Alternada Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -518,6 +557,7 @@ export const exercises = [
   {
     id: "ex40",
     name: "Hack Squat",
+    equipment: "maquina",
     sets: 4,
     reps: 10,
     rest: 90,
@@ -531,6 +571,7 @@ export const exercises = [
   {
     id: "ex41",
     name: "Cadeira Flexora",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -544,6 +585,7 @@ export const exercises = [
   {
     id: "ex42",
     name: "Cadeira Adutora",
+    equipment: "maquina",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -557,6 +599,7 @@ export const exercises = [
   {
     id: "ex43",
     name: "Cadeira Abdutora",
+    equipment: "maquina",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -570,6 +613,7 @@ export const exercises = [
   {
     id: "ex44",
     name: "Panturrilha Sentado Máquina",
+    equipment: "maquina",
     sets: 4,
     reps: 16,
     rest: 45,
@@ -583,6 +627,7 @@ export const exercises = [
   {
     id: "ex45",
     name: "Abdominal Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 14,
     rest: 45,
@@ -596,6 +641,7 @@ export const exercises = [
   {
     id: "ex46",
     name: "Crunch na Polia",
+    equipment: "polia",
     sets: 3,
     reps: 14,
     rest: 45,
@@ -609,6 +655,7 @@ export const exercises = [
   {
     id: "ex47",
     name: "Extensão Lombar Y + W",
+    equipment: "livre",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -622,6 +669,7 @@ export const exercises = [
   {
     id: "ex48",
     name: "Abdominal trocando bola suíça",
+    equipment: "livre",
     sets: 3,
     reps: 14,
     rest: 45,
@@ -635,6 +683,7 @@ export const exercises = [
   {
     id: "ex49",
     name: "Agachamento com Halteres",
+    equipment: "halter",
     sets: 3,
     reps: 11,
     rest: 75,
@@ -648,6 +697,7 @@ export const exercises = [
   {
     id: "ex50",
     name: "Crucifixo Inverso no Banco Inclinado",
+    equipment: "halter",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -661,6 +711,7 @@ export const exercises = [
   {
     id: "ex51",
     name: "Remada Curvada com Halteres (Pegada Neutra)",
+    equipment: "halter",
     sets: 3,
     reps: 10,
     rest: 75,
@@ -674,6 +725,7 @@ export const exercises = [
   {
     id: "ex52",
     name: "Panturrilha em pé com Halteres",
+    equipment: "halter",
     sets: 4,
     reps: 16,
     rest: 45,
@@ -687,6 +739,7 @@ export const exercises = [
   {
     id: "ex53",
     name: "Tríceps Supinado com Halteres",
+    equipment: "halter",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -700,6 +753,7 @@ export const exercises = [
   {
     id: "ex54",
     name: "Flexão Nórdica Inversa",
+    equipment: "livre",
     sets: 3,
     reps: 9,
     rest: 90,
@@ -713,6 +767,7 @@ export const exercises = [
   {
     id: "ex55",
     name: "Rosca Direta Banco Inclinado",
+    equipment: "halter",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -726,6 +781,7 @@ export const exercises = [
   {
     id: "ex56",
     name: "Rosca Scott com Barra W",
+    equipment: "barra",
     sets: 3,
     reps: 10,
     rest: 60,
@@ -739,6 +795,7 @@ export const exercises = [
   {
     id: "ex57",
     name: "Afundo Livre com Halteres",
+    equipment: "halter",
     sets: 3,
     reps: 10,
     rest: 75,
@@ -752,6 +809,7 @@ export const exercises = [
   {
     id: "ex58",
     name: "Barra Fixa (Em pé)",
+    equipment: "livre",
     sets: 3,
     reps: 8,
     rest: 90,
@@ -765,6 +823,7 @@ export const exercises = [
   {
     id: "ex59",
     name: "Supino Reto com Halteres",
+    equipment: "halter",
     sets: 4,
     reps: 10,
     rest: 90,
@@ -778,6 +837,7 @@ export const exercises = [
   {
     id: "ex60",
     name: "Abdominal Canivete Alternado",
+    equipment: "livre",
     sets: 3,
     reps: 14,
     rest: 45,
@@ -791,6 +851,7 @@ export const exercises = [
   {
     id: "ex61",
     name: "Elevação Lateral Sentado com Halteres",
+    equipment: "halter",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -804,6 +865,7 @@ export const exercises = [
   {
     id: "ex62",
     name: "Desenvolvimento Barra Reta",
+    equipment: "barra",
     sets: 4,
     reps: 9,
     rest: 90,
@@ -817,6 +879,7 @@ export const exercises = [
   {
     id: "ex63",
     name: "Tríceps Barra Encostado na Polia",
+    equipment: "polia",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -830,6 +893,7 @@ export const exercises = [
   {
     id: "ex64",
     name: "Rosca Direta na Polia Baixa com Corda",
+    equipment: "polia",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -843,6 +907,7 @@ export const exercises = [
   {
     id: "ex65",
     name: "Tríceps Unilateral na Polia",
+    equipment: "polia",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -856,6 +921,7 @@ export const exercises = [
   {
     id: "ex66",
     name: "Hip Thrust Máquina",
+    equipment: "maquina",
     sets: 4,
     reps: 10,
     rest: 90,
@@ -869,6 +935,7 @@ export const exercises = [
   {
     id: "ex67",
     name: "Glúteo Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 14,
     rest: 60,
@@ -882,6 +949,7 @@ export const exercises = [
   {
     id: "ex68",
     name: "Pullover Máquina",
+    equipment: "maquina",
     sets: 3,
     reps: 11,
     rest: 60,
@@ -895,6 +963,7 @@ export const exercises = [
   {
     id: "ex69",
     name: "Agachamento Livre com Barra",
+    equipment: "barra",
     sets: 4,
     reps: 9,
     rest: 120,
@@ -908,6 +977,7 @@ export const exercises = [
   {
     id: "ex70",
     name: "Rosca Direta com Halteres",
+    equipment: "halter",
     sets: 3,
     reps: 11,
     rest: 60,

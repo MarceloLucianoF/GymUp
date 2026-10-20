@@ -1,3 +1,4 @@
+import { equipmentOf } from './equipment';
 // Composição de fichas por IA com a biblioteca como fonte de verdade.
 // Fluxo: pedido -> foco (spec) -> filtro determinístico da biblioteca -> candidatos enviados à IA (só metadados necessários)
 // -> resposta validada por ID e por composição -> se falhar, montagem determinística (a ficha é válida mesmo sem IA).
@@ -41,14 +42,6 @@ function patternOf(n, group) {
   return 'isolado';
 }
 
-function equipmentOf(n) {
-  if (/halter/.test(n)) return 'halter';
-  if (/barra reta|barra w|barra fixa|barra\b/.test(n) && !/maquina/.test(n)) return 'barra';
-  if (/polia|cabo|crossover|corda|pulldown/.test(n)) return 'polia';
-  if (/maquina|cadeira|mesa|hack|leg press|articulada|convergente|peck|voador/.test(n)) return 'maquina';
-  return 'livre';
-}
-
 /** Metadados normalizados de um exercício da biblioteca. `ref` guarda o objeto original (imagens, descrição, firestoreId). */
 export function normalizeExercise(ex) {
   const name = String(ex?.name || '').trim();
@@ -65,7 +58,7 @@ export function normalizeExercise(ex) {
     primaryGroup,
     subgroups,
     primarySub: subgroups[0],
-    equipment: equipmentOf(n),
+    equipment: equipmentOf(ex),
     movementPattern,
     isCompound: ['agachar', 'empurrar', 'puxar', 'dobradica'].includes(movementPattern),
     difficulty: ['iniciante', 'intermediario', 'avancado'].includes(diff) ? diff : 'iniciante',
