@@ -12,7 +12,8 @@ test('sequência de alongamento usa só exercícios do grupo mobilidade, por tem
   const w = buildStretchWorkout(exercises);
   expect(w.exercises).toHaveLength(8);
   w.exercises.forEach((e) => { expect(e.kind).toBe('timed'); expect(Number(e.reps)).toBeGreaterThanOrEqual(20); expect(e.machineImage).toMatch(/\.gif$/); });
-  expect(w.exercises[0].name).toMatch(/Gato|Criança/);   // começa pela coluna
+  expect(w.exercises[0].name).toMatch(/Aquecimento/);   // aquecimento primeiro
+  expect(w.exercises.slice(0, 2).every((e) => /Aquecimento/.test(e.name))).toBe(true);
   expect(buildStretchWorkout([{ name: 'Supino', muscleGroup: 'peito' }])).toBeNull();
 });
 

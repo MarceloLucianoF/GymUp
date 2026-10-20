@@ -1,39 +1,70 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FileText, Loader2, PencilLine, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, FileText, ImagePlus, Loader2, PencilLine, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { exercises as LIBRARY } from '../../data/exercises';
 import { askWorkoutImport } from '../../services/aiService';
-import { saveMyWorkout } from '../../services/myWorkouts';
-import { KIND_LABELS, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
+import { saveMyWorkout, updateMyWorkout } from '../../services/myWorkouts';
+import { myExerciseToLibrary } from '../../services/myExercises';
+import { ImageError, isSafePhoto, prepareImage } from '../../utils/imageAttach';
+import { KIND_LABELS, cardioMinutes, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, parseImportedWorkout, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 const blank = (name, ref = null) => {
   const kind = exerciseKind({ name, muscleGroup: ref?.muscleGroup, kind: ref?.kind });
-  return { key: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name, kind, ...defaultsForKind(kind), note: '', ref };
+  const d = defaultsForKind(kind);
+  // exercício meu traz a prescrição que o aluno definiu; o da biblioteca começa com o padrão do tipo
+  return { key: newKey(), name, kind, ...d, ...(ref?.mine ? { sets: String(ref.sets || d.sets), reps: String(ref.reps || d.reps), rest: ref.rest ?? d.rest } : {}), note: ref?.mine ? ref.description || '' : '', photo: ref?.mine ? ref.machineImage : null, ref };
 };
 
-export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRARY, onSaved }) {
+// Exercício já salvo na ficha -> linha do editor. Só o que veio da biblioteca ou dos exercícios do aluno mantém o vínculo (imagem e texto).
+const fromSaved = (ex) => {
+  const kind = exerciseKind(ex);
+  const linked = ex.firestoreId && !String(ex.firestoreId).startsWith('custom-');
+  const custom = !linked;
+  return {
+    key: newKey(), name: ex.name || '', kind, sets: String(ex.sets ?? defaultsForKind(kind).sets),
+    reps: kind === 'cardio' ? String(cardioMinutes(ex)) : String(ex.reps ?? defaultsForKind(kind).reps), rest: kind === 'cardio' ? 0 : (ex.rest ?? defaultsForKind(kind).rest),
+    note: ex.note || '', photo: custom && isSafePhoto(ex.machineImage, 45000) ? ex.machineImage : null,
+    ref: linked ? { ...ex, id: ex.firestoreId } : null
+  };
+};
+
+export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRARY, myExercises = [], editing = null, onSaved }) {
   const [step, setStep] = useState('choose');
   const [busy, setBusy] = useState('');
   const [name, setName] = useState('');
   const [items, setItems] = useState([]);
   const [warnings, setWarnings] = useState([]);
   const [source, setSource] = useState('manual');
+  const [photo, setPhoto] = useState(null);
   const [query, setQuery] = useState('');
   const fileRef = useRef(null);
+  const photoRef = useRef(null);
 
+  // Abrir em modo de edição: carrega o treino salvo direto na tela de revisão.
+  useEffect(() => {
+    if (!isOpen || !editing) return;
+    setName(editing.workout.name || '');
+    setItems((editing.workout.exercises || []).map(fromSaved));
+    setPhoto(isSafePhoto(editing.workout.photo) ? editing.workout.photo : null);
+    setSource(editing.workout.source || 'manual');
+    setWarnings([]); setQuery(''); setBusy(''); setStep('edit');
+  }, [isOpen, editing]);
+
+  const mineAsLibrary = useMemo(() => myExercises.map(myExerciseToLibrary), [myExercises]);
   const suggestions = useMemo(() => {
     const q = plain(query).trim();
     if (q.length < 2) return [];
-    return library.filter((e) => plain(e.name).includes(q)).slice(0, 6);
-  }, [query, library]);
+    const hit = (e) => plain(e.name).includes(q);
+    return [...mineAsLibrary.filter(hit), ...library.filter(hit)].slice(0, 7);
+  }, [query, library, mineAsLibrary]);
 
   if (!isOpen) return null;
 
-  const reset = () => { setStep('choose'); setName(''); setItems([]); setWarnings([]); setQuery(''); setSource('manual'); setBusy(''); };
+  const reset = () => { setStep('choose'); setName(''); setItems([]); setWarnings([]); setQuery(''); setSource('manual'); setPhoto(null); setBusy(''); };
   const close = () => { reset(); onClose(); };
-
   const startManual = () => { setSource('manual'); setName('Meu treino'); setItems([]); setStep('edit'); };
 
   const importPdf = async (file) => {
@@ -63,9 +94,16 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     }
   };
 
+  const attach = async (file, kind, apply, inputEl) => {
+    if (!file) return;
+    try { apply(await prepareImage(file, kind)); } catch (error) { toast.error(error instanceof ImageError ? error.message : 'Não consegui usar esta imagem.'); }
+    if (inputEl) inputEl.value = '';
+  };
+
   const patch = (key, changes) => setItems((list) => list.map((it) => (it.key === key ? { ...it, ...changes } : it)));
+  const move = (index, delta) => setItems((l) => { const j = index + delta; if (j < 0 || j >= l.length) return l; const next = [...l]; [next[index], next[j]] = [next[j], next[index]]; return next; });
   const addFromLibrary = (ex) => { setItems((l) => [...l, blank(ex.name, ex)]); setQuery(''); };
-  const addFree = () => { const n = query.trim().slice(0, IMPORT_LIMITS.maxName); if (n.length < 2) return; setItems((l) => [...l, blank(n, matchLibrary(n, library))]); setQuery(''); };
+  const addFree = () => { const n = query.trim().slice(0, IMPORT_LIMITS.maxName); if (n.length < 2) return; setItems((l) => [...l, blank(n, matchLibrary(n, [...mineAsLibrary, ...library]))]); setQuery(''); };
 
   const save = async () => {
     const valid = items.filter((it) => it.name.trim().length > 1);
@@ -73,10 +111,15 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     setBusy('Salvando...');
     try {
       const exs = valid.slice(0, 30).map((it, i) => toWorkoutExercise({
-        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), kind: it.kind, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note
+        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), kind: it.kind, photo: it.ref ? null : it.photo, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note
       }, it.ref, i));
-      await saveMyWorkout(user.uid, { name, exercises: exs, source, description: source === 'pdf' ? 'Importado de um PDF seu.' : 'Montado por você.' });
-      toast.success('Treino salvo em "Meus treinos".');
+      if (editing) {
+        await updateMyWorkout(user.uid, editing.docId, { name, exercises: exs, source, photo, createdAt: editing.workout.createdAt, description: editing.workout.description });
+        toast.success('Treino atualizado.');
+      } else {
+        await saveMyWorkout(user.uid, { name, exercises: exs, source, photo, description: source === 'pdf' ? 'Importado de um PDF seu.' : 'Montado por você.' });
+        toast.success('Treino salvo em "Meus treinos".');
+      }
       onSaved?.();
       close();
     } catch (error) {
@@ -87,10 +130,10 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
   };
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/85 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="Meu treino">
+    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/85 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={editing ? 'Editar meu treino' : 'Meu treino'}>
       <div className="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-t-3xl bg-white p-5 text-gray-900 dark:bg-[#111827] dark:text-white sm:rounded-3xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-black">{step === 'choose' ? 'Cadastrar meu treino' : 'Revise seu treino'}</h2>
+          <h2 className="text-xl font-black">{editing ? 'Editar meu treino' : step === 'choose' ? 'Cadastrar meu treino' : 'Revise seu treino'}</h2>
           <button type="button" onClick={close} aria-label="Fechar" className="grid h-11 w-11 place-items-center rounded-full bg-gray-100 dark:bg-white/10"><X className="h-5 w-5" aria-hidden="true" /></button>
         </div>
 
@@ -120,14 +163,40 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
             <label className="block text-sm font-bold">Nome do treino
               <input value={name} onChange={(e) => setName(e.target.value.slice(0, 80))} className="mt-1 w-full input-brand-dark text-base" maxLength={80} />
             </label>
+            <div>
+              <p className="text-sm font-bold">Foto do treino (opcional)</p>
+              <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" id="my-workout-photo" onChange={(e) => attach(e.target.files?.[0], 'workout', setPhoto, e.target)} />
+              <div className="mt-1 flex items-center gap-3">
+                {photo ? <img src={photo} alt="Foto do treino" className="h-20 w-20 rounded-2xl object-cover" /> : <div className="grid h-20 w-20 place-items-center rounded-2xl bg-gray-100 text-gray-500 dark:bg-white/10"><ImagePlus className="h-6 w-6" aria-hidden="true" /></div>}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="my-workout-photo" className="inline-flex min-h-[44px] cursor-pointer items-center rounded-2xl bg-gray-100 px-4 text-sm font-bold dark:bg-white/10">{photo ? 'Trocar foto' : 'Anexar foto'}</label>
+                  {photo && <button type="button" onClick={() => setPhoto(null)} className="min-h-[44px] rounded-2xl px-4 text-sm font-bold text-red-700 dark:text-red-300">Remover foto</button>}
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">Pode ser a foto da sua ficha no papel. A imagem é reduzida no seu aparelho e fica só com você.</p>
+            </div>
             <ul className="space-y-3">
-              {items.map((it) => (
+              {items.map((it, index) => (
                 <li key={it.key} className="rounded-2xl bg-gray-100 p-3 dark:bg-white/5">
                   <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 flex-col gap-1">
+                      <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Subir ${it.name}`} className="grid h-8 w-9 place-items-center rounded-lg bg-white text-gray-700 disabled:opacity-30 dark:bg-white/10 dark:text-gray-200"><ArrowUp className="h-4 w-4" aria-hidden="true" /></button>
+                      <button type="button" onClick={() => move(index, 1)} disabled={index === items.length - 1} aria-label={`Descer ${it.name}`} className="grid h-8 w-9 place-items-center rounded-lg bg-white text-gray-700 disabled:opacity-30 dark:bg-white/10 dark:text-gray-200"><ArrowDown className="h-4 w-4" aria-hidden="true" /></button>
+                    </div>
                     <input value={it.name} onChange={(e) => patch(it.key, { name: e.target.value.slice(0, IMPORT_LIMITS.maxName), ref: null, ...(exerciseKind({ name: e.target.value }) !== it.kind ? { kind: exerciseKind({ name: e.target.value }), ...defaultsForKind(exerciseKind({ name: e.target.value })) } : {}) })} aria-label="Nome do exercício" className="min-w-0 flex-1 input-brand-dark text-base font-bold" />
                     <button type="button" onClick={() => setItems((l) => l.filter((x) => x.key !== it.key))} aria-label={`Remover ${it.name}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="h-4 w-4" aria-hidden="true" /></button>
                   </div>
-                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">{it.ref ? 'Na biblioteca: terá imagem e explicação.' : 'Fora da biblioteca: sem imagem de demonstração.'}</p>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">{it.ref ? (it.ref.mine ? 'Um dos seus exercícios.' : 'Na biblioteca: terá imagem e explicação.') : 'Fora da biblioteca: sem imagem de demonstração, a não ser que você anexe uma.'}</p>
+                  {!it.ref && (
+                    <div className="mt-2 flex items-center gap-3">
+                      {it.photo && <img src={it.photo} alt={`Foto de ${it.name}`} className="h-14 w-14 rounded-xl object-cover" />}
+                      <label className="inline-flex min-h-[40px] cursor-pointer items-center rounded-xl bg-white px-3 text-xs font-bold dark:bg-white/10">
+                        <ImagePlus className="mr-1 h-4 w-4" aria-hidden="true" />{it.photo ? 'Trocar foto' : 'Foto do exercício'}
+                        <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label={`Foto de ${it.name}`} onChange={(e) => attach(e.target.files?.[0], 'exercise', (url) => patch(it.key, { photo: url }), e.target)} />
+                      </label>
+                      {it.photo && <button type="button" onClick={() => patch(it.key, { photo: null })} className="min-h-[40px] rounded-xl px-2 text-xs font-bold text-red-700 dark:text-red-300">Remover</button>}
+                    </div>
+                  )}
                   <label className="mt-2 block text-xs font-bold">Tipo
                     <select value={it.kind} onChange={(e) => patch(it.key, { kind: e.target.value, ...defaultsForKind(e.target.value) })} className="mt-1 w-full input-brand-dark text-base">
                       {Object.entries(KIND_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
@@ -156,13 +225,13 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
               </div>
               {suggestions.length > 0 && (
                 <ul className="mt-2 space-y-1">
-                  {suggestions.map((s) => <li key={s.id}><button type="button" onClick={() => addFromLibrary(s)} className="w-full rounded-xl bg-gray-100 p-3 text-left text-sm font-bold dark:bg-white/10">{s.name}</button></li>)}
+                  {suggestions.map((s) => <li key={s.id}><button type="button" onClick={() => addFromLibrary(s)} className="flex w-full items-center justify-between rounded-xl bg-gray-100 p-3 text-left text-sm font-bold dark:bg-white/10">{s.name}{s.mine && <span className="ml-2 rounded-full bg-brand/20 px-2 py-0.5 text-[11px] text-amber-800 dark:text-brand">meu</span>}</button></li>)}
                 </ul>
               )}
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={reset} disabled={!!busy} className="min-h-[48px] flex-1 rounded-2xl bg-gray-100 font-bold dark:bg-white/10">Voltar</button>
-              <button type="button" onClick={save} disabled={!!busy || items.length === 0} className="btn-primary-gradient min-h-[48px] flex-[2] font-black disabled:opacity-50">{busy || 'Salvar em Meus treinos'}</button>
+              <button type="button" onClick={editing ? close : reset} disabled={!!busy} className="min-h-[48px] flex-1 rounded-2xl bg-gray-100 font-bold dark:bg-white/10">{editing ? 'Cancelar' : 'Voltar'}</button>
+              <button type="button" onClick={save} disabled={!!busy || items.length === 0} className="btn-primary-gradient min-h-[48px] flex-[2] font-black disabled:opacity-50">{busy || (editing ? 'Salvar alterações' : 'Salvar em Meus treinos')}</button>
             </div>
           </div>
         )}
