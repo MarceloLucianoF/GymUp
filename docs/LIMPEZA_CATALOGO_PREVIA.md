@@ -1,4 +1,7 @@
-# Limpeza do catálogo: prévia (nada foi aplicado)
+# Limpeza do catálogo: prévia e situação da aplicação
+
+## Situação (19/10/2026)
+Aprovados pelo dono: divergências, duplicatas e "TREINO COSTAS" (renomear). **Aplicado no Firestore** depois do backup `~/bohtreinar-backups/limpeza-catalogo-2026-10-19.json` (fora do repositório; 51 exercícios, 8 fichas, 1 pacote): Abdominal Canivete Alternado para intermediário; Extensão Lombar Y + W para costas; "Supino Máquina" para "Supino Reto Máquina"; "Puxada Aberta Máquina" para "Puxada Aberta (Lat Pulldown)"; "TREINO COSTAS" para "Treino Peito e Costas". Cada escrita conferiu o valor anterior antes de gravar. **Código:** biblioteca embutida alinhada (PR de alinhamento). **Não aplicado:** apagar as 4 fichas demo (F1): a conferência mostrou 8 alunos de demonstração (`demo_student_1` a `8`) com essas fichas como ficha atual e 123 check-ins; apagar quebraria o ambiente de demonstração do treinador demo. Fica aguardando decisão.
 
 Base: leitura de produção de 19/10/2026 (51 exercícios e 8 fichas no Firestore) e a biblioteca embutida (70). O relatório completo está em [AUDITORIA_CATALOGO.md](AUDITORIA_CATALOGO.md). Cada item abaixo precisa do seu "sim" ou "não" antes de qualquer escrita.
 

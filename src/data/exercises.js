@@ -197,7 +197,7 @@ export const exercises = [
     machineImage: "/exercises/agachamento-livre-ou-hack.gif",
     videoUrl: '',
     muscleGroup: "perna",
-    difficulty: "avancado"
+    difficulty: "avançado"
   },
   {
     id: "ex15",
@@ -298,7 +298,7 @@ export const exercises = [
     machineImage: "/exercises/hiit-cardio-de-alta-intensidade.gif",
     videoUrl: '',
     muscleGroup: "cardio",
-    difficulty: "avancado"
+    difficulty: "avançado"
   },
   {
     id: "ex22",
@@ -384,7 +384,7 @@ export const exercises = [
     machineImage: "/exercises/supino-declinado-maquina.gif",
     videoUrl: '',
     muscleGroup: "peito",
-    difficulty: "intermediário"
+    difficulty: "iniciante"
   },
   {
     id: "ex28",
@@ -664,7 +664,7 @@ export const exercises = [
     machineImage: "/exercises/extensao-lombar-y-w.gif",
     videoUrl: '',
     muscleGroup: "costas",
-    difficulty: "intermediário"
+    difficulty: "iniciante"
   },
   {
     id: "ex48",
@@ -678,7 +678,7 @@ export const exercises = [
     machineImage: "/exercises/abdominal-trocando-bola-suica.gif",
     videoUrl: '',
     muscleGroup: "core",
-    difficulty: "iniciante"
+    difficulty: "intermediário"
   },
   {
     id: "ex49",
@@ -705,7 +705,7 @@ export const exercises = [
     execution: "Deite de bruços no banco inclinado com um halter em cada mão. Abra os braços para os lados com os cotovelos levemente flexionados até a altura dos ombros e desça devagar.",
     machineImage: "/exercises/crucifixo-inverso-no-banco-inclinado.gif",
     videoUrl: '',
-    muscleGroup: "ombro",
+    muscleGroup: "costas",
     difficulty: "intermediário"
   },
   {
@@ -762,7 +762,7 @@ export const exercises = [
     machineImage: "/exercises/flexao-nordica-inversa.gif",
     videoUrl: '',
     muscleGroup: "perna",
-    difficulty: "avancado"
+    difficulty: "intermediário"
   },
   {
     id: "ex55",
@@ -818,7 +818,7 @@ export const exercises = [
     machineImage: "/exercises/barra-fixa-em-pe.gif",
     videoUrl: '',
     muscleGroup: "costas",
-    difficulty: "intermediário"
+    difficulty: "avançado"
   },
   {
     id: "ex59",
@@ -958,7 +958,7 @@ export const exercises = [
     machineImage: "/exercises/pullover-maquina.gif",
     videoUrl: '',
     muscleGroup: "costas",
-    difficulty: "intermediário"
+    difficulty: "iniciante"
   },
   {
     id: "ex69",
