@@ -24,7 +24,7 @@ describe('biblioteca embutida de exercícios', () => {
       expect(e.reps).toBeGreaterThan(0);   // repetições, segundos (prancha) ou minutos (cardio): nunca 0
       if (['cardio', 'timed'].includes(e.kind)) expect(e.sets).toBeGreaterThan(0);
       expect(exerciseKind(e) === 'cardio').toBe(/cardio/.test(e.muscleGroup));
-      expect(['iniciante', 'intermediário', 'avancado']).toContain(e.difficulty);
+      expect(['iniciante', 'intermediário', 'avançado']).toContain(e.difficulty);
       expect(canonicalGroup(e.muscleGroup)).not.toBe('geral');
     }
   });

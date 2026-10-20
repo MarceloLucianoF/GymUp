@@ -6,16 +6,16 @@ Gerada por `node scripts/audit-catalog.cjs --remote <exportação do Firestore>`
 
 - Biblioteca embutida: 70
 - Firestore: 51
-- Catálogo final (sem repetir nome): **74**
-- Em ambas as fontes: 47; só no Firestore: 4
+- Catálogo final (sem repetir nome): **72**
+- Em ambas as fontes: 49; só no Firestore: 2
 
 | Grupo | Exercícios |
 | --- | --- |
 | Costas | 12 |
 | Pernas | 11 |
-| Peito | 10 |
 | Bíceps | 10 |
-| Ombros | 9 |
+| Peito | 9 |
+| Ombros | 8 |
 | Core | 7 |
 | Tríceps | 6 |
 | Glúteos | 4 |
@@ -24,7 +24,7 @@ Gerada por `node scripts/audit-catalog.cjs --remote <exportação do Firestore>`
 
 | Equipamento principal | Exercícios |
 | --- | --- |
-| maquina | 31 |
+| maquina | 29 |
 | halter | 15 |
 | polia | 12 |
 | livre | 9 |
@@ -33,21 +33,21 @@ Gerada por `node scripts/audit-catalog.cjs --remote <exportação do Firestore>`
 
 | Tipo | Exercícios |
 | --- | --- |
-| strength | 71 |
+| strength | 69 |
 | cardio | 2 |
 | timed | 1 |
 
 | Dificuldade | Exercícios |
 | --- | --- |
 | iniciante | 42 |
-| intermediario | 29 |
+| intermediario | 27 |
 | avancado | 3 |
 
 ## Erros (quebram o uso): 0
 
 Nenhum.
 
-## Avisos (corrigir): 15
+## Avisos (corrigir): 5
 
 ### midia-aproximada (4)
 
@@ -60,23 +60,7 @@ Nenhum.
 
 - Glúteo Máquina [firestore]
 
-### possivel-duplicata (2)
-
-- Supino Reto Máquina  ~  Supino Máquina [embutida / firestore]: grupos peito
-- Puxada Aberta (Lat Pulldown)  ~  Puxada Aberta Máquina [embutida / firestore]: grupos costas
-
-### fontes-divergem (8)
-
-- Supino Declinado Máquina [embutida x firestore]: grupo peito/peito; dificuldade intermediario/iniciante
-- Extensão Lombar Y + W [embutida x firestore]: grupo costas/core; dificuldade intermediario/iniciante
-- Abdominal trocando bola suíça [embutida x firestore]: grupo core/core; dificuldade iniciante/intermediario
-- Crucifixo Inverso no Banco Inclinado [embutida x firestore]: grupo ombros/costas; dificuldade intermediario/intermediario
-- Flexão Nórdica Inversa [embutida x firestore]: grupo pernas/pernas; dificuldade avancado/intermediario
-- Barra Fixa (Em pé) [embutida x firestore]: grupo costas/costas; dificuldade intermediario/avancado
-- Abdominal Canivete Alternado [embutida x firestore]: grupo core/core; dificuldade intermediario/iniciante
-- Pullover Máquina [embutida x firestore]: grupo costas/costas; dificuldade intermediario/iniciante
-
-## Informações: 231
+## Informações: 228
 
 ### sem-video (116)
 
@@ -87,12 +71,6 @@ Nenhum.
 - Elevação Lateral [embutida]
 - Tríceps Corda [embutida]
 - ... e mais 110
-
-### dificuldade-fora-do-padrao (3)
-
-- Agachamento Livre ou Hack [embutida]: "avancado" (padrão: avançado)
-- HIIT (Cardio de Alta Intensidade) [embutida]: "avancado" (padrão: avançado)
-- Flexão Nórdica Inversa [embutida]: "avancado" (padrão: avançado)
 
 ### reps-em-texto (51)
 
@@ -124,32 +102,9 @@ Nenhum.
 - Rosca Direta Banco Inclinado [firestore]: "braços" (rótulo do editor do treinador) -> biceps
 - ... e mais 4
 
-## Fichas na loja: 13 achados em 8 fichas
+## Fichas na loja: 0 achados em 4 fichas
 
-### ficha-demonstracao (4)
-
-- Treino A — Peito e Tríceps: 5 de 5 itens com id demo_*
-- Treino B — Costas e Bíceps: 5 de 5 itens com id demo_*
-- Treino C — Pernas e Ombros: 5 de 5 itens com id demo_*
-- Full Body Express: 4 de 4 itens com id demo_*
-
-### exercicio-fora-do-catalogo (4)
-
-- Treino A — Peito e Tríceps: 3 de 5 sem correspondência no catálogo
-- Treino B — Costas e Bíceps: 5 de 5 sem correspondência no catálogo
-- Treino C — Pernas e Ombros: 2 de 5 sem correspondência no catálogo
-- Full Body Express: 4 de 4 sem correspondência no catálogo
-
-### exercicio-sem-imagem (4)
-
-- Treino A — Peito e Tríceps: 3 de 5
-- Treino B — Costas e Bíceps: 5 de 5
-- Treino C — Pernas e Ombros: 2 de 5
-- Full Body Express: 4 de 4
-
-### titulo-incoerente (1)
-
-- TREINO COSTAS: título fala de costas, mas só 1 de 4 exercícios são desse(s) grupo(s) (peito 2, ombros 1, costas 1)
+Nenhum.
 
 ## Catálogo final
 
@@ -171,14 +126,14 @@ Nenhum.
 | Abdominal Infra | Core | livre | strength | intermediario | embutida |
 | Abdominal Máquina | Core | maquina | strength | iniciante | embutida+firestore |
 | Abdominal Oblíquo (Bicicleta) | Core | livre | strength | intermediario | embutida |
-| Abdominal trocando bola suíça | Core | livre | strength | iniciante | embutida+firestore |
+| Abdominal trocando bola suíça | Core | livre | strength | intermediario | embutida+firestore |
 | Crunch na Polia | Core | polia | strength | intermediario | embutida+firestore |
 | Prancha Abdominal | Core | livre | timed | iniciante | embutida |
-| Barra Fixa (Em pé) | Costas | livre | strength | intermediario | embutida+firestore |
-| Extensão Lombar Y + W | Costas | livre | strength | intermediario | embutida+firestore |
-| Pullover Máquina | Costas | maquina | strength | intermediario | embutida+firestore |
-| Puxada Aberta (Lat Pulldown) | Costas | polia | strength | iniciante | embutida |
-| Puxada Aberta Máquina | Costas | maquina | strength | iniciante | firestore |
+| Barra Fixa (Em pé) | Costas | livre | strength | avancado | embutida+firestore |
+| Crucifixo Inverso no Banco Inclinado | Costas | halter | strength | intermediario | embutida+firestore |
+| Extensão Lombar Y + W | Costas | livre | strength | iniciante | embutida+firestore |
+| Pullover Máquina | Costas | maquina | strength | iniciante | embutida+firestore |
+| Puxada Aberta (Lat Pulldown) | Costas | polia | strength | iniciante | embutida+firestore |
 | Puxada Neutra Máquina | Costas | maquina | strength | iniciante | firestore |
 | Puxada Triângulo (Pegada Fechada) | Costas | polia | strength | iniciante | embutida |
 | Remada Articulada | Costas | maquina | strength | iniciante | embutida+firestore |
@@ -191,7 +146,6 @@ Nenhum.
 | Glúteo Máquina | Glúteos | maquina | strength | iniciante | embutida+firestore |
 | Hip Thrust Máquina | Glúteos | maquina | strength | intermediario | embutida+firestore |
 | Crucifixo Inverso Máquina | Ombros | maquina | strength | iniciante | embutida+firestore |
-| Crucifixo Inverso no Banco Inclinado | Ombros | halter | strength | intermediario | embutida+firestore |
 | Desenvolvimento Barra Reta | Ombros | barra | strength | intermediario | embutida+firestore |
 | Desenvolvimento Halter | Ombros | halter | strength | intermediario | embutida |
 | Desenvolvimento Máquina | Ombros | maquina | strength | iniciante | embutida+firestore |
@@ -206,12 +160,11 @@ Nenhum.
 | Crossover na Polia | Peito | polia | strength | intermediario | embutida+firestore |
 | Crucifixo no Cabo | Peito | polia | strength | intermediario | embutida+firestore |
 | Peck Deck (Voador) | Peito | maquina | strength | iniciante | embutida |
-| Supino Declinado Máquina | Peito | maquina | strength | intermediario | embutida+firestore |
+| Supino Declinado Máquina | Peito | maquina | strength | iniciante | embutida+firestore |
 | Supino Inclinado Halter | Peito | halter | strength | intermediario | embutida+firestore |
 | Supino Inclinado Máquina | Peito | maquina | strength | iniciante | embutida+firestore |
-| Supino Máquina | Peito | maquina | strength | iniciante | firestore |
 | Supino Reto com Halteres | Peito | halter | strength | intermediario | embutida+firestore |
-| Supino Reto Máquina | Peito | maquina | strength | iniciante | embutida |
+| Supino Reto Máquina | Peito | maquina | strength | iniciante | embutida+firestore |
 | Afundo Livre com Halteres | Pernas | halter | strength | intermediario | embutida+firestore |
 | Agachamento com Halteres | Pernas | halter | strength | iniciante | embutida+firestore |
 | Agachamento Livre com Barra | Pernas | barra | strength | intermediario | embutida |
@@ -219,7 +172,7 @@ Nenhum.
 | Cadeira Adutora | Pernas | maquina | strength | iniciante | embutida+firestore |
 | Cadeira Extensora | Pernas | maquina | strength | iniciante | embutida+firestore |
 | Cadeira Flexora | Pernas | maquina | strength | iniciante | embutida+firestore |
-| Flexão Nórdica Inversa | Pernas | livre | strength | avancado | embutida+firestore |
+| Flexão Nórdica Inversa | Pernas | livre | strength | intermediario | embutida+firestore |
 | Hack Squat | Pernas | maquina | strength | intermediario | embutida+firestore |
 | Leg Press | Pernas | maquina | strength | intermediario | embutida |
 | Mesa Flexora | Pernas | maquina | strength | iniciante | embutida+firestore |

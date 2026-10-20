@@ -1,4 +1,7 @@
-# Limpeza do catálogo: prévia (nada foi aplicado)
+# Limpeza do catálogo: prévia e situação da aplicação
+
+## Situação (19/10/2026)
+Aprovados pelo dono: divergências, duplicatas e "TREINO COSTAS" (renomear). **Aplicado no Firestore** depois do backup `~/bohtreinar-backups/limpeza-catalogo-2026-10-19.json` (fora do repositório; 51 exercícios, 8 fichas, 1 pacote): Abdominal Canivete Alternado para intermediário; Extensão Lombar Y + W para costas; "Supino Máquina" para "Supino Reto Máquina"; "Puxada Aberta Máquina" para "Puxada Aberta (Lat Pulldown)"; "TREINO COSTAS" para "Treino Peito e Costas". Cada escrita conferiu o valor anterior antes de gravar. **Código:** biblioteca embutida alinhada (PR de alinhamento). **Fichas demo (F1), opção B escolhida e aplicada em 20/10/2026:** os 8 alunos de demonstração (`demo_student_1` a `8`) foram migrados para fichas reais do pacote Split ABC (Peito e Tríceps para "Treino A: Peitoral + Dorsal"; Costas e Bíceps para "Treino C: Bíceps + Tríceps + CORE"; Pernas e Ombros para "Treino B: Pernas + Ombros"), com backup dos documentos dos alunos em `~/bohtreinar-backups/limpeza-catalogo-alunos-demo-2026-10-20.json`; depois de confirmar que nenhum usuário apontava para elas, as 4 fichas demo foram apagadas (cada exclusão conferiu o documento e o autor). Os 123 check-ins antigos mantêm o histórico com o nome da ficha da época. No painel do treinador demo, esses alunos aparecem com a ficha "de outro autor", porque as fichas do pacote não pertencem a ele.
 
 Base: leitura de produção de 19/10/2026 (51 exercícios e 8 fichas no Firestore) e a biblioteca embutida (70). O relatório completo está em [AUDITORIA_CATALOGO.md](AUDITORIA_CATALOGO.md). Cada item abaixo precisa do seu "sim" ou "não" antes de qualquer escrita.
 
