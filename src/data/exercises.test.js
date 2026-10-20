@@ -1,3 +1,4 @@
+import { exerciseKind } from '../utils/exerciseKind';
 import fs from 'fs';
 import path from 'path';
 import { exercises } from './exercises';
@@ -20,7 +21,9 @@ describe('biblioteca embutida de exercícios', () => {
       expect(e.description.length).toBeGreaterThan(30);
       expect(e.execution.length).toBeGreaterThan(60);
       expect(e.sets).toBeGreaterThan(0);
-      expect(e.reps).toBeGreaterThanOrEqual(0);   // cardio e prancha são por tempo (0)
+      expect(e.reps).toBeGreaterThan(0);   // repetições, segundos (prancha) ou minutos (cardio): nunca 0
+      if (['cardio', 'timed'].includes(e.kind)) expect(e.sets).toBeGreaterThan(0);
+      expect(exerciseKind(e) === 'cardio').toBe(/cardio/.test(e.muscleGroup));
       expect(['iniciante', 'intermediário', 'avancado']).toContain(e.difficulty);
       expect(canonicalGroup(e.muscleGroup)).not.toBe('geral');
     }

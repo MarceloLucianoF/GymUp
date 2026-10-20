@@ -7,6 +7,7 @@ import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { sameDifficulty } from '../../utils/exerciseKind';
 import MyWorkoutModal from '../../components/training/MyWorkoutModal';
 import { deleteMyWorkout, listMyWorkouts } from '../../services/myWorkouts';
 import AICoachModal from '../../components/ai/AICoachModal';
@@ -125,10 +126,10 @@ export default function TrainingsPage() {
   };
 
   const getDifficultyColor = (diff) => {
-    switch (diff?.toLowerCase()) {
+    switch ((diff || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()) {
       case 'iniciante': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
-      case 'intermediário': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
-      case 'avançado': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800';
+      case 'intermediario': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
+      case 'avancado': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
   };
@@ -151,7 +152,7 @@ export default function TrainingsPage() {
 
   const term = searchTerm.trim().toLowerCase();
   const filteredTrainings = trainings.filter(t => {
-      if (filter !== 'Todos' && t.difficulty?.toLowerCase() !== filter.toLowerCase()) return false;
+      if (filter !== 'Todos' && !sameDifficulty(t.difficulty, filter)) return false;
       if (!term) return true;
       return (t.name || '').toLowerCase().includes(term) ||
         (t.description || '').toLowerCase().includes(term) ||
@@ -338,7 +339,7 @@ export default function TrainingsPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {mine.map((t, i) => (
-                    <div key={t.id} className="relative">
+                    <div key={t.id} className="relative flex flex-col [&>a]:flex-1">
                       {renderTrainingCard({ ...t, _validId: t.id, difficulty: 'Meu treino' }, i)}
                       <button type="button" onClick={() => removeMine(t)} aria-label={`Apagar ${t.name}`} className="absolute bottom-3 right-16 z-10 grid h-11 w-11 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="w-4 h-4" aria-hidden="true" /></button>
                     </div>

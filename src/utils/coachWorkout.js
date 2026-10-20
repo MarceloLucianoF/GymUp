@@ -1,3 +1,4 @@
+import { exerciseKind } from './exerciseKind';
 // Predefinições de séries/reps/descanso por objetivo e utilitários do editor de fichas.
 export const WORKOUT_PRESETS = [
   { id: 'hipertrofia', label: 'Hipertrofia', sets: '4', reps: '8-12', rest: 75 },
@@ -7,7 +8,7 @@ export const WORKOUT_PRESETS = [
 
 export const getPreset = (id) => WORKOUT_PRESETS.find((p) => p.id === id) || null;
 
-export const applyPreset = (exercise, preset) => (preset
+export const applyPreset = (exercise, preset) => (preset && exerciseKind(exercise) === 'strength'   // cardio e prancha têm prescrição própria
   ? { ...exercise, sets: preset.sets, reps: preset.reps, rest: preset.rest }
   : exercise);
 

@@ -11,6 +11,7 @@ import EmptyState from '../../components/common/EmptyState';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import { estimateWorkout } from '../../components/coach/helpers';
+import { KIND_LABELS, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { WORKOUT_PRESETS, getPreset, applyPreset, reorder, formatMinutes } from '../../utils/coachWorkout';
 import { btnPrimary, btnGhost, iconBtn, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
@@ -26,7 +27,9 @@ const normalizeExercise = (raw, library) => {
   const lib = typeof raw === 'string' ? library.find((l) => l.id === raw) : library.find((l) => l.id === (raw?.firestoreId || raw?.exerciseId || raw?.id));
   const base = typeof raw === 'object' && raw ? raw : {};
   const sets = Array.isArray(base.sets) ? base.sets.length : (base.sets ?? lib?.sets ?? 3);
-  const reps = Array.isArray(base.sets) ? (base.sets[0]?.reps ?? 10) : (base.reps ?? lib?.reps ?? 10);
+  const kind = exerciseKind({ ...lib, ...base });
+  const fallback = defaultsForKind(kind);
+  const reps = Array.isArray(base.sets) ? (base.sets[0]?.reps ?? fallback.reps) : (base.reps ?? lib?.reps ?? fallback.reps);
   const out = {
     ...base,
     _key: nextKey(),
@@ -34,9 +37,10 @@ const normalizeExercise = (raw, library) => {
     name: base.name || lib?.name || 'Exercício removido',
     muscleGroup: base.muscleGroup || lib?.muscleGroup || '',
     machineImage: base.machineImage || base.demoUrl || lib?.machineImage || lib?.demoUrl || null,
-    sets: String(sets || 3),
-    reps: String(reps || 10),
-    rest: Number(base.rest ?? lib?.rest) || 60
+    kind,
+    sets: String(sets || fallback.sets),
+    reps: String(reps && String(reps) !== '0' ? reps : fallback.reps),
+    rest: kind === 'cardio' ? 0 : (Number(base.rest ?? lib?.rest) || fallback.rest)
   };
   delete out.exerciseId;
   delete out.demoUrl;
@@ -168,6 +172,8 @@ export default function WorkoutEditor() {
 
   const update = useCallback((patch) => { setTraining((prev) => ({ ...prev, ...patch })); setDirty(true); }, []);
   const updateExercise = (index, field, value) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)) });
+  // Trocar o tipo troca a prescrição junto: 3 x 10 não faz sentido para esteira.
+  const changeKind = (index, kind) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, kind, ...defaultsForKind(kind) } : ex)) });
   const removeExercise = (index) => update({ exercises: training.exercises.filter((_, i) => i !== index) });
   const moveTo = (index, target) => {
     if (target < 0 || target >= training.exercises.length || target === index) return;
@@ -347,19 +353,29 @@ export default function WorkoutEditor() {
                     </div>
                     <button type="button" onClick={() => removeExercise(i)} aria-label={`Remover ${ex.name}`} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"><Trash2 className="h-5 w-5" /></button>
                   </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="mt-3">
+                    <label htmlFor={`kind-${ex._key}`} className={labelCls}>Tipo</label>
+                    <select id={`kind-${ex._key}`} value={exerciseKind(ex)} onChange={(e) => changeKind(i, e.target.value)} className={inputCls}>
+                      {Object.entries(KIND_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                    </select>
+                  </div>
+                  <div className={`mt-3 grid ${exerciseKind(ex) === 'cardio' ? 'grid-cols-1' : 'grid-cols-3'} gap-2`}>
+                    {exerciseKind(ex) !== 'cardio' && (
+                      <div>
+                        <label htmlFor={`sets-${ex._key}`} className={labelCls}>Séries</label>
+                        <input id={`sets-${ex._key}`} inputMode="numeric" value={ex.sets} onChange={(e) => updateExercise(i, 'sets', e.target.value.replace(/\D/g, ''))} className={`${inputCls} text-center font-bold`} />
+                      </div>
+                    )}
                     <div>
-                      <label htmlFor={`sets-${ex._key}`} className={labelCls}>Séries</label>
-                      <input id={`sets-${ex._key}`} inputMode="numeric" value={ex.sets} onChange={(e) => updateExercise(i, 'sets', e.target.value.replace(/\D/g, ''))} className={`${inputCls} text-center font-bold`} />
+                      <label htmlFor={`reps-${ex._key}`} className={labelCls}>{repsFieldLabel(exerciseKind(ex))}</label>
+                      <input id={`reps-${ex._key}`} value={ex.reps} onChange={(e) => updateExercise(i, 'reps', e.target.value)} className={`${inputCls} text-center font-bold`} placeholder={repsPlaceholder(exerciseKind(ex))} />
                     </div>
-                    <div>
-                      <label htmlFor={`reps-${ex._key}`} className={labelCls}>Reps</label>
-                      <input id={`reps-${ex._key}`} value={ex.reps} onChange={(e) => updateExercise(i, 'reps', e.target.value)} className={`${inputCls} text-center font-bold`} placeholder="10 ou 8-12" />
-                    </div>
-                    <div>
-                      <label htmlFor={`rest-${ex._key}`} className={labelCls}>Descanso (s)</label>
-                      <input id={`rest-${ex._key}`} inputMode="numeric" value={ex.rest} onChange={(e) => updateExercise(i, 'rest', Number(e.target.value.replace(/\D/g, '')) || 0)} className={`${inputCls} text-center font-bold`} />
-                    </div>
+                    {exerciseKind(ex) !== 'cardio' && (
+                      <div>
+                        <label htmlFor={`rest-${ex._key}`} className={labelCls}>Descanso (s)</label>
+                        <input id={`rest-${ex._key}`} inputMode="numeric" value={ex.rest} onChange={(e) => updateExercise(i, 'rest', Number(e.target.value.replace(/\D/g, '')) || 0)} className={`${inputCls} text-center font-bold`} />
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}

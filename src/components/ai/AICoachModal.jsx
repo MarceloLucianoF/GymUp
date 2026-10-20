@@ -1,3 +1,4 @@
+import { prescriptionLabel } from '../../utils/exerciseKind';
 import { saveMyWorkout } from '../../services/myWorkouts';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
@@ -457,7 +458,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-xs font-black text-amber-800 dark:text-brand">{ex.sets}x {ex.reps}</span>
+                          <span className="text-xs font-black text-amber-800 dark:text-brand">{prescriptionLabel(ex)}</span>
                           <p className="text-[11px] text-gray-600 dark:text-gray-400 font-bold">{ex.rest}s descanso</p>
                         </div>
                       </div>

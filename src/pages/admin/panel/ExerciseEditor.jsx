@@ -1,3 +1,4 @@
+import { KIND_LABELS, defaultsForKind, repsFieldLabel, repsPlaceholder } from '../../../utils/exerciseKind';
 import React, { useMemo, useState } from 'react';
 import { ImageOff, Dumbbell } from 'lucide-react';
 import Drawer from './Drawer';
@@ -6,7 +7,7 @@ import { DIFFICULTIES, MUSCLE_GROUPS, validateExerciseForm, hasNameConflict } fr
 import { safeHttpUrl } from '../../../utils/safeUrl';
 
 export const EMPTY_EXERCISE = {
-  name: '', muscleGroup: '', difficulty: 'iniciante', sets: 3, reps: '10', rest: 60,
+  name: '', muscleGroup: '', difficulty: 'iniciante', kind: 'strength', sets: 3, reps: '10', rest: 60,
   description: '', execution: '', machineImage: '', videoUrl: ''
 };
 
@@ -101,10 +102,15 @@ export default function ExerciseEditor({ initial, existing, editingId, onSave, o
         </Section>
 
         <Section title="Prescrição padrão" hint="Valores sugeridos quando o exercício entra numa ficha.">
-          <div className="grid grid-cols-3 gap-3">
-            <Field id="ex-sets" label="Séries" error={errors.sets}><input id="ex-sets" type="number" inputMode="numeric" value={form.sets} onChange={set('sets')} className={inputCls} /></Field>
-            <Field id="ex-reps" label="Repetições" error={errors.reps}><input id="ex-reps" value={form.reps} onChange={set('reps')} className={inputCls} placeholder="10 ou 8-12" /></Field>
-            <Field id="ex-rest" label="Descanso (s)" error={errors.rest}><input id="ex-rest" type="number" inputMode="numeric" value={form.rest} onChange={set('rest')} className={inputCls} /></Field>
+          <Field id="ex-kind" label="Tipo de exercício">
+            <select id="ex-kind" value={form.kind || 'strength'} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value, ...defaultsForKind(e.target.value) }))} className={inputCls}>
+              {Object.entries(KIND_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select>
+          </Field>
+          <div className={`mt-3 grid ${(form.kind || 'strength') === 'cardio' ? 'grid-cols-1' : 'grid-cols-3'} gap-3`}>
+            {(form.kind || 'strength') !== 'cardio' && <Field id="ex-sets" label="Séries" error={errors.sets}><input id="ex-sets" type="number" inputMode="numeric" value={form.sets} onChange={set('sets')} className={inputCls} /></Field>}
+            <Field id="ex-reps" label={repsFieldLabel(form.kind || 'strength')} error={errors.reps}><input id="ex-reps" value={form.reps} onChange={set('reps')} className={inputCls} placeholder={repsPlaceholder(form.kind || 'strength')} /></Field>
+            {(form.kind || 'strength') !== 'cardio' && <Field id="ex-rest" label="Descanso (s)" error={errors.rest}><input id="ex-rest" type="number" inputMode="numeric" value={form.rest} onChange={set('rest')} className={inputCls} /></Field>}
           </div>
         </Section>
 
