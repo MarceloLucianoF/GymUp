@@ -28,6 +28,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
+    "audit:catalog": "node scripts/audit-catalog.cjs",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

@@ -1,4 +1,5 @@
 import { equipmentOf } from './equipment';
+import { catalogKey } from './exerciseCatalog';
 import { defaultsForKind, exerciseKind } from './exerciseKind';
 // Composição de fichas por IA com a biblioteca como fonte de verdade.
 // Fluxo: pedido -> foco (spec) -> filtro determinístico da biblioteca -> candidatos enviados à IA (só metadados necessários)
@@ -68,8 +69,9 @@ export function normalizeExercise(ex) {
 }
 
 export function normalizeLibrary(list) {
+  // Mesma chave de nome (acento, parênteses, "com Halteres" x "Halter") = mesmo exercício; a primeira ocorrência vale.
   const seen = new Set();
-  return (list || []).filter((e) => e?.name).map(normalizeExercise).filter((e) => { if (!e.id || seen.has(e.id)) return false; seen.add(e.id); return true; });
+  return (list || []).filter((e) => e?.name).map(normalizeExercise).filter((e) => { const k = catalogKey(e.name); if (!e.id || !k || seen.has(e.id) || seen.has(k)) return false; seen.add(e.id); seen.add(k); return true; });
 }
 
 /** Só o que a IA precisa para escolher: nada de imagem, descrição ou ID interno do Firestore. */
