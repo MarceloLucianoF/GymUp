@@ -839,3 +839,28 @@ test('resumo semanal: só o dono lê, grava e apaga; id e conteúdo validados', 
   await assertFails(getDocs(collection(db('stu1'), 'weeklySummaries')));
   await assertSucceeds(deleteDoc(ref('stu1', 'stu1_2026-W42')));
 });
+
+test('myWorkouts: foto só como JPEG pequeno em data URL; myExercises é privado e de formato fechado', async () => {
+  const jpeg = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+  const w = { name: 'Meu treino', exercises: [{ name: 'Supino' }], source: 'manual', createdAt: '2026-10-20' };
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f1'), { ...w, photo: jpeg }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f2'), { ...w, photo: 'data:image/svg+xml;base64,PHN2Zz4=' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f3'), { ...w, photo: 'https://golpe.com/a.jpg' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f4'), { ...w, photo: 'data:image/jpeg;base64,' + 'A'.repeat(141000) }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f5'), { ...w, photo: 123 }));
+  const e = { name: 'Minha remada', kind: 'strength', muscleGroup: 'costas', equipment: 'halter', sets: '3', reps: '10', rest: 60, note: '', createdAt: '2026-10-20' };
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e1'), { ...e, photo: jpeg }));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'users/stu1/myExercises/e1')));
+  await assertFails(getDoc(doc(db('stu2'), 'users/stu1/myExercises/e1')));
+  await assertFails(getDoc(doc(db('coach1'), 'users/stu1/myExercises/e1')));
+  await assertFails(setDoc(doc(db('stu2'), 'users/stu1/myExercises/e2'), e));
+  await assertFails(setDoc(doc(db('coach1'), 'users/coach1/myExercises/e3'), e));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e4'), { ...e, kind: 'magica' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e5'), { ...e, equipment: 'laser' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e6'), { ...e, muscleGroup: 'cabelo' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e7'), { ...e, extra: 'x' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e8'), { ...e, name: 'x'.repeat(81) }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e9'), { ...e, photo: 'data:image/jpeg;base64,' + 'A'.repeat(51000) }));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'users/stu1/myExercises/e1')));
+  await assertFails(deleteDoc(doc(db('stu2'), 'users/stu1/myExercises/e1')));
+});

@@ -144,7 +144,8 @@ export const toWorkoutExercise = (e, ref, idx) => {
     firestoreId: ref?.firestoreId || ref?.id || `custom-${idx}`,
     name: ref?.name || e.name,
     kind,
-    machineImage: ref?.machineImage || ref?.demoUrl || null,
+    machineImage: ref?.machineImage || ref?.demoUrl || e.photo || null,
+    note: String(e.note || '').slice(0, 160),
     videoUrl: ref?.videoUrl || null
   };
   if (kind === 'cardio') return { ...base, muscleGroup: 'Cardio', durationMin: e.durationMin, sets: '1', reps: String(e.durationMin), rest: 0, description: e.note || ref?.description || 'Cardio no ritmo indicado.' };

@@ -4,8 +4,8 @@ import { catalogGroup } from './exerciseCatalog';
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 export const isStretchRequest = (text) => /alongament|mobilidade|aquecimento|soltar o corpo/.test(plain(text));
 
-// Ordem que faz sentido numa sessão: costas e coluna, quadril e pernas, tronco, braços e ombros.
-const ORDER = [/gato|crianca/, /flexor|posterior|quadriceps|panturrilha|quadril/, /peitoral|ombro|triceps|bracos/];
+// Ordem que faz sentido numa sessão: aquecimentos primeiro, depois costas e coluna, quadril e pernas, tronco, braços e ombros.
+const ORDER = [/aquecimento/, /gato|crianca/, /flexor|posterior|quadriceps|panturrilha|quadril/, /peitoral|ombro|triceps|bracos/];
 const rank = (name) => { const i = ORDER.findIndex((re) => re.test(plain(name))); return i < 0 ? ORDER.length : i; };
 
 export function buildStretchWorkout(library = []) {

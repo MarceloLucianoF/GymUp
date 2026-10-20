@@ -5,11 +5,13 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2 } from 'lucide-react';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2, Pencil, ListChecks } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { sameDifficulty } from '../../utils/exerciseKind';
 import MyWorkoutModal from '../../components/training/MyWorkoutModal';
 import { deleteMyWorkout, listMyWorkouts } from '../../services/myWorkouts';
+import { listMyExercises } from '../../services/myExercises';
+import { isSafePhoto } from '../../utils/imageAttach';
 import AICoachModal from '../../components/ai/AICoachModal';
 import { formatDate } from '../../utils/format';
 import ErrorState from '../../components/common/ErrorState';
@@ -54,12 +56,15 @@ export default function TrainingsPage() {
   const [isMineOpen, setIsMineOpen] = useState(false);
   const [mine, setMine] = useState([]);
   const [mineReload, setMineReload] = useState(0);
+  const [editingMine, setEditingMine] = useState(null);
+  const [myExercises, setMyExercises] = useState([]);
 
   // Treinos pessoais (privados): digitados ou importados de PDF. Não vêm da loja de fichas.
   useEffect(() => {
     if (!user) return;
     let alive = true;
     listMyWorkouts(user.uid).then((rows) => { if (alive) setMine(rows); }).catch((err) => console.error('Erro ao buscar meus treinos:', err));
+    listMyExercises(user.uid).then((rows) => { if (alive) setMyExercises(rows); }).catch(() => {});
     return () => { alive = false; };
   }, [user, mineReload]);
 
@@ -206,6 +211,7 @@ export default function TrainingsPage() {
             </div>
         )}
 
+        {isSafePhoto(training.photo) && <img src={training.photo} alt={`Foto de ${training.name || 'treino'}`} className="h-32 w-full object-cover" loading="lazy" />}
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
               <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-900/60 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform group-hover:bg-white dark:group-hover:bg-[#1F2937]">
@@ -285,6 +291,13 @@ export default function TrainingsPage() {
                     <FilePlus2 className="w-4 h-4" aria-hidden="true" />
                     Meu treino
                 </button>
+                <Link
+                    to="/meus-exercicios"
+                    className="pressable min-h-[44px] px-4 text-xs font-black rounded-2xl bg-gray-100 text-gray-900 dark:bg-white/10 dark:text-white shrink-0 inline-flex items-center gap-2"
+                >
+                    <ListChecks className="w-4 h-4" aria-hidden="true" />
+                    Meus exercícios
+                </Link>
                 <button
                     type="button"
                     onClick={() => setIsAIModalOpen(true)}
@@ -341,6 +354,7 @@ export default function TrainingsPage() {
                   {mine.map((t, i) => (
                     <div key={t.id} className="relative flex flex-col [&>a]:flex-1">
                       {renderTrainingCard({ ...t, _validId: t.id, difficulty: 'Meu treino' }, i)}
+                      <button type="button" onClick={() => setEditingMine({ docId: t.docId, workout: t })} aria-label={`Editar ${t.name}`} className="absolute bottom-3 right-28 z-10 grid h-11 w-11 place-items-center rounded-full bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-white"><Pencil className="w-4 h-4" aria-hidden="true" /></button>
                       <button type="button" onClick={() => removeMine(t)} aria-label={`Apagar ${t.name}`} className="absolute bottom-3 right-16 z-10 grid h-11 w-11 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="w-4 h-4" aria-hidden="true" /></button>
                     </div>
                   ))}
@@ -428,7 +442,7 @@ export default function TrainingsPage() {
         )}
       </div>
 
-      <MyWorkoutModal isOpen={isMineOpen} onClose={() => setIsMineOpen(false)} user={user} onSaved={() => setMineReload((n) => n + 1)} />
+      <MyWorkoutModal isOpen={isMineOpen || !!editingMine} editing={editingMine} myExercises={myExercises} onClose={() => { setIsMineOpen(false); setEditingMine(null); }} user={user} onSaved={() => setMineReload((n) => n + 1)} />
 
       {/* MODAL DO COACH IA */}
       <AICoachModal

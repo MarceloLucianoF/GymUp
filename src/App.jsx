@@ -26,6 +26,7 @@ const Friends = lazy(() => import('./pages/user/Friends'));
 // --- PÁGINAS: USER (ALUNO) ---
 const Home = lazy(() => import('./pages/user/Home'));
 const TrainingsPage = lazy(() => import('./pages/user/TrainingsPage'));
+const MyExercisesPage = lazy(() => import('./pages/user/MyExercisesPage'));
 const TrainingPage = lazy(() => import('./pages/user/TrainingPage'));
 const TrainingExecutionPage = lazy(() => import('./pages/user/TrainingExecutionPage'));
 const HistoryPage = lazy(() => import('./pages/user/HistoryPage'));
@@ -67,6 +68,7 @@ const ROUTE_META = [
   ['/forgot-password', 'Recuperar senha', 'Recupere o acesso à sua conta.', false],
   ['/dashboard', 'Painel', 'Seu painel de treinos.', true],
   ['/trainings', 'Meus treinos', 'Suas fichas de treino.', true],
+  ['/meus-exercicios', 'Meus exercícios', 'Exercícios que você criou.', true],
   ['/training', 'Treino', 'Detalhes do treino.', true],
   ['/execution', 'Treino em andamento', 'Execução do treino.', true],
   ['/history', 'Histórico', 'Histórico de treinos.', true],
@@ -276,6 +278,7 @@ function AppRoutes() {
           
           {/* Fluxo de Treino */}
           <Route path="/trainings" element={<ProtectedRoute allowedRoles={['user']}><TrainingsPage /></ProtectedRoute>} />
+          <Route path="/meus-exercicios" element={<ProtectedRoute allowedRoles={['user']}><MyExercisesPage /></ProtectedRoute>} />
           <Route path="/training/:trainingId" element={<ProtectedRoute allowedRoles={['user']}><TrainingPage /></ProtectedRoute>} />
           <Route path="/execution/:trainingId" element={<ProtectedRoute allowedRoles={['user']}><TrainingExecutionPage /></ProtectedRoute>} />
           

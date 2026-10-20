@@ -6,6 +6,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
 import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
 import { exerciseKind, prescriptionLabel } from '../../utils/exerciseKind';
+import { isSafePhoto } from '../../utils/imageAttach';
 import { Dumbbell, Flame, Scale, ClipboardList, Wrench } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 
@@ -237,6 +238,7 @@ export default function TrainingPage() {
                 ← Voltar
             </button>
             
+            {isSafePhoto(training.photo) && <img src={training.photo} alt={`Foto de ${training.name}`} className="mb-3 max-h-56 w-full rounded-2xl object-cover" />}
             <div className="flex justify-between items-start gap-4 mb-2">
                 <h1 className="font-display text-2xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight">{training.name}</h1>
                 {lastWorkoutDate && (
