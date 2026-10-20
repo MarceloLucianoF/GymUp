@@ -35,3 +35,21 @@ Já existe: biblioteca embutida de **70 exercícios, todos com GIF**, fichas ofi
 
 ## Regras que valem para tudo
 Revisão independente do diff em mudança de Worker, banco ou regras; teste de isolamento entre duas academias em todo endpoint novo; homologação primeiro; dado financeiro só para quem tem papel; IA sugere, humano decide, e o app nunca inventa exercício fora da biblioteca.
+
+## Paridade com o mercado (19/10/2026)
+
+Lista dos apps líderes comparada com o que o BohTreinar tem hoje. "Tem" foi conferido no código; o que não está marcado como tem não existe.
+
+| Recurso do mercado | Hoje | Próximo passo |
+| --- | --- | --- |
+| Registro de séries, carga, repetições, descanso | Tem (carga, repetições, esforço RPE, temporizador de descanso). Agora também cardio por minutos e prancha por segundos | Tipos de série: aquecimento, drop-set, até a falha, superset |
+| Tipos de série (aquecimento, drop-set, falha, superset) | Não tem | Campo `setType` por série e agrupamento de superset na ficha; começa pelo aquecimento e pela falha |
+| Planejador de rotinas | Tem (fichas do treinador, "Meus treinos" privados, importação de PDF, montar do zero) | Duplicar e reordenar ficha pessoal; pastas por rotina |
+| Biblioteca de exercícios | 70 exercícios com GIF, sem vídeo em nenhum; treinador cadastra exercícios; aluno só cria dentro do próprio treino | Exercício personalizado do aluno (privado) reutilizável; mais cardio e alongamento; vídeos |
+| Estatísticas: volume, carga, PR, 1RM, grupos | Tem gráfico por exercício, recorde de carga, 1RM nas ferramentas e equilíbrio muscular | Painel único de evolução com volume semanal e PR por exercício |
+| Comunidade: seguir, curtir, feed, compartilhar rotina | Tem amigos; sem feed, curtida nem compartilhar ficha | Feed de treinos concluídos e compartilhar ficha como cópia privada |
+| Strava | Não tem | Exportar treino como atividade (OAuth); só depois da Gestão em produção |
+| Apple Watch e Wear OS | Não tem | Exige app nativo: começar pelo PWA com notificação de descanso e avaliar app nativo depois |
+| Plataforma do treinador | Tem (fichas, pacotes, vínculos, Gestão com financeiro) | Prescrever cardio e prancha no editor (feito), retenção e relatórios (Gestão) |
+
+Prioridade sugerida: (1) tipos de série, porque muda o registro de treino que todo aluno usa; (2) exercício personalizado do aluno e mais cardio; (3) feed e compartilhar ficha; (4) Strava; (5) relógio. As fichas da academia (Gestão) ainda usam só séries e repetições: cardio e prancha ficam para quando o contrato compartilhado ganhar o campo `kind`.

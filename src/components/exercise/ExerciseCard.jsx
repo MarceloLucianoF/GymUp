@@ -1,3 +1,4 @@
+import { exerciseKind, prescriptionLabel } from '../../utils/exerciseKind';
 import React, { useId, useState } from 'react';
 import { Check, ChevronDown, Layers, Repeat, Timer } from 'lucide-react';
 import ExerciseExecution from './ExerciseExecution';
@@ -37,9 +38,13 @@ function ExerciseCard({ exercise, isCompleted, onCheckIn, exerciseNumber }) {
       </header>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Stat icon={Layers}>{exercise.sets} séries</Stat>
-        <Stat icon={Repeat}>{exercise.reps} reps</Stat>
-        <Stat icon={Timer}>{exercise.rest}s descanso</Stat>
+        {exerciseKind(exercise) === 'cardio' ? <Stat icon={Timer}>{prescriptionLabel(exercise)}</Stat> : (
+          <>
+            <Stat icon={Layers}>{exercise.sets} séries</Stat>
+            <Stat icon={Repeat}>{exerciseKind(exercise) === 'timed' ? `${exercise.reps} s` : `${exercise.reps} reps`}</Stat>
+            <Stat icon={Timer}>{exercise.rest}s descanso</Stat>
+          </>
+        )}
       </div>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">

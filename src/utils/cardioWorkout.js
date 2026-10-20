@@ -1,3 +1,4 @@
+import { exerciseKind } from './exerciseKind';
 // Treino aeróbico (esteira, bicicleta, elíptico, remo...). A biblioteca de musculação não tem cardio, então a ficha vem de regras fixas:
 // aquecimento, blocos por modalidade e volta à calma, com a intensidade em percepção de esforço (PSE de 1 a 10). Não usa IA nem rede.
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -8,6 +9,8 @@ const MODALITIES = [
   { id: 'eliptico', re: /eliptico|transport/, label: 'Elíptico', warm: 'movimento leve', work: 'ritmo constante', fast: 'ritmo forte' },
   { id: 'remo', re: /remo ergom|remo indoor|ergometro de remo|remada ergom/, label: 'Remo ergométrico', warm: 'remada leve', work: 'remada constante', fast: 'remada forte' }
 ];
+
+export const isCardioExercise = (ex) => exerciseKind(ex) === 'cardio';
 
 export const isCardioRequest = (text) => /aerobic|aerobio|cardio|bicicleta|bike|esteira|eliptico|corrida|caminhada|spinning|hiit/.test(plain(text));
 
@@ -28,8 +31,8 @@ export function buildCardioWorkout(text, { goal = 'Emagrecimento', durationMinut
   const perMod = Math.max(5, Math.round(main / mods.length / 5) * 5);
   const exercises = [];
   const add = (name, minutes, description) => exercises.push({
-    firestoreId: `cardio-${exercises.length + 1}`, name: `${name} (${minutes} min)`, muscleGroup: 'Cardio',
-    sets: '1', reps: '1', rest: 0, machineImage: null, videoUrl: null, description
+    firestoreId: `cardio-${exercises.length + 1}`, name, muscleGroup: 'Cardio', kind: 'cardio', cardio: true, durationMin: minutes,
+    sets: '1', reps: String(minutes), rest: 0, machineImage: null, videoUrl: null, description
   });
   add(`${mods[0].label}: ${mods[0].warm}`, warm, 'Aquecimento: esforço 3 de 10 (dá para conversar sem esforço). Aumente aos poucos nos últimos minutos.');
   mods.forEach((m, i) => {

@@ -254,9 +254,10 @@ export const exercises = [
   {
     id: "ex20",
     name: "Esteira / Bike / Escada",
+    kind: "cardio", // duração em minutos (campo reps)
     sets: 1,
-    reps: 0, // Não se aplica
-    rest: 0, // Não se aplica
+    reps: 25,
+    rest: 0,
     description: "Cardio de baixa a moderada intensidade para queima de gordura e condicionamento.",
     execution: "Escolha sua máquina preferida (esteira, bicicleta ergométrica ou escada). Mantenha um ritmo constante onde você consiga conversar, mas sinta o esforço. Duração de 25 a 40 minutos.",
     machineImage: "/exercises/esteira-bike-escada.gif",
@@ -267,9 +268,10 @@ export const exercises = [
   {
     id: "ex21",
     name: "HIIT (Cardio de Alta Intensidade)",
+    kind: "cardio",
     sets: 1,
-    reps: 0, // Não se aplica
-    rest: 0, // Não se aplica
+    reps: 15, // minutos
+    rest: 0,
     description: "Cardio de alta intensidade para queima de gordura e melhora da capacidade cardiovascular.",
     execution: "Alternar períodos curtos de esforço máximo (ex: 30s de sprint) com períodos de recuperação ativa (ex: 60s de caminhada). Repetir por 15-20 minutos. Pode ser feito em esteira, bike ou com exercícios corporais.",
     machineImage: "/exercises/hiit-cardio-de-alta-intensidade.gif",
@@ -280,8 +282,9 @@ export const exercises = [
   {
     id: "ex22",
     name: "Prancha Abdominal",
+    kind: "timed", // segundos por série (campo reps)
     sets: 3,
-    reps: 0, // Duração em segundos
+    reps: 30,
     rest: 60,
     description: "Fortalece o core, abdômen e lombar. Melhora a postura e estabilidade.",
     execution: "Deite-se de bruços, apoie os antebraços e as pontas dos pés no chão. Mantenha o corpo reto, contraindo o abdômen e glúteos. Evite deixar o quadril cair ou subir demais. Mantenha a posição por 30-60 segundos.",

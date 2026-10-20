@@ -1,3 +1,4 @@
+import { cardioMinutes, exerciseKind, timedSeconds } from '../../utils/exerciseKind';
 // Helpers puros das telas do treinador (datas, moeda, status de aluno).
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const RISK_DAYS = 7;
@@ -91,14 +92,19 @@ export const estimateWorkout = (exercises = []) => {
   let sets = 0;
   let reps = 0;
   let restSeconds = 0;
+  let extraSeconds = 0;
+  let timedSets = 0;
   exercises.forEach((ex) => {
+    const kind = exerciseKind(ex);
+    if (kind === 'cardio') { extraSeconds += cardioMinutes(ex) * 60; return; }   // cardio: só minutos, sem séries nem repetições
     const s = Array.isArray(ex.sets) ? ex.sets.length : (Number(ex.sets) || 0);
+    if (kind === 'timed') { sets += s; timedSets += s; extraSeconds += s * (timedSeconds(ex) + (Number(ex.rest) || 0)); return; }
     const r = Array.isArray(ex.sets) ? parseReps(ex.sets[0]?.reps) : parseReps(ex.reps);
     sets += s;
     reps += s * r;
-    restSeconds += s * (Number(ex.rest) || 60);
+    restSeconds += s * (Number(ex.rest ?? 60) || 0);
   });
-  // ~40s de execução por série + descanso
-  const minutes = Math.round((sets * 40 + restSeconds) / 60);
+  // ~40s de execução por série + descanso (cardio e exercícios por tempo entram pela duração)
+  const minutes = Math.round(((sets - timedSets) * 40 + restSeconds + extraSeconds) / 60);
   return { sets, reps: Math.round(reps), minutes };
 };

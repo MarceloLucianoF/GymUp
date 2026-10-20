@@ -2,6 +2,7 @@ import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
 import { buildCardioWorkout, isCardioRequest } from '../utils/cardioWorkout';
+import { prescriptionLabel } from '../utils/exerciseKind';
 import { failureMessage } from './aiMeta';
 import {
   canonicalGroup as composerGroup, applyEquipmentConstraint, composeLocalPlan, describeConstraint, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseEquipmentConstraint, parseRequest,
@@ -535,7 +536,7 @@ export const aiService = {
         }
         onWorkout?.(workout);
         onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : workout.composition?.source === 'regras' ? 'regras' : 'indisponivel' });
-        const lines = workout.exercises.map((ex, i) => (ex.muscleGroup === 'Cardio' ? `${i + 1}. ${ex.name}` : `${i + 1}. ${ex.name} - ${ex.sets}x${ex.reps}`)).join('\n');
+        const lines = workout.exercises.map((ex, i) => `${i + 1}. ${ex.name} - ${prescriptionLabel(ex)}`).join('\n');
         const limit = parseEquipmentConstraint(safePrompt);
         return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}${limit ? `, ${describeConstraint(limit)}` : ''}:\n${lines}\nUse o botão abaixo para salvar em Meus treinos.`;
       } catch (error) {

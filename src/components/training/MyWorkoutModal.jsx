@@ -4,10 +4,14 @@ import { FileText, Loader2, PencilLine, Plus, ShieldCheck, Trash2, X } from 'luc
 import { exercises as LIBRARY } from '../../data/exercises';
 import { askWorkoutImport } from '../../services/aiService';
 import { saveMyWorkout } from '../../services/myWorkouts';
+import { KIND_LABELS, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, parseImportedWorkout, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const blank = (name, ref = null) => ({ key: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name, sets: 3, reps: '10', rest: 60, note: '', ref });
+const blank = (name, ref = null) => {
+  const kind = exerciseKind({ name, muscleGroup: ref?.muscleGroup, kind: ref?.kind });
+  return { key: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name, kind, ...defaultsForKind(kind), note: '', ref };
+};
 
 export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRARY, onSaved }) {
   const [step, setStep] = useState('choose');
@@ -47,7 +51,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
       if (removed.suspicious) notes.push('Trechos suspeitos do documento (pedidos de pagamento ou instruções para a IA) foram ignorados.');
       if (removed.truncated || truncatedPages) notes.push(`Só o começo do documento foi lido (até ${IMPORT_LIMITS.maxPages} páginas).`);
       setName(parsed.name);
-      setItems(parsed.exercises.map((e) => ({ ...blank(e.name, e.ref), sets: e.sets, reps: e.reps, rest: e.rest, note: e.note })));
+      setItems(parsed.exercises.map((e) => ({ ...blank(e.name, e.ref), kind: e.kind, sets: e.kind === 'cardio' ? '1' : e.sets, reps: e.kind === 'cardio' ? String(e.durationMin) : e.kind === 'timed' ? String(e.seconds) : e.reps, rest: e.kind === 'cardio' ? 0 : e.rest, note: e.note })));
       setWarnings(notes);
       setSource('pdf');
       setStep('edit');
@@ -69,7 +73,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     setBusy('Salvando...');
     try {
       const exs = valid.slice(0, 30).map((it, i) => toWorkoutExercise({
-        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note
+        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), kind: it.kind, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note
       }, it.ref, i));
       await saveMyWorkout(user.uid, { name, exercises: exs, source, description: source === 'pdf' ? 'Importado de um PDF seu.' : 'Montado por você.' });
       toast.success('Treino salvo em "Meus treinos".');
@@ -120,15 +124,27 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
               {items.map((it) => (
                 <li key={it.key} className="rounded-2xl bg-gray-100 p-3 dark:bg-white/5">
                   <div className="flex items-center gap-2">
-                    <input value={it.name} onChange={(e) => patch(it.key, { name: e.target.value.slice(0, IMPORT_LIMITS.maxName), ref: null })} aria-label="Nome do exercício" className="min-w-0 flex-1 input-brand-dark text-base font-bold" />
+                    <input value={it.name} onChange={(e) => patch(it.key, { name: e.target.value.slice(0, IMPORT_LIMITS.maxName), ref: null, ...(exerciseKind({ name: e.target.value }) !== it.kind ? { kind: exerciseKind({ name: e.target.value }), ...defaultsForKind(exerciseKind({ name: e.target.value })) } : {}) })} aria-label="Nome do exercício" className="min-w-0 flex-1 input-brand-dark text-base font-bold" />
                     <button type="button" onClick={() => setItems((l) => l.filter((x) => x.key !== it.key))} aria-label={`Remover ${it.name}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="h-4 w-4" aria-hidden="true" /></button>
                   </div>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">{it.ref ? 'Na biblioteca: terá imagem e explicação.' : 'Fora da biblioteca: sem imagem de demonstração.'}</p>
-                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs font-bold">
-                    <label>Séries<input type="number" inputMode="numeric" min="1" max="10" value={it.sets} onChange={(e) => patch(it.key, { sets: e.target.value })} className="mt-1 w-full input-brand-dark text-base" /></label>
-                    <label>Repetições<input value={it.reps} onChange={(e) => patch(it.key, { reps: e.target.value.slice(0, 12) })} className="mt-1 w-full input-brand-dark text-base" /></label>
-                    <label>Descanso (s)<input type="number" inputMode="numeric" min="0" max="600" value={it.rest} onChange={(e) => patch(it.key, { rest: e.target.value })} className="mt-1 w-full input-brand-dark text-base" /></label>
-                  </div>
+                  <label className="mt-2 block text-xs font-bold">Tipo
+                    <select value={it.kind} onChange={(e) => patch(it.key, { kind: e.target.value, ...defaultsForKind(e.target.value) })} className="mt-1 w-full input-brand-dark text-base">
+                      {Object.entries(KIND_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                    </select>
+                  </label>
+                  {it.kind === 'cardio' ? (
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-bold">
+                      <label>{repsFieldLabel('cardio')}<input type="number" inputMode="numeric" min="1" max="180" value={it.reps} onChange={(e) => patch(it.key, { reps: e.target.value })} className="mt-1 w-full input-brand-dark text-base" /></label>
+                      <label>Intensidade<input value={it.note} onChange={(e) => patch(it.key, { note: e.target.value.slice(0, IMPORT_LIMITS.maxNote) })} placeholder="ex.: leve, moderado" className="mt-1 w-full input-brand-dark text-base" /></label>
+                    </div>
+                  ) : (
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs font-bold">
+                      <label>Séries<input type="number" inputMode="numeric" min="1" max="10" value={it.sets} onChange={(e) => patch(it.key, { sets: e.target.value })} className="mt-1 w-full input-brand-dark text-base" /></label>
+                      <label>{repsFieldLabel(it.kind)}<input value={it.reps} onChange={(e) => patch(it.key, { reps: e.target.value.slice(0, 12) })} placeholder={repsPlaceholder(it.kind)} className="mt-1 w-full input-brand-dark text-base" /></label>
+                      <label>Descanso (s)<input type="number" inputMode="numeric" min="0" max="600" value={it.rest} onChange={(e) => patch(it.key, { rest: e.target.value })} className="mt-1 w-full input-brand-dark text-base" /></label>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

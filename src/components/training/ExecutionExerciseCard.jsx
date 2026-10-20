@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote } from 'lucide-react';
 import SetRow from './SetRow';
+import { cardioMinutes, exerciseKind, prescriptionLabel, timedSeconds } from '../../utils/exerciseKind';
 import { getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
 
 // Card de exercício da execução do treino (modo lista ou foco).
@@ -13,14 +14,18 @@ const ExecutionExerciseCard = ({
 }) => {
     if (!ex) return null;
 
-    const setsCount = parseInt(ex.sets, 10) || 3;
+    const kind = exerciseKind(ex);
+    const cardio = kind === 'cardio';
+    const timed = kind === 'timed';
+    const cardioMin = cardioMinutes(ex);
+    const setsCount = cardio ? 1 : (parseInt(ex.sets, 10) || 3);
     const setsArray = Array.from({ length: setsCount });
     const exName = ex.name || `Exercício ${exIndex + 1}`;
     const lastLoad = historyMap[exName];
     const restSeconds = ex.rest || 60;
 
-    const repsRaw = (ex.reps && String(ex.reps) !== 'undefined') ? String(ex.reps) : '10';
-    const repsPlaceholder = repsRaw.includes('-') ? repsRaw.split('-')[0] : (repsRaw !== 'undefined' ? repsRaw : '10');
+    const repsRaw = timed ? String(timedSeconds(ex)) : ((ex.reps && String(ex.reps) !== 'undefined' && String(ex.reps) !== '0') ? String(ex.reps) : '10');
+    const repsPlaceholder = cardio ? String(cardioMin) : repsRaw.includes('-') ? repsRaw.split('-')[0] : (repsRaw !== 'undefined' ? repsRaw : '10');
 
     // Inteligência de Progressão de Carga + Repetições
     const lastReps = getLastReps(rawHistoryDocs, exName);
@@ -35,7 +40,7 @@ const ExecutionExerciseCard = ({
     const allDone = setsArray.every((_, sIdx) => isSetDone(sIdx));
     const nextUndoneIndex = setsArray.findIndex((_, sIdx) => !isSetDone(sIdx));
 
-    const checkSet = (setIndex) => onCheckSet(exIndex, setIndex, repsPlaceholder, setsCount, restSeconds, exName);
+    const checkSet = (setIndex) => onCheckSet(exIndex, setIndex, repsPlaceholder, setsCount, cardio ? 5 : restSeconds, exName);
 
     return (
         <div className={`surface animate-fade-up overflow-hidden ${isFocusMode ? 'min-h-[50vh] flex flex-col' : ''}`}>
@@ -65,8 +70,8 @@ const ExecutionExerciseCard = ({
                     <h3 className={`${isFocusMode ? 'text-xl' : 'text-lg'} font-black text-gray-800 dark:text-white leading-tight truncate`}>{exName}</h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 uppercase font-bold">{ex.muscleGroup || 'Geral'}</p>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] bg-brand/10 text-amber-800 dark:text-brand border border-brand/20 px-2 py-0.5 rounded font-bold">Meta: {setsCount}x {repsRaw}</span>
-                        {lastLoad ? (
+                        <span className="text-[10px] bg-brand/10 text-amber-800 dark:text-brand border border-brand/20 px-2 py-0.5 rounded font-bold">Meta: {prescriptionLabel(ex)}</span>
+                        {!cardio && !timed && lastLoad ? (
                             <button
                                 onClick={() => onOpenLoadHistory(exName)}
                                 className="text-[10px] bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 px-2 py-0.5 rounded font-bold hover:scale-105 active:scale-95 transition-all flex items-center gap-1"
@@ -75,9 +80,11 @@ const ExecutionExerciseCard = ({
                                 <History className="w-3 h-3" /> {lastLoad}kg
                             </button>
                         ) : null}
+                        {!cardio && (
                         <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded font-bold flex items-center gap-1">
                             <Timer className="w-3 h-3" /> {restSeconds}s
                         </span>
+                        )}
                     </div>
                 </div>
                 {/* Botão de Dica/Vídeo no header */}
@@ -89,18 +96,23 @@ const ExecutionExerciseCard = ({
             </div>
 
             {/* Dica Inteligente de Progresso de Cargas */}
-            <div className="bg-brand/10 border-y border-brand/20 px-4 py-2.5 flex items-center justify-between text-xs">
+            {!cardio && !timed && <div className="bg-brand/10 border-y border-brand/20 px-4 py-2.5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                     <Sparkles className="w-4 h-4 text-amber-800 dark:text-brand shrink-0 animate-pulse" />
                     <span className="min-w-0 font-bold leading-snug text-amber-800 dark:text-brand">
                         {smartTip}
                     </span>
                 </div>
-            </div>
+            </div>}
+            {cardio && (
+                <div className="bg-brand/10 border-y border-brand/20 px-4 py-2.5 text-xs font-bold text-amber-800 dark:text-brand">
+                    {ex.description || 'Mantenha o ritmo indicado e respire de forma controlada.'}
+                </div>
+            )}
 
             {/* Cópia da última sessão e nota do exercício */}
             <div className="px-4 py-3 space-y-2 border-b border-gray-100 dark:border-gray-700/50">
-                {hasLastSession && (
+                {!cardio && hasLastSession && (
                     <button
                         type="button" onClick={() => onCopyLast(exIndex, exName, setsCount)}
                         className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/10 px-3 text-xs font-black text-amber-800 dark:text-brand active:scale-95 transition-all"
@@ -124,7 +136,18 @@ const ExecutionExerciseCard = ({
 
             {/* Séries */}
             <div className="divide-y divide-gray-100 dark:divide-gray-700/50 flex-1 overflow-y-auto">
-                {setsArray.map((_, setIndex) => (
+                {cardio ? (
+                    <div className="p-4">
+                        <button
+                            type="button"
+                            onClick={() => checkSet(0)}
+                            aria-pressed={!!isSetDone(0)}
+                            className={`w-full min-h-[56px] rounded-2xl text-base font-black transition-all active:scale-95 ${isSetDone(0) ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-brand text-black'}`}
+                        >
+                            {isSetDone(0) ? `Feito: ${cardioMin} min (toque para desfazer)` : `Concluir ${cardioMin} min`}
+                        </button>
+                    </div>
+                ) : setsArray.map((_, setIndex) => (
                     <SetRow
                         key={setIndex}
                         setIndex={setIndex}
@@ -132,6 +155,7 @@ const ExecutionExerciseCard = ({
                         weightPlaceholder={lastLoad}
                         repsPlaceholder={repsPlaceholder}
                         isFocusMode={isFocusMode}
+                        kind={kind}
                         isPR={!!sessionData[`${exIndex}-${setIndex}`]?.completed && isPRSet(sessionData[`${exIndex}-${setIndex}`]?.weight, lastLoad)}
                         onAdjust={(sIdx, field, delta) => onAdjust(exIndex, sIdx, field, delta, field === 'weight' ? lastLoad : targetRepsNum)}
                         onInput={(sIdx, field, value) => onInput(exIndex, sIdx, field, value)}
@@ -162,7 +186,7 @@ const ExecutionExerciseCard = ({
                             }}
                             className="w-full bg-gradient-to-r from-brand to-[#FF9800] text-black min-h-[60px] text-base font-black rounded-2xl shadow-lg shadow-brand/30 flex items-center justify-center gap-2 transition-all active:scale-95 animate-pulse-ring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
                         >
-                            <Check className="w-5 h-5" /> CONCLUIR SÉRIE #{nextUndoneIndex + 1} & DESCANSAR
+                            <Check className="w-5 h-5" /> {cardio ? `CONCLUIR ${cardioMin} MIN` : `CONCLUIR SÉRIE #${nextUndoneIndex + 1} & DESCANSAR`}
                         </button>
                     )}
                   </div>

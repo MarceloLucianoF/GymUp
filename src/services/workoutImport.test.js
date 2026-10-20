@@ -83,3 +83,25 @@ describe('resposta da IA (não confiável)', () => {
     expect(matchLibrary('Rosca direta', lib)).toBeNull();
   });
 });
+
+describe('tipos de exercício na importação', () => {
+  test('cardio vira minutos, prancha vira segundos e musculação mantém séries e repetições', () => {
+    const raw = JSON.stringify({ name: 'Treino', exercises: [
+      { name: 'Esteira', type: 'cardio', minutes: 25, note: 'leve' },
+      { name: 'Bicicleta ergométrica', sets: 3, reps: '10' },
+      { name: 'Prancha abdominal', type: 'timed', sets: 3, seconds: 45 },
+      { name: 'Supino reto', sets: 4, reps: '8-12', rest: 90 }
+    ] });
+    const w = parseImportedWorkout(raw, []);
+    const [esteira, bike, prancha, supino] = w.exercises;
+    expect(esteira.kind).toBe('cardio'); expect(esteira.durationMin).toBe(25);
+    expect(bike.kind).toBe('cardio'); expect(bike.durationMin).toBe(20);   // sem minutos informados: 20, nunca "3 x 10 de bicicleta"
+    expect(prancha.kind).toBe('timed'); expect(prancha.seconds).toBe(45);
+    expect(supino.kind).toBe('strength');
+    expect(w.warnings.join(' ')).toMatch(/^2 exercício\(s\) não estão/);   // só prancha e supino: cardio livre não conta como fora da biblioteca
+    const { toWorkoutExercise } = require('./workoutImport');
+    expect(toWorkoutExercise(esteira, null, 0)).toMatchObject({ kind: 'cardio', sets: '1', reps: '25', rest: 0, durationMin: 25 });
+    expect(toWorkoutExercise(prancha, null, 2)).toMatchObject({ kind: 'timed', sets: '3', reps: '45' });
+    expect(toWorkoutExercise(supino, null, 3)).toMatchObject({ kind: 'strength', sets: '4', reps: '8-12', rest: 90 });
+  });
+});
