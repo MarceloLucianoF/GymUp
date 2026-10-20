@@ -1,3 +1,4 @@
+import { EQUIPMENT, EQUIPMENT_LABELS, equipmentOf } from '../../utils/equipment';
 import ExerciseThumb from '../../components/ui/ExerciseThumb';
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, orderBy, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -15,7 +16,7 @@ import PageSkeleton from '../../components/coach/PageSkeleton';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
 const BASE_GROUPS = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Cardio', 'Full Body'];
-const EMPTY_FORM = { name: '', muscleGroup: 'Peito', demoUrl: '', equipment: 'Máquina' };
+const EMPTY_FORM = { name: '', muscleGroup: 'Peito', demoUrl: '', equipment: 'maquina' };
 const norm = (s) => String(s || '').trim().toLowerCase();
 const cap = (s) => { const t = String(s || '').trim(); return t ? t[0].toUpperCase() + t.slice(1) : 'Outros'; };
 
@@ -64,14 +65,14 @@ export default function ExerciseLibrary() {
       && (!term || norm(ex.name).includes(term) || norm(ex.muscleGroup).includes(term) || norm(ex.equipment).includes(term)));
   }, [exercises, searchTerm, group]);
 
-  const openEdit = (ex) => setForm({ id: ex.id, name: ex.name || '', muscleGroup: ex.muscleGroup || 'Peito', demoUrl: ex.demoUrl || ex.machineImage || '', equipment: ex.equipment || '' });
+  const openEdit = (ex) => setForm({ id: ex.id, name: ex.name || '', muscleGroup: ex.muscleGroup || 'Peito', demoUrl: ex.demoUrl || ex.machineImage || '', equipment: equipmentOf(ex) });
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return toast.error('Nome é obrigatório');
     setSaving(true);
     const toastId = toast.loading('Salvando...');
-    const fields = { name: form.name.trim(), muscleGroup: form.muscleGroup, equipment: form.equipment.trim(), demoUrl: form.demoUrl.trim(), machineImage: form.demoUrl.trim() };
+    const fields = { name: form.name.trim(), muscleGroup: form.muscleGroup, equipment: form.equipment, demoUrl: form.demoUrl.trim(), machineImage: form.demoUrl.trim() };
     try {
       if (form.id) {
         await updateDoc(doc(db, 'exercises', form.id), { ...fields, updatedAt: serverTimestamp() });
@@ -177,7 +178,7 @@ export default function ExerciseLibrary() {
               </div>
               <div>
                 <label htmlFor="ex-eq" className={labelCls}>Equipamento</label>
-                <input id="ex-eq" value={form.equipment} onChange={(e) => setForm({ ...form, equipment: e.target.value })} placeholder="Ex: Halteres" className={inputCls} />
+                <select id="ex-eq" value={form.equipment} onChange={(e) => setForm({ ...form, equipment: e.target.value })} className={inputCls}>{EQUIPMENT.map((k) => <option key={k} value={k}>{EQUIPMENT_LABELS[k]}</option>)}</select>
               </div>
             </div>
             <div>

@@ -85,3 +85,24 @@ describe('sem emojis nas respostas da IA', () => {
     expect(text).toMatch(/NUNCA use emojis/);
   });
 });
+
+describe('equipamentos da academia do aluno', () => {
+  const { aiService: svc } = require('./aiService');
+  const { InsufficientExercisesError } = require('../utils/workoutComposer');
+  test('gerador local só usa o que o aluno tem', () => {
+    const w = svc.generateLocalWorkout({ muscleFocus: 'Full Body (Corpo Todo)', equipment: ['halter', 'livre'] });
+    expect(w.exercises.length).toBeGreaterThan(2);
+    const { exercises } = require('../data/exercises');
+    const { equipmentOptions } = require('../utils/equipment');
+    w.exercises.forEach((e) => {
+      const ref = exercises.find((x) => x.name === e.name);
+      expect(equipmentOptions(ref).some((o) => ['halter', 'livre'].includes(o))).toBe(true);
+    });
+  });
+  test('pouquíssimos equipamentos dão erro claro em vez de ficha fora do que ele tem', () => {
+    expect(() => svc.generateLocalWorkout({ muscleFocus: 'Full Body (Corpo Todo)', equipment: ['cardio'] })).toThrow(InsufficientExercisesError);
+  });
+  test('sem escolha continua como antes', () => {
+    expect(svc.generateLocalWorkout({ muscleFocus: 'Peito e Tríceps' }).exercises.length).toBeGreaterThan(2);
+  });
+});
