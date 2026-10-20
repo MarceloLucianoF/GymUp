@@ -4,6 +4,7 @@ import { doc, getDoc, collection, getDocs, query, where, orderBy, limit } from '
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
+import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
 import { Dumbbell, Flame, Scale, ClipboardList, Wrench } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 
@@ -36,11 +37,21 @@ export default function TrainingPage() {
         if (!trainingId) throw new Error("ID do treino indefinido.");
 
         // A. Busca Treino (Robustez: Tenta ID do Doc e depois firestoreId)
-        let docSnap = await getDoc(doc(db, 'trainings', trainingId));
         let finalData = null;
         let finalId = null;
+        let docSnap = null;
+        if (isMyTrainingId(trainingId)) {
+          // Treino pessoal: só o dono lê (regras); fica fora da loja.
+          const mine = await getDoc(doc(db, 'users', user.uid, 'myWorkouts', fromMyTrainingId(trainingId)));
+          if (!mine.exists()) throw new Error('Treino não encontrado.');
+          finalData = { ...mine.data(), isMine: true }; finalId = trainingId;
+        } else {
+          docSnap = await getDoc(doc(db, 'trainings', trainingId));
+        }
 
-        if (docSnap.exists()) {
+        if (finalData) {
+          // já carregado acima
+        } else if (docSnap.exists()) {
             finalData = docSnap.data();
             finalId = docSnap.id;
         } else {

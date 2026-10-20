@@ -12,6 +12,7 @@ export const failureMessage = (reason) => ({
 
 export const modelLabel = (meta) => {
   if (!meta) return 'Coach IA';
+  if (meta.provider === 'local' && meta.reason === 'regras') return 'Coach IA';
   if (meta.provider === 'local') return meta.reason === 'sem-internet' ? 'Sem internet' : 'IA indisponível';
   if (meta.provider === 'nvidia') {
     const short = String(meta.model || '').split('/').pop().replace(/^llama-3\.1-/, '').replace(/-instruct$/, '');

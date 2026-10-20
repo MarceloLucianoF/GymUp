@@ -5,7 +5,10 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search } from 'lucide-react';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import MyWorkoutModal from '../../components/training/MyWorkoutModal';
+import { deleteMyWorkout, listMyWorkouts } from '../../services/myWorkouts';
 import AICoachModal from '../../components/ai/AICoachModal';
 import { formatDate } from '../../utils/format';
 import ErrorState from '../../components/common/ErrorState';
@@ -47,6 +50,22 @@ export default function TrainingsPage() {
   const [packagesReload, setPackagesReload] = useState(0);
   const [collapsedPackages, setCollapsedPackages] = useState({});
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isMineOpen, setIsMineOpen] = useState(false);
+  const [mine, setMine] = useState([]);
+  const [mineReload, setMineReload] = useState(0);
+
+  // Treinos pessoais (privados): digitados ou importados de PDF. Não vêm da loja de fichas.
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    listMyWorkouts(user.uid).then((rows) => { if (alive) setMine(rows); }).catch((err) => console.error('Erro ao buscar meus treinos:', err));
+    return () => { alive = false; };
+  }, [user, mineReload]);
+
+  const removeMine = async (training) => {
+    if (!window.confirm(`Apagar o treino "${training.name}"?`)) return;
+    try { await deleteMyWorkout(user.uid, training.docId); setMineReload((n) => n + 1); toast.success('Treino apagado.'); } catch { toast.error('Não consegui apagar o treino.'); }
+  };
 
   // 1. Busca Histórico
   useEffect(() => {
@@ -255,6 +274,16 @@ export default function TrainingsPage() {
               title="Fichas de treino"
               subtitle="Escolha sua missão ou gere uma ficha inteligente por IA."
               actions={
+                <div className="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    onClick={() => setIsMineOpen(true)}
+                    aria-label="Cadastrar meu treino"
+                    className="pressable min-h-[44px] px-4 text-xs font-black rounded-2xl bg-gray-100 text-gray-900 dark:bg-white/10 dark:text-white shrink-0 inline-flex items-center gap-2"
+                >
+                    <FilePlus2 className="w-4 h-4" aria-hidden="true" />
+                    Meu treino
+                </button>
                 <button
                     type="button"
                     onClick={() => setIsAIModalOpen(true)}
@@ -264,6 +293,7 @@ export default function TrainingsPage() {
                     <Sparkles className="w-4 h-4 fill-current" aria-hidden="true" />
                     Gerar com IA
                 </button>
+                </div>
               }
             />
 
@@ -293,7 +323,30 @@ export default function TrainingsPage() {
             </div>
         ) : (
           <div className="space-y-8">
-            
+            {/* Meus treinos: privados, só do aluno */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 px-1">
+                <Dumbbell className="w-5 h-5 text-brand" aria-hidden="true" />
+                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Meus treinos</h2>
+                <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{mine.length}</span>
+              </div>
+              {mine.length === 0 ? (
+                <button type="button" onClick={() => setIsMineOpen(true)} className="surface pressable w-full p-5 text-left">
+                  <p className="font-bold text-gray-800 dark:text-white">Cadastre o treino que você já usa</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Importe um PDF ou monte do zero com os aparelhos que a sua academia tem. Só você vê.</p>
+                </button>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mine.map((t, i) => (
+                    <div key={t.id} className="relative">
+                      {renderTrainingCard({ ...t, _validId: t.id, difficulty: 'Meu treino' }, i)}
+                      <button type="button" onClick={() => removeMine(t)} aria-label={`Apagar ${t.name}`} className="absolute bottom-3 right-16 z-10 grid h-11 w-11 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="w-4 h-4" aria-hidden="true" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Pacotes de Treino */}
             {packages.map(pkg => {
               const pkgTrainings = packagedTrainings[pkg.id] || [];
@@ -373,6 +426,8 @@ export default function TrainingsPage() {
           </div>
         )}
       </div>
+
+      <MyWorkoutModal isOpen={isMineOpen} onClose={() => setIsMineOpen(false)} user={user} onSaved={() => setMineReload((n) => n + 1)} />
 
       {/* MODAL DO COACH IA */}
       <AICoachModal
