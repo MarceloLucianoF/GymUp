@@ -7,7 +7,7 @@ export const KINDS = ['strength', 'timed', 'cardio'];
 export const KIND_LABELS = { strength: 'Musculação (séries e repetições)', timed: 'Por tempo (prancha, isometria)', cardio: 'Cardio (esteira, bike, escada)' };
 
 const CARDIO_NAME = /esteira|\bbike\b|bicicleta ergom|escada|eliptico|hiit|corrida|caminhada|pular corda|remo ergom|spinning|transport/;
-const TIMED_NAME = /prancha|isometri|dead hang|suspensao|parede isometrica|wall sit|\bhollow\b/;
+const TIMED_NAME = /prancha|isometri|dead hang|suspensao|parede isometrica|wall sit|\bhollow\b|alongamento|postura da crianca|\(cat stretch\)|aquecimento/;
 
 export function exerciseKind(ex) {
   if (KINDS.includes(ex?.kind)) return ex.kind;

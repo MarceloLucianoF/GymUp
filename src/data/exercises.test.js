@@ -35,3 +35,32 @@ describe('biblioteca embutida de exercícios', () => {
     expect(lib.filter((e) => e.primaryGroup === 'core').length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('ampliação do catálogo (ex71 em diante)', () => {
+  const novos = exercises.filter((e) => Number(e.id.replace('ex', '')) > 70);
+  test('são 48 novos, com ids seguidos e nomes únicos em toda a biblioteca', () => {
+    expect(novos).toHaveLength(48);
+    expect(new Set(exercises.map((e) => e.id)).size).toBe(exercises.length);
+    expect(new Set(exercises.map((e) => e.name.toLowerCase())).size).toBe(exercises.length);
+  });
+  test('alongamento e mobilidade são por tempo, sem carga, e cardio é por minutos', () => {
+    novos.filter((e) => e.muscleGroup === 'mobilidade').forEach((e) => { expect(e.kind).toBe('timed'); expect(e.reps).toBeGreaterThanOrEqual(20); expect(e.sets).toBeLessThanOrEqual(3); });
+    novos.filter((e) => e.muscleGroup === 'cardio').forEach((e) => { expect(e.kind).toBe('cardio'); expect(e.sets).toBe(1); expect(e.rest).toBe(0); });
+    expect(novos.filter((e) => e.muscleGroup === 'mobilidade').length).toBeGreaterThanOrEqual(10);
+  });
+  test('o gerador de fichas de musculação não usa alongamento nem cardio', () => {
+    const lib = normalizeLibrary(exercises).filter((e) => ['mobilidade', 'cardio'].includes(e.primaryGroup));
+    expect(lib.length).toBeGreaterThan(15);
+    const { composeLocalPlan, specFromFocus } = require('../utils/workoutComposer');
+    ['Full Body (Corpo Todo)', 'Peito e Tríceps', 'Pernas Completo'].forEach((focus) => {
+      const plan = composeLocalPlan({ spec: specFromFocus(focus), library: normalizeLibrary(exercises), total: 6, goal: 'Hipertrofia' });
+      plan.exercises.forEach((e) => expect(['mobilidade', 'cardio']).not.toContain(e.primaryGroup));
+    });
+  });
+  test('quem só tem halteres e peso do corpo agora tem peso livre em todos os grupos principais', () => {
+    const { filterByEquipment } = require('../utils/equipment');
+    const lib = filterByEquipment(exercises, ['barra']);
+    const groups = new Set(lib.map((e) => e.muscleGroup));
+    ['peito', 'costas', 'perna', 'triceps', 'biceps'].forEach((g) => expect(groups.has(g)).toBe(true));
+  });
+});

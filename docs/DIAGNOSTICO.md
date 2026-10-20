@@ -707,3 +707,10 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - Biblioteca embutida alinhada ao Firestore (dificuldades, grupo do Crucifixo Inverso, "avançado" com acento). Auditoria depois da limpeza: 0 erros, 0 duplicatas prováveis, 0 divergências entre fontes, 0 títulos incoerentes; restam 4 mídias aproximadas, 1 descrição curta e as 4 fichas demo.
 - **Fichas demo (20/10/2026):** os 8 alunos de demonstração foram migrados para fichas reais do pacote Split ABC (backup dos documentos antes) e as 4 fichas demo foram apagadas. Cuidado: `scripts/seed-demo.cjs --apply` recria essas fichas e os alunos de demonstração; não rodar contra produção.
 - Aplicar a mudança de código exige publicar o app; os dados de produção já estão alinhados.
+
+## Catálogo ampliado para 118 exercícios embutidos (20/10/2026)
+- 48 exercícios novos (peso livre e peso do corpo 30, cardio 7, alongamento e mobilidade 11), cada um com foto e GIF do Free Exercise DB (domínio público) e texto em português conferido contra o movimento da imagem. Novo grupo `mobilidade` (por tempo, sem carga) no normalizador, no editor do treinador e na auditoria.
+- Coach IA: "treino de alongamento" monta uma sequência de 8 alongamentos por tempo; o gerador de musculação não usa alongamento nem cardio.
+- Auditoria: 0 erros; catálogo final de 120; restam 4 mídias aproximadas e a descrição curta de Glúteo Máquina.
+- **Pendências:** panturrilha segue com só 3 exercícios; vídeos (nenhum exercício tem); revisão dos textos por um treinador; a mídia nova são 2 quadros (sem vídeo de execução).
+- **Verificado:** 518 testes e build. **Não executado:** conferência no navegador das novas fichas (alongamento e cardio) e dos novos GIFs na versão publicada.

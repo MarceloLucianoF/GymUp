@@ -7,8 +7,8 @@ import { exerciseKind } from './exerciseKind';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-export const GROUPS = ['peito', 'costas', 'ombros', 'biceps', 'triceps', 'pernas', 'gluteos', 'panturrilha', 'core', 'cardio'];
-export const GROUP_LABELS = { peito: 'Peito', costas: 'Costas', ombros: 'Ombros', biceps: 'Bíceps', triceps: 'Tríceps', pernas: 'Pernas', gluteos: 'Glúteos', panturrilha: 'Panturrilha', core: 'Core', cardio: 'Cardio' };
+export const GROUPS = ['peito', 'costas', 'ombros', 'biceps', 'triceps', 'pernas', 'gluteos', 'panturrilha', 'core', 'cardio', 'mobilidade'];
+export const GROUP_LABELS = { peito: 'Peito', costas: 'Costas', ombros: 'Ombros', biceps: 'Bíceps', triceps: 'Tríceps', pernas: 'Pernas', gluteos: 'Glúteos', panturrilha: 'Panturrilha', core: 'Core', cardio: 'Cardio', mobilidade: 'Alongamento e mobilidade' };
 export const DIFFICULTIES = ['iniciante', 'intermediario', 'avancado'];
 /** Como a dificuldade é GRAVADA (a mesma do editor do treinador); a comparação em código ignora acento e caixa. */
 export const STORED_DIFFICULTY = { iniciante: 'iniciante', intermediario: 'intermediário', avancado: 'avançado' };
@@ -19,6 +19,7 @@ export function catalogGroup(ex) {
   const g = plain(ex?.muscleGroup || ex?.category);
   const n = plain(ex?.name);
   if (/cardio|aerobi/.test(g)) return 'cardio';
+  if (/mobilidade|alongament|aquecimento/.test(g)) return 'mobilidade';
   if (/peit/.test(g)) return 'peito';
   if (/costa|dorsal|trapez|lombar/.test(g)) return 'costas';
   if (/ombro|deltoid/.test(g)) return 'ombros';

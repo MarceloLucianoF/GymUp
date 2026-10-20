@@ -1,6 +1,6 @@
 import { safeHttpUrl } from '../../../utils/safeUrl';
 
-export const MUSCLE_GROUPS = [['peito', 'Peito'], ['costas', 'Costas'], ['ombros', 'Ombros'], ['braços', 'Braços'], ['pernas', 'Pernas'], ['core', 'Core']];
+export const MUSCLE_GROUPS = [['peito', 'Peito'], ['costas', 'Costas'], ['ombros', 'Ombros'], ['braços', 'Braços'], ['pernas', 'Pernas'], ['core', 'Core'], ['mobilidade', 'Alongamento e mobilidade']];
 export const GROUP_LABEL = Object.fromEntries(MUSCLE_GROUPS);
 export const DIFFICULTIES = [['iniciante', 'Iniciante'], ['intermediário', 'Intermediário'], ['avançado', 'Avançado']];
 
