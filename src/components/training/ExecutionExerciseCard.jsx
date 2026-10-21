@@ -1,14 +1,15 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote } from 'lucide-react';
+import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote, Repeat2 } from 'lucide-react';
 import SetRow from './SetRow';
 import { cardioMinutes, exerciseKind, prescriptionLabel, timedSeconds } from '../../utils/exerciseKind';
 import { isSetType } from '../../utils/setTypes';
+import { dropLoad, fmtKg, suggestNext } from '../../utils/progression';
 import { getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
 
 // Card de exercício da execução do treino (modo lista ou foco).
 const ExecutionExerciseCard = ({
-    ex, exIndex, isFocusMode = false, superset = null,
+    ex, exIndex, isFocusMode = false, superset = null, onSwap,
     historyMap, rawHistoryDocs, sessionData,
     isLastExercise,
     onInput, onCheckSet, onAdjust, onCopyLast, onNote, onOpenLoadHistory, onZoom, onShowVideo, onNextExercise, onFinish
@@ -32,6 +33,10 @@ const ExecutionExerciseCard = ({
     const lastReps = getLastReps(rawHistoryDocs, exName);
     const targetRepsNum = parseInt(repsPlaceholder, 10) || 10;
     const smartTip = getSmartTip(lastLoad, lastReps, targetRepsNum);
+    // Carga sugerida por dupla progressão (a partir do último treino deste exercício); sem histórico, a dica antiga
+    const suggestion = (!cardio && !timed) ? suggestNext({ historyDocs: rawHistoryDocs, exName, reps: ex.reps, exercise: ex }) : null;
+    const repsHint = suggestion ? String(suggestion.reps) : repsPlaceholder;
+    const loadHint = suggestion && suggestion.load > 0 ? String(suggestion.load) : lastLoad;
 
     const lastNote = getLastNote(rawHistoryDocs, exName);
     const hasLastSession = getLastSessionSets(rawHistoryDocs, exName).length > 0;
@@ -41,7 +46,19 @@ const ExecutionExerciseCard = ({
     const allDone = setsArray.every((_, sIdx) => isSetDone(sIdx));
     const nextUndoneIndex = setsArray.findIndex((_, sIdx) => !isSetDone(sIdx));
 
-    const checkSet = (setIndex) => onCheckSet(exIndex, setIndex, repsPlaceholder, setsCount, cardio ? 5 : restSeconds, exName);
+    const typeOf = (i) => (isSetType(sessionData[`${exIndex}-${i}`]?.type) ? sessionData[`${exIndex}-${i}`].type : (isSetType(ex.setTypes?.[i]) ? ex.setTypes[i] : 'normal'));
+    const checkSet = (setIndex) => onCheckSet(exIndex, setIndex, repsHint, setsCount, cardio ? 5 : restSeconds, exName, suggestion && suggestion.load > 0 ? (typeOf(setIndex) === 'drop' ? dropLoad(suggestion.load) : suggestion.load) : null);
+    // Preenche as séries ainda vazias com a sugestão (aquecimento fica de fora; drop-set usa cerca de 70% da carga)
+    const applySuggestion = () => {
+        if (!suggestion) return;
+        setsArray.forEach((_, i) => {
+            const d = sessionData[`${exIndex}-${i}`] || {};
+            if (d.completed || typeOf(i) === 'warmup') return;
+            const w = typeOf(i) === 'drop' ? dropLoad(suggestion.load) : suggestion.load;
+            if (!d.weight && w > 0) onInput(exIndex, i, 'weight', String(w));
+            if (!d.reps) onInput(exIndex, i, 'reps', String(suggestion.reps));
+        });
+    };
 
     return (
         <div className={`surface animate-fade-up overflow-hidden ${isFocusMode ? 'min-h-[50vh] flex flex-col' : ''}`}>
@@ -107,9 +124,12 @@ const ExecutionExerciseCard = ({
                 <div className="flex items-center gap-2 min-w-0">
                     <Sparkles className="w-4 h-4 text-amber-800 dark:text-brand shrink-0 animate-pulse" />
                     <span className="min-w-0 font-bold leading-snug text-amber-800 dark:text-brand">
-                        {smartTip}
+                        {suggestion ? suggestion.text : smartTip}
                     </span>
                 </div>
+                {suggestion && suggestion.load > 0 && (
+                    <button type="button" onClick={applySuggestion} aria-label={`Usar sugestão: ${fmtKg(suggestion.load)} kg por ${suggestion.reps} repetições`} className="ml-3 min-h-[36px] shrink-0 rounded-xl bg-brand px-3 text-xs font-black text-black active:scale-95">Usar</button>
+                )}
             </div>}
             {cardio && (
                 <div className="bg-brand/10 border-y border-brand/20 px-4 py-2.5 text-xs font-bold text-amber-800 dark:text-brand">
@@ -119,14 +139,21 @@ const ExecutionExerciseCard = ({
 
             {/* Cópia da última sessão e nota do exercício */}
             <div className="px-4 py-3 space-y-2 border-b border-gray-100 dark:border-gray-700/50">
-                {!cardio && hasLastSession && (
-                    <button
-                        type="button" onClick={() => onCopyLast(exIndex, exName, setsCount)}
-                        className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/10 px-3 text-xs font-black text-amber-800 dark:text-brand active:scale-95 transition-all"
-                    >
-                        <Copy className="w-4 h-4" aria-hidden="true" /> Copiar da última sessão
-                    </button>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                    {!cardio && hasLastSession && (
+                        <button
+                            type="button" onClick={() => onCopyLast(exIndex, exName, setsCount)}
+                            className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/10 px-3 text-xs font-black text-amber-800 dark:text-brand active:scale-95 transition-all"
+                        >
+                            <Copy className="w-4 h-4" aria-hidden="true" /> Copiar da última sessão
+                        </button>
+                    )}
+                    {onSwap && (
+                        <button type="button" onClick={() => onSwap(exIndex)} aria-label={`Trocar ${exName}`} className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-xs font-black text-gray-800 active:scale-95 transition-all dark:bg-white/10 dark:text-gray-100">
+                            <Repeat2 className="w-4 h-4" aria-hidden="true" /> Trocar exercício
+                        </button>
+                    )}
+                </div>
                 {lastNote && (
                     <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-300">
                         <StickyNote className="w-4 h-4 shrink-0" aria-hidden="true" /> <span><b>Última nota:</b> {lastNote}</span>
@@ -159,8 +186,8 @@ const ExecutionExerciseCard = ({
                         key={setIndex}
                         setIndex={setIndex}
                         data={sessionData[`${exIndex}-${setIndex}`] || {}}
-                        weightPlaceholder={lastLoad}
-                        repsPlaceholder={repsPlaceholder}
+                        weightPlaceholder={loadHint}
+                        repsPlaceholder={repsHint}
                         isFocusMode={isFocusMode}
                         kind={kind}
                         type={isSetType(sessionData[`${exIndex}-${setIndex}`]?.type) ? sessionData[`${exIndex}-${setIndex}`].type : (isSetType(ex.setTypes?.[setIndex]) ? ex.setTypes[setIndex] : 'normal')}
