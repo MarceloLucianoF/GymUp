@@ -7,7 +7,7 @@ Estado em 16/10/2026. A infraestrutura de produção existe, foi testada e está
 | --- | --- |
 | API | Worker `bohtreinar-academy-worker`, https://bohtreinar-academy-worker.marcelo-labs.workers.dev |
 | Console | Worker de assets `bohtreinar-gestao`, https://bohtreinar-gestao.marcelo-labs.workers.dev (`noindex`) |
-| Banco | D1 `bohtreinar-gestao` (dica de localização `enam`), migrações 0001 a 0005 |
+| Banco | D1 `bohtreinar-gestao` (dica de localização `enam`), migrações 0001 a 0007 (financeiro e encerramento aplicados em 19/10/2026) |
 | Login | Firebase Auth do projeto do app (`workout-tracker-app-20e43`); o endereço do console foi incluído nos domínios autorizados |
 | Limites | `GESTAO_IP_LIMIT` 300, `GESTAO_USER_LIMIT` 120, `GESTAO_ACADEMY_LIMIT` 120 por minuto (identificadores próprios, separados da homologação) |
 
@@ -29,7 +29,7 @@ Os arquivos de configuração reais (`gestao-worker/wrangler.production.jsonc`, 
 
 ## Ainda falta
 1. **Jurídico/LGPD** (bloqueador comercial): textos de privacidade e termos, controlador e operador, menores, retenção, localização do D1 e e-mail de contato (hoje "a confirmar").
-2. **Produto:** exclusão de academia e exportação dos dados da academia; e-mail de suporte; decidir se a entrada da Gestão deixa de ser `noindex`.
+2. **Produto:** (exclusão e exportação já feitas) e-mail de suporte; decidir se a entrada da Gestão deixa de ser `noindex`.
 3. **Operação:** backup agendado e alerta de erros.
 4. **Ligar o app do aluno:** E2E conjunto em produção com `REACT_APP_ACADEMY_API` apontando para a API de produção; depois congelar as coleções antigas de academia no Firestore.
 5. **Domínio (por último):** domínios personalizados nos dois Workers, `ALLOWED_ORIGINS`, domínios do Firebase Auth, `VITE_API_URL`, variáveis do app e DNS do e-mail.
