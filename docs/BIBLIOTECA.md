@@ -1,8 +1,14 @@
 # Biblioteca de exercícios
 
-Estado em 20/10/2026. A biblioteca embutida (`src/data/exercises.js`) tem **120 exercícios, todos com GIF** em `public/exercises/<slug>.gif` (e foto em `public/exercicios/<slug>.jpg`, usada em miniaturas). O app junta esta lista com a coleção `exercises` do Firestore (51 exercícios, todos com GIF local), sem duplicar por nome: catálogo final de 122.
+Estado em 21/10/2026. A biblioteca embutida (`src/data/exercises.js`) tem **141 exercícios, todos com GIF** em `public/exercises/<slug>.gif` (e foto em `public/exercicios/<slug>.jpg`, usada em miniaturas). O app junta esta lista com a coleção `exercises` do Firestore (51 exercícios, todos com GIF local), sem duplicar por nome: catálogo final de 143 (confira com o auditor `scripts/audit-catalog.cjs`).
 
 Por grupo (catálogo final): costas 17, pernas 17, peito 14, core 12, ombros 11, bíceps 11, alongamento e mobilidade 11, tríceps 9, cardio 9, glúteos 6, panturrilha 3.
+
+## Lote 2 de 21/10/2026 (21 exercícios novos, ex121 a ex141)
+- **Panturrilha (4):** leg press, sentado unilateral com halter, Smith e burrinho. **Glúteos (4):** hip thrust com barra, chute na polia, coice em quatro apoios e ponte na bola suíça.
+- **Trapézio (4, no grupo Ombros):** encolhimento com barra e na polia, remada alta com barra e na polia. **Antebraço (4, no grupo Bíceps):** rosca de punho (palmas para cima e para baixo), rosca inversa e caminhada do fazendeiro (por tempo).
+- **Mobilidade (5):** lombar (joelho ao peito), glúteo sentado (piriforme), glúteo deitado, antebraço e inclinação pélvica.
+- Mídia e textos como na ampliação anterior (`scripts/catalogo-novo.py`, Free Exercise DB, domínio público). Os textos em português ainda precisam de revisão de um treinador, como os anteriores. Trapézio e antebraço ficam nos grupos existentes porque o app não tem esses grupos separados.
 
 ## Ampliação de 20/10/2026 (50 exercícios novos, ex71 a ex120)
 - **Peso livre e peso do corpo (30):** supino reto e inclinado com barra, supino fechado, crucifixo com halteres, flexão de braço, mergulho nas paralelas, remada curvada com barra, levantamento terra, barra fixa supinada, remada invertida, superman, encolhimento, desenvolvimento Arnold, elevação frontal, rosca martelo, tríceps testa com barra W, mergulho no banco, stiff, agachamento goblet, avanço com barra, agachamento búlgaro, subida no banco, bom dia, ponte de glúteo (comum e unilateral), abdominal no solo, prancha lateral, russian twist, elevação de pernas na barra e dead bug.
