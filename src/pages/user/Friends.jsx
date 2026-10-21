@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, Copy, Search, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, Copy, Heart, Search, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/ui/PageHeader';
 import Tabs from '../../components/coach/Tabs';
@@ -12,9 +12,11 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import useSocial from '../../hooks/useSocial';
 import usePageMeta from '../../hooks/usePageMeta';
+import { deletePost, listFeed, setLike } from '../../services/feedService';
+import { postLine, timeAgo } from '../../utils/feed';
 import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
 
-const TABS = [['ranking', 'Ranking'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
+const TABS = [['ranking', 'Ranking'], ['activity', 'Atividade'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
 const medal = (pos) => (pos === 1 ? 'bg-amber-400 text-black' : pos === 2 ? 'bg-gray-300 text-black' : pos === 3 ? 'bg-orange-300 text-black' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200');
 const smallBtn = 'pressable inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 text-xs font-bold';
 const Person = ({ p, fallback = 'Usuário' }) => (
@@ -151,6 +153,50 @@ function SearchTab({ social, uid, initialQuery, reload }) {
   );
 }
 
+function ActivityTab({ social, uid, onGo }) {
+  const { profile, friendships } = social;
+  const [state, setState] = useState({ loading: true, error: false, posts: [] });
+  const load = React.useCallback(async () => {
+    try { setState({ loading: false, error: false, posts: await listFeed(uid, friendships) }); }
+    catch (error) { console.error('Erro no feed:', error); setState({ loading: false, error: true, posts: [] }); }
+  }, [uid, friendships]);
+  useEffect(() => { if (profile) load(); }, [profile, load]);
+  if (!profile) return <EmptyState icon={Users} title="Crie seu perfil social" description="Com o perfil você vê o que seus amigos treinaram." action={<button type="button" onClick={() => onGo('profile')} className={btnPrimary}>Criar perfil</button>} />;
+  if (state.loading) return <PageSkeleton />;
+  if (state.error) return <ErrorState onRetry={load} />;
+  const like = async (post) => {
+    setState((st) => ({ ...st, posts: st.posts.map((x) => (x.id === post.id ? { ...x, liked: !x.liked, likeCount: x.likeCount + (x.liked ? -1 : 1) } : x)) }));
+    try { await setLike(post.id, uid, !post.liked); } catch (_) { toast.error('Não foi possível curtir.'); load(); }
+  };
+  const remove = async (post) => {
+    try { await deletePost(post.id); toast.success('Publicação apagada.'); load(); } catch (_) { toast.error('Não foi possível apagar.'); }
+  };
+  return (
+    <section className="space-y-3" aria-labelledby="act-title">
+      <h2 id="act-title" className="font-display text-lg font-black text-gray-900 dark:text-white">Atividade dos amigos</h2>
+      {!profile.shareWorkouts && <p className="rounded-2xl bg-gray-50 p-3 text-xs text-gray-700 dark:bg-white/5 dark:text-gray-300">Você não publica seus treinos. <button type="button" onClick={() => onGo('profile')} className="font-bold text-brand underline">Ativar em Meu perfil</button></p>}
+      {state.posts.length === 0 ? <EmptyState icon={Users} title="Nada por aqui ainda" description="Quando você ou seus amigos concluírem treinos e publicarem, eles aparecem aqui." /> : (
+        <ul className="space-y-2">
+          {state.posts.map((post) => {
+            const mine = post.authorId === uid;
+            const who = mine ? { displayName: 'Você' } : social.people[post.authorId];
+            return (
+              <li key={post.id} className="surface flex items-center gap-3 p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-gray-900 dark:text-white"><b>{who?.displayName || 'Amigo'}</b> concluiu <b>{post.title}</b></p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{postLine(post)} · {timeAgo(post.createdAt)}</p>
+                </div>
+                <button type="button" onClick={() => like(post)} aria-pressed={post.liked} aria-label={post.liked ? 'Descurtir' : 'Curtir'} className={`${smallBtn} ${post.liked ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200'}`}><Heart className="h-4 w-4" aria-hidden="true" fill={post.liked ? 'currentColor' : 'none'} /> {post.likeCount}</button>
+                {mine && <button type="button" onClick={() => remove(post)} aria-label="Apagar publicação" className={`${smallBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200`}><X className="h-4 w-4" aria-hidden="true" /></button>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function ProfileTab({ social, user, profile: studentProfile, reload }) {
   const { profile } = social;
   const suggested = normalizeHandle((user.displayName || 'aluno').split(' ')[0]).replace(/[^a-z0-9_]/g, '');
@@ -159,6 +205,7 @@ function ProfileTab({ social, user, profile: studentProfile, reload }) {
     handle: profile?.handle || (suggested.length >= 3 ? suggested : `${suggested}_${Math.floor(Math.random() * 90 + 10)}`),
     discoverable: profile?.discoverable ?? false,
     shareRanking: profile?.shareRanking ?? false,
+    shareWorkouts: profile?.shareWorkouts ?? false,
     weeklyGoal: profile?.weeklyGoal || studentProfile?.weeklyGoal || 4
   });
   const [saving, setSaving] = useState(false);
@@ -187,6 +234,7 @@ function ProfileTab({ social, user, profile: studentProfile, reload }) {
       </div>
       <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.discoverable} onChange={set('discoverable')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Mostrar meu nome a quem me achar</span><span className="text-xs text-gray-600 dark:text-gray-400">Desligado, quem tem seu @usuário ou código vê só o @usuário até vocês serem amigos.</span></span></label>
       <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.shareRanking} onChange={set('shareRanking')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Participar do ranking entre amigos</span><span className="text-xs text-gray-600 dark:text-gray-400">Amigos que também participam veem seus treinos da semana, dias ativos e sequência.</span></span></label>
+      <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.shareWorkouts} onChange={set('shareWorkouts')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Publicar meus treinos para amigos</span><span className="text-xs text-gray-600 dark:text-gray-400">Ao concluir um treino, seus amigos veem o nome, a duração e o número de séries. Nunca cargas, medidas ou saúde. Dá para apagar cada publicação.</span></span></label>
       <div><label htmlFor="sp-goal" className={labelCls}>Meta semanal (treinos)</label><input id="sp-goal" type="number" min={2} max={7} value={form.weeklyGoal} onChange={set('weeklyGoal')} className={`${inputCls} sm:w-40`} /></div>
       {profile && (
         <div className="rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
@@ -236,6 +284,7 @@ export default function Friends() {
         <PageHeader eyebrow="Social" title="Amigos" subtitle="Compare consistência com quem treina com você, sem expor seus dados de saúde." />
         <Tabs tabs={TABS.map(([id, label]) => ({ id, label: id === 'friends' && pendingIn ? `${label} (${pendingIn})` : label }))} value={tab} onChange={setTab} />
         {tab === 'ranking' && <RankingTab social={social} onGo={setTab} onJoin={join} />}
+        {tab === 'activity' && <ActivityTab social={social} uid={uid} onGo={setTab} />}
         {tab === 'friends' && <FriendsTab social={social} uid={uid} act={act} onGo={setTab} />}
         {tab === 'search' && <SearchTab social={social} uid={uid} initialQuery={params.get('buscar') || ''} reload={social.reload} />}
         {tab === 'profile' && <ProfileTab key={social.profile?.updatedAt || 'novo'} social={social} user={user} profile={userProfile} reload={social.reload} />}

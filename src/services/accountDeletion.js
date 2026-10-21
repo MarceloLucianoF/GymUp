@@ -121,6 +121,12 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     const tryDelete = async (ref) => {
       try { await deps.deleteDoc(ref); removed += 1; } catch (error) { if (error?.code !== 'permission-denied') throw error; }
     };
+    // Posts de atividade e as curtidas deles: saem antes do perfil (as regras de leitura dependem dele).
+    for (const post of await refsOf(deps, 'socialPosts', deps.where('authorId', '==', uid))) {
+      const likes = await deps.getDocs(deps.collection(deps.db, 'socialPosts', post.id, 'likes'));
+      for (const like of likes.docs) await tryDelete(like.ref);
+      await tryDelete(post.ref);
+    }
     try {
       const profile = await deps.getDoc(deps.doc(deps.db, 'publicProfiles', uid));
       if (profile?.exists?.()) {

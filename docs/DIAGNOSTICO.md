@@ -775,3 +775,8 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 
 ## Controles na tela de bloqueio (21/10/2026)
 - `useWorkoutMediaSession` + botão de cadeado no cabeçalho da execução. Notificação de mídia com o exercício, a série e o treino; botões do sistema: próximo = concluir série, anterior = desfazer, play/pausa = pular descanso, avançar/voltar = trocar de exercício. Áudio silencioso gerado em código mantém a sessão; desligado por padrão (avisa que a música de outro app pode pausar). Espelha no Wear OS pelo sistema. Chromium: 14/14; sem teste em aparelho físico.
+
+## Atualização — atividade entre amigos (21/10/2026)
+- **Resolvido/novo:** feed de treinos concluídos entre amigos, opt-in, sem carga nem saúde (`socialPosts`, `likes`, `publicProfiles.shareWorkouts`). Regras testadas no emulador; exclusão de conta apaga posts e curtidas.
+- **Pendente:** denúncia de publicação e comentários (exigem moderação); notificação de curtida; teste em celular físico.- **Limites conhecidos (revisão das regras):** curtidas dadas em posts de outras pessoas não são apagadas na exclusão de conta se o autor apagar o post antes (só guardam o uid); quem curte é visível a amigos do autor; posts antigos reaparecem se o autor religar o compartilhamento; o post usa o id do check-in (reenvio não duplica).
+
