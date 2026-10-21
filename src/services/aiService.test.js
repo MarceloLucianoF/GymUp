@@ -106,3 +106,47 @@ describe('equipamentos da academia do aluno', () => {
     expect(svc.generateLocalWorkout({ muscleFocus: 'Peito e Tríceps' }).exercises.length).toBeGreaterThan(2);
   });
 });
+
+describe('exercícios próprios do aluno no gerador', () => {
+  const { aiService: svc } = require('./aiService');
+  const mine = [
+    { id: 'mine_1', firestoreId: 'mine_1', name: 'Remada do condomínio', muscleGroup: 'costas', equipment: 'halter', kind: 'strength', sets: 4, reps: 10, rest: 60, description: 'banco 3', machineImage: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==', mine: true },
+    { id: 'mine_2', firestoreId: 'mine_2', name: 'Puxada do prédio', muscleGroup: 'costas', equipment: 'polia', kind: 'strength', sets: 3, reps: 12, rest: 60, description: '', machineImage: null, mine: true },
+    { id: 'mine_3', firestoreId: 'mine_3', name: 'Rosca no cano', muscleGroup: 'biceps', equipment: 'barra', kind: 'strength', sets: 3, reps: 10, rest: 60, description: '', machineImage: null, mine: true }
+  ];
+  test('o gerador local inclui até 2 exercícios do aluno do grupo pedido, com a foto, e mantém a divisão', () => {
+    const w = svc.generateLocalWorkout({ muscleFocus: 'Costas e Bíceps', userRequest: 'monte um treino de costas', customExercises: mine });
+    const names = w.exercises.map((e) => e.name);
+    const own = names.filter((n) => /condomínio|prédio/.test(n));   // costas
+    expect(own.length).toBeGreaterThanOrEqual(1);
+    expect(own.length).toBeLessThanOrEqual(2);
+    expect(names.length).toBe(5);   // a divisão do foco (costas e bíceps) continua com o mesmo total
+    expect(w.exercises.find((e) => /condomínio/.test(e.name))?.machineImage).toMatch(/^data:image\/jpeg/);
+    expect(w.exercises.every((e) => e.kind === undefined || ['strength', 'timed', 'cardio'].includes(e.kind))).toBe(true);
+    expect(w.exercises.every((e) => !('kind' in e) || e.kind !== undefined)).toBe(true);   // nunca "undefined" (o Firestore recusa)
+  });
+  test('respeita os equipamentos da academia: sem halter, a remada de halter do aluno não entra', () => {
+    const w = svc.generateLocalWorkout({ muscleFocus: 'Costas e Bíceps', userRequest: 'monte um treino de costas', customExercises: mine, equipment: ['maquina', 'polia'] });
+    const names = w.exercises.map((e) => e.name);
+    expect(names).not.toContain('Remada do condomínio');
+    expect(names).toContain('Puxada do prédio');
+  });
+  test('sem exercícios do aluno nada muda, e pedido de outro grupo não recebe os dele', () => {
+    const w = svc.generateLocalWorkout({ muscleFocus: 'Peito e Tríceps', userRequest: 'monte um treino de peito', customExercises: mine });
+    expect(w.exercises.map((e) => e.name).join('|')).not.toMatch(/condomínio|prédio|cano/);
+  });
+  test('na versão com IA, o exercício do aluno entra mesmo que a IA não o tenha escolhido', async () => {
+    const { generatePlan, normalizeLibrary, specFromFocus, parseRequest } = require('../utils/workoutComposer');
+    const { exercises } = require('../data/exercises');
+    const library = normalizeLibrary([...mine, ...exercises]);
+    const spec = parseRequest('treino de costas');
+    const askModel = async (prompt) => {
+      const catalog = JSON.parse(prompt.match(/Candidatos: (\[.*\])\n/)[1]).filter((c) => !/condominio|predio/.test(c.id));
+      return JSON.stringify({ name: 'Costas IA', exercises: catalog.filter((c) => c.primaryGroup === 'costas').slice(0, 5).map((c) => ({ id: c.id, sets: 3, reps: '10', rest: 60 })) });
+    };
+    const plan = await generatePlan({ spec, library, total: 5, goal: 'Hipertrofia', durationMinutes: 45, askModel });
+    expect(plan.source).toBe('ia');
+    expect(plan.exercises.some((e) => /condomínio|prédio/.test(e.name))).toBe(true);
+    expect(specFromFocus).toBeDefined();
+  });
+});

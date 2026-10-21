@@ -232,11 +232,32 @@ function pickGroup(part, pool, count, pickLegacy) {
 let legacyPicker = (_label, pool, count) => pool.slice(0, count);
 export const setLegacyPicker = (fn) => { legacyPicker = fn; };
 
+/**
+ * Garante que os exercícios que o ALUNO criou (ref.mine) entrem na ficha: até `max` deles, trocando um exercício da biblioteca do
+ * MESMO grupo e subgrupo. A divisão do foco não muda (o validador conta por grupo), e se o foco não tem nada do grupo dele, nada entra.
+ */
+export function withOwn(picks, lib, max = 2) {
+  const mine = (lib || []).filter((e) => e.ref?.mine);
+  if (!mine.length) return picks;
+  const out = [...picks];
+  let used = out.filter((p) => p.ref?.mine).length;
+  for (const m of mine) {
+    if (used >= max) break;
+    if (out.some((p) => p.id === m.id)) continue;
+    let idx = -1;
+    for (let i = out.length - 1; i >= 0; i -= 1) {
+      if (!out[i].ref?.mine && out[i].primaryGroup === m.primaryGroup && out[i].primarySub === m.primarySub) { idx = i; break; }
+    }
+    if (idx >= 0) { out[idx] = m; used += 1; }
+  }
+  return out;
+}
+
 export function composeDeterministic(spec, lib, total) {
   const counts = allocate(spec, total);
   const picks = [];
   spec.parts.forEach((part, i) => { pickGroup(part, lib, counts[i], legacyPicker).forEach((e) => { if (!picks.includes(e)) picks.push(e); }); });
-  return picks;
+  return withOwn(picks, lib);
 }
 
 /** Candidatos enviados à IA: só o que serve ao foco (nunca a biblioteca inteira). */
@@ -369,7 +390,7 @@ export function composeLocalPlan({ spec, library, total, goal }) {
  * cai na montagem determinística: o resultado é sempre válido e só usa exercícios da biblioteca.
  */
 export async function generatePlan({ spec, library, total, goal, durationMinutes, askModel, references = [] }) {
-  const { counts, candidates, need, det, expected, base, finish } = prepare({ spec, library, total, goal });
+  const { lib, counts, candidates, need, det, expected, base, finish } = prepare({ spec, library, total, goal });
 
   if (typeof askModel === 'function') {
     try {
@@ -383,8 +404,9 @@ export async function generatePlan({ spec, library, total, goal, durationMinutes
         seen.add(base2.id);
         return { ...base2, sets: Math.min(6, Math.max(1, Number(item.sets) || base.sets)), reps: String(item.reps || base.reps).slice(0, 20), rest: Math.min(300, Math.max(20, Number(item.rest) || base.rest)) };
       }).filter(Boolean).slice(0, total);
-      const check = checkComposition(aiPicks, spec, total, expected);
-      if (aiPicks.length >= need && check.ok) return finish(aiPicks, 'ia', { name: plan.name, description: plan.description });
+      const ownPicks = withOwn(aiPicks, lib);
+      const check = checkComposition(ownPicks, spec, total, expected);
+      if (ownPicks.length >= need && check.ok) return finish(ownPicks, 'ia', { name: plan.name, description: plan.description });
       return finish(det, 'local', { reason: 'ia_invalida', reasons: check.reasons });
     } catch (e) {
       return finish(det, 'local', { reason: 'ia_indisponivel' });
