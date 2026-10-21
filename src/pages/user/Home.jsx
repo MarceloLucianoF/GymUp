@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Flame, Trophy, Target, Scale, Link2, Wrench, Sparkles, Timer, Weight, CalendarCheck, MessageSquare, ChevronRight, Dumbbell, RefreshCw } from 'lucide-react';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useRole } from '../../hooks/useRole';
 import { useStudentHome, useWeeklyGoal } from '../../hooks/useStudentHome';
+import WeekTodayCard from '../../components/dashboard/WeekTodayCard';
+import { listMyWorkouts } from '../../services/myWorkouts';
+import { weekStatus } from '../../utils/weekSchedule';
 import WeeklyChart from '../../components/dashboard/WeeklyChart';
 import StudentChatWidget from '../../components/chat/StudentChatWidget';
 import AICoachModal from '../../components/ai/AICoachModal';
@@ -62,6 +65,15 @@ export default function Home() {
   const summary = useWeeklySummary({ uid: user?.uid, history, weeklyGoal: goal, ready: !loading && !errors.history });
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [mineWorkouts, setMineWorkouts] = useState([]);
+  useEffect(() => {
+    if (!user?.uid) return undefined;
+    let alive = true;
+    listMyWorkouts(user.uid).then((rows) => { if (alive) setMineWorkouts(rows); }).catch(() => {});
+    return () => { alive = false; };
+  }, [user?.uid]);
+  // Semana montada pela IA (treinos "Semana · Seg · ..."): vira o treino de hoje, a não ser que o treinador tenha prescrito uma ficha
+  const weekToday = useMemo(() => weekStatus({ mine: mineWorkouts, history }), [mineWorkouts, history]);
 
   const handleDiscardActiveWorkout = () => {
     discardActiveSession();
@@ -169,6 +181,8 @@ export default function Home() {
                   action={<button type="button" onClick={() => navigate('/trainings')} className="btn-primary-gradient min-h-[44px] px-5 text-sm">Ver fichas de treino</button>}
                 />
               </div>
+            ) : weekToday && !userProfile?.currentTrainingId ? (
+              <WeekTodayCard status={weekToday} onStart={(id) => navigate(`/training/${id}`)} />
             ) : (
               <RecommendedWorkoutCard
                 history={history}
