@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
 import { exerciseKind, prescriptionLabel } from '../../utils/exerciseKind';
 import { isSafePhoto } from '../../utils/imageAttach';
+import { planSummary } from '../../utils/setTypes';
 import { Dumbbell, Flame, Scale, ClipboardList, Wrench } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 
@@ -100,6 +101,8 @@ export default function TrainingPage() {
                  sets: (typeof ex === 'object' && ex.sets) ? ex.sets : '3',
                  reps: (typeof ex === 'object' && ex.reps) ? ex.reps : (libEx?.reps || '10'),
                  kind: (typeof ex === 'object' && ex.kind) || libEx?.kind || undefined,
+                 setTypes: (typeof ex === 'object' && Array.isArray(ex.setTypes)) ? ex.setTypes : undefined,
+                 superset: (typeof ex === 'object' && ex.superset) || undefined,
                  durationMin: (typeof ex === 'object' && ex.durationMin) || undefined,
              };
         });
@@ -326,6 +329,8 @@ export default function TrainingPage() {
                                 <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
                                     {prescriptionLabel(exercise)}
                                 </span>
+                                {planSummary(exercise.setTypes) && <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">{planSummary(exercise.setTypes)}</span>}
+                                {exercise.superset && <span className="text-[10px] font-bold text-sky-800 dark:text-sky-200 bg-sky-100 dark:bg-sky-500/20 px-1.5 py-0.5 rounded">Superset {exercise.superset}</span>}
                                 {lastLoad && (
                                     <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-800/30">
                                         {lastLoad}kg

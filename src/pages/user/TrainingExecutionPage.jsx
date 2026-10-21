@@ -26,6 +26,7 @@ import {
 import { invalidateCheckIns } from '../../services/checkInsCache';
 import { saveCheckIn } from '../../services/checkInService';
 import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
+import { afterSetAction, supersetRole } from '../../utils/setTypes';
 import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
@@ -261,6 +262,17 @@ export default function TrainingExecutionPage() {
 
         // Se completou a série
         if (isCompleting) {
+            // Superset: sem descanso até o último exercício do grupo; depois descansa e volta ao primeiro.
+            const action = afterSetAction(training.exercises, exIndex, setIndex, totalSets);
+            if (!action.rest) {
+                toast(`Sem descanso: agora ${training.exercises[action.goTo]?.name || 'o próximo exercício do superset'}.`, { duration: 2500 });
+                if (viewMode === 'focus' && action.goTo != null) setActiveExerciseIndex(action.goTo);
+                return;
+            }
+            if (action.goTo != null && viewMode === 'focus') {
+                clearTimeout(nextExerciseTimeoutRef.current);
+                nextExerciseTimeoutRef.current = setTimeout(() => setActiveExerciseIndex(action.goTo), 400);
+            }
             const isLastSetOfExercise = setIndex === totalSets - 1;
             const restTime = restSeconds || 60;
             const endTime = Date.now() + restTime * 1000;
@@ -427,6 +439,7 @@ export default function TrainingExecutionPage() {
             historyMap={historyMap}
             rawHistoryDocs={rawHistoryDocs}
             sessionData={sessionData}
+            superset={(() => { const r = supersetRole(training.exercises, exIndex); return r ? { ...r, goToName: training.exercises[r.nextIndex ?? r.firstIndex]?.name } : null; })()}
             isLastExercise={activeExerciseIndex >= lastExerciseIndex}
             onInput={handleInput}
             onCheckSet={handleCheckSet}

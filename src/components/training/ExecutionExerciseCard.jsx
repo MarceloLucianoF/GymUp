@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote } from 'lucide-react';
 import SetRow from './SetRow';
 import { cardioMinutes, exerciseKind, prescriptionLabel, timedSeconds } from '../../utils/exerciseKind';
+import { isSetType } from '../../utils/setTypes';
 import { getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
 
 // Card de exercício da execução do treino (modo lista ou foco).
 const ExecutionExerciseCard = ({
-    ex, exIndex, isFocusMode = false,
+    ex, exIndex, isFocusMode = false, superset = null,
     historyMap, rawHistoryDocs, sessionData,
     isLastExercise,
     onInput, onCheckSet, onAdjust, onCopyLast, onNote, onOpenLoadHistory, onZoom, onShowVideo, onNextExercise, onFinish
@@ -95,6 +96,12 @@ const ExecutionExerciseCard = ({
                 )}
             </div>
 
+            {superset && (
+                <div className="bg-sky-100 dark:bg-sky-500/15 px-4 py-2.5 text-xs font-bold text-sky-900 dark:text-sky-200" role="note">
+                    Superset {superset.group}: {superset.last ? `este é o último do grupo; descanse e volte para ${superset.goToName || 'o primeiro'}.` : `faça uma série e vá direto para ${superset.goToName || 'o próximo'}, sem descanso.`}
+                </div>
+            )}
+
             {/* Dica Inteligente de Progresso de Cargas */}
             {!cardio && !timed && <div className="bg-brand/10 border-y border-brand/20 px-4 py-2.5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
@@ -156,6 +163,8 @@ const ExecutionExerciseCard = ({
                         repsPlaceholder={repsPlaceholder}
                         isFocusMode={isFocusMode}
                         kind={kind}
+                        type={isSetType(sessionData[`${exIndex}-${setIndex}`]?.type) ? sessionData[`${exIndex}-${setIndex}`].type : (isSetType(ex.setTypes?.[setIndex]) ? ex.setTypes[setIndex] : 'normal')}
+                        onType={(sIdx, t) => onInput(exIndex, sIdx, 'type', t)}
                         isPR={!!sessionData[`${exIndex}-${setIndex}`]?.completed && isPRSet(sessionData[`${exIndex}-${setIndex}`]?.weight, lastLoad)}
                         onAdjust={(sIdx, field, delta) => onAdjust(exIndex, sIdx, field, delta, field === 'weight' ? lastLoad : targetRepsNum)}
                         onInput={(sIdx, field, value) => onInput(exIndex, sIdx, field, value)}
@@ -186,7 +195,7 @@ const ExecutionExerciseCard = ({
                             }}
                             className="w-full bg-gradient-to-r from-brand to-[#FF9800] text-black min-h-[60px] text-base font-black rounded-2xl shadow-lg shadow-brand/30 flex items-center justify-center gap-2 transition-all active:scale-95 animate-pulse-ring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
                         >
-                            <Check className="w-5 h-5" /> {cardio ? `CONCLUIR ${cardioMin} MIN` : `CONCLUIR SÉRIE #${nextUndoneIndex + 1} & DESCANSAR`}
+                            <Check className="w-5 h-5" /> {cardio ? `CONCLUIR ${cardioMin} MIN` : (superset && !superset.last ? `CONCLUIR SÉRIE #${nextUndoneIndex + 1} (SEM DESCANSO)` : `CONCLUIR SÉRIE #${nextUndoneIndex + 1} & DESCANSAR`)}
                         </button>
                     )}
                   </div>

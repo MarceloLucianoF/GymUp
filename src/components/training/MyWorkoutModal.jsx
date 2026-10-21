@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import SetPlanEditor from './SetPlanEditor';
+import { assignSupersetLetters, hasPlan, normalizeSetTypes, supersetLinks } from '../../utils/setTypes';
 import { ArrowDown, ArrowUp, FileText, ImagePlus, Loader2, PencilLine, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { exercises as LIBRARY } from '../../data/exercises';
 import { askWorkoutImport } from '../../services/aiService';
@@ -15,7 +17,7 @@ const blank = (name, ref = null) => {
   const kind = exerciseKind({ name, muscleGroup: ref?.muscleGroup, kind: ref?.kind });
   const d = defaultsForKind(kind);
   // exercício meu traz a prescrição que o aluno definiu; o da biblioteca começa com o padrão do tipo
-  return { key: newKey(), name, kind, ...d, ...(ref?.mine ? { sets: String(ref.sets || d.sets), reps: String(ref.reps || d.reps), rest: ref.rest ?? d.rest } : {}), note: ref?.mine ? ref.description || '' : '', photo: ref?.mine ? ref.machineImage : null, ref };
+  return { key: newKey(), name, kind, setTypes: null, link: false, ...d, ...(ref?.mine ? { sets: String(ref.sets || d.sets), reps: String(ref.reps || d.reps), rest: ref.rest ?? d.rest } : {}), note: ref?.mine ? ref.description || '' : '', photo: ref?.mine ? ref.machineImage : null, ref };
 };
 
 // Exercício já salvo na ficha -> linha do editor. Só o que veio da biblioteca ou dos exercícios do aluno mantém o vínculo (imagem e texto).
@@ -27,6 +29,7 @@ const fromSaved = (ex) => {
     key: newKey(), name: ex.name || '', kind, sets: String(ex.sets ?? defaultsForKind(kind).sets),
     reps: kind === 'cardio' ? String(cardioMinutes(ex)) : String(ex.reps ?? defaultsForKind(kind).reps), rest: kind === 'cardio' ? 0 : (ex.rest ?? defaultsForKind(kind).rest),
     note: ex.note || '', photo: custom && isSafePhoto(ex.machineImage, 45000) ? ex.machineImage : null,
+    setTypes: Array.isArray(ex.setTypes) ? ex.setTypes : null, link: false,
     ref: linked ? { ...ex, id: ex.firestoreId, mine: String(ex.firestoreId).startsWith('mine_') } : null
   };
 };
@@ -47,7 +50,9 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
   useEffect(() => {
     if (!isOpen || !editing) return;
     setName(editing.workout.name || '');
-    setItems((editing.workout.exercises || []).map(fromSaved));
+    const saved = editing.workout.exercises || [];
+    const links = supersetLinks(saved);
+    setItems(saved.map((ex, i) => ({ ...fromSaved(ex), link: links[i] })));
     setPhoto(isSafePhoto(editing.workout.photo) ? editing.workout.photo : null);
     setSource(editing.workout.source || 'manual');
     setWarnings([]); setQuery(''); setBusy(''); setStep('edit');
@@ -82,7 +87,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
       if (removed.suspicious) notes.push('Trechos suspeitos do documento (pedidos de pagamento ou instruções para a IA) foram ignorados.');
       if (removed.truncated || truncatedPages) notes.push(`Só o começo do documento foi lido (até ${IMPORT_LIMITS.maxPages} páginas).`);
       setName(parsed.name);
-      setItems(parsed.exercises.map((e) => ({ ...blank(e.name, e.ref), kind: e.kind, sets: e.kind === 'cardio' ? '1' : e.sets, reps: e.kind === 'cardio' ? String(e.durationMin) : e.kind === 'timed' ? String(e.seconds) : e.reps, rest: e.kind === 'cardio' ? 0 : e.rest, note: e.note })));
+      setItems(parsed.exercises.map((e) => ({ ...blank(e.name, e.ref), kind: e.kind, setTypes: e.setTypes || null, sets: e.kind === 'cardio' ? '1' : e.sets, reps: e.kind === 'cardio' ? String(e.durationMin) : e.kind === 'timed' ? String(e.seconds) : e.reps, rest: e.kind === 'cardio' ? 0 : e.rest, note: e.note })));
       setWarnings(notes);
       setSource('pdf');
       setStep('edit');
@@ -110,8 +115,10 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     if (!valid.length) { toast.error('Adicione ao menos um exercício.'); return; }
     setBusy('Salvando...');
     try {
+      const letters = assignSupersetLetters(valid.slice(0, 30).map((it) => it.link));
       const exs = valid.slice(0, 30).map((it, i) => toWorkoutExercise({
-        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), kind: it.kind, photo: it.ref ? null : it.photo, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note
+        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), kind: it.kind, photo: it.ref ? null : it.photo, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note,
+        setTypes: hasPlan(it.setTypes) ? normalizeSetTypes(it.setTypes, Math.min(10, Math.max(1, Number(it.sets) || 3))) : null, superset: letters[i]
       }, it.ref, i));
       if (editing) {
         await updateMyWorkout(user.uid, editing.docId, { name, exercises: exs, source, photo, createdAt: editing.workout.createdAt, description: editing.workout.description });
@@ -202,6 +209,9 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
                       {Object.entries(KIND_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                     </select>
                   </label>
+                  {it.kind === 'strength' && (
+                    <SetPlanEditor idBase={`plan-${it.key}`} sets={it.sets} types={it.setTypes} onTypes={(t) => patch(it.key, { setTypes: t })} link={it.link} onLink={(v) => patch(it.key, { link: v })} canLink={index < items.length - 1} />
+                  )}
                   {it.kind === 'cardio' ? (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-bold">
                       <label>{repsFieldLabel('cardio')}<input type="number" inputMode="numeric" min="1" max="180" value={it.reps} onChange={(e) => patch(it.key, { reps: e.target.value })} className="mt-1 w-full input-brand-dark text-base" /></label>

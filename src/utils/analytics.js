@@ -24,10 +24,10 @@ export const estimate1RM = (weight, reps) => {
   return round1(w * (1 + r / 30));
 };
 
-// Séries válidas: concluídas (completed !== false) e com reps > 0.
+// Séries válidas: concluídas (completed !== false), de trabalho (aquecimento fica de fora) e com reps > 0.
 export const validSets = (sets) =>
   (Array.isArray(sets) ? sets : [])
-    .filter((s) => s && s.completed !== false && num(s.reps) > 0 && num(s.weight) >= 0)
+    .filter((s) => s && s.completed !== false && s.type !== 'warmup' && num(s.reps) > 0 && num(s.weight) >= 0)   // aquecimento não entra em volume, recorde nem 1RM
     .map((s) => ({ weight: num(s.weight), reps: num(s.reps) }));
 
 // Métricas de uma lista de séries de um treino.

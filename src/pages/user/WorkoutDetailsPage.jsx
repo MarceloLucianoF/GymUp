@@ -1,3 +1,4 @@
+import { SET_SHORT } from '../../utils/setTypes';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
@@ -171,7 +172,7 @@ export default function WorkoutDetailsPage() {
                     <div className="space-y-2">
                         {ex.sets?.map((set, j) => (
                             <div key={j} className="grid grid-cols-4 gap-2 text-center items-center min-h-[40px] py-2 bg-gray-50 dark:bg-white/5 rounded-xl text-sm">
-                                <span className="font-mono text-gray-600 dark:text-gray-400 text-xs">{j + 1}</span>
+                                <span className="font-mono text-gray-600 dark:text-gray-400 text-xs">{j + 1}{set.type && SET_SHORT[set.type] ? <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 font-sans text-[10px] font-black text-gray-700 dark:bg-white/10 dark:text-gray-200">{SET_SHORT[set.type]}</span> : null}</span>
                                 <span className="font-black text-gray-800 dark:text-white">{set.weight || '-'}</span>
                                 <span className="font-bold text-gray-600 dark:text-gray-300">{set.reps || '-'}</span>
                                 <span className="flex items-center justify-center">
