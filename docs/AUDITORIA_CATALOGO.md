@@ -4,9 +4,9 @@ Gerada por `node scripts/audit-catalog.cjs --remote <exportação do Firestore>`
 
 ## Totais
 
-- Biblioteca embutida: 118
+- Biblioteca embutida: 120
 - Firestore: 51
-- Catálogo final (sem repetir nome): **120**
+- Catálogo final (sem repetir nome): **122**
 - Em ambas as fontes: 49; só no Firestore: 2
 
 | Grupo | Exercícios |
@@ -14,11 +14,11 @@ Gerada por `node scripts/audit-catalog.cjs --remote <exportação do Firestore>`
 | Costas | 17 |
 | Pernas | 17 |
 | Peito | 14 |
+| Bíceps | 12 |
 | Core | 12 |
 | Ombros | 11 |
-| Bíceps | 11 |
 | Alongamento e mobilidade | 11 |
-| Tríceps | 9 |
+| Tríceps | 10 |
 | Cardio | 9 |
 | Glúteos | 6 |
 | Panturrilha | 3 |
@@ -27,21 +27,21 @@ Gerada por `node scripts/audit-catalog.cjs --remote <exportação do Firestore>`
 | --- | --- |
 | livre | 33 |
 | maquina | 29 |
-| halter | 23 |
+| halter | 24 |
 | barra | 14 |
-| polia | 12 |
+| polia | 13 |
 | cardio | 9 |
 
 | Tipo | Exercícios |
 | --- | --- |
-| strength | 98 |
+| strength | 100 |
 | timed | 13 |
 | cardio | 9 |
 
 | Dificuldade | Exercícios |
 | --- | --- |
 | iniciante | 69 |
-| intermediario | 45 |
+| intermediario | 47 |
 | avancado | 6 |
 
 ## Erros (quebram o uso): 0
@@ -61,9 +61,9 @@ Nenhum.
 
 - Glúteo Máquina [firestore]
 
-## Informações: 276
+## Informações: 278
 
-### sem-video (164)
+### sem-video (166)
 
 - Supino Reto Máquina [embutida]
 - Supino Inclinado Halter [embutida]
@@ -71,7 +71,7 @@ Nenhum.
 - Desenvolvimento Halter [embutida]
 - Elevação Lateral [embutida]
 - Tríceps Corda [embutida]
-- ... e mais 158
+- ... e mais 160
 
 ### reps-em-texto (51)
 
@@ -122,6 +122,7 @@ Nenhum.
 | Rosca Martelo na Polia | Bíceps | polia | strength | iniciante | embutida+firestore |
 | Rosca Scott com Barra W | Bíceps | barra | strength | intermediario | embutida+firestore |
 | Rosca Scott Máquina | Bíceps | maquina | strength | iniciante | embutida+firestore |
+| Rosca Scott Martelo com Halteres | Bíceps | halter | strength | intermediario | embutida |
 | Bicicleta Ergométrica | Cardio | cardio | cardio | iniciante | embutida |
 | Caminhada na Esteira | Cardio | cardio | cardio | iniciante | embutida |
 | Corrida na Esteira | Cardio | cardio | cardio | iniciante | embutida |
@@ -227,6 +228,7 @@ Nenhum.
 | Tríceps Barra (Pushdown) | Tríceps | polia | strength | iniciante | embutida |
 | Tríceps Barra Encostado na Polia | Tríceps | polia | strength | iniciante | embutida+firestore |
 | Tríceps Corda | Tríceps | polia | strength | iniciante | embutida |
+| Tríceps Francês na Polia Unilateral | Tríceps | polia | strength | intermediario | embutida |
 | Tríceps Máquina | Tríceps | maquina | strength | iniciante | embutida+firestore |
 | Tríceps Supinado com Halteres | Tríceps | halter | strength | intermediario | embutida+firestore |
 | Tríceps Testa com Barra W | Tríceps | barra | strength | intermediario | embutida |
