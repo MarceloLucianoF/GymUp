@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { sameDifficulty } from '../../utils/exerciseKind';
 import MyWorkoutModal from '../../components/training/MyWorkoutModal';
 import { deleteMyWorkout, listMyWorkouts } from '../../services/myWorkouts';
-import { listMyExercises } from '../../services/myExercises';
+import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
 import { isSafePhoto } from '../../utils/imageAttach';
 import AICoachModal from '../../components/ai/AICoachModal';
 import { formatDate } from '../../utils/format';
@@ -39,13 +39,19 @@ const TrainingSkeleton = () => (
   </div>
 );
 
+// Abas do topo: os treinos do aluno ficam separados dos treinos prontos da loja.
+const MINE = 'Meus treinos';
+const READY = 'Prontos';
+
 export default function TrainingsPage() {
   const { trainings, trainingsLoading, trainingsError, refreshData } = useAdmin();
   const { user, userProfile } = useAuthContext();
   
   const [historyMap, setHistoryMap] = useState({});
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [filter, setFilter] = useState('Todos');
+  // Escolha do aluno nas abas (Meus treinos, Prontos, dificuldade). Sem escolha, abre em Meus treinos quando ele já tem treino próprio.
+  const [filterPref, setFilter] = useState(null);
+  const [mineLoaded, setMineLoaded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [packages, setPackages] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
@@ -63,7 +69,7 @@ export default function TrainingsPage() {
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    listMyWorkouts(user.uid).then((rows) => { if (alive) setMine(rows); }).catch((err) => console.error('Erro ao buscar meus treinos:', err));
+    listMyWorkouts(user.uid).then((rows) => { if (alive) setMine(rows); }).catch((err) => console.error('Erro ao buscar meus treinos:', err)).finally(() => { if (alive) setMineLoaded(true); });
     listMyExercises(user.uid).then((rows) => { if (alive) setMyExercises(rows); }).catch(() => {});
     return () => { alive = false; };
   }, [user, mineReload]);
@@ -153,16 +159,22 @@ export default function TrainingsPage() {
   };
 
   // 4. Processamento
-  const isLoading = trainingsLoading || loadingHistory || loadingPackages;
+  const isLoading = trainingsLoading || loadingHistory || loadingPackages || !mineLoaded;
+  const filter = filterPref ?? (mine.length > 0 ? MINE : READY);
 
   const term = searchTerm.trim().toLowerCase();
   const filteredTrainings = trainings.filter(t => {
-      if (filter !== 'Todos' && !sameDifficulty(t.difficulty, filter)) return false;
+      if (filter !== READY && !sameDifficulty(t.difficulty, filter)) return false;
       if (!term) return true;
       return (t.name || '').toLowerCase().includes(term) ||
         (t.description || '').toLowerCase().includes(term) ||
         (t.exercises || []).some(ex => (ex.name || '').toLowerCase().includes(term));
   });
+
+  const mineFiltered = mine.filter((t) => !term
+    || (t.name || '').toLowerCase().includes(term)
+    || (t.description || '').toLowerCase().includes(term)
+    || (t.exercises || []).some((ex) => (ex.name || '').toLowerCase().includes(term)));
 
   // Agrupar por packageId
   const packagedTrainings = {};
@@ -190,7 +202,7 @@ export default function TrainingsPage() {
   });
 
   // Renderizar card de treino individual
-  const renderTrainingCard = (training, index = 0) => {
+  const renderTrainingCard = (training, index = 0, { own = false } = {}) => {
     const validId = training._validId;
     const lastDate = historyMap[validId];
     const lastDoneText = formatLastDone(lastDate);
@@ -205,7 +217,7 @@ export default function TrainingsPage() {
         className="surface surface-hover pressable animate-fade-up group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {/* Badge Recomendado */}
-        {(!lastDate || (new Date() - lastDate) / (1000 * 60 * 60 * 24) > 7) && (
+        {!own && (!lastDate || (new Date() - lastDate) / (1000 * 60 * 60 * 24) > 7) && (
             <div className="absolute top-0 right-0 bg-brand text-black text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-lg z-10">
                 RECOMENDADO
             </div>
@@ -318,16 +330,16 @@ export default function TrainingsPage() {
                     type="search"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar ficha ou exercício..."
-                    aria-label="Buscar ficha ou exercício"
+                    placeholder={filter === MINE ? 'Buscar nos meus treinos...' : 'Buscar ficha ou exercício...'}
+                    aria-label={filter === MINE ? 'Buscar nos meus treinos' : 'Buscar ficha ou exercício'}
                     className="w-full input-brand-dark !pl-11 pr-4 text-base"
                 />
             </div>
             <ChipRow
-                label="Filtrar por dificuldade"
+                label="Filtrar treinos"
                 value={filter}
                 onChange={setFilter}
-                options={['Todos', 'Iniciante', 'Intermediário', 'Avançado'].map(f => ({ value: f, label: f }))}
+                options={[MINE, READY, 'Iniciante', 'Intermediário', 'Avançado'].map(f => ({ value: f, label: f }))}
             />
         </div>
         
@@ -337,7 +349,8 @@ export default function TrainingsPage() {
             </div>
         ) : (
           <div className="space-y-8">
-            {/* Meus treinos: privados, só do aluno */}
+            {filter === MINE ? (
+            /* Meus treinos: privados, só do aluno. Os treinos prontos ficam nas outras abas. */
             <div className="space-y-4">
               <div className="flex items-center gap-3 px-1">
                 <Dumbbell className="w-5 h-5 text-brand" aria-hidden="true" />
@@ -349,19 +362,23 @@ export default function TrainingsPage() {
                   <p className="font-bold text-gray-800 dark:text-white">Cadastre o treino que você já usa</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Importe um PDF ou monte do zero com os aparelhos que a sua academia tem. Só você vê.</p>
                 </button>
+              ) : mineFiltered.length === 0 ? (
+                <EmptyState icon={Package} title="Nenhum treino seu com esse nome." description="Tente outra busca." />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {mine.map((t, i) => (
-                    <div key={t.id} className="relative flex flex-col [&>a]:flex-1">
-                      {renderTrainingCard({ ...t, _validId: t.id, difficulty: 'Meu treino' }, i)}
-                      <button type="button" onClick={() => setEditingMine({ docId: t.docId, workout: t })} aria-label={`Editar ${t.name}`} className="absolute bottom-3 right-28 z-10 grid h-11 w-11 place-items-center rounded-full bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-white"><Pencil className="w-4 h-4" aria-hidden="true" /></button>
-                      <button type="button" onClick={() => removeMine(t)} aria-label={`Apagar ${t.name}`} className="absolute bottom-3 right-16 z-10 grid h-11 w-11 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="w-4 h-4" aria-hidden="true" /></button>
+                  {mineFiltered.map((t, i) => (
+                    <div key={t.id} className="flex flex-col gap-2 [&>a]:flex-1">
+                      {renderTrainingCard({ ...t, _validId: t.id, difficulty: 'Meu treino' }, i, { own: true })}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => setEditingMine({ docId: t.docId, workout: t })} aria-label={`Editar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gray-100 text-sm font-bold text-gray-800 dark:bg-white/10 dark:text-white"><Pencil className="w-4 h-4" aria-hidden="true" />Editar</button>
+                        <button type="button" onClick={() => removeMine(t)} aria-label={`Apagar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-red-100 text-sm font-bold text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="w-4 h-4" aria-hidden="true" />Apagar</button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-
+            ) : (<>
             {/* Pacotes de Treino */}
             {packages.map(pkg => {
               const pkgTrainings = packagedTrainings[pkg.id] || [];
@@ -438,6 +455,7 @@ export default function TrainingsPage() {
                 description="Aplique os filtros ou aguarde o treinador criar seus pacotes."
               />
             )}
+            </>)}
           </div>
         )}
       </div>
@@ -450,7 +468,7 @@ export default function TrainingsPage() {
         onClose={() => setIsAIModalOpen(false)}
         userProfile={userProfile}
         user={user}
-        customExercises={[]}
+        customExercises={myExercises.map(myExerciseToLibrary)}
         onWorkoutSaved={() => {
           if (refreshData) refreshData();
         }}

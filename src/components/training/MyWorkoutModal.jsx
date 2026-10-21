@@ -27,7 +27,7 @@ const fromSaved = (ex) => {
     key: newKey(), name: ex.name || '', kind, sets: String(ex.sets ?? defaultsForKind(kind).sets),
     reps: kind === 'cardio' ? String(cardioMinutes(ex)) : String(ex.reps ?? defaultsForKind(kind).reps), rest: kind === 'cardio' ? 0 : (ex.rest ?? defaultsForKind(kind).rest),
     note: ex.note || '', photo: custom && isSafePhoto(ex.machineImage, 45000) ? ex.machineImage : null,
-    ref: linked ? { ...ex, id: ex.firestoreId } : null
+    ref: linked ? { ...ex, id: ex.firestoreId, mine: String(ex.firestoreId).startsWith('mine_') } : null
   };
 };
 

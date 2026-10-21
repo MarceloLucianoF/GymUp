@@ -406,6 +406,7 @@ const planToWorkout = (plan, { goal, durationMinutes, requestedFocus }) => {
     sets: String(Math.min(6, Math.max(1, Number(e.sets) || 3))),
     reps: String(e.reps || '8-12'),
     rest: Math.min(300, Math.max(20, Number(e.rest) || 60)),
+    ...(e.ref?.kind ? { kind: e.ref.kind } : {}),
     machineImage: e.ref?.machineImage || e.ref?.demoUrl || null,
     videoUrl: e.ref?.videoUrl || null,
     description: e.ref?.description || 'Execução focada na cadência e controle do movimento.'
