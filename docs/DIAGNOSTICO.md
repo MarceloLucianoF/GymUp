@@ -723,3 +723,7 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Também:** a sequência de alongamento do Coach IA agora começa pelos aquecimentos.
 - **Verificado:** 535 testes do app; regras no emulador 69 + 84 (casos novos: foto SVG, link externo, foto grande, exercício de outro aluno, tipo e equipamento inválidos, campo extra); teste em navegador real contra o Firebase de produção para a parte de imagem (11/11: foto de 6,5 MB com EXIF vira JPEG de 420 px sem metadados, PNG com transparência aceito, executável e SVG recusados). **Não executado:** salvar foto e exercícios próprios no Firestore de produção (as regras novas ainda não estão publicadas).
 - **Fora desta entrega:** exercícios do aluno ainda não entram no gerador por IA nem no filtro por equipamento do Coach IA.
+
+## Rosca Scott Martelo e Tríceps Francês na Polia Unilateral (20/10/2026)
+- Dois exercícios pedidos pelo aluno entraram na biblioteca embutida (ex119 e ex120) com GIF do Free Exercise DB: Rosca Scott Martelo com Halteres (bíceps, halter) e Tríceps Francês na Polia Unilateral (tríceps, polia; a imagem é a da versão com corda). Catálogo final: 122.
+- A ficha de origem usa "1x 6 a 10 + DROP" (drop-set), carga e intervalo de 90 s. O app ainda não tem tipo de série; por enquanto o drop-set vai na anotação do exercício. Os tipos de série (aquecimento, drop-set, até a falha, superset) seguem como próximo item do roadmap.

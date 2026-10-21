@@ -38,8 +38,8 @@ describe('biblioteca embutida de exercícios', () => {
 
 describe('ampliação do catálogo (ex71 em diante)', () => {
   const novos = exercises.filter((e) => Number(e.id.replace('ex', '')) > 70);
-  test('são 48 novos, com ids seguidos e nomes únicos em toda a biblioteca', () => {
-    expect(novos).toHaveLength(48);
+  test('são 50 novos, com ids seguidos e nomes únicos em toda a biblioteca', () => {
+    expect(novos).toHaveLength(50);
     expect(new Set(exercises.map((e) => e.id)).size).toBe(exercises.length);
     expect(new Set(exercises.map((e) => e.name.toLowerCase())).size).toBe(exercises.length);
   });

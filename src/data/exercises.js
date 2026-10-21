@@ -1707,5 +1707,35 @@ export const exercises = [
     videoUrl: '',
     muscleGroup: "mobilidade",
     difficulty: "iniciante"
+  },
+  {
+    id: "ex119",
+    name: "Rosca Scott Martelo com Halteres",
+    equipment: "halter",
+    kind: "strength",
+    sets: 3,
+    reps: 8,
+    rest: 90,
+    description: "Rosca no banco Scott com pegada neutra (martelo): trabalha bíceps e braquial, com o braço apoiado e sem balanço.",
+    execution: "Apoie a parte de cima dos dois braços no banco Scott, segurando um halter em cada mão com as palmas voltadas uma para a outra. Flexione os cotovelos até os halteres chegarem perto dos ombros e desça devagar, sem soltar o peso embaixo. Pode fazer os dois braços juntos. Para um drop-set: depois das repetições, reduza cerca de 30% da carga e continue até a falha.",
+    machineImage: "/exercises/rosca-scott-martelo-com-halteres.gif",
+    videoUrl: '',
+    muscleGroup: "biceps",
+    difficulty: "intermediário"
+  },
+  {
+    id: "ex120",
+    name: "Tríceps Francês na Polia Unilateral",
+    equipment: "polia",
+    kind: "strength",
+    sets: 3,
+    reps: 12,
+    rest: 60,
+    description: "Extensão de tríceps acima da cabeça na polia, feita com um braço de cada vez. Dá mais alongamento à cabeça longa do tríceps.",
+    execution: "De costas para a polia baixa, segure a pegada com uma mão atrás da cabeça, com o cotovelo apontado para cima e junto à cabeça. Estenda o braço até o alto, sem mexer o cotovelo, e volte devagar até sentir o tríceps alongar. Faça todas as repetições de um lado e troque. A imagem mostra a versão com a corda, feita com as duas mãos; o movimento é o mesmo.",
+    machineImage: "/exercises/triceps-frances-na-polia-unilateral.gif",
+    videoUrl: '',
+    muscleGroup: "triceps",
+    difficulty: "intermediário"
   }
 ];
