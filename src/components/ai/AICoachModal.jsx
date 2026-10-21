@@ -2,7 +2,8 @@ import { prescriptionLabel } from '../../utils/exerciseKind';
 import { saveMyWorkout } from '../../services/myWorkouts';
 import { describeEquipment } from '../../utils/equipment';
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
+import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2, CalendarDays } from 'lucide-react';
+import WeekPlanTab from './WeekPlanTab';
 import { aiService, InsufficientExercisesError, localFallbackText } from '../../services/aiService';
 import { modelLabel, failureMessage } from '../../services/aiMeta';
 import Markdown from '../common/Markdown';
@@ -17,11 +18,12 @@ const chipCls = 'pressable inline-flex min-h-[40px] shrink-0 items-center gap-1.
 const TABS = [
   { id: 'chat', label: 'Chat IA', Icon: MessageSquare },
   { id: 'generator', label: 'Gerador', Icon: Sparkles },
+  { id: 'week', label: 'Semana', Icon: CalendarDays },
   { id: 'nutrition', label: 'Nutrição', Icon: Utensils }
 ];
 
 export default function AICoachModal({ isOpen, onClose, userProfile, user, customExercises = [], onWorkoutSaved }) {
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'generator' | 'nutrition'
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'generator' | 'week' | 'nutrition'
   const [aiMeta, setAiMeta] = useState(null); // provedor/modelo da última resposta
   const [historyDocs, setHistoryDocs] = useState([]);
 
@@ -246,7 +248,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         </div>
 
         {/* NAVEGAÇÃO DE ABAS */}
-        <div role="tablist" aria-label="Seções do Coach IA" className="grid grid-cols-3 p-2 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0 gap-1">
+        <div role="tablist" aria-label="Seções do Coach IA" className="grid grid-cols-4 p-2 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0 gap-1">
           {TABS.map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -358,6 +360,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
           )}
 
           {/* TAB 2: GERADOR DE TREINOS IA */}
+          {activeTab === 'week' && <WeekPlanTab user={user} userProfile={userProfile} customExercises={customExercises} onSaved={onWorkoutSaved} />}
+
           {activeTab === 'generator' && (
             <div className="space-y-4">
               <div className="card-premium-glass p-4 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3">

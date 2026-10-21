@@ -471,6 +471,7 @@ export default function TrainingsPage() {
         customExercises={myExercises.map(myExerciseToLibrary)}
         onWorkoutSaved={() => {
           if (refreshData) refreshData();
+          setMineReload((n) => n + 1);   // o treino da IA é salvo em "Meus treinos": recarrega a lista
         }}
       />
     </div>

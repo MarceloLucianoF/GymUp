@@ -5,6 +5,7 @@ import { buildCardioWorkout, isCardioRequest } from '../utils/cardioWorkout';
 import { buildStretchWorkout, isStretchRequest } from '../utils/stretchWorkout';
 import { prescriptionLabel } from '../utils/exerciseKind';
 import { describeEquipment, filterByEquipment, sanitizeEquipment } from '../utils/equipment';
+import { catalogKey } from '../utils/exerciseCatalog';
 import { failureMessage } from './aiMeta';
 import {
   canonicalGroup as composerGroup, applyEquipmentConstraint, composeLocalPlan, describeConstraint, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseEquipmentConstraint, parseRequest,
@@ -426,7 +427,7 @@ const planToWorkout = (plan, { goal, durationMinutes, requestedFocus }) => {
 };
 
 // Biblioteca normalizada já filtrada pelo equipamento pedido no texto ("somente máquina"). Poucas opções = erro claro, nunca ficha fora do pedido.
-function libraryFor(exercises, userRequest, owned = []) {
+function libraryFor(exercises, userRequest, owned = [], excludeNames = []) {
   const constraint = parseEquipmentConstraint(userRequest);
   // Equipamentos da academia do aluno (Perfil): só entra na ficha o que ele consegue executar. Lista vazia = tudo.
   const have = sanitizeEquipment(owned);
@@ -434,7 +435,10 @@ function libraryFor(exercises, userRequest, owned = []) {
   if (have.length && pool.length < 6) {
     throw new InsufficientExercisesError(`Com os equipamentos que você marcou (${describeEquipment(have)}) a biblioteca tem poucos exercícios (${pool.length}). Marque mais equipamentos em Perfil ou peça um treino por tempo, como cardio.`);
   }
-  const all = normalizeLibrary(pool);
+  // Variação entre os dias da semana: tira o que já foi usado, desde que sobre biblioteca suficiente para montar a ficha
+  const skip = new Set((excludeNames || []).map(catalogKey));
+  const fresh = skip.size ? pool.filter((e) => !skip.has(catalogKey(e.name))) : pool;
+  const all = normalizeLibrary(fresh.length >= 10 ? fresh : pool);
   const library = applyEquipmentConstraint(all, constraint);
   if (constraint && library.length < 6) {
     throw new InsufficientExercisesError(`A biblioteca tem poucos exercícios com "${describeConstraint(constraint)}" (${library.length}). Cadastre mais exercícios ou peça sem essa restrição.`);
@@ -619,23 +623,23 @@ export const aiService = {
    * `userRequest` (texto do aluno) vale mais que o foco escolhido na tela. Lança InsufficientExercisesError quando a biblioteca
    * não tem exercícios do grupo pedido.
    */
-  async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [] }) {
+  async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [], excludeNames = [] }) {
     // Pedido aeróbico (esteira, bicicleta...) sem grupo muscular: a biblioteca não tem cardio, a ficha vem de regras.
     if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
     if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment);
+    const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment, excludeNames);
     const plan = await generatePlan({ spec, library, total, goal, durationMinutes, askModel: askWorkoutModel, references: constraint ? [] : templateReferences(spec) });
     return planToWorkout(plan, { goal, durationMinutes, requestedFocus: muscleFocus });
   },
   /** Mesma regra de composição, sem IA e sem rede. */
-  generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [] }) {
+  generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [], excludeNames = [] }) {
     if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
     if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment);
+    const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment, excludeNames);
     return planToWorkout(composeLocalPlan({ spec, library, total, goal }), { goal, durationMinutes, requestedFocus: muscleFocus });
   },
 
