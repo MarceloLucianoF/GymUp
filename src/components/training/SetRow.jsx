@@ -8,7 +8,8 @@ const inputClass = (isFocusMode) =>
 const RPE_OPTIONS = [6, 7, 8, 9, 10];
 const stepBtn = 'min-h-[36px] flex-1 rounded-xl bg-gray-100 dark:bg-white/5 text-xs font-bold text-gray-600 dark:text-gray-300 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 
-const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMode, isPR, onInput, onCheck, onAdjust }) => {
+const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMode, isPR, kind = 'strength', onInput, onCheck, onAdjust }) => {
+    const timed = kind === 'timed';
     const isDone = data.completed;
 
     return (
@@ -16,8 +17,8 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
         <div className="flex items-center gap-3">
             <span className="w-8 text-center text-sm font-bold text-gray-600 dark:text-gray-400">#{setIndex + 1}</span>
 
-            <div className="flex-1 grid grid-cols-2 gap-3">
-                <div className="relative">
+            <div className={`flex-1 grid ${timed ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
+                {!timed && <div className="relative">
                     <input
                         type="number" inputMode="decimal" placeholder={weightPlaceholder || '-'}
                         aria-label={`Carga da série ${setIndex + 1} (kg)`}
@@ -26,16 +27,16 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
                         className={inputClass(isFocusMode)}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 dark:text-gray-400 font-bold pointer-events-none">KG</span>
-                </div>
+                </div>}
                 <div className="relative">
                     <input
                         type="number" inputMode="numeric" placeholder={repsPlaceholder}
-                        aria-label={`Repetições da série ${setIndex + 1}`}
+                        aria-label={timed ? `Segundos da série ${setIndex + 1}` : `Repetições da série ${setIndex + 1}`}
                         value={data.reps || ''}
                         onChange={(e) => onInput(setIndex, 'reps', e.target.value)}
                         className={inputClass(isFocusMode)}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 dark:text-gray-400 font-bold pointer-events-none">REPS</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 dark:text-gray-400 font-bold pointer-events-none">{timed ? 'SEG' : 'REPS'}</span>
                 </div>
             </div>
 
@@ -56,14 +57,14 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
             </div>
         )}
         {onAdjust && (
-            <div className="mt-2 ml-11 mr-[4.5rem] grid grid-cols-2 gap-3">
-                <div className="flex gap-1.5">
+            <div className={`mt-2 ml-11 mr-[4.5rem] grid ${timed ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
+                {!timed && <div className="flex gap-1.5">
                     <button type="button" className={stepBtn} aria-label="Diminuir 2,5 kg" onClick={() => onAdjust(setIndex, 'weight', -2.5)}>-2,5</button>
                     <button type="button" className={stepBtn} aria-label="Aumentar 2,5 kg" onClick={() => onAdjust(setIndex, 'weight', 2.5)}>+2,5</button>
-                </div>
+                </div>}
                 <div className="flex gap-1.5">
-                    <button type="button" className={stepBtn} aria-label="Diminuir 1 repetição" onClick={() => onAdjust(setIndex, 'reps', -1)}>-1</button>
-                    <button type="button" className={stepBtn} aria-label="Aumentar 1 repetição" onClick={() => onAdjust(setIndex, 'reps', 1)}>+1</button>
+                    <button type="button" className={stepBtn} aria-label={timed ? 'Diminuir 5 segundos' : 'Diminuir 1 repetição'} onClick={() => onAdjust(setIndex, 'reps', timed ? -5 : -1)}>{timed ? '-5 s' : '-1'}</button>
+                    <button type="button" className={stepBtn} aria-label={timed ? 'Aumentar 5 segundos' : 'Aumentar 1 repetição'} onClick={() => onAdjust(setIndex, 'reps', timed ? 5 : 1)}>{timed ? '+5 s' : '+1'}</button>
                 </div>
             </div>
         )}

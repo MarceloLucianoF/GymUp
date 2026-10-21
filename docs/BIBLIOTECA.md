@@ -1,10 +1,19 @@
 # Biblioteca de exercícios
 
-Estado em 19/10/2026. A biblioteca embutida (`src/data/exercises.js`) tem **70 exercícios, todos com GIF** em `public/exercises/<slug>.gif` (e foto em `public/exercicios/<slug>.jpg`, usada em miniaturas). O app junta esta lista com a coleção `exercises` do Firestore (51 exercícios, todos com GIF local), sem duplicar por nome.
+Estado em 20/10/2026. A biblioteca embutida (`src/data/exercises.js`) tem **120 exercícios, todos com GIF** em `public/exercises/<slug>.gif` (e foto em `public/exercicios/<slug>.jpg`, usada em miniaturas). O app junta esta lista com a coleção `exercises` do Firestore (51 exercícios, todos com GIF local), sem duplicar por nome: catálogo final de 122.
 
-Por grupo: peito 9, costas 10, ombro 8, bíceps 10, tríceps 6, perna 11, glúteo 4, panturrilha 3, core 7, cardio 2.
+Por grupo (catálogo final): costas 17, pernas 17, peito 14, core 12, ombros 11, bíceps 11, alongamento e mobilidade 11, tríceps 9, cardio 9, glúteos 6, panturrilha 3.
 
-## O que mudou nesta rodada
+## Ampliação de 20/10/2026 (50 exercícios novos, ex71 a ex120)
+- **Peso livre e peso do corpo (30):** supino reto e inclinado com barra, supino fechado, crucifixo com halteres, flexão de braço, mergulho nas paralelas, remada curvada com barra, levantamento terra, barra fixa supinada, remada invertida, superman, encolhimento, desenvolvimento Arnold, elevação frontal, rosca martelo, tríceps testa com barra W, mergulho no banco, stiff, agachamento goblet, avanço com barra, agachamento búlgaro, subida no banco, bom dia, ponte de glúteo (comum e unilateral), abdominal no solo, prancha lateral, russian twist, elevação de pernas na barra e dead bug.
+- **Braços (pedido do aluno, 2):** Rosca Scott Martelo com Halteres (pegada neutra no banco Scott; o texto explica o drop-set opcional) e Tríceps Francês na Polia Unilateral (a imagem mostra a versão com corda, de duas mãos; o movimento é o mesmo).
+- **Cardio (7):** bicicleta ergométrica, elíptico, escada, remo ergométrico, pular corda, caminhada e corrida na esteira. Prescrição em minutos.
+- **Alongamento e mobilidade (11):** posterior de coxa, quadríceps, peitoral, ombro, tríceps, panturrilha, flexor do quadril, gato, postura da criança e dois aquecimentos (círculos de braços e de quadril). Novo grupo "mobilidade", por tempo (segundos), sem carga.
+- **Mídia:** foto e GIF de 2 quadros (início e fim) do Free Exercise DB (domínio público, licença Unlicense), gerados por `python3 scripts/catalogo-novo.py`. Os textos em português são do BohTreinar e foram escritos conferindo o movimento mostrado em cada imagem; um treinador deve revisá-los.
+- **Gerador:** alongamento e cardio nunca entram em ficha de musculação. O pedido "treino de alongamento" no Coach IA monta uma sequência de 8 alongamentos por tempo; o pedido de cardio segue montando a ficha aeróbica.
+- **Equipamento:** quem marcou só barra, ou só halteres e peso do corpo, passa a ter opções em todos os grupos principais.
+
+## Rodada anterior (19/10/2026): 46 exercícios ligados a GIFs já existentes
 - 46 exercícios novos com descrição e execução em português, séries, repetições e descanso iniciais, nomes iguais aos do Firestore (para não duplicar) e o GIF já existente anexado. Antes só 24 dos 77 GIFs estavam ligados à biblioteca embutida.
 - A composição de fichas por IA e o filtro "somente máquinas" passam a ter muito mais opções (máquinas e polias de todos os grupos).
 

@@ -55,6 +55,8 @@ service cloud.firestore {
         && data.get('weeklyGoal', 4) is int
         && data.get('weeklyGoal', 4) >= 2 && data.get('weeklyGoal', 4) <= 7
         && data.get('onboardedAt', '') is string
+        && data.get('gymEquipment', []) is list && data.get('gymEquipment', []).size() <= 6
+        && data.get('gymEquipment', []).hasOnly(['maquina', 'polia', 'halter', 'barra', 'livre', 'cardio'])
         && validPhone(data);
     }
 
@@ -77,7 +79,7 @@ service cloud.firestore {
       return (fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
         'updatedAt', 'lastWorkoutDate', 'coachId',
-        'experience', 'weeklyGoal', 'onboardedAt', 'phone'
+        'experience', 'weeklyGoal', 'onboardedAt', 'phone', 'gymEquipment'
       ]) && validProfileExtras(request.resource.data)
         && (!fields.hasAny(['coachId']) || request.resource.data.get('coachId', null) == null)) || (isCoach() && fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
@@ -540,6 +542,33 @@ service cloud.firestore {
     function ownsAITraining(data) {
       return signedIn() && data.get('createdBy', null) == request.auth.uid
         && data.get('isAIGenerated', false) == true && data.get('coachId', null) == null;
+    }
+
+    // Treinos pessoais do aluno (digitados ou importados de PDF): privados, fora da loja de fichas. Só o dono lê e grava.
+    match /users/{userId}/myWorkouts/{workoutId} {
+      allow get, list: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn() && request.auth.uid == userId && hasRole('user')
+        && request.resource.data.keys().hasOnly(['name', 'category', 'description', 'estimatedTime', 'exercises', 'createdAt', 'updatedAt', 'source', 'photo'])
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 140000 && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')))
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
+        && request.resource.data.exercises is list && request.resource.data.exercises.size() > 0 && request.resource.data.exercises.size() <= 30
+        && request.resource.data.get('source', 'manual') in ['manual', 'pdf', 'ai']
+        && request.resource.data.get('description', '') is string && request.resource.data.get('description', '').size() <= 300;
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Exercícios criados pelo aluno: privados, reutilizáveis nos treinos pessoais. Só o dono lê e grava; foto = JPEG pequeno em data URL.
+    match /users/{userId}/myExercises/{exerciseId} {
+      allow get, list: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn() && request.auth.uid == userId && hasRole('user')
+        && request.resource.data.keys().hasOnly(['name', 'kind', 'muscleGroup', 'equipment', 'sets', 'reps', 'rest', 'note', 'photo', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 1 && request.resource.data.name.size() <= 80
+        && request.resource.data.kind in ['strength', 'timed', 'cardio']
+        && request.resource.data.muscleGroup in ['peito', 'costas', 'ombros', 'biceps', 'triceps', 'pernas', 'gluteos', 'panturrilha', 'core', 'cardio', 'mobilidade']
+        && request.resource.data.equipment in ['maquina', 'polia', 'halter', 'barra', 'livre', 'cardio']
+        && request.resource.data.get('note', '') is string && request.resource.data.get('note', '').size() <= 160
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 50000 && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')));
+      allow delete: if signedIn() && request.auth.uid == userId;
     }
 
     match /trainings/{trainingId} {

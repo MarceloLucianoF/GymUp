@@ -153,6 +153,32 @@ test('trainings: ficha de treinador só é editada por ele; aluno não cria fich
   await assertFails(updateDoc(doc(db('coach2'), 'trainings/t1'), { coachId: 'coach2' }));
 });
 
+test('perfil: aluno grava os equipamentos da academia, só valores conhecidos e no máximo 6', async () => {
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: ['halter', 'livre'], updatedAt: '2026-10-19' }));
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: [] }));
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: ['laser'] }));
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: 'halter' }));
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { gymEquipment: ['maquina', 'polia', 'halter', 'barra', 'livre', 'cardio', 'maquina'] }));
+  await assertFails(updateDoc(doc(db('stu2'), 'users/stu1'), { gymEquipment: ['halter'] }));
+});
+
+test('myWorkouts: treino pessoal é privado, só o dono lê e grava, com formato fechado', async () => {
+  const ok = { name: 'Meu treino', exercises: [{ name: 'Supino' }], source: 'pdf', createdAt: '2026-10-19' };
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1'), ok));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1')));
+  await assertFails(getDoc(doc(db('stu2'), 'users/stu1/myWorkouts/w1')));
+  await assertFails(getDoc(doc(db('coach1'), 'users/stu1/myWorkouts/w1')));
+  await assertFails(getDocs(collection(db('coach1'), 'users/stu1/myWorkouts')));
+  await assertFails(setDoc(doc(db('stu2'), 'users/stu1/myWorkouts/w2'), ok));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w3'), { ...ok, extra: 'x' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w4'), { ...ok, exercises: [] }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w5'), { ...ok, name: 'x'.repeat(81) }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w6'), { ...ok, source: 'golpe' }));
+  await assertFails(setDoc(doc(db('coach1'), 'users/coach1/myWorkouts/w7'), ok));   // só o papel aluno
+  await assertFails(deleteDoc(doc(db('stu2'), 'users/stu1/myWorkouts/w1')));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1')));
+});
+
 test('atribuição de ficha: treinador só atribui ficha própria a aluno vinculado', async () => {
   await assertSucceeds(updateDoc(doc(db('coach1'), 'users/stu1'), { currentTrainingId: 's1' }));
   await assertFails(updateDoc(doc(db('coach1'), 'users/stu1'), { currentTrainingId: 's2' }));
@@ -812,4 +838,29 @@ test('resumo semanal: só o dono lê, grava e apaga; id e conteúdo validados', 
   await assertSucceeds(getDocs(query(collection(db('stu1'), 'weeklySummaries'), where('uid', '==', 'stu1'))));
   await assertFails(getDocs(collection(db('stu1'), 'weeklySummaries')));
   await assertSucceeds(deleteDoc(ref('stu1', 'stu1_2026-W42')));
+});
+
+test('myWorkouts: foto só como JPEG pequeno em data URL; myExercises é privado e de formato fechado', async () => {
+  const jpeg = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+  const w = { name: 'Meu treino', exercises: [{ name: 'Supino' }], source: 'manual', createdAt: '2026-10-20' };
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f1'), { ...w, photo: jpeg }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f2'), { ...w, photo: 'data:image/svg+xml;base64,PHN2Zz4=' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f3'), { ...w, photo: 'https://golpe.com/a.jpg' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f4'), { ...w, photo: 'data:image/jpeg;base64,' + 'A'.repeat(141000) }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/f5'), { ...w, photo: 123 }));
+  const e = { name: 'Minha remada', kind: 'strength', muscleGroup: 'costas', equipment: 'halter', sets: '3', reps: '10', rest: 60, note: '', createdAt: '2026-10-20' };
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e1'), { ...e, photo: jpeg }));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'users/stu1/myExercises/e1')));
+  await assertFails(getDoc(doc(db('stu2'), 'users/stu1/myExercises/e1')));
+  await assertFails(getDoc(doc(db('coach1'), 'users/stu1/myExercises/e1')));
+  await assertFails(setDoc(doc(db('stu2'), 'users/stu1/myExercises/e2'), e));
+  await assertFails(setDoc(doc(db('coach1'), 'users/coach1/myExercises/e3'), e));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e4'), { ...e, kind: 'magica' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e5'), { ...e, equipment: 'laser' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e6'), { ...e, muscleGroup: 'cabelo' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e7'), { ...e, extra: 'x' }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e8'), { ...e, name: 'x'.repeat(81) }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myExercises/e9'), { ...e, photo: 'data:image/jpeg;base64,' + 'A'.repeat(51000) }));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'users/stu1/myExercises/e1')));
+  await assertFails(deleteDoc(doc(db('stu2'), 'users/stu1/myExercises/e1')));
 });

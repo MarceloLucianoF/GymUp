@@ -1,10 +1,13 @@
+import { prescriptionLabel } from '../../utils/exerciseKind';
+import { saveMyWorkout } from '../../services/myWorkouts';
+import { describeEquipment } from '../../utils/equipment';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { aiService, InsufficientExercisesError, localFallbackText } from '../../services/aiService';
 import { modelLabel, failureMessage } from '../../services/aiMeta';
 import Markdown from '../common/Markdown';
 import { db } from '../../firebase/config';
-import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { btnPrimary, btnGhost, iconBtn } from '../coach/styles';
 
@@ -185,7 +188,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         goal: selectedGoal,
         muscleFocus: selectedFocus,
         durationMinutes: selectedDuration,
-        customExercises
+        customExercises,
+        equipment: userProfile?.gymEquipment
       });
       setGeneratedWorkout(workout);
       toast.success(workout.composition?.division ? `Treino gerado (${workout.composition.division}).` : 'Treino com IA gerado com sucesso!');
@@ -203,18 +207,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     const toastId = toast.loading('Salvando treino no seu perfil...');
 
     try {
-      const workoutPayload = {
-        name: target.name,
-        category: target.category,
-        description: target.description,
-        estimatedTime: target.estimatedTime,
-        exercises: target.exercises,
-        createdAt: new Date().toISOString(),
-        createdBy: user.uid,
-        isAIGenerated: true
-      };
-
-      await addDoc(collection(db, 'trainings'), workoutPayload);
+      // Treino gerado para o aluno é pessoal: vai para "Meus treinos" (privado), não para a loja de fichas aberta a todos.
+      await saveMyWorkout(user.uid, { name: target.name, category: target.category, description: target.description, exercises: target.exercises, source: 'ai' });
       toast.success('Treino IA salvo em "Meus Treinos"!', { id: toastId });
       if (onWorkoutSaved) onWorkoutSaved();
       onClose();
@@ -389,6 +383,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                     </div>
                   </div>
 
+                  <p className="text-xs text-gray-300">Equipamentos: <b>{describeEquipment(userProfile?.gymEquipment)}</b>. <a href="/profile" className="font-bold text-brand underline">Alterar no perfil</a></p>
+
                   <div>
                     <label htmlFor="gen-870" className={fieldLabel}>Foco Muscular</label>
                     <div className="relative">
@@ -466,7 +462,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-xs font-black text-amber-800 dark:text-brand">{ex.sets}x {ex.reps}</span>
+                          <span className="text-xs font-black text-amber-800 dark:text-brand">{prescriptionLabel(ex)}</span>
                           <p className="text-[11px] text-gray-600 dark:text-gray-400 font-bold">{ex.rest}s descanso</p>
                         </div>
                       </div>

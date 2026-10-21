@@ -1,6 +1,10 @@
 import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
+import { buildCardioWorkout, isCardioRequest } from '../utils/cardioWorkout';
+import { buildStretchWorkout, isStretchRequest } from '../utils/stretchWorkout';
+import { prescriptionLabel } from '../utils/exerciseKind';
+import { describeEquipment, filterByEquipment, sanitizeEquipment } from '../utils/equipment';
 import { failureMessage } from './aiMeta';
 import {
   canonicalGroup as composerGroup, applyEquipmentConstraint, composeLocalPlan, describeConstraint, generatePlan, idOf, InsufficientExercisesError, normalizeLibrary, parseEquipmentConstraint, parseRequest,
@@ -273,9 +277,10 @@ REGRAS:
 5. NUNCA use emojis nem pictogramas: só texto, com Markdown simples.`;
 
 // Rota da NVIDIA (sem funções): os dados que a IA precisaria buscar já vão no prompt.
-export const buildContextInstruction = ({ name, goal, weightNum, heightNum, nutrition, historyText }) =>
+export const buildContextInstruction = ({ name, goal, weightNum, heightNum, nutrition, historyText, equipment = [] }) =>
   `Você é o Coach IA e Nutricionista Esportivo do BohTreinar, falando com ${name}.
 PERFIL: objetivo ${goal}; ${weightNum} kg; ${heightNum} cm.
+EQUIPAMENTOS DA ACADEMIA DO ALUNO: ${describeEquipment(equipment)}. Só sugira exercícios que usem esses equipamentos.
 NUTRIÇÃO CALCULADA PARA O ALUNO: ${nutrition.targetCalories} kcal/dia (gasto estimado ${nutrition.tdee} kcal); proteína ${nutrition.macros.protein.grams} g, carboidratos ${nutrition.macros.carbs.grams} g, gorduras ${nutrition.macros.fats.grams} g; água ~${(nutrition.mealSuggestions.hydrationWaterMl / 1000).toFixed(1)} L/dia.
 HISTÓRICO RECENTE DE TREINOS:
 ${historyText}
@@ -339,6 +344,13 @@ const askNvidiaProxy = async (messages, { timeoutMs = 46000, maxTokens = 1800, t
 };
 
 
+/** Importação de treino por PDF: só texto higienizado, temperatura baixa, resposta validada fora daqui. Sem proxy não há importação por IA. */
+export const askWorkoutImport = async (messages) => {
+  if (!USE_NVIDIA_PROXY || !auth.currentUser) throw new Error('IA indisponível.');
+  const { text } = await askNvidiaProxy(messages, { timeoutMs: 40000, maxTokens: 2200, temperature: 0.1 });
+  return text;
+};
+
 /** Texto sem IA com o ponto de partida calculado do perfil: usado quando a IA falha, demora ou o aluno cancela. */
 export const localFallbackText = (userProfile, reason = 'indisponivel') => {
   const goal = userProfile?.goal || 'Emagrecimento';
@@ -394,6 +406,7 @@ const planToWorkout = (plan, { goal, durationMinutes, requestedFocus }) => {
     sets: String(Math.min(6, Math.max(1, Number(e.sets) || 3))),
     reps: String(e.reps || '8-12'),
     rest: Math.min(300, Math.max(20, Number(e.rest) || 60)),
+    ...(e.ref?.kind ? { kind: e.ref.kind } : {}),
     machineImage: e.ref?.machineImage || e.ref?.demoUrl || null,
     videoUrl: e.ref?.videoUrl || null,
     description: e.ref?.description || 'Execução focada na cadência e controle do movimento.'
@@ -413,9 +426,15 @@ const planToWorkout = (plan, { goal, durationMinutes, requestedFocus }) => {
 };
 
 // Biblioteca normalizada já filtrada pelo equipamento pedido no texto ("somente máquina"). Poucas opções = erro claro, nunca ficha fora do pedido.
-function libraryFor(exercises, userRequest) {
+function libraryFor(exercises, userRequest, owned = []) {
   const constraint = parseEquipmentConstraint(userRequest);
-  const all = normalizeLibrary(exercises);
+  // Equipamentos da academia do aluno (Perfil): só entra na ficha o que ele consegue executar. Lista vazia = tudo.
+  const have = sanitizeEquipment(owned);
+  const pool = filterByEquipment(exercises, have);
+  if (have.length && pool.length < 6) {
+    throw new InsufficientExercisesError(`Com os equipamentos que você marcou (${describeEquipment(have)}) a biblioteca tem poucos exercícios (${pool.length}). Marque mais equipamentos em Perfil ou peça um treino por tempo, como cardio.`);
+  }
+  const all = normalizeLibrary(pool);
   const library = applyEquipmentConstraint(all, constraint);
   if (constraint && library.length < 6) {
     throw new InsufficientExercisesError(`A biblioteca tem poucos exercícios com "${describeConstraint(constraint)}" (${library.length}). Cadastre mais exercícios ou peça sem essa restrição.`);
@@ -474,7 +493,8 @@ export const aiService = {
             userRequest: safePrompt,
             muscleFocus: args.foco || 'Full Body (Corpo Todo)',
             durationMinutes: Math.min(90, Math.max(30, Number(args.duracao_min) || 45)),
-            customExercises
+            customExercises,
+            equipment: userProfile?.gymEquipment
           });
         } catch (error) {
           // Biblioteca sem exercícios do grupo pedido: o modelo explica ao aluno em vez de entregar uma ficha de outro grupo.
@@ -498,7 +518,7 @@ export const aiService = {
       try {
         const nutrition = calcNutrition({ weight: weightNum, height: heightNum, age: userProfile?.age || 25, goal });
         const { text, model } = await askNvidiaProxy([
-          { role: 'system', content: buildContextInstruction({ name, goal, weightNum, heightNum, nutrition, historyText: summarizeHistory(historyDocs, 5) }) },
+          { role: 'system', content: buildContextInstruction({ name, goal, weightNum, heightNum, nutrition, historyText: summarizeHistory(historyDocs, 5), equipment: userProfile?.gymEquipment }) },
           ...conversationHistory.slice(-6).map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text })),
           { role: 'user', content: safePrompt }
         ], { signal });
@@ -515,7 +535,7 @@ export const aiService = {
     // Pedido de ficha com a NVIDIA como principal: o compositor (filtro + IA + validação + fallback local) responde sozinho.
     // O Gemini com funções não responde nesse modo e deixava o chat esperando até o teto de 45 s sem ficha nenhuma.
     if (NVIDIA_FIRST && needsTools(safePrompt)) {
-      const request = { goal, userRequest: safePrompt, muscleFocus: 'Full Body (Corpo Todo)', durationMinutes: 45, customExercises };
+      const request = { goal, userRequest: safePrompt, muscleFocus: 'Full Body (Corpo Todo)', durationMinutes: 45, customExercises, equipment: userProfile?.gymEquipment };
       try {
         let workout;
         try {
@@ -526,8 +546,8 @@ export const aiService = {
           workout = aiService.generateLocalWorkout(request);
         }
         onWorkout?.(workout);
-        onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : 'indisponivel' });
-        const lines = workout.exercises.map((ex, i) => `${i + 1}. ${ex.name} - ${ex.sets}x${ex.reps}`).join('\n');
+        onMeta?.({ provider: workout.composition?.source === 'ia' ? 'nvidia' : 'local', reason: workout.composition?.source === 'ia' ? undefined : workout.composition?.source === 'regras' ? 'regras' : 'indisponivel' });
+        const lines = workout.exercises.map((ex, i) => `${i + 1}. ${ex.name} - ${prescriptionLabel(ex)}`).join('\n');
         const limit = parseEquipmentConstraint(safePrompt);
         return `Montei a ficha "${workout.name}"${workout.composition?.division ? ` (${workout.composition.division})` : ''}${limit ? `, ${describeConstraint(limit)}` : ''}:\n${lines}\nUse o botão abaixo para salvar em Meus treinos.`;
       } catch (error) {
@@ -599,18 +619,23 @@ export const aiService = {
    * `userRequest` (texto do aluno) vale mais que o foco escolhido na tela. Lança InsufficientExercisesError quando a biblioteca
    * não tem exercícios do grupo pedido.
    */
-  async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
+  async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [] }) {
+    // Pedido aeróbico (esteira, bicicleta...) sem grupo muscular: a biblioteca não tem cardio, a ficha vem de regras.
+    if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
+    if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest);
+    const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment);
     const plan = await generatePlan({ spec, library, total, goal, durationMinutes, askModel: askWorkoutModel, references: constraint ? [] : templateReferences(spec) });
     return planToWorkout(plan, { goal, durationMinutes, requestedFocus: muscleFocus });
   },
   /** Mesma regra de composição, sem IA e sem rede. */
-  generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '' }) {
+  generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [] }) {
+    if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
+    if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
-    const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest);
+    const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment);
     return planToWorkout(composeLocalPlan({ spec, library, total, goal }), { goal, durationMinutes, requestedFocus: muscleFocus });
   },
 

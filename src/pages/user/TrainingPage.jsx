@@ -4,6 +4,9 @@ import { doc, getDoc, collection, getDocs, query, where, orderBy, limit } from '
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
+import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
+import { exerciseKind, prescriptionLabel } from '../../utils/exerciseKind';
+import { isSafePhoto } from '../../utils/imageAttach';
 import { Dumbbell, Flame, Scale, ClipboardList, Wrench } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 
@@ -36,11 +39,21 @@ export default function TrainingPage() {
         if (!trainingId) throw new Error("ID do treino indefinido.");
 
         // A. Busca Treino (Robustez: Tenta ID do Doc e depois firestoreId)
-        let docSnap = await getDoc(doc(db, 'trainings', trainingId));
         let finalData = null;
         let finalId = null;
+        let docSnap = null;
+        if (isMyTrainingId(trainingId)) {
+          // Treino pessoal: só o dono lê (regras); fica fora da loja.
+          const mine = await getDoc(doc(db, 'users', user.uid, 'myWorkouts', fromMyTrainingId(trainingId)));
+          if (!mine.exists()) throw new Error('Treino não encontrado.');
+          finalData = { ...mine.data(), isMine: true }; finalId = trainingId;
+        } else {
+          docSnap = await getDoc(doc(db, 'trainings', trainingId));
+        }
 
-        if (docSnap.exists()) {
+        if (finalData) {
+          // já carregado acima
+        } else if (docSnap.exists()) {
             finalData = docSnap.data();
             finalId = docSnap.id;
         } else {
@@ -85,7 +98,9 @@ export default function TrainingPage() {
                  machineImage: libEx?.machineImage || libEx?.demoUrl || (typeof ex === 'object' ? ex.machineImage : null) || null,
                  muscleGroup: (typeof ex === 'object' && ex.muscleGroup) ? ex.muscleGroup : (libEx?.muscleGroup || ''),
                  sets: (typeof ex === 'object' && ex.sets) ? ex.sets : '3',
-                 reps: (typeof ex === 'object' && ex.reps) ? ex.reps : '10',
+                 reps: (typeof ex === 'object' && ex.reps) ? ex.reps : (libEx?.reps || '10'),
+                 kind: (typeof ex === 'object' && ex.kind) || libEx?.kind || undefined,
+                 durationMin: (typeof ex === 'object' && ex.durationMin) || undefined,
              };
         });
 
@@ -195,7 +210,7 @@ export default function TrainingPage() {
   const calculateEstimatedVolume = () => {
       let total = 0;
       exerciseList.forEach((ex, i) => {
-          if (selectedExercises[i]) {
+          if (selectedExercises[i] && exerciseKind(ex) === 'strength') {
               const weight = historyMap[ex.name] || 0;
               const sets = Number(ex.sets) || 3;
               const reps = Number(String(ex.reps).split('-')[0]) || 10;
@@ -223,6 +238,7 @@ export default function TrainingPage() {
                 ← Voltar
             </button>
             
+            {isSafePhoto(training.photo) && <img src={training.photo} alt={`Foto de ${training.name}`} className="mb-3 max-h-56 w-full rounded-2xl object-cover" />}
             <div className="flex justify-between items-start gap-4 mb-2">
                 <h1 className="font-display text-2xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight">{training.name}</h1>
                 {lastWorkoutDate && (
@@ -308,7 +324,7 @@ export default function TrainingPage() {
                             </h3>
                             <div className="flex flex-wrap gap-2 mt-1">
                                 <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
-                                    {exercise.sets} x {exercise.reps}
+                                    {prescriptionLabel(exercise)}
                                 </span>
                                 {lastLoad && (
                                     <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-800/30">

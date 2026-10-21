@@ -1,3 +1,6 @@
+import { equipmentOf } from './equipment';
+import { catalogKey } from './exerciseCatalog';
+import { defaultsForKind, exerciseKind } from './exerciseKind';
 // Composição de fichas por IA com a biblioteca como fonte de verdade.
 // Fluxo: pedido -> foco (spec) -> filtro determinístico da biblioteca -> candidatos enviados à IA (só metadados necessários)
 // -> resposta validada por ID e por composição -> se falhar, montagem determinística (a ficha é válida mesmo sem IA).
@@ -41,14 +44,6 @@ function patternOf(n, group) {
   return 'isolado';
 }
 
-function equipmentOf(n) {
-  if (/halter/.test(n)) return 'halter';
-  if (/barra reta|barra w|barra fixa|barra\b/.test(n) && !/maquina/.test(n)) return 'barra';
-  if (/polia|cabo|crossover|corda|pulldown/.test(n)) return 'polia';
-  if (/maquina|cadeira|mesa|hack|leg press|articulada|convergente|peck|voador/.test(n)) return 'maquina';
-  return 'livre';
-}
-
 /** Metadados normalizados de um exercício da biblioteca. `ref` guarda o objeto original (imagens, descrição, firestoreId). */
 export function normalizeExercise(ex) {
   const name = String(ex?.name || '').trim();
@@ -65,7 +60,7 @@ export function normalizeExercise(ex) {
     primaryGroup,
     subgroups,
     primarySub: subgroups[0],
-    equipment: equipmentOf(n),
+    equipment: equipmentOf(ex),
     movementPattern,
     isCompound: ['agachar', 'empurrar', 'puxar', 'dobradica'].includes(movementPattern),
     difficulty: ['iniciante', 'intermediario', 'avancado'].includes(diff) ? diff : 'iniciante',
@@ -74,8 +69,9 @@ export function normalizeExercise(ex) {
 }
 
 export function normalizeLibrary(list) {
+  // Mesma chave de nome (acento, parênteses, "com Halteres" x "Halter") = mesmo exercício; a primeira ocorrência vale.
   const seen = new Set();
-  return (list || []).filter((e) => e?.name).map(normalizeExercise).filter((e) => { if (!e.id || seen.has(e.id)) return false; seen.add(e.id); return true; });
+  return (list || []).filter((e) => e?.name).map(normalizeExercise).filter((e) => { const k = catalogKey(e.name); if (!e.id || !k || seen.has(e.id) || seen.has(k)) return false; seen.add(e.id); seen.add(k); return true; });
 }
 
 /** Só o que a IA precisa para escolher: nada de imagem, descrição ou ID interno do Firestore. */
@@ -236,11 +232,32 @@ function pickGroup(part, pool, count, pickLegacy) {
 let legacyPicker = (_label, pool, count) => pool.slice(0, count);
 export const setLegacyPicker = (fn) => { legacyPicker = fn; };
 
+/**
+ * Garante que os exercícios que o ALUNO criou (ref.mine) entrem na ficha: até `max` deles, trocando um exercício da biblioteca do
+ * MESMO grupo e subgrupo. A divisão do foco não muda (o validador conta por grupo), e se o foco não tem nada do grupo dele, nada entra.
+ */
+export function withOwn(picks, lib, max = 2) {
+  const mine = (lib || []).filter((e) => e.ref?.mine);
+  if (!mine.length) return picks;
+  const out = [...picks];
+  let used = out.filter((p) => p.ref?.mine).length;
+  for (const m of mine) {
+    if (used >= max) break;
+    if (out.some((p) => p.id === m.id)) continue;
+    let idx = -1;
+    for (let i = out.length - 1; i >= 0; i -= 1) {
+      if (!out[i].ref?.mine && out[i].primaryGroup === m.primaryGroup && out[i].primarySub === m.primarySub) { idx = i; break; }
+    }
+    if (idx >= 0) { out[idx] = m; used += 1; }
+  }
+  return out;
+}
+
 export function composeDeterministic(spec, lib, total) {
   const counts = allocate(spec, total);
   const picks = [];
   spec.parts.forEach((part, i) => { pickGroup(part, lib, counts[i], legacyPicker).forEach((e) => { if (!picks.includes(e)) picks.push(e); }); });
-  return picks;
+  return withOwn(picks, lib);
 }
 
 /** Candidatos enviados à IA: só o que serve ao foco (nunca a biblioteca inteira). */
@@ -350,7 +367,14 @@ function prepare({ spec, library, total, goal }) {
   const finish = (picks, source, extra = {}) => ({
     spec, source, ...extra,
     division: divisionText(spec, total, picks),
-    exercises: picks.map((e) => ({ ...e, sets: String(e.sets ?? base.sets), reps: String(e.reps ?? base.reps), rest: e.rest ?? base.rest }))
+    // Prancha e cardio não seguem as repetições do objetivo: usam a prescrição do próprio exercício (segundos ou minutos).
+    exercises: picks.map((e) => {
+      const kind = exerciseKind(e.ref || e);
+      if (kind === 'strength') return { ...e, sets: String(e.sets ?? base.sets), reps: String(e.reps ?? base.reps), rest: e.rest ?? base.rest };
+      const own = defaultsForKind(kind);
+      const refReps = parseInt(e.ref?.reps, 10);
+      return { ...e, kind, sets: String(e.ref?.sets > 0 ? e.ref.sets : own.sets), reps: String(refReps > 0 ? refReps : own.reps), rest: kind === 'cardio' ? 0 : (e.ref?.rest ?? own.rest) };
+    })
   });
   return { lib, counts, candidates, need, det, expected, base, finish };
 }
@@ -366,7 +390,7 @@ export function composeLocalPlan({ spec, library, total, goal }) {
  * cai na montagem determinística: o resultado é sempre válido e só usa exercícios da biblioteca.
  */
 export async function generatePlan({ spec, library, total, goal, durationMinutes, askModel, references = [] }) {
-  const { counts, candidates, need, det, expected, base, finish } = prepare({ spec, library, total, goal });
+  const { lib, counts, candidates, need, det, expected, base, finish } = prepare({ spec, library, total, goal });
 
   if (typeof askModel === 'function') {
     try {
@@ -380,8 +404,9 @@ export async function generatePlan({ spec, library, total, goal, durationMinutes
         seen.add(base2.id);
         return { ...base2, sets: Math.min(6, Math.max(1, Number(item.sets) || base.sets)), reps: String(item.reps || base.reps).slice(0, 20), rest: Math.min(300, Math.max(20, Number(item.rest) || base.rest)) };
       }).filter(Boolean).slice(0, total);
-      const check = checkComposition(aiPicks, spec, total, expected);
-      if (aiPicks.length >= need && check.ok) return finish(aiPicks, 'ia', { name: plan.name, description: plan.description });
+      const ownPicks = withOwn(aiPicks, lib);
+      const check = checkComposition(ownPicks, spec, total, expected);
+      if (ownPicks.length >= need && check.ok) return finish(ownPicks, 'ia', { name: plan.name, description: plan.description });
       return finish(det, 'local', { reason: 'ia_invalida', reasons: check.reasons });
     } catch (e) {
       return finish(det, 'local', { reason: 'ia_indisponivel' });

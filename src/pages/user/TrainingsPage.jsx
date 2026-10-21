@@ -5,7 +5,13 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search } from 'lucide-react';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2, Pencil, ListChecks } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { sameDifficulty } from '../../utils/exerciseKind';
+import MyWorkoutModal from '../../components/training/MyWorkoutModal';
+import { deleteMyWorkout, listMyWorkouts } from '../../services/myWorkouts';
+import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
+import { isSafePhoto } from '../../utils/imageAttach';
 import AICoachModal from '../../components/ai/AICoachModal';
 import { formatDate } from '../../utils/format';
 import ErrorState from '../../components/common/ErrorState';
@@ -33,13 +39,19 @@ const TrainingSkeleton = () => (
   </div>
 );
 
+// Abas do topo: os treinos do aluno ficam separados dos treinos prontos da loja.
+const MINE = 'Meus treinos';
+const READY = 'Prontos';
+
 export default function TrainingsPage() {
   const { trainings, trainingsLoading, trainingsError, refreshData } = useAdmin();
   const { user, userProfile } = useAuthContext();
   
   const [historyMap, setHistoryMap] = useState({});
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [filter, setFilter] = useState('Todos');
+  // Escolha do aluno nas abas (Meus treinos, Prontos, dificuldade). Sem escolha, abre em Meus treinos quando ele já tem treino próprio.
+  const [filterPref, setFilter] = useState(null);
+  const [mineLoaded, setMineLoaded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [packages, setPackages] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
@@ -47,6 +59,25 @@ export default function TrainingsPage() {
   const [packagesReload, setPackagesReload] = useState(0);
   const [collapsedPackages, setCollapsedPackages] = useState({});
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isMineOpen, setIsMineOpen] = useState(false);
+  const [mine, setMine] = useState([]);
+  const [mineReload, setMineReload] = useState(0);
+  const [editingMine, setEditingMine] = useState(null);
+  const [myExercises, setMyExercises] = useState([]);
+
+  // Treinos pessoais (privados): digitados ou importados de PDF. Não vêm da loja de fichas.
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    listMyWorkouts(user.uid).then((rows) => { if (alive) setMine(rows); }).catch((err) => console.error('Erro ao buscar meus treinos:', err)).finally(() => { if (alive) setMineLoaded(true); });
+    listMyExercises(user.uid).then((rows) => { if (alive) setMyExercises(rows); }).catch(() => {});
+    return () => { alive = false; };
+  }, [user, mineReload]);
+
+  const removeMine = async (training) => {
+    if (!window.confirm(`Apagar o treino "${training.name}"?`)) return;
+    try { await deleteMyWorkout(user.uid, training.docId); setMineReload((n) => n + 1); toast.success('Treino apagado.'); } catch { toast.error('Não consegui apagar o treino.'); }
+  };
 
   // 1. Busca Histórico
   useEffect(() => {
@@ -106,10 +137,10 @@ export default function TrainingsPage() {
   };
 
   const getDifficultyColor = (diff) => {
-    switch (diff?.toLowerCase()) {
+    switch ((diff || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()) {
       case 'iniciante': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
-      case 'intermediário': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
-      case 'avançado': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800';
+      case 'intermediario': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
+      case 'avancado': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
   };
@@ -128,16 +159,22 @@ export default function TrainingsPage() {
   };
 
   // 4. Processamento
-  const isLoading = trainingsLoading || loadingHistory || loadingPackages;
+  const isLoading = trainingsLoading || loadingHistory || loadingPackages || !mineLoaded;
+  const filter = filterPref ?? (mine.length > 0 ? MINE : READY);
 
   const term = searchTerm.trim().toLowerCase();
   const filteredTrainings = trainings.filter(t => {
-      if (filter !== 'Todos' && t.difficulty?.toLowerCase() !== filter.toLowerCase()) return false;
+      if (filter !== READY && !sameDifficulty(t.difficulty, filter)) return false;
       if (!term) return true;
       return (t.name || '').toLowerCase().includes(term) ||
         (t.description || '').toLowerCase().includes(term) ||
         (t.exercises || []).some(ex => (ex.name || '').toLowerCase().includes(term));
   });
+
+  const mineFiltered = mine.filter((t) => !term
+    || (t.name || '').toLowerCase().includes(term)
+    || (t.description || '').toLowerCase().includes(term)
+    || (t.exercises || []).some((ex) => (ex.name || '').toLowerCase().includes(term)));
 
   // Agrupar por packageId
   const packagedTrainings = {};
@@ -165,7 +202,7 @@ export default function TrainingsPage() {
   });
 
   // Renderizar card de treino individual
-  const renderTrainingCard = (training, index = 0) => {
+  const renderTrainingCard = (training, index = 0, { own = false } = {}) => {
     const validId = training._validId;
     const lastDate = historyMap[validId];
     const lastDoneText = formatLastDone(lastDate);
@@ -180,12 +217,13 @@ export default function TrainingsPage() {
         className="surface surface-hover pressable animate-fade-up group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {/* Badge Recomendado */}
-        {(!lastDate || (new Date() - lastDate) / (1000 * 60 * 60 * 24) > 7) && (
+        {!own && (!lastDate || (new Date() - lastDate) / (1000 * 60 * 60 * 24) > 7) && (
             <div className="absolute top-0 right-0 bg-brand text-black text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-lg z-10">
                 RECOMENDADO
             </div>
         )}
 
+        {isSafePhoto(training.photo) && <img src={training.photo} alt={`Foto de ${training.name || 'treino'}`} className="h-32 w-full object-cover" loading="lazy" />}
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
               <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-900/60 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform group-hover:bg-white dark:group-hover:bg-[#1F2937]">
@@ -255,6 +293,23 @@ export default function TrainingsPage() {
               title="Fichas de treino"
               subtitle="Escolha sua missão ou gere uma ficha inteligente por IA."
               actions={
+                <div className="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    onClick={() => setIsMineOpen(true)}
+                    aria-label="Cadastrar meu treino"
+                    className="pressable min-h-[44px] px-4 text-xs font-black rounded-2xl bg-gray-100 text-gray-900 dark:bg-white/10 dark:text-white shrink-0 inline-flex items-center gap-2"
+                >
+                    <FilePlus2 className="w-4 h-4" aria-hidden="true" />
+                    Meu treino
+                </button>
+                <Link
+                    to="/meus-exercicios"
+                    className="pressable min-h-[44px] px-4 text-xs font-black rounded-2xl bg-gray-100 text-gray-900 dark:bg-white/10 dark:text-white shrink-0 inline-flex items-center gap-2"
+                >
+                    <ListChecks className="w-4 h-4" aria-hidden="true" />
+                    Meus exercícios
+                </Link>
                 <button
                     type="button"
                     onClick={() => setIsAIModalOpen(true)}
@@ -264,6 +319,7 @@ export default function TrainingsPage() {
                     <Sparkles className="w-4 h-4 fill-current" aria-hidden="true" />
                     Gerar com IA
                 </button>
+                </div>
               }
             />
 
@@ -274,16 +330,16 @@ export default function TrainingsPage() {
                     type="search"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar ficha ou exercício..."
-                    aria-label="Buscar ficha ou exercício"
+                    placeholder={filter === MINE ? 'Buscar nos meus treinos...' : 'Buscar ficha ou exercício...'}
+                    aria-label={filter === MINE ? 'Buscar nos meus treinos' : 'Buscar ficha ou exercício'}
                     className="w-full input-brand-dark !pl-11 pr-4 text-base"
                 />
             </div>
             <ChipRow
-                label="Filtrar por dificuldade"
+                label="Filtrar treinos"
                 value={filter}
                 onChange={setFilter}
-                options={['Todos', 'Iniciante', 'Intermediário', 'Avançado'].map(f => ({ value: f, label: f }))}
+                options={[MINE, READY, 'Iniciante', 'Intermediário', 'Avançado'].map(f => ({ value: f, label: f }))}
             />
         </div>
         
@@ -293,7 +349,36 @@ export default function TrainingsPage() {
             </div>
         ) : (
           <div className="space-y-8">
-            
+            {filter === MINE ? (
+            /* Meus treinos: privados, só do aluno. Os treinos prontos ficam nas outras abas. */
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 px-1">
+                <Dumbbell className="w-5 h-5 text-brand" aria-hidden="true" />
+                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Meus treinos</h2>
+                <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{mine.length}</span>
+              </div>
+              {mine.length === 0 ? (
+                <button type="button" onClick={() => setIsMineOpen(true)} className="surface pressable w-full p-5 text-left">
+                  <p className="font-bold text-gray-800 dark:text-white">Cadastre o treino que você já usa</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Importe um PDF ou monte do zero com os aparelhos que a sua academia tem. Só você vê.</p>
+                </button>
+              ) : mineFiltered.length === 0 ? (
+                <EmptyState icon={Package} title="Nenhum treino seu com esse nome." description="Tente outra busca." />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mineFiltered.map((t, i) => (
+                    <div key={t.id} className="flex flex-col gap-2 [&>a]:flex-1">
+                      {renderTrainingCard({ ...t, _validId: t.id, difficulty: 'Meu treino' }, i, { own: true })}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => setEditingMine({ docId: t.docId, workout: t })} aria-label={`Editar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gray-100 text-sm font-bold text-gray-800 dark:bg-white/10 dark:text-white"><Pencil className="w-4 h-4" aria-hidden="true" />Editar</button>
+                        <button type="button" onClick={() => removeMine(t)} aria-label={`Apagar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-red-100 text-sm font-bold text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="w-4 h-4" aria-hidden="true" />Apagar</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            ) : (<>
             {/* Pacotes de Treino */}
             {packages.map(pkg => {
               const pkgTrainings = packagedTrainings[pkg.id] || [];
@@ -370,9 +455,12 @@ export default function TrainingsPage() {
                 description="Aplique os filtros ou aguarde o treinador criar seus pacotes."
               />
             )}
+            </>)}
           </div>
         )}
       </div>
+
+      <MyWorkoutModal isOpen={isMineOpen || !!editingMine} editing={editingMine} myExercises={myExercises} onClose={() => { setIsMineOpen(false); setEditingMine(null); }} user={user} onSaved={() => setMineReload((n) => n + 1)} />
 
       {/* MODAL DO COACH IA */}
       <AICoachModal
@@ -380,7 +468,7 @@ export default function TrainingsPage() {
         onClose={() => setIsAIModalOpen(false)}
         userProfile={userProfile}
         user={user}
-        customExercises={[]}
+        customExercises={myExercises.map(myExerciseToLibrary)}
         onWorkoutSaved={() => {
           if (refreshData) refreshData();
         }}

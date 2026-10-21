@@ -1,6 +1,6 @@
 import { safeHttpUrl } from '../../../utils/safeUrl';
 
-export const MUSCLE_GROUPS = [['peito', 'Peito'], ['costas', 'Costas'], ['ombros', 'Ombros'], ['braços', 'Braços'], ['pernas', 'Pernas'], ['core', 'Core']];
+export const MUSCLE_GROUPS = [['peito', 'Peito'], ['costas', 'Costas'], ['ombros', 'Ombros'], ['braços', 'Braços'], ['pernas', 'Pernas'], ['core', 'Core'], ['mobilidade', 'Alongamento e mobilidade']];
 export const GROUP_LABEL = Object.fromEntries(MUSCLE_GROUPS);
 export const DIFFICULTIES = [['iniciante', 'Iniciante'], ['intermediário', 'Intermediário'], ['avançado', 'Avançado']];
 
@@ -56,11 +56,13 @@ export function validateExerciseForm(form) {
   const errors = {};
   if (!hasText(form.name)) errors.name = 'Informe o nome.';
   if (!form.muscleGroup) errors.muscleGroup = 'Escolha o grupo muscular.';
+  const kind = form.kind || 'strength';
   const sets = Number(form.sets);
-  if (!Number.isInteger(sets) || sets < 1 || sets > 12) errors.sets = 'De 1 a 12 séries.';
+  if (kind !== 'cardio' && (!Number.isInteger(sets) || sets < 1 || sets > 12)) errors.sets = 'De 1 a 12 séries.';
   const rest = Number(form.rest);
-  if (!Number.isFinite(rest) || rest < 0 || rest > 600) errors.rest = 'De 0 a 600 s.';
-  if (!hasText(String(form.reps ?? ''))) errors.reps = 'Informe as repetições.';
+  if (kind !== 'cardio' && (!Number.isFinite(rest) || rest < 0 || rest > 600)) errors.rest = 'De 0 a 600 s.';
+  if (!hasText(String(form.reps ?? ''))) errors.reps = kind === 'cardio' ? 'Informe a duração em minutos.' : kind === 'timed' ? 'Informe o tempo em segundos.' : 'Informe as repetições.';
+  else if (kind !== 'strength' && !(parseInt(String(form.reps), 10) > 0)) errors.reps = kind === 'cardio' ? 'A duração precisa ser maior que zero.' : 'O tempo precisa ser maior que zero.';
   if (hasText(form.machineImage) && !safeHttpUrl(form.machineImage)) errors.machineImage = 'Use um link http(s) válido.';
   if (hasText(form.videoUrl) && !safeHttpUrl(form.videoUrl)) errors.videoUrl = 'Use um link http(s) válido.';
   return errors;
