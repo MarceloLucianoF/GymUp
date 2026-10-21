@@ -17,6 +17,8 @@ test('resumo do plano', () => {
   expect(planSummary(['normal', 'normal', 'normal'])).toBe('');
   expect(planSummary(['warmup', 'normal', 'normal', 'drop'])).toBe('Aquec. + 2 normais + Drop');
   expect(planSummary(['normal', 'failure'])).toBe('1 normal + Falha');
+  expect(planSummary(['drop', 'drop', 'drop'])).toBe('3 Drop');
+  expect(planSummary(['warmup', 'warmup', 'normal', 'normal', 'failure'])).toBe('2 Aquec. + 2 normais + Falha');
   expect(hasPlan(['normal'])).toBe(false);
   expect(hasPlan(['normal', 'drop'])).toBe(true);
 });

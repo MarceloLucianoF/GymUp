@@ -24,14 +24,19 @@ export const normalizeSetTypes = (types, count) => {
 
 export const hasPlan = (types) => Array.isArray(types) && types.some((t) => isSetType(t) && t !== 'normal');
 
-/** "Aquec. + 2 normais + Drop": resumo curto do plano para listas. Vazio quando tudo é normal. */
+/** "Aquec. + 2 normais + Drop": resumo curto do plano; sequências iguais viram contagem ("3 Drop"). Vazio quando tudo é normal. */
 export const planSummary = (types) => {
   if (!hasPlan(types)) return '';
+  const norm = types.map((t) => (isSetType(t) ? t : 'normal'));
   const out = [];
-  let normals = 0;
-  const flush = () => { if (normals) { out.push(`${normals} ${normals === 1 ? 'normal' : 'normais'}`); normals = 0; } };
-  types.forEach((t) => { if (!isSetType(t) || t === 'normal') normals += 1; else { flush(); out.push(SET_SHORT[t]); } });
-  flush();
+  for (let i = 0; i < norm.length;) {
+    let j = i;
+    while (j < norm.length && norm[j] === norm[i]) j += 1;
+    const n = j - i;
+    const t = norm[i];
+    out.push(t === 'normal' ? `${n} ${n === 1 ? 'normal' : 'normais'}` : n === 1 ? SET_SHORT[t] : `${n} ${SET_SHORT[t]}`);
+    i = j;
+  }
   return out.join(' + ');
 };
 
