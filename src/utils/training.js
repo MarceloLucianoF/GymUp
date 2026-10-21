@@ -1,4 +1,5 @@
 import { formatDate } from './format';
+import { countsAsWork, isSetType, normalizeSetTypes } from './setTypes';
 
 // Normaliza/hidrata os exercícios de um treino cruzando a biblioteca (Firestore + defaults).
 export const hydrateExercises = (rawExercises, combinedLibrary) => rawExercises.map((ex, idx) => {
@@ -39,9 +40,12 @@ export const hydrateExercises = (rawExercises, combinedLibrary) => rawExercises.
     let rest = exObj.rest || exObj.restSeconds || libEx?.rest || 60;
     if (!rest || String(rest) === 'undefined') rest = 60;
 
+    const plan = Array.isArray(exObj.setTypes) ? normalizeSetTypes(exObj.setTypes, Number(sets) || 3) : null;
+
     return {
         ...libEx,
         ...exObj,
+        ...(plan ? { setTypes: plan } : {}),
         firestoreId: idToFind || libEx?.firestoreId || `ex-${idx}`,
         name,
         muscleGroup,
@@ -131,11 +135,13 @@ export const summarizeSession = (exercises, sessionData) => {
         for (let i = 0; i < numSets; i++) {
             const data = sessionData[`${exIndex}-${i}`];
             if (data?.completed) {
-                setsCompleted++;
+                const type = isSetType(data.type) ? data.type : (isSetType(ex.setTypes?.[i]) ? ex.setTypes[i] : 'normal');
                 const w = parseFloat(data.weight) || 0;
                 const r = parseFloat(data.reps) || 0;
-                totalVolume += w * r;
+                // aquecimento é registrado no histórico, mas não entra no volume nem na contagem de séries de trabalho
+                if (countsAsWork(type)) { setsCompleted++; totalVolume += w * r; }
                 const set = { weight: w, reps: r, completed: true };
+                if (type !== 'normal') set.type = type;
                 const rpe = normalizeRpe(data.rpe);
                 if (rpe) set.rpe = rpe;
                 exSets.push(set);
@@ -162,7 +168,8 @@ export const detectNewPRs = (exercises, sessionData, historyMap) => {
         let maxWeight = 0;
         for (let i = 0; i < numSets; i++) {
             const data = sessionData[`${exIndex}-${i}`];
-            if (data?.completed) {
+            const type = isSetType(data?.type) ? data.type : ex.setTypes?.[i];
+            if (data?.completed && countsAsWork(type)) {
                 const w = parseFloat(data.weight) || 0;
                 if (w > maxWeight) maxWeight = w;
             }

@@ -11,6 +11,8 @@ import EmptyState from '../../components/common/EmptyState';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import { estimateWorkout } from '../../components/coach/helpers';
+import SetPlanEditor from '../../components/training/SetPlanEditor';
+import { assignSupersetLetters, supersetLinks } from '../../utils/setTypes';
 import { KIND_LABELS, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { WORKOUT_PRESETS, getPreset, applyPreset, reorder, formatMinutes } from '../../utils/coachWorkout';
 import { btnPrimary, btnGhost, iconBtn, inputCls, labelCls, pageCls } from '../../components/coach/styles';
@@ -174,6 +176,13 @@ export default function WorkoutEditor() {
   const updateExercise = (index, field, value) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)) });
   // Trocar o tipo troca a prescrição junto: 3 x 10 não faz sentido para esteira.
   const changeKind = (index, kind) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, kind, ...defaultsForKind(kind) } : ex)) });
+  // Superset: liga o exercício ao seguinte; as letras do grupo são refeitas para a lista toda.
+  const setLink = (index, on) => {
+    const links = supersetLinks(training.exercises);
+    links[index] = on;
+    const letters = assignSupersetLetters(links);
+    update({ exercises: training.exercises.map((ex, i) => ({ ...ex, superset: letters[i] || undefined })) });
+  };
   const removeExercise = (index) => update({ exercises: training.exercises.filter((_, i) => i !== index) });
   const moveTo = (index, target) => {
     if (target < 0 || target >= training.exercises.length || target === index) return;
@@ -359,6 +368,9 @@ export default function WorkoutEditor() {
                       {Object.entries(KIND_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                     </select>
                   </div>
+                  {exerciseKind(ex) === 'strength' && (
+                    <SetPlanEditor idBase={`plan-${ex._key}`} sets={ex.sets} types={ex.setTypes} onTypes={(t) => updateExercise(i, 'setTypes', t)} link={supersetLinks(training.exercises)[i]} onLink={(v) => setLink(i, v)} canLink={i < training.exercises.length - 1} />
+                  )}
                   <div className={`mt-3 grid ${exerciseKind(ex) === 'cardio' ? 'grid-cols-1' : 'grid-cols-3'} gap-2`}>
                     {exerciseKind(ex) !== 'cardio' && (
                       <div>

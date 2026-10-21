@@ -1,5 +1,13 @@
 import React from 'react';
 import { Check, Circle, Trophy } from 'lucide-react';
+import { SET_HINTS, SET_LABELS, SET_SHORT, nextSetType } from '../../utils/setTypes';
+
+const TYPE_STYLE = {
+    normal: 'bg-gray-200 text-gray-700 dark:bg-white/10 dark:text-gray-300',
+    warmup: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
+    drop: 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200',
+    failure: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200'
+};
 
 const inputClass = (isFocusMode) =>
     `w-full bg-gray-100 dark:bg-white/5 rounded-2xl px-3 py-3 text-center font-black text-xl text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand transition-all min-h-[52px] ${isFocusMode ? 'h-16 text-2xl' : ''}`;
@@ -8,7 +16,7 @@ const inputClass = (isFocusMode) =>
 const RPE_OPTIONS = [6, 7, 8, 9, 10];
 const stepBtn = 'min-h-[36px] flex-1 rounded-xl bg-gray-100 dark:bg-white/5 text-xs font-bold text-gray-600 dark:text-gray-300 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 
-const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMode, isPR, kind = 'strength', onInput, onCheck, onAdjust }) => {
+const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMode, isPR, kind = 'strength', type = 'normal', onType, onInput, onCheck, onAdjust }) => {
     const timed = kind === 'timed';
     const isDone = data.completed;
 
@@ -51,6 +59,19 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
                 {isDone ? <Check className="w-7 h-7 animate-scale-in" strokeWidth={3} aria-hidden="true" /> : <Circle className="w-6 h-6" aria-hidden="true" />}
             </button>
         </div>
+        {onType && (
+            <div className="mt-2 ml-11 flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => onType(setIndex, nextSetType(type))}
+                    aria-label={`Tipo da série ${setIndex + 1}: ${SET_LABELS[type]}. Toque para mudar`}
+                    className={`min-h-[36px] rounded-full px-3 text-xs font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${TYPE_STYLE[type]}`}
+                >
+                    {SET_SHORT[type]}
+                </button>
+                {type !== 'normal' && <span className="text-[11px] leading-tight text-gray-600 dark:text-gray-300">{SET_HINTS[type]}</span>}
+            </div>
+        )}
         {isPR && (
             <div role="status" className="mt-2 ml-11 inline-flex items-center gap-1 rounded-full bg-brand/15 border border-brand/40 px-2.5 py-1 text-[11px] font-black text-amber-800 dark:text-brand">
                 <Trophy className="w-3.5 h-3.5 fill-current" aria-hidden="true" /> RECORDE de carga!

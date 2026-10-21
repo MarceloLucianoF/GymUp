@@ -148,3 +148,48 @@ describe('edição do treino, foto e meus exercícios', () => {
     expect(payload.exercises[0]).toMatchObject({ name: 'Remada do condomínio', sets: '5', reps: '8', rest: 75, machineImage: JPEG });
   });
 });
+
+describe('tipos de série e superset no editor', () => {
+  const saved = {
+    name: 'Braço', source: 'manual', createdAt: '2026-10-01T10:00:00.000Z', description: 'x',
+    exercises: [
+      { firestoreId: 'custom-1', name: 'Rosca Scott Martelo', muscleGroup: 'biceps', kind: 'strength', sets: '3', reps: '6-10', rest: 90, setTypes: ['normal', 'normal', 'drop'], superset: 'A' },
+      { firestoreId: 'custom-2', name: 'Tríceps francês', muscleGroup: 'triceps', kind: 'strength', sets: '3', reps: '12', rest: 60, superset: 'A' },
+      { firestoreId: 'custom-3', name: 'Abdominal', muscleGroup: 'core', kind: 'strength', sets: '3', reps: '15', rest: 45 }
+    ]
+  };
+  test('carrega plano e superset, edita e grava com as letras refeitas', async () => {
+    const svc = require('../../services/myWorkouts');
+    svc.updateMyWorkout.mockClear();
+    render(<MyWorkoutModal isOpen onClose={jest.fn()} user={{ uid: 'u1' }} library={lib} editing={{ docId: 'w1', workout: saved }} />);
+    expect(await screen.findByText('Editar meu treino')).toBeInTheDocument();
+    expect(screen.getByLabelText('Série 3: Drop-set. Toque para mudar')).toBeInTheDocument();    // plano carregado
+    const links = screen.getAllByLabelText('Superset com o próximo exercício');
+    expect(links).toHaveLength(2);                                                               // o último não liga a ninguém
+    expect(links[0].checked).toBe(true);
+    expect(links[1].checked).toBe(false);
+    // 1ª série do 2º exercício vira aquecimento; liga o 2º ao 3º
+    const second = screen.getAllByLabelText(/^Série 1: Normal/)[1];
+    fireEvent.click(second);
+    fireEvent.click(links[1]);
+    fireEvent.click(screen.getByText('Salvar alterações'));
+    await waitFor(() => expect(svc.updateMyWorkout).toHaveBeenCalled());
+    const exs = svc.updateMyWorkout.mock.calls[0][2].exercises;
+    expect(exs.map((e) => e.superset)).toEqual(['A', 'A', 'A']);                                 // grupo de 3
+    expect(exs[0].setTypes).toEqual(['normal', 'normal', 'drop']);
+    expect(exs[1].setTypes).toEqual(['warmup', 'normal', 'normal']);
+  });
+  test('treino sem plano não grava setTypes nem superset', async () => {
+    const svc = require('../../services/myWorkouts');
+    svc.saveMyWorkout.mockClear();
+    render(<MyWorkoutModal isOpen onClose={jest.fn()} user={{ uid: 'u1' }} library={lib} />);
+    fireEvent.click(screen.getByText('Montar do zero'));
+    fireEvent.change(screen.getByLabelText('Adicionar exercício'), { target: { value: 'supino' } });
+    fireEvent.click(screen.getByText('Supino Reto Máquina'));
+    fireEvent.click(screen.getByText('Salvar em Meus treinos'));
+    await waitFor(() => expect(svc.saveMyWorkout).toHaveBeenCalled());
+    const ex = svc.saveMyWorkout.mock.calls[0][1].exercises[0];
+    expect('setTypes' in ex).toBe(false);
+    expect('superset' in ex).toBe(false);
+  });
+});
