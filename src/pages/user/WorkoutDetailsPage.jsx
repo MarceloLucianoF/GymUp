@@ -112,6 +112,14 @@ export default function WorkoutDetailsPage() {
             </div>
         </div>
 
+        {/* Texto do resumo pós-treino (gravado no fim do treino) */}
+        {typeof workout.summary?.text === 'string' && workout.summary.text.length > 0 && workout.summary.text.length <= 700 && (
+          <section className="surface p-4 sm:p-5 space-y-2" aria-label="Resumo do treino">
+            <h3 className="font-bold text-gray-700 dark:text-gray-300 text-sm uppercase tracking-wider">Resumo do treino{workout.summary.source === 'ai' ? ' (IA)' : ''}</h3>
+            <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-100">{workout.summary.text}</p>
+          </section>
+        )}
+
         {/* Recordes e comparação */}
         {summary && (summary.prs.length > 0 || summary.best || summary.prev) && (
           <section className="surface p-4 sm:p-5 space-y-3" aria-label="Recordes e comparação">
