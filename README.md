@@ -19,10 +19,13 @@ O plano gratuito do Firebase (Spark) não tem Cloud Functions: por isso o códig
 ## Funcionalidades
 
 - **Aluno:** onboarding, painel com meta semanal, fichas, execução (séries, carga, repetições, RPE, descanso, tela sempre acesa), histórico com detalhes, evolução por exercício (1RM, volume, recordes), medidas, ferramentas (1RM, anilhas, conversões, timer), Coach IA e nutrição, exportar e excluir os próprios dados (LGPD).
+- **Treinos do aluno:** "Meus treinos" (privados, fora da loja de fichas): montar do zero, **importar de PDF** (lido no aparelho; só o texto higienizado vai à IA, que devolve JSON validado e revisável), editar, reordenar, foto do treino e dos exercícios próprios. **Meus exercícios** (`/meus-exercicios`) cria exercícios reutilizáveis, que entram também no gerador por IA. A tela Fichas separa **Meus treinos** dos treinos **Prontos** (com filtros de dificuldade).
+- **Exercícios e execução:** biblioteca embutida de 120 exercícios com foto e GIF (peso livre, máquinas, cardio, alongamento e mobilidade), mais a coleção do Firestore. Três tipos de exercício (musculação, por tempo, cardio) e quatro **tipos de série** (normal, aquecimento, drop-set, até a falha) com **superset**; o aquecimento não entra em volume nem em recordes. O aluno marca os **equipamentos da sua academia** no Perfil e o gerador só usa o que ele tem.
 - **Meu treinador:** o aluno pede o vínculo (busca por nome, código ou link `/convite/<código>`) e o treinador aceita antes de ver qualquer dado. O aluno pode cancelar ou encerrar quando quiser.
 - **Convite por link:** o treinador cria links com validade e limite de usos (cancelável); o aluno novo se cadastra pelo link ou o existente abre o pedido no perfil, e o treinador aceita (com a mensalidade padrão sugerida e editável) antes de ver qualquer dado.
 - **Amigos e ranking:** pedido de amizade por @usuário ou código de amigo (sem busca por nome, de propósito: as regras do Firestore não conseguem esconder quem bloqueou); ranking semanal opcional de "Consistência registrada" (treinos, dias ativos, sequência), sem peso, medidas ou check-ins.
 - **Treinador:** fila de ação do dia, alunos com aderência, solicitações de vínculo, atribuição de fichas, financeiro (cobrança por WhatsApp), chat com respostas rápidas, biblioteca e editor de fichas.
+- **Gestão para academias** (produto separado, em homologação fechada): console `gestao/`, API `gestao-worker/` em Cloudflare D1, contratos em `shared/academy-contracts/`. Membros, convites, professores, fichas, alunos e **financeiro** (planos, matrículas, cobranças mensais com baixa manual, resumo e exportação). Ver [docs/GESTAO_ARQUITETURA.md](docs/GESTAO_ARQUITETURA.md) e [docs/GESTAO_PRODUCAO.md](docs/GESTAO_PRODUCAO.md).
 - **Admin:** visão geral com pendências de conteúdo, exercícios (filtros, edição em painel lateral, arquivar, importação com prévia), fichas com avisos, vínculos e histórico de alterações (`adminLog`).
 
 ## Como rodar
@@ -62,6 +65,8 @@ O Firebase Hosting está desativado: o app roda só na Cloudflare. Mais detalhes
 - `scripts/seed-demo.cjs`: dados fictícios e aditivos para testes (não apaga nada). `scripts/seed.cjs` é destrutivo e só deve ser rodado com pedido explícito.
 - `scripts/backfill-user-stats.cjs [apply]`: confere e corrige os contadores de check-ins.
 - `scripts/imagens-exercicios.cjs [apply]`: baixa imagens de exercícios do Free Exercise DB e liga ao Firestore.
+- `scripts/catalogo-novo.py [--write]`: baixa foto e GIF do Free Exercise DB e acrescenta exercícios novos à biblioteca embutida.
+- `npm run audit:catalog -- --remote exportacao.json`: auditoria somente leitura do catálogo e das fichas da loja (ver [docs/AUDITORIA_CATALOGO.md](docs/AUDITORIA_CATALOGO.md)).
 - `mcp/`: servidor MCP para gerenciar fichas, alunos e atribuições (ver [docs/MCP.md](docs/MCP.md)). Exige `serviceAccountKey.json` na raiz (fora do git).
 
 ## Segurança e privacidade
@@ -69,11 +74,14 @@ O Firebase Hosting está desativado: o app roda só na Cloudflare. Mais detalhes
 - Papéis (`role`) vêm do Firestore e não são alteráveis pelo cliente; aluno só vê o próprio; treinador só vê alunos vinculados (com aceite do aluno).
 - Check-ins não podem ser listados de forma ampla (nem pelo admin); métricas vêm de contadores (`userStats`).
 - Links vindos de dados editáveis passam por `safeHttpUrl`; CSP e HSTS ativos.
+- Treinos e exercícios pessoais ficam em `users/{uid}/myWorkouts` e `myExercises`: só o dono lê e grava, com formato fechado. Importação de PDF: assinatura `%PDF-`, até 5 MB, sem scripts, texto sem links, contatos e frases de comando; a resposta da IA é validada (schema, limites, sem URL/HTML) e revisada pelo aluno. Fotos anexadas: só JPEG, PNG e WebP reais, redesenhadas no aparelho (sem EXIF), guardadas como JPEG pequeno.
 - Termos e Política de Privacidade são modelos e precisam de revisão jurídica antes do lançamento público.
 
 ## Documentação
 
 - [docs/DIAGNOSTICO.md](docs/DIAGNOSTICO.md): histórico de achados e entregas
+- [docs/ROADMAP_PRODUTO.md](docs/ROADMAP_PRODUTO.md): próximos passos da Gestão e do treino com IA, e a paridade com os apps do mercado
+- [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md), [docs/AUDITORIA_CATALOGO.md](docs/AUDITORIA_CATALOGO.md) e [docs/LIMPEZA_CATALOGO_PREVIA.md](docs/LIMPEZA_CATALOGO_PREVIA.md): biblioteca de exercícios, auditoria e limpeza do catálogo
 - [docs/IA.md](docs/IA.md): arquitetura da IA, modelos e limites
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md): Worker, domínio e configurações no console
 - [docs/APPCHECK.md](docs/APPCHECK.md): roteiro do enforce do App Check e da proteção contra enumeração de e-mail
