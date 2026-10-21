@@ -766,3 +766,6 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 
 ## Hoje na sua semana (21/10/2026)
 - Home: com uma semana montada pela IA salva (treinos pessoais "Semana · Seg · ..."), o card "Treino de hoje" passa a ser o da semana (a menos que o treinador tenha prescrito ficha): treino de hoje com botão "Começar", faixa dos 7 dias, "Atrasado" e, depois de treinar, "Treino de hoje feito" com o próximo (`src/utils/weekSchedule.js`, `WeekTodayCard`). Só leitura. Teste em navegador contra produção: 7/7. Detalhes das demais entregas do dia em `docs/ENTREGAS_2026-10-21.md`.
+
+## Carga sugerida considera o esforço percebido (21/10/2026)
+- `suggestNext` passa a ler o RPE (6 a 10) das séries de trabalho com a carga mais alta, quando marcado em todas: teto batido com RPE médio de 9,5 ou mais segura a carga; teto batido com RPE 7 ou menos sobe um salto dobrado; dentro da faixa com RPE 6 ou menos já sobe um salto. Sem RPE completo, a regra de dupla progressão não muda. O resumo pós-treino usa a mesma função, então o "próximo treino" também respeita o esforço.
