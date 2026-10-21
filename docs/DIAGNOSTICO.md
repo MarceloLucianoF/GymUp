@@ -772,3 +772,6 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 
 ## Duplicar e compartilhar treino pessoal (21/10/2026)
 - Meus treinos: botões "Duplicar" e "Compartilhar" (`src/utils/workoutShare.js`). O compartilhamento é só texto (nome, exercícios, prescrição, plano de séries, anotação, supersets). `planSummary` agora agrupa séries iguais em sequência ("3 Drop"). Navegador contra produção: 6/6.
+
+## Controles na tela de bloqueio (21/10/2026)
+- `useWorkoutMediaSession` + botão de cadeado no cabeçalho da execução. Notificação de mídia com o exercício, a série e o treino; botões do sistema: próximo = concluir série, anterior = desfazer, play/pausa = pular descanso, avançar/voltar = trocar de exercício. Áudio silencioso gerado em código mantém a sessão; desligado por padrão (avisa que a música de outro app pode pausar). Espelha no Wear OS pelo sistema. Chromium: 14/14; sem teste em aparelho físico.

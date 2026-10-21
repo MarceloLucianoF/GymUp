@@ -1,8 +1,8 @@
 import React from 'react';
-import { List, Search, Wifi, WifiOff } from 'lucide-react';
+import { List, Lock, Search, Wifi, WifiOff } from 'lucide-react';
 
 // Cabeçalho fixo da execução: nome, conectividade, cronômetro, progresso e modo de visualização.
-const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCount, totalSetsInTraining, progressPercent, viewMode, onChangeViewMode }) => (
+const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCount, totalSetsInTraining, progressPercent, viewMode, onChangeViewMode, lockSupported = false, lockEnabled = false, onToggleLock }) => (
     <div className="fixed top-0 md:top-20 left-0 right-0 bg-white/85 dark:bg-[#0B0F19]/85 backdrop-blur-xl z-40 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shadow-sm">
         <div className="flex justify-between items-center gap-3">
             <div className="flex-1 min-w-0">
@@ -34,6 +34,12 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
                 </div>
                 <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{progressPercent}%</span>
             </div>
+
+            {lockSupported && onToggleLock && (
+                <button type="button" onClick={onToggleLock} aria-pressed={lockEnabled} aria-label="Controles na tela de bloqueio" title="Controles na tela de bloqueio" className={`shrink-0 min-h-[44px] min-w-[44px] grid place-items-center rounded-lg border text-xs font-bold transition-all ${lockEnabled ? 'bg-brand text-black border-transparent' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-transparent dark:border-gray-700'}`}>
+                    <Lock className="w-4 h-4" aria-hidden="true" />
+                </button>
+            )}
 
             {/* Toggle de Modo */}
             <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-transparent dark:border-gray-700">

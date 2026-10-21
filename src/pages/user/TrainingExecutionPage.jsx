@@ -29,6 +29,10 @@ import { fromMyTrainingId, isMyTrainingId, replaceExerciseInMyWorkout } from '..
 import { afterSetAction, supersetRole } from '../../utils/setTypes';
 import SwapExerciseModal from '../../components/training/SwapExerciseModal';
 import { buildSwapped } from '../../utils/exerciseSwap';
+import { mediaSessionSupported, useWorkoutMediaSession } from '../../hooks/useWorkoutMediaSession';
+import { suggestNext } from '../../utils/progression';
+import { prescriptionLabel } from '../../utils/exerciseKind';
+import { stillSrc } from '../../utils/exerciseMedia';
 import { buildSessionFacts, localSummaryText, summaryAiMessages, summaryMatchesFacts } from '../../utils/sessionSummary';
 import { aiService } from '../../services/aiService';
 import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
@@ -44,6 +48,9 @@ export default function TrainingExecutionPage() {
     const { trainingId } = useParams();
     const { user, userProfile } = useAuthContext();
     const [swapIndex, setSwapIndex] = useState(null);
+    const lockSupported = mediaSessionSupported();
+    const [lockEnabled, setLockEnabled] = useState(() => { try { return window.localStorage.getItem('bt_lockscreen') === '1'; } catch (e) { return false; } });
+    const mediaHandlersRef = useRef({});
     const swapLibraryRef = useRef([]);
     const navigate = useNavigate();
     const location = useLocation();
@@ -453,6 +460,49 @@ export default function TrainingExecutionPage() {
         }
     };
 
+    const trainingExercises = training?.exercises || [];
+    // ---- controles na tela de bloqueio / notificação de mídia (e relógio pareado) ----
+    const pendingIndex = () => trainingExercises.findIndex((e, i) => Array.from({ length: Math.max(1, parseInt(e.sets, 10) || 3) }).some((_, s) => !sessionData[`${i}-${s}`]?.completed));
+    const mediaIndex = viewMode === 'focus' ? activeExerciseIndex : Math.max(0, pendingIndex());
+    mediaHandlersRef.current = {
+        nexttrack: () => {   // concluir a próxima série
+            const idx = viewMode === 'focus' ? activeExerciseIndex : pendingIndex();
+            const ex = trainingExercises[idx];
+            if (!ex) { toast('Todas as séries concluídas. Finalize o treino.'); return; }
+            const total = Math.max(1, parseInt(ex.sets, 10) || 3);
+            const s = Array.from({ length: total }).findIndex((_, k) => !sessionData[`${idx}-${k}`]?.completed);
+            if (s < 0) { toast('Este exercício já está completo.'); return; }
+            const sug = suggestNext({ historyDocs: rawHistoryDocs, exName: ex.name, reps: ex.reps, exercise: ex });
+            handleCheckSet(idx, s, String(sug ? sug.reps : (parseInt(ex.reps, 10) || 10)), total, ex.rest, ex.name, sug && sug.load > 0 ? sug.load : null);
+        },
+        previoustrack: () => {   // voltar a última série concluída
+            for (let i = trainingExercises.length - 1; i >= 0; i -= 1) {
+                const total = Math.max(1, parseInt(trainingExercises[i].sets, 10) || 3);
+                for (let s = total - 1; s >= 0; s -= 1) {
+                    if (sessionData[`${i}-${s}`]?.completed) { handleCheckSet(i, s, String(parseInt(trainingExercises[i].reps, 10) || 10), total, trainingExercises[i].rest, trainingExercises[i].name, null); toast(`Série ${s + 1} de ${trainingExercises[i].name} desfeita.`); return; }
+                }
+            }
+            toast('Ainda não há série para voltar.');
+        },
+        play: () => { if (restTimerObj) { setRestTimerObj(null); toast('Descanso pulado.'); } },
+        pause: () => { if (restTimerObj) { setRestTimerObj(null); toast('Descanso pulado.'); } },
+        seekforward: () => setActiveExerciseIndex((i) => Math.min(trainingExercises.length - 1, i + 1)),
+        seekbackward: () => setActiveExerciseIndex((i) => Math.max(0, i - 1))
+    };
+    const mediaEx = trainingExercises[mediaIndex];
+    const mediaDone = mediaEx ? Array.from({ length: Math.max(1, parseInt(mediaEx.sets, 10) || 3) }).filter((_, k) => sessionData[`${mediaIndex}-${k}`]?.completed).length : 0;
+    useWorkoutMediaSession({
+        enabled: lockEnabled && lockSupported,
+        handlersRef: mediaHandlersRef,
+        meta: mediaEx ? { title: mediaEx.name, artist: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}`, album: training?.name, artwork: typeof mediaEx.machineImage === 'string' && mediaEx.machineImage.startsWith('/') ? `${window.location.origin}${stillSrc(mediaEx.machineImage)}` : null } : null
+    });
+    const toggleLock = () => {
+        const next = !lockEnabled;
+        setLockEnabled(next);
+        try { window.localStorage.setItem('bt_lockscreen', next ? '1' : '0'); } catch (e) { /* sem storage */ }
+        toast(next ? 'Controles na tela de bloqueio ativados. Se você ouve música no celular, ela pode pausar.' : 'Controles na tela de bloqueio desativados.', { duration: 4000 });
+    };
+
     if (loading || !training) return <div className="h-screen bg-gray-900 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand"></div></div>;
 
     // Calcular progresso geral
@@ -523,6 +573,9 @@ export default function TrainingExecutionPage() {
                 progressPercent={progressPercent}
                 viewMode={viewMode}
                 onChangeViewMode={setViewMode}
+                lockSupported={lockSupported}
+                lockEnabled={lockEnabled}
+                onToggleLock={toggleLock}
             />
 
             {/* ÁREA DE CONTEÚDO */}
