@@ -44,11 +44,23 @@ export function suggestNext({ historyDocs = [], exName, reps, exercise = {} }) {
   const repsAtTop = atTop.map((s) => num(s.reps));
   const minReps = Math.min(...repsAtTop);
   const maxReps = Math.max(...repsAtTop);
-  const last = { load: top, minReps, maxReps, date: doc.date || null };
+  // Esforço percebido (RPE 6 a 10) das séries com a carga mais alta, quando o aluno o marcou em todas
+  const rpes = atTop.map((s) => num(s.rpe)).filter((v) => v > 0);
+  const avgRpe = rpes.length === atTop.length && rpes.length > 0 ? rpes.reduce((a, b) => a + b, 0) / rpes.length : null;
+  const last = { load: top, minReps, maxReps, date: doc.date || null, rpe: avgRpe === null ? null : Math.round(avgRpe * 10) / 10 };
   if (top <= 0) return { kind: 'start', load: 0, reps: range.lo, last, text: `Sem carga registrada na última vez: defina uma carga e busque ${range.lo} a ${range.hi} repetições.` };
   if (minReps >= range.hi) {
+    // bateu o teto, mas no limite do esforço: segura a carga e busca mais folga antes de subir
+    if (avgRpe !== null && avgRpe >= 9.5) return { kind: 'hold', load: top, reps: range.hi, last, text: `Você bateu ${minReps} repetições, mas no limite do esforço (RPE ${fmtKg(Math.round(avgRpe * 10) / 10)}). Repita ${fmtKg(top)} kg e busque mais folga antes de subir.` };
+    // estava leve (RPE 7 ou menos): salto maior
+    const jump = avgRpe !== null && avgRpe <= 7 ? 2 : 1;
+    const next = roundHalf(top + loadStep(exercise, top) * jump);
+    return { kind: 'increase', load: next, reps: range.lo, last, text: `Subir para ${fmtKg(next)} kg: na última vez você fez ${minReps} repetições ou mais em todas as séries com ${fmtKg(top)} kg${jump > 1 ? ' e achou leve' : ''}. Busque ${range.lo}.` };
+  }
+  // dentro da faixa, mas muito leve (RPE 6 ou menos): já pode subir um salto
+  if (minReps >= range.lo && avgRpe !== null && avgRpe <= 6) {
     const next = roundHalf(top + loadStep(exercise, top));
-    return { kind: 'increase', load: next, reps: range.lo, last, text: `Subir para ${fmtKg(next)} kg: na última vez você fez ${minReps} repetições ou mais em todas as séries com ${fmtKg(top)} kg. Busque ${range.lo}.` };
+    return { kind: 'increase', load: next, reps: range.lo, last, text: `Estava leve (RPE ${fmtKg(Math.round(avgRpe * 10) / 10)}): suba para ${fmtKg(next)} kg e busque ${range.lo} repetições.` };
   }
   if (minReps >= range.lo) {
     const target = Math.min(range.hi, minReps + 1);

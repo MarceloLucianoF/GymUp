@@ -56,3 +56,28 @@ describe('dupla progressão', () => {
     expect(dropLoad(0)).toBe(0);
   });
 });
+
+describe('esforço percebido (RPE)', () => {
+  const r = (weight, reps, rpe) => ({ weight, reps, completed: true, rpe });
+  test('bateu o teto no limite do esforço: segura a carga', () => {
+    const out = suggestNext({ historyDocs: [doc([r(60, 12, 10), r(60, 12, 10), r(60, 12, 9)])], exName: 'Supino', reps: '8-12', exercise: {} });
+    expect(out).toMatchObject({ kind: 'hold', load: 60, reps: 12 });
+    expect(out.text).toMatch(/limite do esforço/);
+  });
+  test('bateu o teto e achou leve: salto maior', () => {
+    const out = suggestNext({ historyDocs: [doc([r(60, 12, 7), r(60, 12, 7), r(60, 12, 6)])], exName: 'Supino', reps: '8-12', exercise: {} });
+    expect(out).toMatchObject({ kind: 'increase', load: 65 });
+    expect(out.text).toMatch(/achou leve/);
+  });
+  test('bateu o teto com esforço normal: salto de sempre; sem RPE marcado em todas, ignora o esforço', () => {
+    expect(suggestNext({ historyDocs: [doc([r(60, 12, 8), r(60, 12, 8), r(60, 12, 9)])], exName: 'Supino', reps: '8-12', exercise: {} }).load).toBe(62.5);
+    expect(suggestNext({ historyDocs: [doc([r(60, 12, 10), s(60, 12), s(60, 12)])], exName: 'Supino', reps: '8-12', exercise: {} }).load).toBe(62.5);
+  });
+  test('dentro da faixa mas muito leve: já sobe um salto', () => {
+    expect(suggestNext({ historyDocs: [doc([r(40, 9, 6), r(40, 9, 6), r(40, 10, 5)])], exName: 'Supino', reps: '8-12', exercise: {} })).toMatchObject({ kind: 'increase', load: 42.5, reps: 8 });
+    expect(suggestNext({ historyDocs: [doc([r(40, 9, 8), r(40, 9, 8)])], exName: 'Supino', reps: '8-12', exercise: {} }).kind).toBe('reps');
+  });
+  test('a média de esforço vai em last.rpe', () => {
+    expect(suggestNext({ historyDocs: [doc([r(40, 10, 8), r(40, 10, 9)])], exName: 'Supino', reps: '8-12', exercise: {} }).last.rpe).toBe(8.5);
+  });
+});
