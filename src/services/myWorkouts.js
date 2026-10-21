@@ -1,5 +1,5 @@
 // Treinos pessoais do aluno: users/{uid}/myWorkouts. Ficam privados (a loja de fichas, `trainings`, é aberta a todos os logados).
-import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { IMAGE_LIMITS, isSafePhoto } from '../utils/imageAttach';
 
@@ -45,3 +45,20 @@ export async function updateMyWorkout(uid, docId, payload) {
 }
 
 export const deleteMyWorkout = (uid, docId) => deleteDoc(doc(db, 'users', uid, 'myWorkouts', docId));
+
+/** Troca um exercício dentro do treino salvo, mantendo a prescrição, o plano de séries e o superset da posição. */
+export async function replaceExerciseInMyWorkout(uid, docId, originalName, swapped) {
+  const ref = doc(db, 'users', uid, 'myWorkouts', docId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('Treino não encontrado.');
+  const data = snap.data();
+  const idx = (data.exercises || []).findIndex((e) => e.name === originalName);
+  if (idx < 0) throw new Error('Exercício não encontrado no treino.');
+  const old = data.exercises[idx];
+  const next = [...data.exercises];
+  next[idx] = {
+    ...old, firestoreId: swapped.firestoreId, name: swapped.name, muscleGroup: swapped.muscleGroup, machineImage: swapped.machineImage,
+    videoUrl: swapped.videoUrl, description: swapped.description, ...(swapped.kind ? { kind: swapped.kind } : {})
+  };
+  await updateMyWorkout(uid, docId, { name: data.name, exercises: next, source: data.source, description: data.description, category: data.category, photo: data.photo, createdAt: data.createdAt });
+}

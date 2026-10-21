@@ -25,8 +25,11 @@ import {
 } from '../../utils/training';
 import { invalidateCheckIns } from '../../services/checkInsCache';
 import { saveCheckIn } from '../../services/checkInService';
-import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
+import { fromMyTrainingId, isMyTrainingId, replaceExerciseInMyWorkout } from '../../services/myWorkouts';
 import { afterSetAction, supersetRole } from '../../utils/setTypes';
+import SwapExerciseModal from '../../components/training/SwapExerciseModal';
+import { buildSwapped } from '../../utils/exerciseSwap';
+import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
 import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
@@ -37,7 +40,9 @@ export default function TrainingExecutionPage() {
     useEffect(() => () => clearTimeout(nextExerciseTimeoutRef.current), []);
 
     const { trainingId } = useParams();
-    const { user } = useAuthContext();
+    const { user, userProfile } = useAuthContext();
+    const [swapIndex, setSwapIndex] = useState(null);
+    const swapLibraryRef = useRef([]);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -137,6 +142,10 @@ export default function TrainingExecutionPage() {
                     ...firestoreLib,
                     ...defaultExercises.filter(d => !firestoreLib.some(f => f.name?.toLowerCase() === d.name?.toLowerCase()))
                 ];
+                // Biblioteca para "Trocar exercício": a do app mais os exercícios que o aluno criou (os dele vêm primeiro)
+                let mineLib = [];
+                try { mineLib = (await listMyExercises(user.uid)).map(myExerciseToLibrary); } catch (e) { /* sem exercícios próprios */ }
+                swapLibraryRef.current = [...mineLib, ...combinedLibrary];
 
                 let rawExercises = [];
                 if (location.state?.customExerciseList) {
@@ -214,7 +223,7 @@ export default function TrainingExecutionPage() {
     }, [trainingId, user, navigate, location.state]);
 
     // 2. Lógica Avançada de Inputs
-    const handleCheckSet = (exIndex, setIndex, targetReps, totalSets, restSeconds, exName) => {
+    const handleCheckSet = (exIndex, setIndex, targetReps, totalSets, restSeconds, exName, weightHint = null) => {
         const key = `${exIndex}-${setIndex}`;
         const current = sessionData[key] || {};
         const isCompleting = !current.completed;
@@ -245,7 +254,7 @@ export default function TrainingExecutionPage() {
                     }
                 }
                 if (!finalWeight) {
-                    finalWeight = historyMap[exName] || '';
+                    finalWeight = weightHint ? String(weightHint) : (historyMap[exName] || '');
                 }
             }
         }
@@ -430,6 +439,19 @@ export default function TrainingExecutionPage() {
 
     const lastExerciseIndex = training.exercises.length - 1;
 
+    // Trocar exercício: só nesta sessão, ou também no treino pessoal salvo
+    const doSwap = async (idx, ref, scope) => {
+        const original = training.exercises[idx];
+        setSwapIndex(null);   // fecha a lista antes da confirmação, para a pergunta não ficar atrás dela
+        const done = Array.from({ length: parseInt(original.sets, 10) || 3 }).some((_, i) => sessionData[`${idx}-${i}`]?.completed);
+        if (done && !(await confirm({ title: 'Trocar exercício', message: 'Você já concluiu séries deste exercício. Elas serão registradas com o exercício novo. Trocar mesmo assim?', confirmLabel: 'Trocar' }))) return;
+        const swapped = buildSwapped(original, ref);
+        setTraining((t) => ({ ...t, exercises: t.exercises.map((e, i) => (i === idx ? swapped : e)) }));
+        if (scope === 'ficha' && isMyTrainingId(trainingId)) {
+            try { await replaceExerciseInMyWorkout(user.uid, fromMyTrainingId(trainingId), original.name, swapped); toast.success(`Trocado por ${swapped.name} nesta sessão e na sua ficha.`); } catch (e) { console.error(e); toast.error('Troquei só hoje: não consegui salvar na sua ficha.'); }
+        } else toast.success(`Trocado por ${swapped.name} (só hoje).`);
+    };
+
     const renderExerciseCard = (ex, exIndex, isFocusMode = false) => (
         <ExecutionExerciseCard
             key={exIndex}
@@ -439,6 +461,7 @@ export default function TrainingExecutionPage() {
             historyMap={historyMap}
             rawHistoryDocs={rawHistoryDocs}
             sessionData={sessionData}
+            onSwap={(i) => setSwapIndex(i)}
             superset={(() => { const r = supersetRole(training.exercises, exIndex); return r ? { ...r, goToName: training.exercises[r.nextIndex ?? r.firstIndex]?.name } : null; })()}
             isLastExercise={activeExerciseIndex >= lastExerciseIndex}
             onInput={handleInput}
@@ -457,6 +480,16 @@ export default function TrainingExecutionPage() {
     return (
         <div className={`min-h-screen bg-gray-50 dark:bg-[#0B0F19] transition-colors ${viewMode === 'focus' ? 'pb-64' : 'pb-40'}`}>
             {dialog}
+            <SwapExerciseModal
+                isOpen={swapIndex !== null}
+                onClose={() => setSwapIndex(null)}
+                exercise={swapIndex !== null ? training.exercises[swapIndex] : null}
+                library={swapLibraryRef.current}
+                owned={userProfile?.gymEquipment}
+                excludeNames={training.exercises.map((e) => e.name)}
+                canPersist={isMyTrainingId(trainingId)}
+                onPick={(ref, scope) => doSwap(swapIndex, ref, scope)}
+            />
 
             <ExecutionHeader
                 trainingName={training.name}

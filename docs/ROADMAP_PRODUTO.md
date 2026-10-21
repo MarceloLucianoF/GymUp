@@ -53,3 +53,6 @@ Lista dos apps líderes comparada com o que o BohTreinar tem hoje. "Tem" foi con
 | Plataforma do treinador | Tem (fichas, pacotes, vínculos, Gestão com financeiro) | Prescrever cardio e prancha no editor (feito), retenção e relatórios (Gestão) |
 
 Prioridade sugerida: (1) tipos de série, porque muda o registro de treino que todo aluno usa; (2) exercício personalizado do aluno e mais cardio; (3) feed e compartilhar ficha; (4) Strava; (5) relógio. As fichas da academia (Gestão) ainda usam só séries e repetições: cardio e prancha ficam para quando o contrato compartilhado ganhar o campo `kind`.
+
+## Status (21/10/2026)
+Entregues do treino com IA: tipos de série e superset, carga sugerida por dupla progressão e trocar exercício na execução, importação de PDF, exercícios próprios no gerador e filtro por equipamentos. Seguem abertos: semana inteira pela IA, resumo pós-treino, Coach IA para o professor, e na Gestão a cobrança que chega ao aluno (Pix), a geração automática e os relatórios de retenção.
