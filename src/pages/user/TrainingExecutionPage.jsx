@@ -37,6 +37,9 @@ import { buildSessionFacts, localSummaryText, summaryAiMessages, summaryMatchesF
 import { aiService } from '../../services/aiService';
 import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
 import { loadAssignedTraining } from '../../services/academyTrainingSource';
+import { getSocialProfile } from '../../services/socialService';
+import { publishPost } from '../../services/feedService';
+import { buildPostPayload } from '../../utils/feed';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
@@ -417,8 +420,17 @@ export default function TrainingExecutionPage() {
 
             lastPayloadRef.current = checkInPayload;
 
+
             // Detector de Novos Recordes (PRs)
             const newPRs = detectNewPRs(training.exercises, sessionData, historyMap);
+
+            // Atividade para amigos: só com opt-in no perfil social e depois do check-in salvo. Falha aqui nunca atrapalha o treino.
+            if (saved) {
+                getSocialProfile(user.uid).then((social) => {
+                    if (!social?.shareWorkouts) return null;
+                    return publishPost(clientId, buildPostPayload(user.uid, { trainingName: training.name, durationSeconds: elapsedTime, setsCompleted, exercisesCount: executedExercises.length, newRecords: newPRs.length, weekCount: 0 }));
+                }).then((id) => { if (id) toast.success('Publicado para seus amigos.'); }).catch(() => {});
+            }
 
             try { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); } catch(e){}
 

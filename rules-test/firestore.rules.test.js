@@ -864,3 +864,78 @@ test('myWorkouts: foto só como JPEG pequeno em data URL; myExercises é privado
   await assertSucceeds(deleteDoc(doc(db('stu1'), 'users/stu1/myExercises/e1')));
   await assertFails(deleteDoc(doc(db('stu2'), 'users/stu1/myExercises/e1')));
 });
+
+// ---- feed de amigos ----
+const seedFeed = async ({ friends = 'active', shareA = true, shareB = true } = {}) => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    const prof = (uid, share) => ({ uid, displayName: uid, displayNameLower: uid, handle: uid, photoURL: '', friendCode: 'ABCD2345', discoverable: false, shareRanking: false, shareWorkouts: share, weeklyGoal: 4, updatedAt: '2026-10-21' });
+    await setDoc(doc(d, 'publicProfiles/stu1'), prof('stu1', shareA));
+    await setDoc(doc(d, 'publicProfiles/stu2'), prof('stu2', shareB));
+    await setDoc(doc(d, 'friendships/stu1_stu2'), { userA: 'stu1', userB: 'stu2', status: friends, requestedBy: 'stu1', createdAt: '2026-10-20', updatedAt: '2026-10-20', ...(friends === 'blocked' ? { blockedBy: 'stu2' } : {}) });
+  });
+};
+const feedPost = (over = {}) => ({ authorId: 'stu1', kind: 'workout', title: 'Treino de Braço', minutes: 50, workSets: 12, exercises: 6, records: 1, weekCount: 2, createdAt: '2026-10-21T10:00:00.000Z', ...over });
+
+test('feed: só quem ativou compartilhar publica, com formato fechado e sem cargas', async () => {
+  await seedFeed();
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1'), feedPost()));
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p2'), feedPost({ volumeKg: 3300 })));                 // carga/volume não entra
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p3'), feedPost({ title: '' })));
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p4'), feedPost({ title: 'x'.repeat(61) })));
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p5'), feedPost({ minutes: 0 })));
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p6'), feedPost({ exercises: 41 })));
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p7'), feedPost({ kind: 'foto' })));
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p8'), feedPost({ authorId: 'stu2' })));               // em nome de outro
+  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p9'), feedPost({ authorId: 'stu1' })));
+  await assertFails(setDoc(doc(db('coach1'), 'socialPosts/p10'), feedPost({ authorId: 'coach1' })));          // só aluno
+  await seedFeed({ shareA: false });
+  await assertFails(setDoc(doc(db('stu1'), 'socialPosts/p11'), feedPost()));                                   // sem ativar compartilhar
+});
+
+test('feed: amigos ativos leem; estranho, bloqueado e ex-amigo não; autor sempre lê e apaga', async () => {
+  await seedFeed();
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1'), feedPost()));
+  await assertSucceeds(getDoc(doc(db('stu2'), 'socialPosts/p1')));
+  await assertSucceeds(getDocs(query(collection(db('stu2'), 'socialPosts'), where('authorId', '==', 'stu1'))));
+  await assertFails(getDoc(doc(db('coach1'), 'socialPosts/p1')));
+  await assertFails(getDocs(query(collection(db('coach1'), 'socialPosts'), where('authorId', '==', 'stu1'))));
+  await assertFails(updateDoc(doc(db('stu1'), 'socialPosts/p1'), { minutes: 60 }));                        // posts não mudam
+  await assertFails(deleteDoc(doc(db('stu2'), 'socialPosts/p1')));
+  await seedFeed({ friends: 'blocked' });
+  await assertFails(getDoc(doc(db('stu2'), 'socialPosts/p1')));
+  await seedFeed({ friends: 'removed' });
+  await assertFails(getDoc(doc(db('stu2'), 'socialPosts/p1')));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'socialPosts/p1')));
+  await seedFeed({ shareA: false });
+  await assertFails(getDoc(doc(db('stu2'), 'socialPosts/p1')));                                            // desligou o compartilhamento: some para os amigos
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'socialPosts/p1')));
+});
+
+test('feed: curtidas só de amigos ativos, uma por pessoa, só o próprio id; autor e quem curtiu apagam', async () => {
+  await seedFeed();
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1'), feedPost()));
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z' }));
+  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu1'), { at: '2026-10-21T11:00:00.000Z' }));    // em nome de outro
+  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z', extra: 1 }));
+  await assertFails(setDoc(doc(db('coach1'), 'socialPosts/p1/likes/coach1'), { at: '2026-10-21T11:00:00.000Z' })); // estranho
+  await assertSucceeds(getDocs(collection(db('stu1'), 'socialPosts/p1/likes')));
+  await assertSucceeds(getDocs(collection(db('stu2'), 'socialPosts/p1/likes')));
+  await assertFails(getDocs(collection(db('coach1'), 'socialPosts/p1/likes')));
+  await assertSucceeds(deleteDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2')));
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:05:00.000Z' }));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'socialPosts/p1/likes/stu2')));                             // o autor limpa as curtidas do próprio post
+  await assertFails(deleteDoc(doc(db('coach1'), 'socialPosts/p1/likes/stu2')));
+});
+
+test('perfil social aceita shareWorkouts booleano', async () => {
+  const prof = { uid: 'stu1', displayName: 'Aluno 1', displayNameLower: 'aluno 1', handle: 'aluno1', photoURL: '', friendCode: 'ABCD2345', discoverable: false, shareRanking: false, weeklyGoal: 4, updatedAt: '2026-10-21' };
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await setDoc(doc(d, 'publicProfiles/stu1'), prof);
+    await setDoc(doc(d, 'handles/aluno1'), { uid: 'stu1' });
+    await setDoc(doc(d, 'friendCodes/ABCD2345'), { uid: 'stu1' });
+  });
+  await assertSucceeds(setDoc(doc(db('stu1'), 'publicProfiles/stu1'), { ...prof, shareWorkouts: true }));
+  await assertFails(setDoc(doc(db('stu1'), 'publicProfiles/stu1'), { ...prof, shareWorkouts: 'sim' }));
+});

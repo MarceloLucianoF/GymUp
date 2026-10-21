@@ -69,6 +69,7 @@ export async function saveSocialProfile(user, input, existing) {
     friendCode,
     discoverable: !!input.discoverable,
     shareRanking: !!input.shareRanking,
+    shareWorkouts: !!input.shareWorkouts,
     weeklyGoal: Math.min(7, Math.max(2, Number(input.weeklyGoal) || 4)),
     updatedAt: now()
   });
