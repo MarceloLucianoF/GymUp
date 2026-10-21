@@ -5,11 +5,12 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2, Pencil, ListChecks } from 'lucide-react';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2, Pencil, ListChecks, Copy, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { sameDifficulty } from '../../utils/exerciseKind';
 import MyWorkoutModal from '../../components/training/MyWorkoutModal';
-import { deleteMyWorkout, listMyWorkouts } from '../../services/myWorkouts';
+import { deleteMyWorkout, listMyWorkouts, saveMyWorkout } from '../../services/myWorkouts';
+import { duplicatePayload, workoutShareText } from '../../utils/workoutShare';
 import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
 import { isSafePhoto } from '../../utils/imageAttach';
 import AICoachModal from '../../components/ai/AICoachModal';
@@ -73,6 +74,22 @@ export default function TrainingsPage() {
     listMyExercises(user.uid).then((rows) => { if (alive) setMyExercises(rows); }).catch(() => {});
     return () => { alive = false; };
   }, [user, mineReload]);
+
+  const duplicateMine = async (training) => {
+    try { await saveMyWorkout(user.uid, duplicatePayload(training)); setMineReload((n) => n + 1); toast.success('Treino duplicado.'); } catch { toast.error('Não consegui duplicar o treino.'); }
+  };
+
+  const shareMine = async (training) => {
+    const text = workoutShareText(training);
+    try {
+      if (navigator.share) { await navigator.share({ title: training.name, text }); return; }
+      await navigator.clipboard.writeText(text);
+      toast.success('Treino copiado. É só colar onde quiser.');
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+      toast.error('Não consegui compartilhar.');
+    }
+  };
 
   const removeMine = async (training) => {
     if (!window.confirm(`Apagar o treino "${training.name}"?`)) return;
@@ -371,6 +388,8 @@ export default function TrainingsPage() {
                       {renderTrainingCard({ ...t, _validId: t.id, difficulty: 'Meu treino' }, i, { own: true })}
                       <div className="grid grid-cols-2 gap-2">
                         <button type="button" onClick={() => setEditingMine({ docId: t.docId, workout: t })} aria-label={`Editar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gray-100 text-sm font-bold text-gray-800 dark:bg-white/10 dark:text-white"><Pencil className="w-4 h-4" aria-hidden="true" />Editar</button>
+                        <button type="button" onClick={() => duplicateMine(t)} aria-label={`Duplicar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gray-100 text-sm font-bold text-gray-800 dark:bg-white/10 dark:text-white"><Copy className="w-4 h-4" aria-hidden="true" />Duplicar</button>
+                        <button type="button" onClick={() => shareMine(t)} aria-label={`Compartilhar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gray-100 text-sm font-bold text-gray-800 dark:bg-white/10 dark:text-white"><Share2 className="w-4 h-4" aria-hidden="true" />Compartilhar</button>
                         <button type="button" onClick={() => removeMine(t)} aria-label={`Apagar ${t.name}`} className="pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-red-100 text-sm font-bold text-red-700 dark:bg-red-500/15 dark:text-red-300"><Trash2 className="w-4 h-4" aria-hidden="true" />Apagar</button>
                       </div>
                     </div>
