@@ -4,10 +4,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { db } from '../../firebase/config';
-import { Clock, Scale, CheckCircle2, Dumbbell, FileText, XCircle, ArrowLeft, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Clock, Scale, CheckCircle2, Dumbbell, FileText, XCircle, ArrowLeft, Download, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 import { fetchStudentCheckIns } from '../../services/checkInsCache';
 
+import { toHealthConnectSession } from '../../utils/healthExport';
 import { stillSrc } from '../../utils/exerciseMedia';
 export default function WorkoutDetailsPage() {
   const { checkInId } = useParams();
@@ -17,6 +18,16 @@ export default function WorkoutDetailsPage() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuthContext();
   const [past, setPast] = useState([]); // histórico do próprio aluno
+
+  // Baixa a sessão no formato do Health Connect (arquivo local, nada vai para a nuvem).
+  const exportHealth = () => {
+    const session = toHealthConnectSession(workout);
+    if (!session) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `treino-${session.startTime.slice(0, 10)}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -87,10 +98,15 @@ export default function WorkoutDetailsPage() {
             <button onClick={() => navigate(-1)} aria-label="Voltar" className="pressable surface !rounded-full w-11 h-11 shrink-0 text-gray-700 dark:text-white flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
                 <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </button>
-            <div>
+            <div className="min-w-0 flex-1">
                 <h1 className="font-display text-2xl font-black text-gray-900 dark:text-white leading-tight">{workout.trainingName}</h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400 first-letter:uppercase">{date}</p>
             </div>
+            {toHealthConnectSession(workout) && (
+                <button type="button" onClick={exportHealth} aria-label="Exportar para Saúde (JSON)" className="pressable surface !rounded-full w-11 h-11 shrink-0 text-gray-700 dark:text-white flex items-center justify-center">
+                    <Download className="w-5 h-5" aria-hidden="true" />
+                </button>
+            )}
         </div>
 
         {/* Resumo Geral (Stats) */}
