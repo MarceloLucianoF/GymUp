@@ -29,6 +29,8 @@ import { fromMyTrainingId, isMyTrainingId, replaceExerciseInMyWorkout } from '..
 import { afterSetAction, supersetRole } from '../../utils/setTypes';
 import SwapExerciseModal from '../../components/training/SwapExerciseModal';
 import { buildSwapped } from '../../utils/exerciseSwap';
+import { buildSessionFacts, localSummaryText, summaryAiMessages, summaryMatchesFacts } from '../../utils/sessionSummary';
+import { aiService } from '../../services/aiService';
 import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
 import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
@@ -70,6 +72,7 @@ export default function TrainingExecutionPage() {
     const [selectedHistoryExercise, setSelectedHistoryExercise] = useState(null);
     const [showCelebration, setShowCelebration] = useState(false);
     const [celebrationStats, setCelebrationStats] = useState(null);
+    const [sessionSummary, setSessionSummary] = useState(null);
 
     // Mantém a tela acesa durante o treino (some após a celebração)
     useWakeLock(!!training && !showCelebration);
@@ -424,6 +427,26 @@ export default function TrainingExecutionPage() {
             toast.dismiss(toastId);
             setShowCelebration(true);
 
+            // Resumo pós-treino: o texto local aparece na hora; a IA reescreve em segundo plano (e só vale se os números baterem)
+            try {
+                const facts = buildSessionFacts({ training, executedExercises, totalVolume, setsCompleted, duration: elapsedTime, history: rawHistoryDocs, newPRs, weeklyGoal: userProfile?.weeklyGoal });
+                const localText = localSummaryText(facts);
+                const ai = navigator.onLine;
+                setSessionSummary({ facts, text: localText, source: 'local', loading: ai });
+                (async () => {
+                    let text = localText; let source = 'local';
+                    if (ai) {
+                        try {
+                            const reply = await aiService.summarizeFacts(summaryAiMessages(facts));
+                            const clean = String(reply || '').replace(/\s+/g, ' ').trim();
+                            if (clean && summaryMatchesFacts(clean, facts)) { text = clean; source = 'ai'; }
+                        } catch (e) { /* fica o texto local */ }
+                    }
+                    setSessionSummary((s) => (s ? { ...s, text, source, loading: false } : s));
+                    if (saved) updateDoc(doc(db, 'checkIns', clientId), { summary: { text, source } }).catch(() => {});
+                })();
+            } catch (e) { console.warn('Resumo do treino indisponível:', e); }
+
         } catch (error) {
             console.error(error);
             toast.error("Erro ao salvar.", { id: toastId });
@@ -569,6 +592,7 @@ export default function TrainingExecutionPage() {
             {showCelebration && celebrationStats && (
                 <CelebrationModal 
                     stats={celebrationStats}
+                    summary={sessionSummary}
                     onFinish={() => {
                         setShowCelebration(false);
                         navigate('/home');
