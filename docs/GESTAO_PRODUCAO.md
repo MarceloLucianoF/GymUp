@@ -20,6 +20,9 @@ Os arquivos de configuração reais (`gestao-worker/wrangler.production.jsonc`, 
 - **Desligar escritas (incidente):** publicar a API com `ADMIN_OPS_ENABLED` igual a `"false"` **no arquivo de configuração** (a opção de linha de comando `--var` não aplicou o valor neste teste). Leitura continua e sair da academia continua funcionando. Para religar, publicar de novo com `"true"`.
 - **Restaurar o banco:** `npx wrangler d1 time-travel info|restore bohtreinar-gestao ...` (guardar o bookmark antes de qualquer operação arriscada) ou importar a exportação.
 
+## Publicações
+- 22/10/2026: API (versão `d2510448`) e console com o relatório de **Retenção** no Financeiro (`GET /v1/academies/:id/finance/retention`, só dono e administrador, somente leitura, sem migração). Conferido: rota responde 401 sem token (existe), console servindo o bundle novo, sem `-hml` no bundle.
+
 ## O que foi verificado em produção (16/10/2026)
 - E2E da API com tokens reais e usuários fictícios: 22/22 (origens permitidas, token adulterado, todos os papéis por convite, isolamento entre duas academias, professor com e sem permissão, lote com prévia e idempotência, consentimento, esquema fechado, último dono, auditoria, sair e `leave-all`).
 - Console: criação de academia pela tela e 6 telas em 390 e 1280 px sem rolagem horizontal, axe WCAG 2.1 A/AA e erros de JavaScript: 27/27.
