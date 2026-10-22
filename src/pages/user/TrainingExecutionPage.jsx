@@ -516,16 +516,24 @@ export default function TrainingExecutionPage() {
         handlersRef: mediaHandlersRef,
         meta: mediaEx ? { title: mediaEx.name, artist: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}`, album: training?.name, artwork: typeof mediaEx.machineImage === 'string' && mediaEx.machineImage.startsWith('/') ? `${window.location.origin}${stillSrc(mediaEx.machineImage)}` : null } : null
     });
-    notifHandlersRef.current = { done: mediaHandlersRef.current.nexttrack, rest: mediaHandlersRef.current.play };
+    notifHandlersRef.current = {
+        done: mediaHandlersRef.current.nexttrack,
+        undo: mediaHandlersRef.current.previoustrack,
+        rest: mediaHandlersRef.current.play,
+        add30: () => setRestTimerObj((prev) => (prev ? { ...prev, endTime: prev.endTime + 30000 } : prev))
+    };
     const notifTotal = trainingExercises.reduce((acc, ex) => acc + (Math.max(1, parseInt(ex.sets, 10) || 3)), 0);
-    useWorkoutNotification({
+    const notifSug = mediaEx ? suggestNext({ historyDocs: rawHistoryDocs, exName: mediaEx.name, reps: mediaEx.reps, exercise: mediaEx }) : null;
+    const { alertRestOver } = useWorkoutNotification({
         enabled: notifEnabled && notifPerm === 'granted',
         handlersRef: notifHandlersRef,
         meta: mediaEx ? {
             title: `${mediaEx.name} · ${training?.name || 'Treino'}`,
-            setLabel: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}`,
+            setLabel: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}${notifSug && notifSug.load > 0 ? ` · ${String(notifSug.load).replace('.', ',')} kg` : ''}`,
             progress: `${Object.values(sessionData).filter((x) => x?.completed).length} de ${notifTotal} séries concluídas`,
-            resting: !!restTimerObj
+            resting: !!restTimerObj,
+            restEndsAt: restTimerObj?.endTime || null,
+            image: typeof mediaEx.machineImage === 'string' && mediaEx.machineImage.startsWith('/') ? `${window.location.origin}${stillSrc(mediaEx.machineImage)}` : null
         } : null
     });
     const setNotif = async (on) => {
@@ -682,7 +690,7 @@ export default function TrainingExecutionPage() {
                 <RestTimer 
                     endTime={restTimerObj.endTime}
                     duration={restTimerObj.duration} 
-                    onFinish={() => { setRestTimerObj(null); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
+                    onFinish={() => { setRestTimerObj(null); alertRestOver(); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
                     onClose={() => setRestTimerObj(null)} 
                     onAdjust={(ms) => setRestTimerObj(prev => prev ? ({ ...prev, endTime: prev.endTime + ms }) : null)}
                 />
