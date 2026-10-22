@@ -31,5 +31,8 @@ Por grupo (catálogo final): costas 17, pernas 17, peito 14, core 12, ombros 11,
 ## Pendências de qualidade
 - **Hip Thrust Máquina:** o GIF mostra a versão com barra, e o nome (herdado do Firestore e dos modelos oficiais de pernas) diz máquina. Para o filtro "somente máquinas" isso engana; corrigir o nome no Firestore e nos modelos oficiais depois da revisão do treinador.
 - **Agachamento Livre com Barra e Rosca Direta com Halteres:** nomes ajustados para o que o GIF mostra (antes: "Agachamento Livre" e "Rosca Direta" aproximados).
-- **Flexão Nórdica Inversa:** o GIF é um agachamento sissy com carga; revisar o nome.
+- **Flexão Nórdica Inversa:** o GIF é um agachamento sissy com carga. Em 22/10/2026 a execução passou a descrever a versão ajoelhada (como o nome) e avisa que a imagem é a variação em pé; marcada como imagem de referência.
 - Todos os textos novos de execução devem passar pelo olhar de um treinador antes de virarem referência oficial.
+
+## Imagens de referência (22/10/2026)
+Glúteo Máquina, Pullover Máquina, Elevação Lateral Máquina, Hip Thrust Máquina e Flexão Nórdica Inversa não têm imagem da própria máquina/movimento no banco de domínio público. O texto de execução agora diz o que a imagem mostra ("A imagem mostra a versão com barra; na máquina o movimento é o mesmo"), no app e no Firestore (backup em `~/bohtreinar-backups/catalogo-imagens-referencia-2026-10-22.json`). Glúteo Máquina ganhou descrição completa. Trocar as imagens exige foto/vídeo próprio (ex.: gravado na academia).
