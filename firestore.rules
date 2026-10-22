@@ -803,12 +803,19 @@ service cloud.firestore {
       match /likes/{likerId} {
         allow get, list: if signedIn() && canSeePost(get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId);
         allow create: if signedIn() && likerId == request.auth.uid
-          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at is string && request.resource.data.at.size() <= 40
+          && request.resource.data.keys().hasOnly(['at', 'likerId']) && request.resource.data.likerId == request.auth.uid
+          && request.resource.data.at is string && request.resource.data.at.size() <= 40
           && canSeePost(get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId);
         allow update: if false;
         allow delete: if signedIn() && (likerId == request.auth.uid
           || get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId == request.auth.uid);
       }
+    }
+
+    // Curtidas que o usuário deu (consulta por grupo de coleções, usada ao excluir a conta): só as próprias.
+    // Atenção: qualquer subcoleção futura chamada 'likes' com campo likerId ficaria listável pelo próprio dono.
+    match /{path=**}/likes/{likeId} {
+      allow list: if signedIn() && resource.data.likerId == request.auth.uid;
     }
 
     // Registro das ações sociais (para a auditoria do admin). Cada usuário só acrescenta as próprias entradas.

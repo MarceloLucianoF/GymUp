@@ -6,7 +6,7 @@ const path = require('path');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds
 } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, query, where, writeBatch, deleteField, Timestamp, serverTimestamp } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, collectionGroup, query, where, writeBatch, deleteField, Timestamp, serverTimestamp } = require('firebase/firestore');
 
 let env;
 const cache = new Map();
@@ -915,17 +915,29 @@ test('feed: amigos ativos leem; estranho, bloqueado e ex-amigo não; autor sempr
 test('feed: curtidas só de amigos ativos, uma por pessoa, só o próprio id; autor e quem curtiu apagam', async () => {
   await seedFeed();
   await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1'), feedPost()));
-  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z' }));
-  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu1'), { at: '2026-10-21T11:00:00.000Z' }));    // em nome de outro
-  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z', extra: 1 }));
-  await assertFails(setDoc(doc(db('coach1'), 'socialPosts/p1/likes/coach1'), { at: '2026-10-21T11:00:00.000Z' })); // estranho
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z', likerId: 'stu2' }));
+  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu1'), { at: '2026-10-21T11:00:00.000Z', likerId: 'stu1' }));    // em nome de outro
+  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z', likerId: 'stu2', extra: 1 }));
+  await assertFails(setDoc(doc(db('coach1'), 'socialPosts/p1/likes/coach1'), { at: '2026-10-21T11:00:00.000Z', likerId: 'coach1' })); // estranho
+  await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z' }));                     // sem likerId
   await assertSucceeds(getDocs(collection(db('stu1'), 'socialPosts/p1/likes')));
   await assertSucceeds(getDocs(collection(db('stu2'), 'socialPosts/p1/likes')));
   await assertFails(getDocs(collection(db('coach1'), 'socialPosts/p1/likes')));
   await assertSucceeds(deleteDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2')));
-  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:05:00.000Z' }));
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:05:00.000Z', likerId: 'stu2' }));
   await assertSucceeds(deleteDoc(doc(db('stu1'), 'socialPosts/p1/likes/stu2')));                             // o autor limpa as curtidas do próprio post
   await assertFails(deleteDoc(doc(db('coach1'), 'socialPosts/p1/likes/stu2')));
+});
+
+test('curtidas dadas: cada um lista só as próprias (grupo de coleções) e apaga mesmo sem o post', async () => {
+  await seedFeed();
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1'), feedPost()));
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z', likerId: 'stu2' }));
+  await assertSucceeds(getDocs(query(collectionGroup(db('stu2'), 'likes'), where('likerId', '==', 'stu2'))));
+  await assertFails(getDocs(query(collectionGroup(db('stu1'), 'likes'), where('likerId', '==', 'stu2'))));   // não lista curtida alheia
+  await assertFails(getDocs(collectionGroup(db('stu2'), 'likes')));                                           // sem filtro
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'socialPosts/p1')));                                         // o autor apaga o post
+  await assertSucceeds(deleteDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2')));                              // a curtida órfã ainda sai
 });
 
 test('perfil social aceita shareWorkouts booleano', async () => {

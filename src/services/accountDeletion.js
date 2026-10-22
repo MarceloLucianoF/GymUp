@@ -1,5 +1,5 @@
 import {
-  collection, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc
+  collection, collectionGroup, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc
 } from 'firebase/firestore';
 import {
   EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, deleteUser, browserPopupRedirectResolver
@@ -28,7 +28,7 @@ export const chunk = (items, size = BATCH_SIZE) => {
   return out;
 };
 
-const realDeps = { db, collection, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc };
+const realDeps = { db, collection, collectionGroup, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc };
 
 const deleteRefs = async (refs, deps) => {
   for (const group of chunk(refs)) {
@@ -126,6 +126,16 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
       const likes = await deps.getDocs(deps.collection(deps.db, 'socialPosts', post.id, 'likes'));
       for (const like of likes.docs) await tryDelete(like.ref);
       await tryDelete(post.ref);
+    }
+    // Curtidas que dei em posts de outras pessoas (só as que já guardam o likerId).
+    if (deps.collectionGroup) {
+      try {
+        const given = await deps.getDocs(deps.query(deps.collectionGroup(deps.db, 'likes'), deps.where('likerId', '==', uid)));
+        for (const like of given.docs) await tryDelete(like.ref);
+      } catch (error) {
+        if (error?.code !== 'permission-denied' && error?.code !== 'failed-precondition') throw error;
+        console.warn('Curtidas dadas não foram apagadas (índice ou regra indisponível):', error.code);
+      }
     }
     try {
       const profile = await deps.getDoc(deps.doc(deps.db, 'publicProfiles', uid));
