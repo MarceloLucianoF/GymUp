@@ -307,6 +307,45 @@ export async function summary(ctx) {
   };
 }
 
+// ---------- retenção e inadimplência por mês (só leitura; dono e administrador) ----------
+// Para cada um dos 6 meses até `month`: contratos ativos no início, novos, encerrados, cancelamento (%) e cobranças do mês ainda em atraso.
+// Mais os alunos com 2 ou mais cobranças atrasadas (para a recepção ligar), sem dado de treino ou saúde.
+export async function retention(ctx) {
+  const { academyId } = ctx.params;
+  await requireAccess(ctx, academyId, STAFF);
+  const today = todayBrt(ctx.now);
+  const month = monthParam(ctx, 'month', monthOf(today));
+  const months = Array.from({ length: 6 }, (_, i) => addMonths(month, i - 5));
+  const rowsByMonth = await Promise.all(months.map(async (m) => {
+    const start = `${m}-01`;
+    const next = `${addMonths(m, 1)}-01`;
+    const [c, b] = await Promise.all([
+      first(ctx, `SELECT
+          count(CASE WHEN start_date < ? AND (end_date IS NULL OR end_date >= ?) THEN 1 END) AS at_start,
+          count(CASE WHEN start_date >= ? AND start_date < ? THEN 1 END) AS started,
+          count(CASE WHEN status = 'ended' AND end_date >= ? AND end_date < ? THEN 1 END) AS ended
+        FROM student_contracts WHERE academy_id = ?`, start, start, start, next, start, next, academyId),
+      first(ctx, `SELECT COALESCE(sum(CASE WHEN billing_status IN ('pending', 'paid') THEN amount_cents - discount_cents END), 0) AS expected,
+          COALESCE(sum(CASE WHEN billing_status = 'pending' AND due_date < ? THEN amount_cents - discount_cents END), 0) AS overdue_cents,
+          count(CASE WHEN billing_status = 'pending' AND due_date < ? THEN 1 END) AS overdue_n
+        FROM academy_billing WHERE academy_id = ? AND reference_month = ?`, today, today, academyId, m)
+    ]);
+    return {
+      month: m, activeAtStart: c.at_start, started: c.started, ended: c.ended,
+      churnPercent: c.at_start > 0 ? Math.round((c.ended / c.at_start) * 1000) / 10 : 0,
+      expectedCents: b.expected, overdueCents: b.overdue_cents, overdueCount: b.overdue_n,
+      delinquencyPercent: b.expected > 0 ? Math.round((b.overdue_cents / b.expected) * 1000) / 10 : 0
+    };
+  }));
+  const atRisk = await all(ctx, `SELECT b.student_uid, m.display_name AS student_name, count(*) AS n, sum(b.amount_cents - b.discount_cents) AS cents, min(b.due_date) AS oldest
+      FROM academy_billing b JOIN academy_members m ON m.academy_id = b.academy_id AND m.user_id = b.student_uid
+      WHERE b.academy_id = ? AND b.billing_status = 'pending' AND b.due_date < ? GROUP BY b.student_uid HAVING count(*) >= 2 ORDER BY n DESC, oldest LIMIT 20`, academyId, today);
+  return {
+    academyId, today, month, months: rowsByMonth,
+    atRisk: atRisk.map((r) => ({ studentUid: r.student_uid, studentName: r.student_name, overdueCount: r.n, overdueCents: r.cents, oldestDueDate: r.oldest }))
+  };
+}
+
 // Exportação das cobranças (até 12 meses, 5000 linhas) para planilha; fica na auditoria.
 export async function exportFinance(ctx) {
   const { academyId } = ctx.params;

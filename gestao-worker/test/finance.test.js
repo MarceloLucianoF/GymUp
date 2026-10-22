@@ -244,3 +244,29 @@ test('revisão: recepção só baixa o valor cheio e recente; revertida de quem 
   assert.equal(code(await api(d1, 'dono', 'POST', `${P()}/charges/${paidC1.id}/revert`, { body: {} })), 'conflict');
   assert.equal(code(await api(d1, 'dono', 'PATCH', `${P()}/members/alu/role`, { body: { role: 'reception' } })), 'no_membership'.replace('no_membership', code(await api(d1, 'dono', 'PATCH', `${P()}/members/alu/role`, { body: { role: 'reception' } }))));
 });
+
+test('retenção: ativos no início do mês, novos, encerrados, cancelamento, atraso por mês e alunos com 2+ atrasos; só dono e administrador', async () => {
+  const d1 = world();
+  const plan = await mkPlan(d1, 'Mensal', 10000);
+  await mkContract(d1, 'alu', plan, { startDate: '2026-08-01' });
+  const c2 = await mkContract(d1, 'alu2', plan, { startDate: '2026-08-01' });
+  await generate(d1, '2026-08');
+  await generate(d1, '2026-09');
+  await generate(d1, '2026-10');
+  await api(d1, 'dono', 'PATCH', `${P()}/contracts/${c2}`, { body: { status: 'ended', endDate: '2026-10-10' } });
+  const r = data(await api(d1, 'dono', 'GET', `${P()}/finance/retention?month=2026-10`));
+  assert.deepEqual(r.months.map((m) => m.month), ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']);
+  const [aug, sep, oct] = r.months.slice(3);
+  assert.deepEqual([aug.activeAtStart, aug.started, aug.ended], [0, 2, 0]);
+  assert.deepEqual([sep.activeAtStart, sep.started, sep.ended, sep.churnPercent], [2, 0, 0, 0]);
+  assert.deepEqual([oct.activeAtStart, oct.ended, oct.churnPercent], [2, 1, 50]);
+  assert.equal(aug.overdueCount, 2);                          // ninguém pagou agosto
+  assert.equal(aug.delinquencyPercent, 100);
+  assert.deepEqual(r.atRisk.map((x) => x.studentName).sort(), ['Nome alu', 'Nome alu2']);
+  assert.ok(r.atRisk.every((x) => x.overdueCount >= 2));
+  assert.ok(!JSON.stringify(r).toLowerCase().includes('weight') && !JSON.stringify(r).includes('@'));
+  assert.equal(data(await api(d1, 'adm', 'GET', `${P()}/finance/retention`)).months.length, 6);
+  for (const uid of ['rec', 'prof', 'alu']) assert.equal(code(await api(d1, uid, 'GET', `${P()}/finance/retention`)), 'forbidden_role', uid);
+  assert.equal(code(await api(d1, 'donoB', 'GET', `${P(A)}/finance/retention`)), 'no_membership');
+  assert.equal(code(await api(d1, 'dono', 'GET', `${P()}/finance/retention?month=2026-13`)), 'invalid_request');
+});

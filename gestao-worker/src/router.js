@@ -40,6 +40,7 @@ export const ROUTES = [
   route('POST', '/v1/academies/:academyId/charges/:id/exempt', finance.exemptCharge),
   route('PATCH', '/v1/academies/:academyId/charges/:id', finance.adjustCharge),
   route('GET', '/v1/academies/:academyId/finance/summary', finance.summary),
+  route('GET', '/v1/academies/:academyId/finance/retention', finance.retention),
   route('POST', '/v1/academies/:academyId/finance/export', finance.exportFinance),
   route('POST', '/v1/academies/:academyId/export', dataRights.exportAcademy),
   route('POST', '/v1/academies/:academyId/close', dataRights.closeAcademy),
