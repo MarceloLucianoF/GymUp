@@ -23,7 +23,7 @@ import {
     hydrateExercises, buildLoadMap, buildExerciseLoadLogs, summarizeSession, detectNewPRs,
     adjustValue, getLastSessionSets, buildCopyFromLast, noteKey, NOTE_MAX, formatDuration
 } from '../../utils/training';
-import { invalidateCheckIns } from '../../services/checkInsCache';
+import { fetchStudentCheckIns, invalidateCheckIns } from '../../services/checkInsCache';
 import { saveCheckIn } from '../../services/checkInService';
 import { fromMyTrainingId, isMyTrainingId, replaceExerciseInMyWorkout } from '../../services/myWorkouts';
 import { afterSetAction, supersetRole } from '../../utils/setTypes';
@@ -40,7 +40,7 @@ import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises
 import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { getSocialProfile } from '../../services/socialService';
 import { publishPost } from '../../services/feedService';
-import { buildPostPayload } from '../../utils/feed';
+import { buildPostPayload, weekCountOf } from '../../utils/feed';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
@@ -432,9 +432,11 @@ export default function TrainingExecutionPage() {
 
             // Atividade para amigos: só com opt-in no perfil social e depois do check-in salvo. Falha aqui nunca atrapalha o treino.
             if (saved) {
-                getSocialProfile(user.uid).then((social) => {
+                getSocialProfile(user.uid).then(async (social) => {
                     if (!social?.shareWorkouts) return null;
-                    return publishPost(clientId, buildPostPayload(user.uid, { trainingName: training.name, durationSeconds: elapsedTime, setsCompleted, exercisesCount: executedExercises.length, newRecords: newPRs.length, weekCount: 0 }));
+                    let weekCount = 0;
+                    try { weekCount = weekCountOf(await fetchStudentCheckIns(user.uid)); } catch (e) { /* sem histórico: o post sai sem a contagem */ }
+                    return publishPost(clientId, buildPostPayload(user.uid, { trainingName: training.name, durationSeconds: elapsedTime, setsCompleted, exercisesCount: executedExercises.length, newRecords: newPRs.length, weekCount }));
                 }).then((id) => { if (id) toast.success('Publicado para seus amigos.'); }).catch(() => {});
             }
 

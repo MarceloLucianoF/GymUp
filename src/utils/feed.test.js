@@ -16,6 +16,7 @@ describe('feed', () => {
   test('postLine, mergePosts e timeAgo', () => {
     expect(postLine({ minutes: 50, workSets: 12, records: 1 })).toBe('50 min · 12 séries · 1 recorde');
     expect(postLine({ minutes: 50, workSets: 12, records: 0 })).toBe('50 min · 12 séries');
+    expect(postLine({ minutes: 50, workSets: 12, records: 0, weekCount: 3 })).toBe('50 min · 12 séries · 3º treino da semana');
     const merged = mergePosts([[{ id: 'a', createdAt: '2026-10-20' }], [{ id: 'b', createdAt: '2026-10-21' }]], 1);
     expect(merged.map((x) => x.id)).toEqual(['b']);
     const now = Date.parse('2026-10-21T12:00:00Z');
@@ -42,4 +43,11 @@ describe('curtidas recebidas', () => {
     expect(likeAlertText(items, {})).toBe('3 curtidas novas nos seus treinos.');
     expect(likeAlertText([], {})).toBe('');
   });
+});
+
+test('weekCountOf conta só desde segunda-feira', () => {
+  const { weekCountOf } = require('./feed');
+  const now = new Date(2026, 9, 22, 12);   // quinta, 22/10/2026
+  const rows = [{ date: new Date(2026, 9, 19, 7).toISOString() }, { date: new Date(2026, 9, 22, 8).toISOString() }, { date: new Date(2026, 9, 18, 20).toISOString() }, { date: 'x' }];
+  expect(weekCountOf(rows, now)).toBe(2);
 });

@@ -1,3 +1,5 @@
+import { weekStart } from './analytics';
+
 // Atividade entre amigos: o que vai para o post é só o resumo do treino (sem carga, volume ou dado de saúde).
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Math.round(Number(value) || 0)));
 
@@ -31,6 +33,7 @@ export function buildPostPayload(uid, { trainingName, durationSeconds, setsCompl
 /** Frase curta do post para a lista de atividade. */
 export function postLine(post) {
   const parts = [`${post.minutes} min`, `${post.workSets} séries`];
+  if (post.weekCount > 0) parts.push(`${post.weekCount}º treino da semana`);
   if (post.records > 0) parts.push(`${post.records} ${post.records === 1 ? 'recorde' : 'recordes'}`);
   return parts.join(' · ');
 }
@@ -64,4 +67,10 @@ export function likeAlertText(items, names = {}) {
   if (items.length === 1) return `${names[items[0].likerId] || 'Um amigo'} curtiu seu treino "${items[0].title}".`;
   if (people.length === 1) return `${names[people[0]] || 'Um amigo'} curtiu ${items.length} treinos seus.`;
   return `${items.length} curtidas novas nos seus treinos.`;
+}
+
+/** Quantos treinos o aluno registrou nesta semana (segunda a domingo), contando o que acabou de salvar. */
+export function weekCountOf(checkIns, now = new Date()) {
+  const from = weekStart(now).getTime();
+  return (checkIns || []).filter((c) => { const t = new Date(c.date || c.createdAt).getTime(); return Number.isFinite(t) && t >= from; }).length;
 }
