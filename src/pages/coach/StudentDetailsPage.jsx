@@ -19,6 +19,7 @@ import Tabs from '../../components/coach/Tabs';
 import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import AdherenceHeatmap from '../../components/coach/AdherenceHeatmap';
+import CoachBriefCard from '../../components/coach/CoachBriefCard';
 import { adherenceGrid, adherencePct } from '../../utils/coachInsights';
 import { useConfirm } from '../../hooks/useConfirm';
 import { endStudentLink } from '../../services/coachLinkService';
@@ -220,6 +221,7 @@ export default function StudentDetailsPage() {
               </div>
               <button type="button" onClick={() => setAssigning(true)} className={btnGhost}>{student.currentTrainingId ? 'Trocar' : 'Atribuir'}</button>
             </section>
+            <CoachBriefCard checkIns={history} student={student} />
             <section className="surface flex flex-wrap items-center gap-5 p-5" aria-label="Aderência semanal">
               <AdherenceHeatmap grid={derived.grid} />
               <div>
