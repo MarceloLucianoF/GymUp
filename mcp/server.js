@@ -4,7 +4,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import admin from 'firebase-admin';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -15,22 +16,22 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'workout-tracker-app-20e43';
 
 function initFirebase() {
-  if (admin.apps.length) return;
+  if (getApps().length) return;   // firebase-admin 14 só tem a API modular
   if (process.env.FIRESTORE_EMULATOR_HOST) {
-    admin.initializeApp({ projectId: PROJECT_ID });
+    initializeApp({ projectId: PROJECT_ID });
     return;
   }
   const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(here, '..', 'serviceAccountKey.json');
   if (!existsSync(keyPath)) {
     throw new Error('Credencial não encontrada: defina GOOGLE_APPLICATION_CREDENTIALS ou use FIRESTORE_EMULATOR_HOST.');
   }
-  const credential = admin.credential.cert(JSON.parse(readFileSync(keyPath, 'utf8')));
-  admin.initializeApp({ credential, projectId: PROJECT_ID });
+  const credential = cert(JSON.parse(readFileSync(keyPath, 'utf8')));
+  initializeApp({ credential, projectId: PROJECT_ID });
 }
 
 const db = () => {
   initFirebase();
-  return admin.firestore();
+  return getFirestore();
 };
 
 const ok = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] });
@@ -91,7 +92,7 @@ server.tool('upsert_training',
 
     const ref = id ? db().collection('trainings').doc(id) : db().collection('trainings').doc();
     if (id && !(await ref.get()).exists) throw new Error('Ficha a atualizar não existe.');
-    const stamp = admin.firestore.FieldValue.serverTimestamp();
+    const stamp = FieldValue.serverTimestamp();
     await ref.set(id ? { ...data, updatedAt: stamp } : { ...data, createdAt: stamp, updatedAt: stamp }, { merge: Boolean(id) });
     audit({ tool: 'upsert_training', id: ref.id, action: result.action });
     return { ...result, id: ref.id, applied: true };
@@ -106,7 +107,7 @@ server.tool('duplicate_training', 'Duplica uma ficha com novo nome.',
     const copy = { ...rest, name: newName };
     if (!apply) return { action: 'duplicate', from: id, preview: { name: newName, exercises: (copy.exercises || []).length }, applied: false };
     const ref = db().collection('trainings').doc();
-    const stamp = admin.firestore.FieldValue.serverTimestamp();
+    const stamp = FieldValue.serverTimestamp();
     await ref.set({ ...copy, createdAt: stamp, updatedAt: stamp });
     audit({ tool: 'duplicate_training', from: id, id: ref.id });
     return { action: 'duplicate', from: id, id: ref.id, applied: true };

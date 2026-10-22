@@ -20,5 +20,8 @@ Com `FIRESTORE_EMULATOR_HOST` define o emulador (sem credencial). **Ignora as re
 
 Toda escrita é **prévia por padrão** (`apply:false`). Só grava com `apply:true`, e registra em `mcp/audit.log` (ignorado pelo git).
 
+## Histórico
+- 22/10/2026: com `firebase-admin` 14 o objeto `admin.*` (apps, credential, firestore) deixou de existir e toda ferramenta falhava com "Cannot read properties of undefined (reading 'length')". O servidor passou a usar a API modular (`firebase-admin/app`, `firebase-admin/firestore`). Reinicie o Claude Code para carregar a correção.
+
 ## Testes
 `cd mcp && npm test` (validação de fichas). Sem emulador, os testes de escrita não tocam o Firestore.
