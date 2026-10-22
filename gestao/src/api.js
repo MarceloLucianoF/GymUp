@@ -80,6 +80,7 @@ export function createApi({ baseUrl, getToken, onSessionExpired, fetchImpl = fet
     chargeAction: (id, cid, action, note) => request(`${A(id)}/charges/${enc(cid)}/${action}`, { method: 'POST', body: note ? { note } : {} }),
     adjustCharge: (id, cid, body) => request(`${A(id)}/charges/${enc(cid)}`, { method: 'PATCH', body }),
     financeSummary: (id, params) => request(`${A(id)}/finance/summary${q(params)}`),
+    financeRetention: (id, params) => request(`${A(id)}/finance/retention${q(params)}`),
     exportFinance: (id, body) => request(`${A(id)}/finance/export`, { method: 'POST', body }),
     exportAcademy: (id) => request(`${A(id)}/export`, { method: 'POST', body: {} }),
     closeAcademy: (id, confirmName, key) => request(`${A(id)}/close`, { method: 'POST', body: { confirmName, confirm: true }, idempotencyKey: key }),

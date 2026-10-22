@@ -99,6 +99,57 @@ function SummaryTab({ month, setMonth, onPay }) {
   );
 }
 
+// ---------- retenção ----------
+function RetentionTab({ month, setMonth }) {
+  const { api, academyId } = useApp();
+  const [state, reload] = useApi(() => api.financeRetention(academyId, { month }), [api, academyId, month]);
+  const d = state.data;
+  const pct = (n) => `${n.toLocaleString('pt-BR')}%`;
+  return (
+    <>
+      <MonthNav month={month} onChange={setMonth} />
+      {state.status === 'loading' && <TableSkeleton rows={3} />}
+      {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
+      {d && (
+        <>
+          <section className="panel" aria-labelledby="retencao">
+            <h2 id="retencao">Retenção e inadimplência, últimos 6 meses</h2>
+            <div className="table-wrap">
+              <table className="table">
+                <caption className="sr-only">Contratos e atrasos por mês</caption>
+                <thead><tr><th scope="col">Mês</th><th scope="col">Ativos no início</th><th scope="col">Novos</th><th scope="col">Encerrados</th><th scope="col">Cancelamento</th><th scope="col">Em atraso</th><th scope="col">Inadimplência</th></tr></thead>
+                <tbody>
+                  {d.months.map((m) => (
+                    <tr key={m.month}>
+                      <th scope="row">{monthLabel(m.month)}</th>
+                      <td>{m.activeAtStart}</td><td>+{m.started}</td><td>-{m.ended}</td><td>{pct(m.churnPercent)}</td>
+                      <td>{formatBRL(m.overdueCents)} <span className="muted small">({plural(m.overdueCount, 'cobrança', 'cobranças')})</span></td><td>{pct(m.delinquencyPercent)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted small">Cancelamento = contratos encerrados no mês sobre os ativos no início. Inadimplência = cobranças do mês ainda em atraso hoje sobre o previsto do mês.</p>
+          </section>
+          <section className="panel" aria-labelledby="risco">
+            <h2 id="risco">Alunos com 2 ou mais cobranças atrasadas</h2>
+            {d.atRisk.length === 0 ? <p className="muted">Ninguém com mais de uma cobrança atrasada.</p> : (
+              <ul className="rows">
+                {d.atRisk.map((r) => (
+                  <li key={r.studentUid} className="row">
+                    <span className="person"><Avatar name={r.studentName} /><span>{r.studentName}<span className="muted small"> · mais antiga venceu em {dateBR(r.oldestDueDate)}</span></span></span>
+                    <span><strong>{formatBRL(r.overdueCents)}</strong> <span className="muted small">({plural(r.overdueCount, 'cobrança', 'cobranças')})</span></span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
+      )}
+    </>
+  );
+}
+
 // ---------- cobranças ----------
 function ChargesTab({ month, setMonth, manage, openPay }) {
   const { api, academyId } = useApp();
@@ -276,7 +327,7 @@ export default function Finance() {
   const [pay, setPay] = useState(null);
   const toast = useToast();
   if (!canSeeFinance(role)) return <Navigate to="/app" replace />;
-  const tabs = [manage && ['resumo', 'Resumo'], ['cobrancas', 'Cobranças'], ['planos', 'Planos e contratos']].filter(Boolean);
+  const tabs = [manage && ['resumo', 'Resumo'], manage && ['retencao', 'Retenção'], ['cobrancas', 'Cobranças'], ['planos', 'Planos e contratos']].filter(Boolean);
   const openPay = (charge, reload) => setPay({ charge, reload });
   return (
     <>
@@ -286,6 +337,7 @@ export default function Finance() {
       </div>
       <div id="painel-fin" role="tabpanel" aria-labelledby={`tab-${tab}`} className="stack">
         {tab === 'resumo' && manage && <SummaryTab month={month} setMonth={setMonth} onPay={openPay} />}
+        {tab === 'retencao' && manage && <RetentionTab month={month} setMonth={setMonth} />}
         {tab === 'cobrancas' && <ChargesTab month={month} setMonth={setMonth} manage={manage} openPay={openPay} />}
         {tab === 'planos' && <PlansTab manage={manage} />}
       </div>
