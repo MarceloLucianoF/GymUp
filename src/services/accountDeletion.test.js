@@ -180,3 +180,22 @@ describe('leaveAcademies (vínculos com academias antes de apagar a conta)', () 
     await expect(leaveAcademies({ api, enabled: true })).rejects.toMatchObject({ step: 'academies', message: expect.stringMatching(/Tente de novo/) });
   });
 });
+
+describe('deleteUserData - atividade social', () => {
+  test('apaga posts próprios com as curtidas e as curtidas dadas a outros', async () => {
+    const { deps, log } = makeDeps();
+    const baseGet = deps.getDocs;
+    deps.collectionGroup = (db, name) => ({ path: `group:${name}` });
+    deps.getDocs = async (q) => {
+      const path = q.path || q.col.path;
+      if (path === 'socialPosts') return { docs: [{ id: 'p1', ref: { path: 'socialPosts/p1' } }] };
+      if (path === 'socialPosts/p1/likes') return { docs: [{ id: 'x', ref: { path: 'socialPosts/p1/likes/x' } }] };
+      if (path === 'group:likes') return { docs: [{ id: 'u1', ref: { path: 'socialPosts/outro/likes/u1' } }] };
+      return baseGet(q);
+    };
+    await deleteUserData('u1', { deps });
+    const deleted = log.filter((l) => l[0] === 'delete').map((l) => l[1]);
+    expect(deleted).toEqual(expect.arrayContaining(['socialPosts/p1/likes/x', 'socialPosts/p1', 'socialPosts/outro/likes/u1']));
+    expect(deleted.indexOf('socialPosts/p1/likes/x')).toBeLessThan(deleted.indexOf('socialPosts/p1'));
+  });
+});

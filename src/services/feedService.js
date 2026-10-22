@@ -19,6 +19,13 @@ export async function deletePost(postId) {
   await deleteDoc(doc(db, 'socialPosts', postId));
 }
 
+/** Apaga todos os meus posts (e as curtidas deles): usado ao parar de compartilhar treinos. */
+export async function deleteMyPosts(uid) {
+  const snap = await getDocs(query(collection(db, 'socialPosts'), where('authorId', '==', uid)));
+  for (const d of snap.docs) await deletePost(d.id);
+  return snap.size;
+}
+
 /** Atividade dos amigos ativos e a minha. Uma consulta por autor: as regras não filtram listas com `in`. */
 export async function listFeed(uid, friendships) {
   const friends = (friendships || []).filter((f) => f.status === 'active').map((f) => otherOf(f, uid)).slice(0, MAX_FRIENDS);
@@ -43,5 +50,5 @@ export async function listFeed(uid, friendships) {
 
 export async function setLike(postId, uid, on) {
   const ref = doc(db, 'socialPosts', postId, 'likes', uid);
-  if (on) await setDoc(ref, { at: new Date().toISOString() }); else await deleteDoc(ref);
+  if (on) await setDoc(ref, { at: new Date().toISOString(), likerId: uid }); else await deleteDoc(ref);
 }

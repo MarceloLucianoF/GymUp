@@ -12,7 +12,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import useSocial from '../../hooks/useSocial';
 import usePageMeta from '../../hooks/usePageMeta';
-import { deletePost, listFeed, setLike } from '../../services/feedService';
+import { deleteMyPosts, deletePost, listFeed, setLike } from '../../services/feedService';
 import { postLine, timeAgo } from '../../utils/feed';
 import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
 
@@ -217,7 +217,12 @@ function ProfileTab({ social, user, profile: studentProfile, reload }) {
     const problem = validateHandle(normalizeHandle(form.handle));
     if (problem) { setError(problem); return; }
     setError(''); setSaving(true);
-    try { await saveSocialProfile(user, form, profile); toast.success('Perfil social salvo.'); await reload(); }
+    try {
+      await saveSocialProfile(user, form, profile);
+      if (profile?.shareWorkouts && !form.shareWorkouts) { try { await deleteMyPosts(user.uid); } catch (_) { /* os posts já ficam ocultos pelas regras */ } }
+      toast.success(profile?.shareWorkouts && !form.shareWorkouts ? 'Perfil salvo. Suas publicações foram apagadas.' : 'Perfil social salvo.');
+      await reload();
+    }
     catch (err) { setError(err.message || 'Não foi possível salvar.'); }
     finally { setSaving(false); }
   };
