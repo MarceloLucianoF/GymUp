@@ -127,6 +127,8 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
       for (const like of likes.docs) await tryDelete(like.ref);
       await tryDelete(post.ref);
     }
+    // Denúncias que fiz (o admin perde a fila dessas, mas são dados meus).
+    for (const r of await refsOf(deps, 'socialReports', deps.where('reporterId', '==', uid))) await tryDelete(r.ref);
     // Curtidas que dei em posts de outras pessoas (só as que já guardam o likerId).
     if (deps.collectionGroup) {
       try {

@@ -50,3 +50,18 @@ export const timeAgo = (iso, now = Date.now()) => {
   const d = Math.floor(h / 24);
   return d === 1 ? 'ontem' : `há ${d} dias`;
 };
+
+/** Curtidas mais novas que `since` (ISO). Sem `since`, só as das últimas 24 h, para não avisar o histórico todo. */
+export function newLikes(items, since, now = Date.now()) {
+  const floor = since || new Date(now - 24 * 3600 * 1000).toISOString();
+  return (items || []).filter((l) => l.at && String(l.at) > floor);
+}
+
+/** Texto do aviso: um nome quando é uma pessoa, contagem quando são várias. */
+export function likeAlertText(items, names = {}) {
+  if (!items.length) return '';
+  const people = [...new Set(items.map((l) => l.likerId))];
+  if (items.length === 1) return `${names[items[0].likerId] || 'Um amigo'} curtiu seu treino "${items[0].title}".`;
+  if (people.length === 1) return `${names[people[0]] || 'Um amigo'} curtiu ${items.length} treinos seus.`;
+  return `${items.length} curtidas novas nos seus treinos.`;
+}

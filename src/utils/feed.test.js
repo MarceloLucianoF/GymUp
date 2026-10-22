@@ -24,3 +24,22 @@ describe('feed', () => {
     expect(timeAgo('2026-10-20T10:00:00Z', now)).toBe('ontem');
   });
 });
+
+describe('curtidas recebidas', () => {
+  const { newLikes, likeAlertText } = require('./feed');
+  const items = [
+    { postId: 'p1', title: 'Peito', likerId: 'a', at: '2026-10-21T12:00:00.000Z' },
+    { postId: 'p2', title: 'Costas', likerId: 'a', at: '2026-10-20T08:00:00.000Z' },
+    { postId: 'p1', title: 'Peito', likerId: 'b', at: '2026-10-19T08:00:00.000Z' }
+  ];
+  test('newLikes respeita o último visto e, sem ele, só as últimas 24 h', () => {
+    expect(newLikes(items, '2026-10-20T00:00:00.000Z').length).toBe(2);
+    expect(newLikes(items, '', Date.parse('2026-10-21T13:00:00.000Z')).map((l) => l.postId)).toEqual(['p1']);
+  });
+  test('likeAlertText', () => {
+    expect(likeAlertText(items.slice(0, 1), { a: 'Ana' })).toBe('Ana curtiu seu treino "Peito".');
+    expect(likeAlertText(items.slice(0, 2), { a: 'Ana' })).toBe('Ana curtiu 2 treinos seus.');
+    expect(likeAlertText(items, {})).toBe('3 curtidas novas nos seus treinos.');
+    expect(likeAlertText([], {})).toBe('');
+  });
+});

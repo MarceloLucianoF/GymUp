@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, Copy, Heart, Search, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, Copy, Flag, Heart, Search, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/ui/PageHeader';
 import Tabs from '../../components/coach/Tabs';
@@ -12,8 +12,8 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import useSocial from '../../hooks/useSocial';
 import usePageMeta from '../../hooks/usePageMeta';
-import { deleteMyPosts, deletePost, listFeed, setLike } from '../../services/feedService';
-import { postLine, timeAgo } from '../../utils/feed';
+import { REPORT_REASONS, deleteMyPosts, deletePost, likesOnMyPosts, likesSeenAt, listFeed, markLikesSeen, reportPost, setLike } from '../../services/feedService';
+import { newLikes, postLine, timeAgo } from '../../utils/feed';
 import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
 
 const TABS = [['ranking', 'Ranking'], ['activity', 'Atividade'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
@@ -155,10 +155,15 @@ function SearchTab({ social, uid, initialQuery, reload }) {
 
 function ActivityTab({ social, uid, onGo }) {
   const { profile, friendships } = social;
-  const [state, setState] = useState({ loading: true, error: false, posts: [] });
+  const [state, setState] = useState({ loading: true, error: false, posts: [], likes: [], seenAt: '' });
+  const [reporting, setReporting] = useState(null);
   const load = React.useCallback(async () => {
-    try { setState({ loading: false, error: false, posts: await listFeed(uid, friendships) }); }
-    catch (error) { console.error('Erro no feed:', error); setState({ loading: false, error: true, posts: [] }); }
+    try {
+      const seenAt = likesSeenAt(uid);
+      const [posts, likes] = await Promise.all([listFeed(uid, friendships), likesOnMyPosts(uid).catch(() => [])]);
+      setState({ loading: false, error: false, posts, likes: newLikes(likes, seenAt), seenAt });
+      markLikesSeen(uid);
+    } catch (error) { console.error('Erro no feed:', error); setState((st) => ({ ...st, loading: false, error: true, posts: [] })); }
   }, [uid, friendships]);
   useEffect(() => { if (profile) load(); }, [profile, load]);
   if (!profile) return <EmptyState icon={Users} title="Crie seu perfil social" description="Com o perfil você vê o que seus amigos treinaram." action={<button type="button" onClick={() => onGo('profile')} className={btnPrimary}>Criar perfil</button>} />;
@@ -171,9 +176,28 @@ function ActivityTab({ social, uid, onGo }) {
   const remove = async (post) => {
     try { await deletePost(post.id); toast.success('Publicação apagada.'); load(); } catch (_) { toast.error('Não foi possível apagar.'); }
   };
+  const report = async (post, reason) => {
+    try {
+      await reportPost(uid, post, reason);
+      setReporting(null);
+      setState((st) => ({ ...st, posts: st.posts.filter((x) => x.id !== post.id) }));
+      toast.success('Denúncia enviada. A publicação saiu do seu feed.');
+    } catch (error) {
+      setReporting(null);
+      toast.error(error?.code === 'permission-denied' ? 'Você já denunciou esta publicação.' : 'Não foi possível denunciar.');
+    }
+  };
   return (
     <section className="space-y-3" aria-labelledby="act-title">
       <h2 id="act-title" className="font-display text-lg font-black text-gray-900 dark:text-white">Atividade dos amigos</h2>
+      {state.likes.length > 0 && (
+        <div className="rounded-2xl bg-rose-500/10 p-3" role="status" aria-label="Curtidas novas">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-rose-800 dark:text-rose-200"><Heart className="h-4 w-4" aria-hidden="true" fill="currentColor" /> Curtidas novas</p>
+          <ul className="space-y-0.5 text-sm text-gray-800 dark:text-gray-200">
+            {state.likes.slice(0, 8).map((l) => <li key={`${l.postId}-${l.likerId}`}><b>{social.people[l.likerId]?.displayName || 'Um amigo'}</b> curtiu <b>{l.title}</b> · <span className="text-xs text-gray-600 dark:text-gray-400">{timeAgo(l.at)}</span></li>)}
+          </ul>
+        </div>
+      )}
       {!profile.shareWorkouts && <p className="rounded-2xl bg-gray-50 p-3 text-xs text-gray-700 dark:bg-white/5 dark:text-gray-300">Você não publica seus treinos. <button type="button" onClick={() => onGo('profile')} className="font-bold text-brand underline">Ativar em Meu perfil</button></p>}
       {state.posts.length === 0 ? <EmptyState icon={Users} title="Nada por aqui ainda" description="Quando você ou seus amigos concluírem treinos e publicarem, eles aparecem aqui." /> : (
         <ul className="space-y-2">
@@ -181,18 +205,32 @@ function ActivityTab({ social, uid, onGo }) {
             const mine = post.authorId === uid;
             const who = mine ? { displayName: 'Você' } : social.people[post.authorId];
             return (
-              <li key={post.id} className="surface flex items-center gap-3 p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-gray-900 dark:text-white"><b>{who?.displayName || 'Amigo'}</b> concluiu <b>{post.title}</b></p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{postLine(post)} · {timeAgo(post.createdAt)}</p>
+              <li key={post.id} className="surface p-3">
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-gray-900 dark:text-white"><b>{who?.displayName || 'Amigo'}</b> concluiu <b>{post.title}</b></p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{postLine(post)} · {timeAgo(post.createdAt)}</p>
+                  </div>
+                  <button type="button" onClick={() => like(post)} aria-pressed={post.liked} aria-label={post.liked ? 'Descurtir' : 'Curtir'} className={`${smallBtn} ${post.liked ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200'}`}><Heart className="h-4 w-4" aria-hidden="true" fill={post.liked ? 'currentColor' : 'none'} /> {post.likeCount}</button>
+                  {mine
+                    ? <button type="button" onClick={() => remove(post)} aria-label="Apagar publicação" className={`${smallBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200`}><X className="h-4 w-4" aria-hidden="true" /></button>
+                    : <button type="button" onClick={() => setReporting(reporting === post.id ? null : post.id)} aria-expanded={reporting === post.id} aria-label="Denunciar publicação" className={`${smallBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200`}><Flag className="h-4 w-4" aria-hidden="true" /></button>}
                 </div>
-                <button type="button" onClick={() => like(post)} aria-pressed={post.liked} aria-label={post.liked ? 'Descurtir' : 'Curtir'} className={`${smallBtn} ${post.liked ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200'}`}><Heart className="h-4 w-4" aria-hidden="true" fill={post.liked ? 'currentColor' : 'none'} /> {post.likeCount}</button>
-                {mine && <button type="button" onClick={() => remove(post)} aria-label="Apagar publicação" className={`${smallBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200`}><X className="h-4 w-4" aria-hidden="true" /></button>}
+                {reporting === post.id && (
+                  <div className="mt-2 rounded-xl bg-gray-50 p-2 dark:bg-white/5" role="group" aria-label="Motivo da denúncia">
+                    <p className="mb-1 text-xs text-gray-700 dark:text-gray-300">Por que denunciar? A publicação sai do seu feed e a equipe analisa. Quem publicou não sabe quem denunciou.</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {REPORT_REASONS.map(([id, label]) => <button key={id} type="button" onClick={() => report(post, id)} className={`${smallBtn} bg-white text-gray-900 ring-1 ring-gray-200 dark:bg-white/10 dark:text-white dark:ring-white/10`}>{label}</button>)}
+                      <button type="button" onClick={() => setReporting(null)} className={`${smallBtn} text-gray-700 dark:text-gray-300`}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
               </li>
             );
           })}
         </ul>
       )}
+      <p className="text-xs text-gray-600 dark:text-gray-400">Algo errado com um amigo? Em Amigos você pode remover ou bloquear a pessoa.</p>
     </section>
   );
 }
@@ -261,7 +299,7 @@ export default function Friends() {
   const { confirm, dialog } = useConfirm();
   const [params] = useSearchParams();
   const social = useSocial(user?.uid);
-  const [tab, setTab] = useState(params.get('buscar') ? 'search' : 'ranking');
+  const [tab, setTab] = useState(params.get('buscar') ? 'search' : params.get('aba') === 'atividade' ? 'activity' : 'ranking');
   const uid = user?.uid;
   const pendingIn = useMemo(() => social.friendships.filter((f) => relationOf(f, uid) === 'pending-in').length, [social.friendships, uid]);
 

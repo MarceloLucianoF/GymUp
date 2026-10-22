@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Activity, Users } from 'lucide-react';
 import EmptyState from '../../../components/common/EmptyState';
 import { socialOverview } from './adminUtils';
+import ReportsSection from './ReportsSection';
 
 const ACTION = { pedir: 'pediu amizade a', aceitar: 'aceitou o pedido de', recusar: 'recusou o pedido de', cancelar: 'cancelou o pedido a', remover: 'removeu', bloquear: 'bloqueou', desbloquear: 'desbloqueou', 'entrar-ranking': 'entrou no ranking', 'sair-ranking': 'saiu do ranking' };
 const fmt = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
@@ -21,6 +22,7 @@ export default function SocialTab({ users, profiles, friendships, log, error }) 
         <Kpi label="Pedidos pendentes" value={o.pending} />
         <Kpi label="Bloqueios" value={o.blocked} />
       </section>
+      <ReportsSection names={names} />
       <section className="surface p-5" aria-labelledby="soc-log">
         <h2 id="soc-log" className="mb-3 flex items-center gap-2 font-display text-lg font-black text-gray-900 dark:text-white"><Activity className="h-5 w-5 text-amber-800 dark:text-brand" aria-hidden="true" /> Ações recentes</h2>
         {error ? <p className="text-sm text-gray-600 dark:text-gray-400">Não foi possível carregar o registro.</p>

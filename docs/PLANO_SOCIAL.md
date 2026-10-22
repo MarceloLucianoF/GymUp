@@ -25,7 +25,7 @@ O plano gratuito do Firebase não tem Cloud Functions. Para pontos e ranking con
 Treino concluído 100; meta semanal 250; treino em dia planejado +25; sequência de 3 dias +100 e de 7 dias +300; desafio concluído 500; primeiro treino do mês +100. Teto diário para não premiar excesso. Sem pontos por abrir o app, registrar carga sem concluir séries ou repetir treino no mesmo dia.
 
 ## Atividade entre amigos (implementada em 21/10/2026)
-Coleção `socialPosts` (autor, título, minutos, séries, exercícios, recordes) com `likes`. Opt-in em `publicProfiles.shareWorkouts`; leitura só para o autor e amigos ativos de quem compartilha. Sem comentários, imagens nem texto livre, para não abrir moderação. Próximos passos: denúncia, comentários moderados e notificação de curtida.
+Coleção `socialPosts` (autor, título, minutos, séries, exercícios, recordes) com `likes`. Opt-in em `publicProfiles.shareWorkouts`; leitura só para o autor e amigos ativos de quem compartilha. Sem comentários, imagens nem texto livre, para não abrir moderação. Denúncia (motivos fixos, fila no painel do admin) e aviso de curtidas implementados. Próximos passos: comentários moderados e push real (exige servidor).
 
 ## Fases seguintes
 Convites por QR, desafios cooperativos, temporadas mensais, notificações configuráveis, grupos e equipes, painel admin (engajamento, badges, denúncias e bloqueios).
