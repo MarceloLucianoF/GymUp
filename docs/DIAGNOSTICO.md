@@ -778,7 +778,7 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 
 ## Atualização — atividade entre amigos (21/10/2026)
 - **Resolvido/novo:** feed de treinos concluídos entre amigos, opt-in, sem carga nem saúde (`socialPosts`, `likes`, `publicProfiles.shareWorkouts`). Regras testadas no emulador; exclusão de conta apaga posts e curtidas.
-- **Pendente:** denúncia de publicação e comentários (exigem moderação); notificação de curtida; teste em celular físico.- **Limites conhecidos (revisão das regras):** curtidas dadas em posts de outras pessoas não são apagadas na exclusão de conta se o autor apagar o post antes (só guardam o uid); quem curte é visível a amigos do autor; posts antigos reaparecem se o autor religar o compartilhamento; o post usa o id do check-in (reenvio não duplica).
+- **Pendente:** comentários (exigem moderação); teste em celular físico. (Denúncia e aviso de curtida entregues em 21/10; "Nº treino da semana" em 22/10.)- **Limites conhecidos (revisão das regras):** curtidas dadas em posts de outras pessoas não são apagadas na exclusão de conta se o autor apagar o post antes (só guardam o uid); quem curte é visível a amigos do autor; posts antigos reaparecem se o autor religar o compartilhamento; o post usa o id do check-in (reenvio não duplica).
 
 ## Atualização — limpeza do feed (21/10/2026)
 - **Resolvido:** curtida nova guarda `likerId`; ao excluir a conta, as curtidas dadas a outras pessoas saem (consulta por grupo de coleções, só as próprias; regra e índice novos), mesmo se o autor já apagou o post. Ao desligar "Publicar meus treinos", os posts antigos e as curtidas deles são apagados.
