@@ -139,7 +139,8 @@ test('nenhuma resposta de nenhuma rota expõe peso, medidas, cargas, volume, sa�
   const paths = [`/v1/academies/${A}`, `/v1/academies/${A}/profile`, `/v1/academies/${A}/dashboard`, `/v1/academies/${A}/members`, `/v1/academies/${A}/invites`, `/v1/academies/${A}/audit`,
     `/v1/academies/${A}/coach-assignments`, `/v1/academies/${A}/trainings`, '/v1/me', '/v1/academies', '/v1/me/coach-assignments'];
   for (const p of paths) {
-    const text = JSON.stringify((await api(d1, 'dono', 'GET', p)).json).toLowerCase();
+    // ids aleatórios (24 letras/números) podem conter 'cpf' ou 'peso' por acaso: saem da busca de palavras proibidas
+    const text = JSON.stringify((await api(d1, 'dono', 'GET', p)).json).toLowerCase().replace(/[a-z0-9]{24}/g, '');
     for (const banned of ['weight', 'peso', 'height', 'altura', 'measure', 'medida', 'carga', 'volume', 'health', 'saude', 'saúde', 'streak', 'phone', 'telefone', 'cpf', '@']) assert.ok(!text.includes(banned), `${p} contém ${banned}`);
     assert.ok(!text.includes(inv.code), `${p} expõe o código do convite`);
   }
