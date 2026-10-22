@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals */
 // Incremente VERSION a cada mudança de estratégia/shell. Os bundles do CRA têm hash no nome,
 // então são buscados na rede e guardados em runtime (stale-while-revalidate).
-const VERSION = 'v5';
+const VERSION = 'v6';
 const SHELL_CACHE = `bohtreinar-shell-${VERSION}`;
 const RUNTIME_CACHE = `bohtreinar-runtime-${VERSION}`;
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.ico', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
@@ -82,10 +82,13 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
   event.notification.close();
+  const raw = (event.notification.data && event.notification.data.url) || '/';
+  const target = new URL(raw, self.location.origin);
+  const url = target.origin === self.location.origin ? target.pathname + target.search : '/';   // só abre páginas do próprio app
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      for (const c of list) if ('focus' in c) return c.focus();
-      return self.clients.openWindow('/');
+      for (const c of list) if ('focus' in c) return c.focus().then((w) => (url !== '/' && w && 'navigate' in w ? w.navigate(url) : w));
+      return self.clients.openWindow(url);
     })
   );
 });

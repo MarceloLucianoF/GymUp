@@ -951,3 +951,32 @@ test('perfil social aceita shareWorkouts booleano', async () => {
   await assertSucceeds(setDoc(doc(db('stu1'), 'publicProfiles/stu1'), { ...prof, shareWorkouts: true }));
   await assertFails(setDoc(doc(db('stu1'), 'publicProfiles/stu1'), { ...prof, shareWorkouts: 'sim' }));
 });
+
+test('denúncia de post: amigo que vê denuncia uma vez, sem texto livre; só o admin lê e remove', async () => {
+  await seedFeed();
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1'), feedPost()));
+  const rep = (over = {}) => ({ reporterId: 'stu2', postId: 'p1', authorId: 'stu1', reason: 'spam', createdAt: '2026-10-21T12:00:00.000Z', ...over });
+  await assertFails(setDoc(doc(db('stu2'), 'socialReports/stu2_p1'), rep({ reason: 'xingou' })));           // motivo fora da lista
+  await assertFails(setDoc(doc(db('stu2'), 'socialReports/stu2_p1'), rep({ texto: 'oi' })));                // sem texto livre
+  await assertFails(setDoc(doc(db('stu2'), 'socialReports/stu2_p1'), rep({ authorId: 'stu3' })));           // autor tem de bater com o post
+  await assertFails(setDoc(doc(db('stu2'), 'socialReports/qualquer'), rep()));                               // id fixo: uma denúncia por pessoa e post
+  await assertFails(setDoc(doc(db('stu1'), 'socialReports/stu1_p1'), rep({ reporterId: 'stu1' })));         // o autor não denuncia o próprio post
+  await assertFails(setDoc(doc(db('coach1'), 'socialReports/coach1_p1'), rep({ reporterId: 'coach1' })));   // quem não vê o post
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialReports/stu2_p1'), rep()));
+  await assertFails(setDoc(doc(db('stu2'), 'socialReports/stu2_p1'), rep({ reason: 'ofensivo' })));        // não reescreve
+  await assertSucceeds(getDoc(doc(db('stu2'), 'socialReports/stu2_p1')));
+  await assertFails(getDoc(doc(db('stu1'), 'socialReports/stu2_p1')));                                     // o autor não sabe quem denunciou
+  await assertFails(getDocs(collection(db('stu1'), 'socialReports')));
+  await assertSucceeds(getDocs(collection(db('admin1'), 'socialReports')));
+  await assertSucceeds(getDoc(doc(db('admin1'), 'socialPosts/p1')));                                       // o admin vê o post denunciado
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/likes/stu2'), { at: '2026-10-21T11:00:00.000Z', likerId: 'stu2' }));
+  await assertSucceeds(getDocs(collection(db('admin1'), 'socialPosts/p1/likes')));
+  await assertSucceeds(deleteDoc(doc(db('admin1'), 'socialPosts/p1/likes/stu2')));
+  await assertSucceeds(deleteDoc(doc(db('admin1'), 'socialPosts/p1')));
+  await assertFails(updateDoc(doc(db('stu2'), 'socialReports/stu2_p1'), { status: 'dismissed' }));        // só o admin dispensa
+  await assertFails(updateDoc(doc(db('admin1'), 'socialReports/stu2_p1'), { reason: 'outro' }));           // e só o status
+  await assertSucceeds(updateDoc(doc(db('admin1'), 'socialReports/stu2_p1'), { status: 'dismissed' }));
+  await assertFails(setDoc(doc(db('stu2'), 'socialReports/stu2_p1'), rep()));                              // dispensada não é reaberta
+  await assertFails(deleteDoc(doc(db('coach1'), 'socialReports/stu2_p1')));
+  await assertSucceeds(deleteDoc(doc(db('admin1'), 'socialReports/stu2_p1')));
+});

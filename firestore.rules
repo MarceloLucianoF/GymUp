@@ -795,21 +795,41 @@ service cloud.firestore {
       return request.auth.uid == authorId || (activeFriends(request.auth.uid, authorId) && sharesWorkouts(authorId));
     }
     match /socialPosts/{postId} {
-      allow get, list: if signedIn() && canSeePost(resource.data.authorId);
+      allow get, list: if signedIn() && (canSeePost(resource.data.authorId) || isAdmin());
       allow create: if signedIn() && hasRole('user') && postShape(request.resource.data)
         && request.resource.data.authorId == request.auth.uid && sharesWorkouts(request.auth.uid);
       allow update: if false;
-      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+      allow delete: if signedIn() && (resource.data.authorId == request.auth.uid || isAdmin());   // o admin remove post denunciado
       match /likes/{likerId} {
-        allow get, list: if signedIn() && canSeePost(get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId);
+        allow get, list: if signedIn() && (isAdmin() || canSeePost(get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId));
         allow create: if signedIn() && likerId == request.auth.uid
           && request.resource.data.keys().hasOnly(['at', 'likerId']) && request.resource.data.likerId == request.auth.uid
           && request.resource.data.at is string && request.resource.data.at.size() <= 40
           && canSeePost(get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId);
         allow update: if false;
-        allow delete: if signedIn() && (likerId == request.auth.uid
+        allow delete: if signedIn() && (likerId == request.auth.uid || isAdmin()
           || get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId == request.auth.uid);
       }
+    }
+
+    // Denúncia de publicação: quem vê o post (amigo) denuncia uma vez; só o admin lê e decide. Sem texto livre.
+    match /socialReports/{reportId} {
+      allow get: if signedIn() && (isAdmin() || resource.data.reporterId == request.auth.uid);
+      allow list: if signedIn() && (isAdmin() || resource.data.reporterId == request.auth.uid);
+      allow create: if signedIn() && hasRole('user')
+        && request.resource.data.keys().hasOnly(['reporterId', 'postId', 'authorId', 'reason', 'createdAt'])
+        && request.resource.data.reporterId == request.auth.uid
+        && reportId == request.auth.uid + '_' + request.resource.data.postId
+        && request.resource.data.reason in ['spam', 'ofensivo', 'improprio', 'outro']
+        && request.resource.data.createdAt is string && request.resource.data.createdAt.size() <= 40
+        && request.resource.data.authorId != request.auth.uid
+        && exists(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId))
+        && get(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId)).data.authorId == request.resource.data.authorId
+        && canSeePost(request.resource.data.authorId);
+      // Dispensar mantém o registro (status), para a mesma pessoa não reabrir a denúncia em loop.
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'dismissed';
+      allow delete: if signedIn() && (isAdmin() || resource.data.reporterId == request.auth.uid);
     }
 
     // Curtidas que o usuário deu (consulta por grupo de coleções, usada ao excluir a conta): só as próprias.
