@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals */
 // Incremente VERSION a cada mudança de estratégia/shell. Os bundles do CRA têm hash no nome,
 // então são buscados na rede e guardados em runtime (stale-while-revalidate).
-const VERSION = 'v4';
+const VERSION = 'v5';
 const SHELL_CACHE = `bohtreinar-shell-${VERSION}`;
 const RUNTIME_CACHE = `bohtreinar-runtime-${VERSION}`;
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.ico', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
@@ -72,6 +72,15 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('notificationclick', (event) => {
+  // Notificação do treino em andamento: os botões viram ações na tela do treino (sem abrir o app).
+  if (event.notification.tag === 'bt-workout' && (event.action === 'done' || event.action === 'rest')) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+        list.forEach((c) => c.postMessage({ type: 'WORKOUT_ACTION', action: event.action }));
+      })
+    );
+    return;
+  }
   event.notification.close();
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {

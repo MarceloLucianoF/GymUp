@@ -29,6 +29,7 @@ import { fromMyTrainingId, isMyTrainingId, replaceExerciseInMyWorkout } from '..
 import { afterSetAction, supersetRole } from '../../utils/setTypes';
 import SwapExerciseModal from '../../components/training/SwapExerciseModal';
 import { buildSwapped } from '../../utils/exerciseSwap';
+import { useWorkoutNotification, workoutNotifSupported } from '../../hooks/useWorkoutNotification';
 import { mediaSessionSupported, useWorkoutMediaSession } from '../../hooks/useWorkoutMediaSession';
 import { suggestNext } from '../../utils/progression';
 import { prescriptionLabel } from '../../utils/exerciseKind';
@@ -54,6 +55,11 @@ export default function TrainingExecutionPage() {
     const lockSupported = mediaSessionSupported();
     const [lockEnabled, setLockEnabled] = useState(() => { try { return window.localStorage.getItem('bt_lockscreen') === '1'; } catch (e) { return false; } });
     const mediaHandlersRef = useRef({});
+    const notifHandlersRef = useRef({});
+    const notifSupported = workoutNotifSupported();
+    const [notifEnabled, setNotifEnabled] = useState(() => { try { return window.localStorage.getItem('bt_workout_notif') === '1'; } catch (e) { return false; } });
+    const [notifOfferGone, setNotifOfferGone] = useState(() => { try { return window.localStorage.getItem('bt_workout_notif') !== null; } catch (e) { return true; } });
+    const [notifPerm, setNotifPerm] = useState(() => (typeof Notification === 'undefined' ? 'denied' : Notification.permission));
     const swapLibraryRef = useRef([]);
     const navigate = useNavigate();
     const location = useLocation();
@@ -508,6 +514,28 @@ export default function TrainingExecutionPage() {
         handlersRef: mediaHandlersRef,
         meta: mediaEx ? { title: mediaEx.name, artist: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}`, album: training?.name, artwork: typeof mediaEx.machineImage === 'string' && mediaEx.machineImage.startsWith('/') ? `${window.location.origin}${stillSrc(mediaEx.machineImage)}` : null } : null
     });
+    notifHandlersRef.current = { done: mediaHandlersRef.current.nexttrack, rest: mediaHandlersRef.current.play };
+    const notifTotal = trainingExercises.reduce((acc, ex) => acc + (Math.max(1, parseInt(ex.sets, 10) || 3)), 0);
+    useWorkoutNotification({
+        enabled: notifEnabled && notifPerm === 'granted',
+        handlersRef: notifHandlersRef,
+        meta: mediaEx ? {
+            title: `${mediaEx.name} · ${training?.name || 'Treino'}`,
+            setLabel: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}`,
+            progress: `${Object.values(sessionData).filter((x) => x?.completed).length} de ${notifTotal} séries concluídas`,
+            resting: !!restTimerObj
+        } : null
+    });
+    const setNotif = async (on) => {
+        try { window.localStorage.setItem('bt_workout_notif', on ? '1' : '0'); } catch (e) { /* sem storage */ }
+        setNotifOfferGone(true);
+        if (!on) { setNotifEnabled(false); toast('Notificação do treino desativada.'); return; }
+        let perm = typeof Notification === 'undefined' ? 'denied' : Notification.permission;
+        if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } }
+        setNotifPerm(perm);
+        if (perm === 'granted') { setNotifEnabled(true); toast.success('O treino aparece na notificação.'); }
+        else { setNotifEnabled(false); toast.error('Permissão de notificação negada. Libere nas configurações do navegador.'); }
+    };
     const toggleLock = () => {
         const next = !lockEnabled;
         setLockEnabled(next);
@@ -588,10 +616,22 @@ export default function TrainingExecutionPage() {
                 lockSupported={lockSupported}
                 lockEnabled={lockEnabled}
                 onToggleLock={toggleLock}
+                notifSupported={notifSupported}
+                notifEnabled={notifEnabled && notifPerm === 'granted'}
+                onToggleNotif={() => setNotif(!(notifEnabled && notifPerm === 'granted'))}
             />
 
             {/* ÁREA DE CONTEÚDO */}
             <div className="pt-28 sm:pt-24 md:pt-44 px-4 max-w-2xl mx-auto space-y-6">
+                {notifSupported && !notifOfferGone && notifPerm !== 'denied' && (
+                    <div className="surface p-4 flex flex-col gap-3" role="region" aria-label="Notificação do treino">
+                        <p className="text-sm text-gray-800 dark:text-gray-200"><b>Mostrar o treino na notificação?</b> Você vê o exercício e a série atual com a tela bloqueada e conclui a série ou pula o descanso pelos botões. Não pausa a sua música.</p>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={() => setNotif(true)} className="pressable min-h-[44px] rounded-xl bg-brand px-4 text-sm font-bold text-black">Ativar</button>
+                            <button type="button" onClick={() => setNotif(false)} className="pressable min-h-[44px] rounded-xl bg-gray-100 px-4 text-sm font-bold text-gray-800 dark:bg-white/10 dark:text-gray-200">Agora não</button>
+                        </div>
+                    </div>
+                )}
                 
                 {viewMode === 'list' ? (
                     // MODO LISTA: Renderiza todos
