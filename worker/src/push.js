@@ -5,6 +5,7 @@
 //   DELETE /api/push/subscribe     { endpoint? }          remove uma inscrição, ou todas (excluir conta)
 //   POST   /api/push/rest          { endsAt, title, body } agenda (ou cancela, com endsAt null) o aviso de fim do descanso
 //   POST   /api/push/like          { postId }             avisa o autor do post, se quem chama curtiu mesmo (conferido no Firestore)
+//   POST   /api/push/comment       { postId, commentId }  avisa o autor do post de um comentário de quem chama (conferido no Firestore)
 import { verifyFirebaseIdToken } from '../../shared/firebaseAuth.js';
 import { sendPush, validEndpoint, validKeys, vapidPublicKey } from './webPush.js';
 
@@ -104,6 +105,23 @@ export async function handlePushRequest(request, env, deps = {}) {
     const payload = { kind: 'like', title: 'Curtidas no BohTreinar', body: `${who} curtiu seu treino "${clip(post.title, 60)}".`, url: '/amigos?aba=atividade', tag: 'bt-likes' };
     return json(200, await call(post.authorId, 'like', { key: `${uid}:${postId}`, payload }), cors);
   }
+  if (route === 'comment' && request.method === 'POST') {
+    const postId = clip(body.postId, 64);
+    const commentId = clip(body.commentId, 64);
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(postId) || !/^[A-Za-z0-9_-]{1,64}$/.test(commentId)) return json(400, { error: 'Comentário inválido.' }, cors);
+    let comment; let post; let me;
+    try {
+      comment = await firestoreGet(env, match[1], `socialPosts/${postId}/comments/${commentId}`, fetchImpl);
+      if (!comment || comment.authorId !== uid) return json(200, { sent: 0, reason: 'sem-comentario' }, cors);
+      post = await firestoreGet(env, match[1], `socialPosts/${postId}`, fetchImpl);
+      if (!post?.authorId || post.authorId === uid) return json(200, { sent: 0, reason: 'sem-autor' }, cors);
+      me = await firestoreGet(env, match[1], `publicProfiles/${uid}`, fetchImpl);
+    } catch { return json(502, { error: 'Não foi possível conferir o comentário.' }, cors); }
+    const who = clip(me?.displayName, 40) || 'Um amigo';
+    const text = clip(comment.text, 80);
+    const payload = { kind: 'comment', title: `${who} comentou no seu treino`, body: `"${clip(post.title, 40)}": ${text}`, url: '/amigos?aba=atividade', tag: 'bt-likes' };
+    return json(200, await call(post.authorId, 'like', { key: `${uid}:${postId}`, payload, bucket: 'comment' }), cors);
+  }
   return json(404, { error: 'Rota desconhecida.' }, cors);
 }
 
@@ -159,15 +177,19 @@ export class PushBox {
     }
     if (op === 'like') {
       // Uma vez por pessoa e post, no máximo 1 aviso a cada 30 s e 20 por hora para quem recebe (o resto aparece na aba Atividade).
-      const seen = (await this.state.storage.get('likesSeen')) || [];
+      // Curtidas e comentários têm cotas separadas (bucket), para uma rajada de um não calar o outro.
+      const b = data.bucket === 'comment' ? 'comment' : 'like';
+      const seenKey = b === 'like' ? 'likesSeen' : 'commentsSeen';
+      const timesKey = b === 'like' ? 'likeTimes' : 'commentTimes';
+      const seen = (await this.state.storage.get(seenKey)) || [];
       if (seen.includes(data.key)) return json(200, { sent: 0, reason: 'repetida' });
       const now = Date.now();
-      const recent = ((await this.state.storage.get('likeTimes')) || []).filter((t) => now - t < 3600 * 1000);
+      const recent = ((await this.state.storage.get(timesKey)) || []).filter((t) => now - t < 3600 * 1000);
       if (recent.length >= LIKES_PER_HOUR || (recent.length && now - recent[recent.length - 1] < LIKE_GAP_MS)) return json(200, { sent: 0, reason: 'limite' });
       const sent = await this.deliver(data.payload, 24 * 3600, 'low');
       if (sent > 0) {
-        await this.state.storage.put('likesSeen', [...seen, data.key].slice(-300));
-        await this.state.storage.put('likeTimes', [...recent, now]);
+        await this.state.storage.put(seenKey, [...seen, data.key].slice(-300));
+        await this.state.storage.put(timesKey, [...recent, now]);
       }
       return json(200, { sent });
     }

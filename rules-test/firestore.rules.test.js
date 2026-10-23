@@ -980,3 +980,35 @@ test('denúncia de post: amigo que vê denuncia uma vez, sem texto livre; só o 
   await assertFails(deleteDoc(doc(db('coach1'), 'socialReports/stu2_p1')));
   await assertSucceeds(deleteDoc(doc(db('admin1'), 'socialReports/stu2_p1')));
 });
+
+test('comentários: amigo que vê o post comenta (curto, sem link, sem edição); apagam autor, dono do post e admin; denúncia de comentário', async () => {
+  await seedFeed();
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1'), feedPost()));
+  const c = (over = {}) => ({ authorId: 'stu2', text: 'Mandou bem!', createdAt: serverTimestamp(), ...over });
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/comments/c1'), c()));
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialPosts/p1/comments/c2'), c({ authorId: 'stu1', text: 'Valeu!' })));
+  for (const bad of [c({ authorId: 'stu1' }), c({ text: '' }), c({ text: 'x'.repeat(281) }), c({ text: 'veja https://spam.example' }), c({ text: 'acessa www.site.com' }), c({ text: 'linha 1\nsite.com.br' }), c({ text: 'meu app x.dev' }), c({ text: 'discord.gg/abc' }), c({ text: '   \n  ' }), c({ extra: 1 }), c({ createdAt: '2099-01-01T00:00:00.000Z' })]) {
+    await assertFails(setDoc(doc(db('stu2'), 'socialPosts/p1/comments/cx'), bad));
+  }
+  await assertFails(setDoc(doc(db('coach1'), 'socialPosts/p1/comments/c3'), c({ authorId: 'coach1' })));   // não vê o post
+  await assertFails(updateDoc(doc(db('stu2'), 'socialPosts/p1/comments/c1'), { text: 'editado' }));
+  await assertSucceeds(getDocs(collection(db('stu2'), 'socialPosts/p1/comments')));
+  await assertFails(getDocs(collection(db('coach1'), 'socialPosts/p1/comments')));
+  await assertSucceeds(getDocs(query(collectionGroup(db('stu2'), 'comments'), where('authorId', '==', 'stu2'))));
+  await assertFails(getDocs(query(collectionGroup(db('stu1'), 'comments'), where('authorId', '==', 'stu2'))));
+  // denúncia do comentário: id fixo, autor certo, sem denunciar o próprio
+  const rep = (over = {}) => ({ reporterId: 'stu1', postId: 'p1', commentId: 'c1', authorId: 'stu2', reason: 'ofensivo', createdAt: '2026-10-22T12:00:00.000Z', ...over });
+  await assertFails(setDoc(doc(db('stu1'), 'socialReports/stu1_p1'), rep()));                    // id de post com commentId
+  await assertFails(setDoc(doc(db('stu1'), 'socialReports/stu1_p1_c1'), rep({ authorId: 'stu3' })));
+  await assertFails(setDoc(doc(db('stu2'), 'socialReports/stu2_p1_c1'), rep({ reporterId: 'stu2' })));   // o próprio comentário
+  await assertFails(setDoc(doc(db('coach1'), 'socialReports/coach1_p1_c1'), rep({ reporterId: 'coach1' })));   // quem não vê o post
+  await assertFails(setDoc(doc(db('stu1'), 'socialReports/stu1_p1_nao'), rep({ commentId: 'nao' })));             // comentário que não existe
+  await assertSucceeds(setDoc(doc(db('stu1'), 'socialReports/stu1_p1_c1'), rep()));
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialReports/stu2_p1'), { reporterId: 'stu2', postId: 'p1', authorId: 'stu1', reason: 'spam', createdAt: '2026-10-22T12:00:00.000Z' }));   // denúncia de post segue igual
+  // apagar
+  await assertFails(deleteDoc(doc(db('coach1'), 'socialPosts/p1/comments/c1')));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'socialPosts/p1/comments/c1')));                // dono do post apaga comentário alheio
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'socialPosts/p1/comments/c2')));                // o próprio
+  await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/comments/c4'), c()));
+  await assertSucceeds(deleteDoc(doc(db('admin1'), 'socialPosts/p1/comments/c4')));
+});

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, Copy, Flag, Heart, Search, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, Copy, Flag, Heart, MessageCircle, Send, Trash2, Search, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/ui/PageHeader';
 import Tabs from '../../components/coach/Tabs';
@@ -12,9 +12,9 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import useSocial from '../../hooks/useSocial';
 import usePageMeta from '../../hooks/usePageMeta';
-import { REPORT_REASONS, deleteMyPosts, deletePost, likesOnMyPosts, likesSeenAt, listFeed, markLikesSeen, reportPost, setLike } from '../../services/feedService';
-import { newLikes, postLine, timeAgo } from '../../utils/feed';
-import { notifyLike } from '../../services/pushService';
+import { REPORT_REASONS, addComment, commentsOnMyPosts, deleteComment, deleteMyPosts, deletePost, likesOnMyPosts, likesSeenAt, listComments, listFeed, markLikesSeen, reportComment, reportPost, setLike } from '../../services/feedService';
+import { COMMENT_MAX, checkComment, newLikes, postLine, timeAgo } from '../../utils/feed';
+import { notifyComment, notifyLike } from '../../services/pushService';
 import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
 
 const TABS = [['ranking', 'Ranking'], ['activity', 'Atividade'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
@@ -154,15 +154,85 @@ function SearchTab({ social, uid, initialQuery, reload }) {
   );
 }
 
+function CommentThread({ post, uid, people, onCount }) {
+  const [state, setState] = useState({ loading: true, error: false, items: [] });
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [reporting, setReporting] = useState(null);
+  const onCountRef = React.useRef(onCount);
+  onCountRef.current = onCount;   // a função muda a cada render do pai; o ref evita recarregar em loop
+  const load = React.useCallback(async () => {
+    try { const items = await listComments(post.id); setState({ loading: false, error: false, items }); onCountRef.current(items.length); }
+    catch (e) { console.error(e); setState({ loading: false, error: true, items: [] }); }
+  }, [post.id]);
+  useEffect(() => { load(); }, [load]);
+  const nameOf = (id) => (id === uid ? 'Você' : people[id]?.displayName || 'Amigo');
+  const send = async (e) => {
+    e.preventDefault();
+    const c = checkComment(text);
+    if (!c.ok) { setError(c.error); return; }
+    setError(''); setSending(true);
+    try { const id = await addComment(uid, post.id, c.text); setText(''); notifyComment(post.id, id); await load(); }
+    catch (err) { setError(err?.code === 'permission-denied' ? 'Não foi possível comentar (links não são permitidos).' : 'Não foi possível comentar.'); }
+    finally { setSending(false); }
+  };
+  const remove = async (c) => {
+    try { await deleteComment(post.id, c.id); await load(); } catch (_) { toast.error('Não foi possível apagar.'); }
+  };
+  const report = async (c, reason) => {
+    try { await reportComment(uid, post, c, reason); toast.success('Denúncia enviada.'); }
+    catch (err) { toast.error(err?.code === 'permission-denied' ? 'Você já denunciou este comentário.' : 'Não foi possível denunciar.'); }
+    finally { setReporting(null); }
+  };
+  return (
+    <div className="mt-2 space-y-2 border-t border-gray-100 pt-2 dark:border-white/10">
+      {state.loading ? <p className="text-xs text-gray-600 dark:text-gray-400">Carregando…</p>
+        : state.error ? <p className="text-xs text-gray-600 dark:text-gray-400">Não foi possível carregar os comentários. <button type="button" onClick={load} className="font-bold underline">Tentar de novo</button></p>
+          : state.items.length === 0 ? <p className="text-xs text-gray-600 dark:text-gray-400">Nenhum comentário ainda.</p> : (
+            <ul className="space-y-2" aria-label="Comentários">
+              {state.items.map((c) => {
+                const canDelete = c.authorId === uid || post.authorId === uid;
+                return (
+                  <li key={c.id} className="rounded-xl bg-gray-50 p-2 dark:bg-white/5">
+                    <div className="flex items-start gap-2">
+                      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-white"><b>{nameOf(c.authorId)}</b> <span className="text-xs text-gray-600 dark:text-gray-400">· {timeAgo(c.createdAt)}</span><br />{c.text}</p>
+                      {canDelete
+                        ? <button type="button" onClick={() => remove(c)} aria-label="Apagar comentário" className="pressable grid min-h-[40px] min-w-[40px] place-items-center rounded-lg text-gray-600 dark:text-gray-400"><Trash2 className="h-4 w-4" aria-hidden="true" /></button>
+                        : <button type="button" onClick={() => setReporting(reporting === c.id ? null : c.id)} aria-expanded={reporting === c.id} aria-label="Denunciar comentário" className="pressable grid min-h-[40px] min-w-[40px] place-items-center rounded-lg text-gray-600 dark:text-gray-400"><Flag className="h-4 w-4" aria-hidden="true" /></button>}
+                    </div>
+                    {reporting === c.id && (
+                      <div className="mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Motivo da denúncia do comentário">
+                        {REPORT_REASONS.map(([id, label]) => <button key={id} type="button" onClick={() => report(c, id)} className={`${smallBtn} bg-white text-gray-900 ring-1 ring-gray-200 dark:bg-white/10 dark:text-white dark:ring-white/10`}>{label}</button>)}
+                        <button type="button" onClick={() => setReporting(null)} className={`${smallBtn} text-gray-700 dark:text-gray-300`}>Cancelar</button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+      <form onSubmit={send} className="flex items-end gap-2">
+        <label htmlFor={`cm-${post.id}`} className="sr-only">Escreva um comentário</label>
+        <textarea id={`cm-${post.id}`} value={text} onChange={(e) => setText(e.target.value.slice(0, COMMENT_MAX))} rows={1} maxLength={COMMENT_MAX} placeholder="Escreva um comentário" className={`${inputCls} min-h-[44px] flex-1 resize-none text-sm`} aria-describedby={`cm-${post.id}-hint`} />
+        <button type="submit" disabled={sending || !text.trim()} aria-label="Enviar comentário" className={`${btnPrimary} min-h-[44px] px-3 disabled:opacity-50`}><Send className="h-4 w-4" aria-hidden="true" /></button>
+      </form>
+      <p id={`cm-${post.id}-hint`} className="text-[11px] text-gray-600 dark:text-gray-400">{error ? <span role="alert" className="font-bold text-rose-700 dark:text-rose-400">{error}</span> : `${text.length}/${COMMENT_MAX} · sem links · quem vê o treino vê o comentário`}</p>
+    </div>
+  );
+}
+
 function ActivityTab({ social, uid, onGo }) {
   const { profile, friendships } = social;
-  const [state, setState] = useState({ loading: true, error: false, posts: [], likes: [], seenAt: '' });
+  const [state, setState] = useState({ loading: true, error: false, posts: [], likes: [], comments: [], seenAt: '' });
   const [reporting, setReporting] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const setCount = React.useCallback((postId, n) => setState((st) => ({ ...st, posts: st.posts.map((x) => (x.id === postId ? { ...x, commentCount: n } : x)) })), []);
   const load = React.useCallback(async () => {
     try {
       const seenAt = likesSeenAt(uid);
-      const [posts, likes] = await Promise.all([listFeed(uid, friendships), likesOnMyPosts(uid).catch(() => [])]);
-      setState({ loading: false, error: false, posts, likes: newLikes(likes, seenAt), seenAt });
+      const [posts, likes, comments] = await Promise.all([listFeed(uid, friendships), likesOnMyPosts(uid).catch(() => []), commentsOnMyPosts(uid).catch(() => [])]);
+      setState({ loading: false, error: false, posts, likes: newLikes(likes, seenAt), comments: newLikes(comments, seenAt), seenAt });
       markLikesSeen(uid);
     } catch (error) { console.error('Erro no feed:', error); setState((st) => ({ ...st, loading: false, error: true, posts: [] })); }
   }, [uid, friendships]);
@@ -191,11 +261,13 @@ function ActivityTab({ social, uid, onGo }) {
   return (
     <section className="space-y-3" aria-labelledby="act-title">
       <h2 id="act-title" className="font-display text-lg font-black text-gray-900 dark:text-white">Atividade dos amigos</h2>
-      {state.likes.length > 0 && (
-        <div className="rounded-2xl bg-rose-500/10 p-3" role="status" aria-label="Curtidas novas">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-rose-800 dark:text-rose-200"><Heart className="h-4 w-4" aria-hidden="true" fill="currentColor" /> Curtidas novas</p>
+      {(state.likes.length > 0 || state.comments.length > 0) && (
+        <div className="rounded-2xl bg-rose-500/10 p-3" role="status" aria-label="Novidades nos seus treinos">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-rose-800 dark:text-rose-200"><Heart className="h-4 w-4" aria-hidden="true" fill="currentColor" /> {state.comments.length ? 'Novidades nos seus treinos' : 'Curtidas novas'}</p>
           <ul className="space-y-0.5 text-sm text-gray-800 dark:text-gray-200">
-            {state.likes.slice(0, 8).map((l) => <li key={`${l.postId}-${l.likerId}`}><b>{social.people[l.likerId]?.displayName || 'Um amigo'}</b> curtiu <b>{l.title}</b> · <span className="text-xs text-gray-600 dark:text-gray-400">{timeAgo(l.at)}</span></li>)}
+            {[...state.likes.map((l) => ({ ...l, kind: 'like', who: l.likerId })), ...state.comments.map((c) => ({ ...c, kind: 'comment', who: c.authorId }))]
+              .sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8)
+              .map((n) => <li key={`${n.kind}-${n.postId}-${n.who}-${n.at}`} className="break-words"><b>{social.people[n.who]?.displayName || 'Um amigo'}</b> {n.kind === 'like' ? 'curtiu' : 'comentou em'} <b>{n.title}</b>{n.kind === 'comment' ? `: "${n.text.slice(0, 80)}"` : ''} · <span className="text-xs text-gray-600 dark:text-gray-400">{timeAgo(n.at)}</span></li>)}
           </ul>
         </div>
       )}
@@ -212,11 +284,13 @@ function ActivityTab({ social, uid, onGo }) {
                     <p className="truncate text-sm text-gray-900 dark:text-white"><b>{who?.displayName || 'Amigo'}</b> concluiu <b>{post.title}</b></p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">{postLine(post)} · {timeAgo(post.createdAt)}</p>
                   </div>
+                  <button type="button" onClick={() => setOpenId(openId === post.id ? null : post.id)} aria-expanded={openId === post.id} aria-label={post.commentCount == null ? 'Comentários' : `Comentários (${post.commentCount})`} className={`${smallBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200`}><MessageCircle className="h-4 w-4" aria-hidden="true" /> {post.commentCount ?? ''}</button>
                   <button type="button" onClick={() => like(post)} aria-pressed={post.liked} aria-label={post.liked ? 'Descurtir' : 'Curtir'} className={`${smallBtn} ${post.liked ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200'}`}><Heart className="h-4 w-4" aria-hidden="true" fill={post.liked ? 'currentColor' : 'none'} /> {post.likeCount}</button>
                   {mine
                     ? <button type="button" onClick={() => remove(post)} aria-label="Apagar publicação" className={`${smallBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200`}><X className="h-4 w-4" aria-hidden="true" /></button>
                     : <button type="button" onClick={() => setReporting(reporting === post.id ? null : post.id)} aria-expanded={reporting === post.id} aria-label="Denunciar publicação" className={`${smallBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200`}><Flag className="h-4 w-4" aria-hidden="true" /></button>}
                 </div>
+                {openId === post.id && <CommentThread post={post} uid={uid} people={social.people} onCount={(n) => setCount(post.id, n)} />}
                 {reporting === post.id && (
                   <div className="mt-2 rounded-xl bg-gray-50 p-2 dark:bg-white/5" role="group" aria-label="Motivo da denúncia">
                     <p className="mb-1 text-xs text-gray-700 dark:text-gray-300">Por que denunciar? A publicação sai do seu feed e a equipe analisa. Quem publicou não sabe quem denunciou.</p>

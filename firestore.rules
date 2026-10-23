@@ -810,22 +810,45 @@ service cloud.firestore {
         allow delete: if signedIn() && (likerId == request.auth.uid || isAdmin()
           || get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId == request.auth.uid);
       }
+      // Comentários: quem vê o post comenta; texto curto, sem links; sem edição. Apagam o autor do comentário, o do post e o admin.
+      match /comments/{commentId} {
+        allow get, list: if signedIn() && (isAdmin() || canSeePost(get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId));
+        allow create: if signedIn() && hasRole('user')
+          && request.resource.data.keys().hasOnly(['authorId', 'text', 'createdAt'])
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 280
+          && request.resource.data.text.matches('(?s).*[^\\s].*')
+          && !request.resource.data.text.lower().matches('(?s).*(https?://|www[.]|[a-z0-9-]+[.][a-z]{2,}([/:?#]|\\b)).*')
+          && request.resource.data.createdAt == request.time
+          && canSeePost(get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId);
+        allow update: if false;
+        allow delete: if signedIn() && (resource.data.authorId == request.auth.uid || isAdmin()
+          || get(/databases/$(database)/documents/socialPosts/$(postId)).data.authorId == request.auth.uid);
+      }
     }
 
     // Denúncia de publicação: quem vê o post (amigo) denuncia uma vez; só o admin lê e decide. Sem texto livre.
     match /socialReports/{reportId} {
       allow get: if signedIn() && (isAdmin() || resource.data.reporterId == request.auth.uid);
       allow list: if signedIn() && (isAdmin() || resource.data.reporterId == request.auth.uid);
+      // Denúncia de post (id denunciante_post) ou de comentário (id denunciante_post_comentário, authorId = autor do comentário).
       allow create: if signedIn() && hasRole('user')
-        && request.resource.data.keys().hasOnly(['reporterId', 'postId', 'authorId', 'reason', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['reporterId', 'postId', 'authorId', 'reason', 'createdAt', 'commentId'])
         && request.resource.data.reporterId == request.auth.uid
-        && reportId == request.auth.uid + '_' + request.resource.data.postId
         && request.resource.data.reason in ['spam', 'ofensivo', 'improprio', 'outro']
         && request.resource.data.createdAt is string && request.resource.data.createdAt.size() <= 40
         && request.resource.data.authorId != request.auth.uid
         && exists(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId))
-        && get(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId)).data.authorId == request.resource.data.authorId
-        && canSeePost(request.resource.data.authorId);
+        && canSeePost(get(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId)).data.authorId)
+        && (
+          (!('commentId' in request.resource.data)
+            && reportId == request.auth.uid + '_' + request.resource.data.postId
+            && get(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId)).data.authorId == request.resource.data.authorId)
+          || (request.resource.data.commentId is string
+            && reportId == request.auth.uid + '_' + request.resource.data.postId + '_' + request.resource.data.commentId
+            && exists(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId)/comments/$(request.resource.data.commentId))
+            && get(/databases/$(database)/documents/socialPosts/$(request.resource.data.postId)/comments/$(request.resource.data.commentId)).data.authorId == request.resource.data.authorId)
+        );
       // Dispensar mantém o registro (status), para a mesma pessoa não reabrir a denúncia em loop.
       allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && request.resource.data.status == 'dismissed';
@@ -836,6 +859,12 @@ service cloud.firestore {
     // Atenção: qualquer subcoleção futura chamada 'likes' com campo likerId ficaria listável pelo próprio dono.
     match /{path=**}/likes/{likeId} {
       allow list: if signedIn() && resource.data.likerId == request.auth.uid;
+    }
+
+    // Comentários que o usuário fez (grupo de coleções, usado ao excluir a conta): só os próprios.
+    // Atenção: qualquer subcoleção futura chamada 'comments' com campo authorId ficaria listável pelo próprio autor.
+    match /{path=**}/comments/{commentId} {
+      allow list: if signedIn() && resource.data.authorId == request.auth.uid;
     }
 
     // Registro das ações sociais (para a auditoria do admin). Cada usuário só acrescenta as próprias entradas.
