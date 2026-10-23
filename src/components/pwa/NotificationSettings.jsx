@@ -2,6 +2,7 @@ import React from 'react';
 import toast from 'react-hot-toast';
 import { Bell } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
+import { disablePush, enablePush, pushEnabled, pushSupported } from '../../services/pushService';
 
 const Toggle = ({ label, checked, onChange, disabled }) => (
   <label className="flex items-center justify-between gap-3 min-h-[44px] cursor-pointer">
@@ -10,9 +11,19 @@ const Toggle = ({ label, checked, onChange, disabled }) => (
   </label>
 );
 
-// Seção "Notificações e app" do Perfil. Apenas notificações locais (sem push de servidor).
+// Seção "Notificações e app" do Perfil. Notificações locais e, opcionalmente, avisos com o app fechado (Web Push pelo Worker).
 export default function NotificationSettings({ uid }) {
   const { prefs, updatePrefs, permission, requestPermission, notify, vibrate, playSound } = useNotifications(uid);
+  const [push, setPush] = React.useState(pushEnabled);
+  const togglePush = async (on) => {
+    if (!on) { await disablePush(); setPush(false); toast('Avisos com o app fechado desligados neste aparelho.'); return; }
+    try {
+      const ok = await enablePush();
+      setPush(ok);
+      if (ok) toast.success('Pronto: você recebe curtidas e o fim do descanso mesmo com o app fechado.');
+      else toast.error('Sem permissão de notificação neste aparelho.');
+    } catch (_) { setPush(false); toast.error('Não foi possível ligar os avisos agora.'); }
+  };
 
   const enable = async () => {
     const r = await requestPermission();
@@ -43,6 +54,7 @@ export default function NotificationSettings({ uid }) {
 
       <div className="mt-2 divide-y divide-gray-100 dark:divide-white/5">
         <Toggle label="Avisar quando o descanso acabar" checked={prefs.restDone} onChange={(v) => updatePrefs({ restDone: v })} />
+        {pushSupported() && <Toggle label="Avisos com o app fechado (curtidas e fim do descanso)" checked={push} onChange={togglePush} />}
         <Toggle label="Vibrar" checked={prefs.vibrate} onChange={(v) => updatePrefs({ vibrate: v })} />
         <Toggle label="Som curto" checked={prefs.sound} onChange={(v) => updatePrefs({ sound: v })} />
         <Toggle label="Lembrete de treino" checked={prefs.reminder} onChange={(v) => updatePrefs({ reminder: v })} />

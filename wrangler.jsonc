@@ -13,8 +13,16 @@
   },
   "ratelimits": [
     { "name": "AI_USER_LIMIT", "namespace_id": "41001", "simple": { "limit": 20, "period": 60 } },
-    { "name": "AI_IP_LIMIT", "namespace_id": "41002", "simple": { "limit": 60, "period": 60 } }
+    { "name": "AI_IP_LIMIT", "namespace_id": "41002", "simple": { "limit": 60, "period": 60 } },
+    { "name": "PUSH_USER_LIMIT", "namespace_id": "41003", "simple": { "limit": 60, "period": 60 } },
+    { "name": "PUSH_IP_LIMIT", "namespace_id": "41004", "simple": { "limit": 120, "period": 60 } }
   ],
+  // Avisos com o app fechado: um Durable Object por usuário (inscrições dos aparelhos e alarme do fim do descanso).
+  // A chave privada VAPID fica só no segredo VAPID_PRIVATE_JWK (wrangler secret put).
+  "durable_objects": {
+    "bindings": [{ "name": "PUSH_BOX", "class_name": "PushBox" }]
+  },
+  "migrations": [{ "tag": "v1-push", "new_sqlite_classes": ["PushBox"] }],
   "vars": {
     "FIREBASE_PROJECT_ID": "workout-tracker-app-20e43",
     "ALLOWED_ORIGINS": "https://bohtreinar.marcelo-labs.workers.dev"
