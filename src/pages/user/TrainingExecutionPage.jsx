@@ -40,7 +40,8 @@ import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { getSocialProfile } from '../../services/socialService';
 import { publishPost } from '../../services/feedService';
 import { buildPostPayload, weekCountOf } from '../../utils/feed';
-import { enablePush, scheduleRestPush } from '../../services/pushService';
+import { disablePush, enablePush, pushEnabled, scheduleRestPush } from '../../services/pushService';
+import { isNativeApp } from '../../services/nativeApp';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
@@ -54,10 +55,12 @@ export default function TrainingExecutionPage() {
     const [swapIndex, setSwapIndex] = useState(null);
     const mediaHandlersRef = useRef({});
     const notifHandlersRef = useRef({});
-    const notifSupported = workoutNotifSupported();
-    const [notifEnabled, setNotifEnabled] = useState(() => { try { return window.localStorage.getItem('bt_workout_notif') === '1'; } catch (e) { return false; } });
+    // No app Android não há notificação do navegador: o sino liga os avisos nativos (FCM), que trazem o fim do descanso.
+    const nativeApp = isNativeApp();
+    const notifSupported = workoutNotifSupported() || nativeApp;
+    const [notifEnabled, setNotifEnabled] = useState(() => { if (isNativeApp()) return pushEnabled(); try { return window.localStorage.getItem('bt_workout_notif') === '1'; } catch (e) { return false; } });
     const [notifOfferGone, setNotifOfferGone] = useState(() => { try { return window.localStorage.getItem('bt_workout_notif') !== null; } catch (e) { return true; } });
-    const [notifPerm, setNotifPerm] = useState(() => (typeof Notification === 'undefined' ? 'denied' : Notification.permission));
+    const [notifPerm, setNotifPerm] = useState(() => (isNativeApp() ? 'granted' : typeof Notification === 'undefined' ? 'denied' : Notification.permission));
     const swapLibraryRef = useRef([]);
     const navigate = useNavigate();
     const location = useLocation();
@@ -540,6 +543,16 @@ export default function TrainingExecutionPage() {
         return () => { if (restEndsAt) scheduleRestPush(null); };
     }, [restEndsAt, notifEnabled]);
     const setNotif = async (on) => {
+        if (nativeApp) {
+            try { window.localStorage.setItem('bt_workout_notif', on ? '1' : '0'); } catch (e) { /* sem storage */ }
+            setNotifOfferGone(true);
+            if (!on) { await disablePush(); setNotifEnabled(false); toast('Avisos do treino desligados.'); return; }
+            const okNative = await enablePush().catch(() => false);
+            setNotifEnabled(okNative);
+            if (okNative) toast.success('Pronto: o fim do descanso chega como aviso, mesmo com a tela bloqueada.');
+            else toast.error('Sem permissão de notificação. Libere nas configurações do app.');
+            return;
+        }
         try { window.localStorage.setItem('bt_workout_notif', on ? '1' : '0'); } catch (e) { /* sem storage */ }
         setNotifOfferGone(true);
         if (!on) { setNotifEnabled(false); toast('Notificação do treino desativada.'); return; }

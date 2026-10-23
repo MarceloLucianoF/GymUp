@@ -8,6 +8,7 @@
 //   POST   /api/push/comment       { postId, commentId }  avisa o autor do post de um comentário de quem chama (conferido no Firestore)
 import { verifyFirebaseIdToken } from '../../shared/firebaseAuth.js';
 import { sendPush, validEndpoint, validKeys, vapidPublicKey } from './webPush.js';
+import { sendFcm, serviceAccountOf } from './fcm.js';
 
 const MAX_SUBS = 5;
 const SUBJECT = 'https://bohtreinar.marcelo-labs.workers.dev';
@@ -70,6 +71,13 @@ export async function handlePushRequest(request, env, deps = {}) {
   const box = (id) => env.PUSH_BOX.get(env.PUSH_BOX.idFromName(id));
   const call = (id, op, data) => box(id).fetch('https://push-box/' + op, { method: 'POST', body: JSON.stringify(data) }).then((r) => r.json());
 
+  if (route === 'subscribe' && request.method === 'POST' && typeof body.fcm === 'string') {
+    // App Android: token do FCM no lugar da inscrição Web Push.
+    if (!/^[A-Za-z0-9_:-]{100,400}$/.test(body.fcm)) return json(400, { error: 'Token inválido.' }, cors);
+    const owner = await call(`ep:${await sha('fcm:' + body.fcm)}`, 'claim', { uid });
+    if (owner.previous && owner.previous !== uid) await call(owner.previous, 'unsubscribe', { endpoint: 'fcm:' + body.fcm });
+    return json(200, await call(uid, 'subscribe', { endpoint: 'fcm:' + body.fcm, fcm: body.fcm, at: now }), cors);
+  }
   if (route === 'subscribe' && request.method === 'POST') {
     const s = body.subscription || {};
     const keys = s.keys || {};
@@ -82,6 +90,7 @@ export async function handlePushRequest(request, env, deps = {}) {
   if (route === 'subscribe' && request.method === 'DELETE') {
     if (body.all === true) return json(200, await call(uid, 'unsubscribe', { all: true }), cors);
     if (typeof body.endpoint !== 'string' || !body.endpoint) return json(400, { error: 'Informe o aparelho.' }, cors);
+    await call(`ep:${await sha(body.endpoint)}`, 'release', { uid });   // o aparelho deixa de pertencer a esta conta
     return json(200, await call(uid, 'unsubscribe', { endpoint: body.endpoint }), cors);
   }
   if (route === 'rest' && request.method === 'POST') {
@@ -133,13 +142,18 @@ export class PushBox {
 
   async deliver(payload, ttl, urgency = 'high') {
     const jwk = jwkOf(this.env);
+    const sa = serviceAccountOf(this.env);
     const subs = await this.subs();
-    if (!jwk || !subs.length) return 0;
+    if (!subs.length) return 0;
     let sent = 0;
     const alive = [];
     for (const s of subs) {
+      if ((s.fcm && !sa) || (!s.fcm && !jwk)) { alive.push(s); continue; }   // canal sem credencial ainda: guarda o aparelho, não conta como falha
       let status = 0;
-      try { status = await sendPush(s, payload, { jwk, subject: SUBJECT, ttl, urgency }); } catch { status = 0; }
+      try {
+        if (s.fcm) status = await sendFcm(s.fcm, payload, { sa, ttl });
+        else status = await sendPush(s, payload, { jwk, subject: SUBJECT, ttl, urgency });
+      } catch { status = 0; }
       if (status === 404 || status === 410) continue;   // inscrição morta: sai
       if (status >= 200 && status < 300) { sent += 1; alive.push({ ...s, fails: 0 }); continue; }
       const fails = (s.fails || 0) + 1;
@@ -154,7 +168,7 @@ export class PushBox {
     const data = await request.json();
     if (op === 'subscribe') {
       const subs = (await this.subs()).filter((s) => s.endpoint !== data.endpoint);
-      subs.push({ endpoint: data.endpoint, keys: data.keys, at: data.at });
+      subs.push(data.fcm ? { endpoint: data.endpoint, fcm: data.fcm, at: data.at } : { endpoint: data.endpoint, keys: data.keys, at: data.at });
       await this.state.storage.put('subs', subs.slice(-MAX_SUBS));
       return json(200, { ok: true, devices: Math.min(subs.length, MAX_SUBS) });
     }
@@ -162,6 +176,10 @@ export class PushBox {
       const previous = (await this.state.storage.get('owner')) || null;
       await this.state.storage.put('owner', data.uid);
       return json(200, { previous });
+    }
+    if (op === 'release') {
+      if ((await this.state.storage.get('owner')) === data.uid) await this.state.storage.delete('owner');
+      return json(200, { ok: true });
     }
     if (op === 'unsubscribe') {
       if (data.all === true) { await this.state.storage.deleteAll(); await this.state.storage.deleteAlarm(); return json(200, { ok: true, devices: 0 }); }
