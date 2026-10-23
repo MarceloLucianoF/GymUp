@@ -160,3 +160,33 @@ test('comentário: só avisa se o comentário é de quem chama, e nunca o própr
   assert.equal(r3.reason, 'sem-autor');      // a autora comentando o próprio post
   assert.equal((await handlePushRequest(req('comment', 'POST', { postId: 'p1', commentId: '../x' }, 'tok-b'), env, { verify, fetchImpl })).status, 400);
 });
+
+test('app Android: token FCM aceito e enviado pela API v1 com token OAuth da conta de serviço', async () => {
+  const { jwk } = await vapidJwk();
+  const { env, boxes } = fakeEnv(jwk);
+  const rsa = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', rsa.privateKey)).toString('base64');
+  const token = 'f'.repeat(30) + ':' + 'A'.repeat(140);
+  assert.equal((await handlePushRequest(req('subscribe', 'POST', { fcm: 'curto' }), env, { verify })).status, 400);
+  // sem a conta de serviço: guarda o aparelho e não envia
+  await handlePushRequest(req('subscribe', 'POST', { fcm: token }), env, { verify });
+  assert.equal(boxes.get('ana').st.m.get('subs')[0].fcm, token);
+  env.FCM_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: 'fcm@p.iam.gserviceaccount.com', private_key: `-----BEGIN PRIVATE KEY-----\n${pkcs8}\n-----END PRIVATE KEY-----\n`, project_id: 'proj' });
+  const calls = [];
+  globalThis.__f2 = globalThis.fetch;
+  globalThis.fetch = async (u, init) => {
+    calls.push(String(u));
+    if (String(u).startsWith('https://oauth2.googleapis.com/token')) { assert.match(String(init.body), /assertion=/); return new Response(JSON.stringify({ access_token: 'ya29.x', expires_in: 3600 })); }
+    assert.equal(init.headers.Authorization, 'Bearer ya29.x');
+    const msg = JSON.parse(init.body).message;
+    assert.equal(msg.token, token);
+    assert.equal(msg.android.notification.channel_id, 'bohtreinar');
+    return new Response('{}', { status: 200 });
+  };
+  try {
+    const box = env.PUSH_BOX.get('ana');
+    const r = await (await box.fetch('https://push-box/like', { method: 'POST', body: JSON.stringify({ key: 'x:1', payload: { title: 'oi', body: 'b' } }) })).json();
+    assert.equal(r.sent, 1);
+    assert.deepEqual(calls, ['https://oauth2.googleapis.com/token', 'https://fcm.googleapis.com/v1/projects/proj/messages:send']);
+  } finally { globalThis.fetch = globalThis.__f2; }
+});

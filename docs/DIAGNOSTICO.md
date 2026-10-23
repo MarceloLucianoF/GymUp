@@ -803,3 +803,8 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Revisão:** data do comentário é a do servidor (`request.time`), lista os 50 mais recentes, bloqueio de link para qualquer domínio (`algo.xx`, com ou sem `/`), texto só com espaços recusado, avisos de comentário com cota própria (1 a cada 30 s, 20/h, uma vez por pessoa e post).
 - **Limites:** o bloqueio de links desencoraja, não impede ("site ponto com" passa; a denúncia é a defesa); sem moderação automática de palavras; um amigo do autor vê comentários de outros amigos do autor mesmo sem ser amigo deles (aparece como "Amigo", o uid chega ao aparelho); sem limite de quantidade por pessoa; um comentário criado no instante em que o post é apagado pode ficar órfão (invisível, só o admin lê); a regra de grupo `comments` vale para qualquer subcoleção com esse nome.
 
+## Atualização — app Android, fase 1 (23/10/2026)
+- **Novo:** projeto `android/` (Capacitor 8) carregando o site publicado; login Google nativo (`src/services/nativeApp.js`); avisos pelo FCM (`worker/src/fcm.js`, segredo `FCM_SERVICE_ACCOUNT_JSON` da conta `bohtreinar-fcm`, papel único Firebase Cloud Messaging Admin). App Android registrado no Firebase com a SHA-1/SHA-256 da chave de envio.
+- **Revisão (revisor-diff):** nenhum segredo no git; corrigidos aparelho apagado por erro de formato do FCM, links de aviso só internos, backup do Android desligado, ouvintes duplicados, logout depois de reiniciar o app, liberação do aparelho ao desligar, página "Sem conexão" ligada (`errorPath`).
+- **Pendente:** teste no aparelho do dono; CSP no site antes da loja; minificação e senhas separadas antes da Play Store; SHA-1 da Play App Signing no Firebase quando publicar.
+

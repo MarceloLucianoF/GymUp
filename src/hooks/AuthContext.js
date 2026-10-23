@@ -6,9 +6,6 @@ import {
     signOut, 
     onAuthStateChanged,
     updateProfile,
-    GoogleAuthProvider,
-    signInWithPopup,
-    browserPopupRedirectResolver
 } from "firebase/auth";
 import { auth, db, ensureAppCheck } from "../firebase/config"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -16,6 +13,7 @@ import { syncPublicCoachProfile } from "../services/coachProfile";
 import { requestWithInvite } from "../services/coachLinkService";
 import { readCachedProfile, writeCachedProfile, clearCachedProfile } from "../utils/profileCache";
 import { disablePush } from '../services/pushService';
+import { nativeSignOut, signInWithGoogle } from '../services/nativeApp';
 
 // Versão do texto de Termos/Privacidade aceito no cadastro (atualize ao mudar os textos).
 export const TERMS_VERSION = '2026-10';
@@ -130,7 +128,7 @@ export function AuthProvider({ children }) {
         ensureAppCheck();
         creatingProfile.current = true;
         try {
-            const res = await signInWithPopup(auth, new GoogleAuthProvider(), browserPopupRedirectResolver);
+            const res = await signInWithGoogle(auth);   // popup no site; conta Google do celular no app Android
             const ref = doc(db, "users", res.user.uid);
             const snap = await getDoc(ref);
             if (snap.exists()) {
@@ -169,6 +167,7 @@ export function AuthProvider({ children }) {
     const logout = async () => {
         try {
             await disablePush();   // este aparelho para de receber avisos da conta que saiu (não trava: tem limite de tempo)
+            await nativeSignOut();
             await signOut(auth);
             clearCachedProfile();
             setUser(null);
