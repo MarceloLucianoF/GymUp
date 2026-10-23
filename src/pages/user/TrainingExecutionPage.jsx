@@ -30,7 +30,6 @@ import { afterSetAction, supersetRole } from '../../utils/setTypes';
 import SwapExerciseModal from '../../components/training/SwapExerciseModal';
 import { buildSwapped } from '../../utils/exerciseSwap';
 import { useWorkoutNotification, workoutNotifSupported } from '../../hooks/useWorkoutNotification';
-import { mediaSessionSupported, useWorkoutMediaSession } from '../../hooks/useWorkoutMediaSession';
 import { suggestNext } from '../../utils/progression';
 import { prescriptionLabel } from '../../utils/exerciseKind';
 import { stillSrc } from '../../utils/exerciseMedia';
@@ -53,8 +52,6 @@ export default function TrainingExecutionPage() {
     const { trainingId } = useParams();
     const { user, userProfile } = useAuthContext();
     const [swapIndex, setSwapIndex] = useState(null);
-    const lockSupported = mediaSessionSupported();
-    const [lockEnabled, setLockEnabled] = useState(() => { try { return window.localStorage.getItem('bt_lockscreen') === '1'; } catch (e) { return false; } });
     const mediaHandlersRef = useRef({});
     const notifHandlersRef = useRef({});
     const notifSupported = workoutNotifSupported();
@@ -512,11 +509,6 @@ export default function TrainingExecutionPage() {
     };
     const mediaEx = trainingExercises[mediaIndex];
     const mediaDone = mediaEx ? Array.from({ length: Math.max(1, parseInt(mediaEx.sets, 10) || 3) }).filter((_, k) => sessionData[`${mediaIndex}-${k}`]?.completed).length : 0;
-    useWorkoutMediaSession({
-        enabled: lockEnabled && lockSupported,
-        handlersRef: mediaHandlersRef,
-        meta: mediaEx ? { title: mediaEx.name, artist: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}`, album: training?.name, artwork: typeof mediaEx.machineImage === 'string' && mediaEx.machineImage.startsWith('/') ? `${window.location.origin}${stillSrc(mediaEx.machineImage)}` : null } : null
-    });
     notifHandlersRef.current = {
         done: mediaHandlersRef.current.nexttrack,
         undo: mediaHandlersRef.current.previoustrack,
@@ -556,12 +548,6 @@ export default function TrainingExecutionPage() {
         setNotifPerm(perm);
         if (perm === 'granted') { setNotifEnabled(true); toast.success('O treino aparece na notificação.'); enablePush().catch(() => {}); }
         else { setNotifEnabled(false); toast.error('Permissão de notificação negada. Libere nas configurações do navegador.'); }
-    };
-    const toggleLock = () => {
-        const next = !lockEnabled;
-        setLockEnabled(next);
-        try { window.localStorage.setItem('bt_lockscreen', next ? '1' : '0'); } catch (e) { /* sem storage */ }
-        toast(next ? 'Controles na tela de bloqueio ativados. Se você ouve música no celular, ela pode pausar.' : 'Controles na tela de bloqueio desativados.', { duration: 4000 });
     };
 
     if (loading || !training) return <div className="h-screen bg-gray-900 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand"></div></div>;
@@ -634,9 +620,6 @@ export default function TrainingExecutionPage() {
                 progressPercent={progressPercent}
                 viewMode={viewMode}
                 onChangeViewMode={setViewMode}
-                lockSupported={lockSupported}
-                lockEnabled={lockEnabled}
-                onToggleLock={toggleLock}
                 notifSupported={notifSupported}
                 notifEnabled={notifEnabled && notifPerm === 'granted'}
                 onToggleNotif={() => setNotif(!(notifEnabled && notifPerm === 'granted'))}
