@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals */
 // Incremente VERSION a cada mudança de estratégia/shell. Os bundles do CRA têm hash no nome,
 // então são buscados na rede e guardados em runtime (stale-while-revalidate).
-const VERSION = 'v7';
+const VERSION = 'v8';
 const SHELL_CACHE = `bohtreinar-shell-${VERSION}`;
 const RUNTIME_CACHE = `bohtreinar-runtime-${VERSION}`;
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.ico', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
@@ -71,12 +71,35 @@ self.addEventListener('fetch', (event) => {
   if (isStatic) event.respondWith(staleWhileRevalidate(request));
 });
 
+// Avisos vindos do servidor (Web Push): fim do descanso com o app fechado e curtidas.
+// Com o app aberto e visível, o aviso do fim do descanso já é mostrado pela própria tela: o do servidor não repete.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      if (data.tag === 'bt-rest' && list.some((c) => c.visibilityState === 'visible')) return undefined;
+      return self.registration.showNotification(data.title || 'BohTreinar', {
+        body: data.body || '',
+        tag: data.tag || 'bt-push',
+        renotify: true,
+        vibrate: [250, 120, 250],
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        data: { url: data.url || '/' }
+      });
+    })
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   // Notificação do treino em andamento: os botões viram ações na tela do treino (sem abrir o app).
   if (event.notification.tag === 'bt-workout' && ['done', 'undo', 'rest', 'add30'].includes(event.action)) {
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+        if (!list.length) return self.clients.openWindow('/');   // app fechado: abre o app (o treino em andamento é retomado lá)
         list.forEach((c) => c.postMessage({ type: 'WORKOUT_ACTION', action: event.action }));
+        return undefined;
       })
     );
     return;

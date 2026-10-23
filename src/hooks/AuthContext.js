@@ -15,6 +15,7 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { syncPublicCoachProfile } from "../services/coachProfile";
 import { requestWithInvite } from "../services/coachLinkService";
 import { readCachedProfile, writeCachedProfile, clearCachedProfile } from "../utils/profileCache";
+import { disablePush } from '../services/pushService';
 
 // Versão do texto de Termos/Privacidade aceito no cadastro (atualize ao mudar os textos).
 export const TERMS_VERSION = '2026-10';
@@ -167,6 +168,7 @@ export function AuthProvider({ children }) {
     // --- 3. LOGOUT ---
     const logout = async () => {
         try {
+            await disablePush();   // este aparelho para de receber avisos da conta que saiu (não trava: tem limite de tempo)
             await signOut(auth);
             clearCachedProfile();
             setUser(null);

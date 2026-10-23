@@ -789,3 +789,8 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Novo:** aviso de curtidas: a aba Atividade mostra "Curtidas novas" desde a última visita; com o app aberto, confere ao abrir e a cada 15 min (5 posts mais novos) e mostra um aviso na tela, ou notificação do sistema se o app estiver em segundo plano e a permissão concedida (toque abre Amigos → Atividade).
 - **Limites:** sem servidor de push (plano Spark), não há aviso com o app fechado; a ocultação do post denunciado fica no aparelho (outro aparelho volta a mostrar até o admin decidir); a denúncia não suspende o autor automaticamente; dispensar marca a denúncia (a mesma pessoa não reabre); a fila mostra as 200 mais recentes; o admin pode ler e apagar posts e curtidas de qualquer aluno para moderar (ampliação de leitura intencional).
 
+## Atualização — Web Push (22/10/2026)
+- **Novo:** avisos com o app fechado (fim do descanso e curtidas) pelo Worker do app: rotas `/api/push/*`, Durable Object `PushBox` por usuário (inscrições e alarme), VAPID + RFC 8291 com WebCrypto, segredo `VAPID_PRIVATE_JWK` (wrangler secret), limite `PUSH_USER_LIMIT` 60/min. Curtida conferida no Firestore com o token de quem curtiu (as regras valem). Endpoints de push restritos aos serviços conhecidos (sem SSRF). Exclusão de conta apaga as inscrições.
+- **Dado pessoal novo fora do Firestore:** o endereço de push de cada aparelho fica no Durable Object do usuário (Cloudflare). Entra na revisão de LGPD da política de privacidade.
+- **Limites:** iPhone só recebe com o app instalado na tela inicial (iOS 16.4+); o lembrete de treino diário continua só ao abrir o app.
+

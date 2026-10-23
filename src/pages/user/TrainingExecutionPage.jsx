@@ -41,6 +41,7 @@ import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { getSocialProfile } from '../../services/socialService';
 import { publishPost } from '../../services/feedService';
 import { buildPostPayload, weekCountOf } from '../../utils/feed';
+import { enablePush, scheduleRestPush } from '../../services/pushService';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
@@ -536,6 +537,16 @@ export default function TrainingExecutionPage() {
             image: typeof mediaEx.machineImage === 'string' && mediaEx.machineImage.startsWith('/') ? `${window.location.origin}${stillSrc(mediaEx.machineImage)}` : null
         } : null
     });
+    // Fim do descanso com o app fechado: o servidor avisa na hora certa (Web Push). Cancela ao pular ou sair da tela.
+    const restEndsAt = restTimerObj?.endTime || null;
+    const restPushText = mediaEx ? { title: `Descanso acabou · ${mediaEx.name}`.slice(0, 80), body: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}` } : {};
+    const restPushRef = useRef(restPushText);
+    restPushRef.current = restPushText;
+    useEffect(() => {
+        if (!notifEnabled) return undefined;
+        scheduleRestPush(restEndsAt, restPushRef.current);
+        return () => { if (restEndsAt) scheduleRestPush(null); };
+    }, [restEndsAt, notifEnabled]);
     const setNotif = async (on) => {
         try { window.localStorage.setItem('bt_workout_notif', on ? '1' : '0'); } catch (e) { /* sem storage */ }
         setNotifOfferGone(true);
@@ -543,7 +554,7 @@ export default function TrainingExecutionPage() {
         let perm = typeof Notification === 'undefined' ? 'denied' : Notification.permission;
         if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } }
         setNotifPerm(perm);
-        if (perm === 'granted') { setNotifEnabled(true); toast.success('O treino aparece na notificação.'); }
+        if (perm === 'granted') { setNotifEnabled(true); toast.success('O treino aparece na notificação.'); enablePush().catch(() => {}); }
         else { setNotifEnabled(false); toast.error('Permissão de notificação negada. Libere nas configurações do navegador.'); }
     };
     const toggleLock = () => {

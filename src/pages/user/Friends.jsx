@@ -14,6 +14,7 @@ import useSocial from '../../hooks/useSocial';
 import usePageMeta from '../../hooks/usePageMeta';
 import { REPORT_REASONS, deleteMyPosts, deletePost, likesOnMyPosts, likesSeenAt, listFeed, markLikesSeen, reportPost, setLike } from '../../services/feedService';
 import { newLikes, postLine, timeAgo } from '../../utils/feed';
+import { notifyLike } from '../../services/pushService';
 import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
 
 const TABS = [['ranking', 'Ranking'], ['activity', 'Atividade'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
@@ -171,7 +172,7 @@ function ActivityTab({ social, uid, onGo }) {
   if (state.error) return <ErrorState onRetry={load} />;
   const like = async (post) => {
     setState((st) => ({ ...st, posts: st.posts.map((x) => (x.id === post.id ? { ...x, liked: !x.liked, likeCount: x.likeCount + (x.liked ? -1 : 1) } : x)) }));
-    try { await setLike(post.id, uid, !post.liked); } catch (_) { toast.error('Não foi possível curtir.'); load(); }
+    try { await setLike(post.id, uid, !post.liked); if (!post.liked) notifyLike(post.id); } catch (_) { toast.error('Não foi possível curtir.'); load(); }
   };
   const remove = async (post) => {
     try { await deletePost(post.id); toast.success('Publicação apagada.'); load(); } catch (_) { toast.error('Não foi possível apagar.'); }

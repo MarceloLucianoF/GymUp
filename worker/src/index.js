@@ -1,4 +1,7 @@
 import { handleNvidiaRequest } from './nvidiaProxy.js';
+import { handlePushRequest, PushBox } from './push.js';
+
+export { PushBox };
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -12,6 +15,7 @@ export default {
     const { pathname } = new URL(request.url);
 
     if (pathname === '/api/nvidia') return handleNvidiaRequest(request, env);
+    if (pathname.startsWith('/api/push/')) return handlePushRequest(request, env);
     if (pathname.startsWith('/api/')) return new Response('Not found', { status: 404 });
 
     // Demais rotas: app estático (SPA) servido pelo binding de assets.

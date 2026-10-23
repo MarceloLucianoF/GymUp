@@ -6,6 +6,7 @@ import {
 } from 'firebase/auth';
 import { db } from '../firebase/config';
 import { ACADEMY_API_ENABLED, academyApi } from './academyApi';
+import { disablePush } from './pushService';
 
 const BATCH_SIZE = 400; // limite do Firestore é 500 operações por lote
 
@@ -245,6 +246,7 @@ export async function deleteAccount({ user, password, onStep = () => {}, deps, a
   onStep('reauth', 'done');
 
   await leaveAcademies(academy);
+  await disablePush({ all: true });   // inscrições de aviso de todos os aparelhos (ficam no Worker, não no Firestore)
   const counts = await deleteUserData(user.uid, { onStep, deps });
   purgeLocalData(user.uid);
 
