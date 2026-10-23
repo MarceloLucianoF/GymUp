@@ -1,16 +1,23 @@
 import React from 'react';
-import { Bell, List, Lock, Search, Wifi, WifiOff } from 'lucide-react';
+import { Bell, BellOff, List, Search, Wifi, WifiOff } from 'lucide-react';
+
+// 75 min aparece como 1:15:00, não 75:00.
+export const formatElapsed = (sec) => {
+    const s = Math.max(0, Math.floor(sec || 0));
+    const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const r = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${r}` : `${m}:${r}`;
+};
 
 // Cabeçalho fixo da execução: nome, conectividade, cronômetro, progresso e modo de visualização.
-const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCount, totalSetsInTraining, progressPercent, viewMode, onChangeViewMode, lockSupported = false, lockEnabled = false, onToggleLock, notifSupported = false, notifEnabled = false, onToggleNotif }) => (
+const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCount, totalSetsInTraining, progressPercent, viewMode, onChangeViewMode, notifSupported = false, notifEnabled = false, onToggleNotif }) => (
     <div className="fixed top-0 md:top-20 left-0 right-0 bg-white/85 dark:bg-[#0B0F19]/85 backdrop-blur-xl z-40 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="flex justify-between items-center gap-3">
+        <div className="flex justify-between items-center gap-2">
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
                     <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight truncate">{trainingName}</h2>
-                    <span className={`shrink-0 whitespace-nowrap text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${isOnline ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse'}`}>
+                    <span role="status" aria-label={isOnline ? 'Sincronizado' : 'Offline'} title={isOnline ? 'Sincronizado' : 'Offline'} className={`shrink-0 whitespace-nowrap text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-full flex items-center gap-1 ${isOnline ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse'}`}>
                         {isOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                        {isOnline ? 'Sincronizado' : 'Offline'}
+                        <span className={isOnline ? 'hidden sm:inline' : ''} aria-hidden="true">{isOnline ? 'Sincronizado' : 'Offline'}</span>
                     </span>
                 </div>
                 <p className="text-[11px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
@@ -18,7 +25,7 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    <span className="font-mono font-black text-sm text-amber-800 dark:text-amber-400 dark:text-brand">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
+                    <span className="font-mono font-black text-sm text-amber-800 dark:text-amber-400 dark:text-brand">{formatElapsed(elapsedTime)}</span>
                     <span>•</span>
                     <span className="font-bold">{completedSetsCount}/{totalSetsInTraining} séries</span>
                 </p>
@@ -36,32 +43,28 @@ const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCou
             </div>
 
             {notifSupported && onToggleNotif && (
-                <button type="button" onClick={onToggleNotif} aria-pressed={notifEnabled} aria-label="Treino na notificação" title="Treino na notificação" className={`shrink-0 min-h-[44px] min-w-[44px] grid place-items-center rounded-lg border text-xs font-bold transition-all ${notifEnabled ? 'bg-brand text-black border-transparent' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-transparent dark:border-gray-700'}`}>
-                    <Bell className="w-4 h-4" aria-hidden="true" />
+                <button type="button" onClick={onToggleNotif} aria-pressed={notifEnabled} aria-label={notifEnabled ? 'Treino na notificação: ligado' : 'Treino na notificação: desligado'} title="Treino na notificação" className={`shrink-0 min-h-[44px] min-w-[40px] grid place-items-center rounded-lg transition-colors ${notifEnabled ? 'text-amber-700 dark:text-brand' : 'text-gray-500 dark:text-gray-500'}`}>
+                    {notifEnabled ? <Bell className="w-5 h-5" aria-hidden="true" fill="currentColor" /> : <BellOff className="w-5 h-5" aria-hidden="true" />}
                 </button>
             )}
 
-            {lockSupported && onToggleLock && (
-                <button type="button" onClick={onToggleLock} aria-pressed={lockEnabled} aria-label="Controles na tela de bloqueio" title="Controles na tela de bloqueio" className={`shrink-0 min-h-[44px] min-w-[44px] grid place-items-center rounded-lg border text-xs font-bold transition-all ${lockEnabled ? 'bg-brand text-black border-transparent' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-transparent dark:border-gray-700'}`}>
-                    <Lock className="w-4 h-4" aria-hidden="true" />
-                </button>
-            )}
-
-            {/* Toggle de Modo */}
-            <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-transparent dark:border-gray-700">
+            {/* Toggle de Modo (no celular só os ícones, para sobrar espaço ao nome do treino) */}
+            <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 border border-transparent dark:border-gray-700">
                 <button
                     onClick={() => onChangeViewMode('list')}
                     aria-pressed={viewMode === 'list'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-800 dark:text-brand' : 'text-gray-600 dark:text-gray-400'}`}
+                    aria-label="Lista"
+                    className={`min-h-[40px] min-w-[40px] px-2 sm:px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-800 dark:text-brand' : 'text-gray-600 dark:text-gray-400'}`}
                 >
-                    <List className="w-3.5 h-3.5" /> Lista
+                    <List className="w-4 h-4" aria-hidden="true" /><span className="hidden sm:inline">Lista</span>
                 </button>
                 <button
                     onClick={() => onChangeViewMode('focus')}
                     aria-pressed={viewMode === 'focus'}
-                    className={`min-h-[44px] px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-800 dark:text-brand' : 'text-gray-600 dark:text-gray-400'}`}
+                    aria-label="Foco"
+                    className={`min-h-[40px] min-w-[40px] px-2 sm:px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${viewMode === 'focus' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-800 dark:text-brand' : 'text-gray-600 dark:text-gray-400'}`}
                 >
-                    <Search className="w-3.5 h-3.5" /> Foco
+                    <Search className="w-4 h-4" aria-hidden="true" /><span className="hidden sm:inline">Foco</span>
                 </button>
             </div>
         </div>

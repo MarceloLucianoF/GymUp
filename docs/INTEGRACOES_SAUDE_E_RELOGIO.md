@@ -3,7 +3,7 @@
 Estado em 21/10/2026. Objetivo do dono: ler dados do relógio e gravar o treino no Samsung Health.
 
 ## O que já existe (sem app nativo)
-- **Controles no relógio:** a notificação de mídia (MediaSession) do treino aparece espelhada em relógios Wear OS (Galaxy Watch 4 em diante). Próximo = concluir série, anterior = desfazer, play/pausa = pular descanso. Ver `useWorkoutMediaSession`.
+- **Controles no relógio:** a notificação do treino em andamento (botões Concluir/Desfazer série, Pular descanso/+30 s) aparece espelhada no relógio Galaxy/Wear OS pareado, como qualquer notificação com botões. O antigo controle de mídia (MediaSession, cadeado) foi retirado em 22/10/2026: não aparecia com o Chrome e brigava com a música.
 - **Exportar treino para Saúde:** na tela de histórico do treino, "Exportar para Saúde (JSON)" baixa o treino no formato de uma sessão de exercício do Health Connect (`toHealthConnectSession` em `src/utils/healthExport.js`), para quem for importar por um app/atalho. Não envia nada para a nuvem.
 
 ## O que não dá para fazer só com a web

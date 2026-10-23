@@ -794,3 +794,7 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Dado pessoal novo fora do Firestore:** o endereço de push de cada aparelho fica no Durable Object do usuário (Cloudflare). Entra na revisão de LGPD da política de privacidade.
 - **Limites:** iPhone só recebe com o app instalado na tela inicial (iOS 16.4+); o lembrete de treino diário continua só ao abrir o app.
 
+## Atualização — retirado o controle de mídia (cadeado) e topo do treino mais compacto (22/10/2026)
+- **Teste do dono em celular:** o cartão de mídia não aparecia (com ou sem Spotify). Causa provável: o Chrome no Android só mostra o cartão de mídia para áudio com 5 s ou mais, e o silêncio usado tinha 1 s; mesmo corrigido, ele disputaria o lugar com a música do aluno. Como a notificação do treino (sino) e os avisos com o app fechado já fazem o mesmo papel sem conflito, o cadeado e `useWorkoutMediaSession` foram removidos.
+- **Topo da execução:** sem o cadeado, sino só com ícone (cheio ligado, riscado desligado), Lista/Foco só com ícones no celular e "Sincronizado" só com o ícone; o nome do treino passa a caber. Cronômetro com horas a partir de 60 min (3:50:53 em vez de 230:53).
+
