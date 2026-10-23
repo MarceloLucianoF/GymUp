@@ -191,11 +191,14 @@ describe('deleteUserData - atividade social', () => {
       if (path === 'socialPosts') return { docs: [{ id: 'p1', ref: { path: 'socialPosts/p1' } }] };
       if (path === 'socialPosts/p1/likes') return { docs: [{ id: 'x', ref: { path: 'socialPosts/p1/likes/x' } }] };
       if (path === 'group:likes') return { docs: [{ id: 'u1', ref: { path: 'socialPosts/outro/likes/u1' } }] };
+      if (path === 'group:comments') return { docs: [{ id: 'k9', ref: { path: 'socialPosts/outro/comments/k9' } }] };
+      if (path === 'socialPosts/p1/comments') return { docs: [{ id: 'k1', ref: { path: 'socialPosts/p1/comments/k1' } }] };
       return baseGet(q);
     };
     await deleteUserData('u1', { deps });
     const deleted = log.filter((l) => l[0] === 'delete').map((l) => l[1]);
-    expect(deleted).toEqual(expect.arrayContaining(['socialPosts/p1/likes/x', 'socialPosts/p1', 'socialPosts/outro/likes/u1']));
+    expect(deleted).toEqual(expect.arrayContaining(['socialPosts/p1/likes/x', 'socialPosts/p1/comments/k1', 'socialPosts/p1', 'socialPosts/outro/likes/u1', 'socialPosts/outro/comments/k9']));
+    expect(deleted.indexOf('socialPosts/p1/comments/k1')).toBeLessThan(deleted.indexOf('socialPosts/p1'));
     expect(deleted.indexOf('socialPosts/p1/likes/x')).toBeLessThan(deleted.indexOf('socialPosts/p1'));
   });
 });

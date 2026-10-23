@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, deleteDoc, doc, getCountFromServer, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { mergePosts } from '../utils/feed';
 import { otherOf } from './socialService';
@@ -12,10 +12,10 @@ export async function publishPost(postId, payload) {
   return postId;
 }
 
-/** Apaga o post e as curtidas dele (as curtidas ficam numa subcoleção). */
+/** Apaga o post, as curtidas e os comentários dele (subcoleções). */
 export async function deletePost(postId) {
-  const likes = await getDocs(collection(db, 'socialPosts', postId, 'likes'));
-  for (const d of likes.docs) await deleteDoc(d.ref);
+  const [likes, comments] = await Promise.all([getDocs(collection(db, 'socialPosts', postId, 'likes')), getDocs(collection(db, 'socialPosts', postId, 'comments'))]);
+  for (const d of [...likes.docs, ...comments.docs]) await deleteDoc(d.ref);
   await deleteDoc(doc(db, 'socialPosts', postId));
 }
 
@@ -43,9 +43,12 @@ export async function listFeed(uid, friendships) {
   const posts = mergePosts(lists).filter((p) => !hidden.has(p.id));
   return Promise.all(posts.map(async (post) => {
     try {
-      const likes = await getDocs(collection(db, 'socialPosts', post.id, 'likes'));
-      return { ...post, likeCount: likes.size, liked: likes.docs.some((d) => d.id === uid) };
-    } catch (_) { return { ...post, likeCount: 0, liked: false }; }
+      const [likes, comments] = await Promise.all([
+        getDocs(collection(db, 'socialPosts', post.id, 'likes')),
+        getCountFromServer(collection(db, 'socialPosts', post.id, 'comments')).catch(() => null)
+      ]);
+      return { ...post, likeCount: likes.size, liked: likes.docs.some((d) => d.id === uid), commentCount: comments ? comments.data().count : null };
+    } catch (_) { return { ...post, likeCount: 0, liked: false, commentCount: null }; }
   }));
 }
 
@@ -79,21 +82,28 @@ export async function listReports() {
   snap.docs.forEach((d) => {
     const r = { id: d.id, ...d.data() };
     if (r.status === 'dismissed') return;
-    if (!groups.has(r.postId)) groups.set(r.postId, { postId: r.postId, authorId: r.authorId, reports: [] });
-    groups.get(r.postId).reports.push(r);
+    const key = r.commentId ? `${r.postId}/${r.commentId}` : r.postId;
+    if (!groups.has(key)) groups.set(key, { key, postId: r.postId, commentId: r.commentId || null, authorId: r.authorId, reports: [] });
+    groups.get(key).reports.push(r);
   });
   return Promise.all([...groups.values()].map(async (g) => {
-    try { const p = await getDoc(doc(db, 'socialPosts', g.postId)); return { ...g, post: p.exists() ? { id: p.id, ...p.data() } : null }; }
-    catch (_) { return { ...g, post: null }; }
+    try {
+      const p = await getDoc(doc(db, 'socialPosts', g.postId));
+      const post = p.exists() ? { id: p.id, ...p.data() } : null;
+      if (!g.commentId) return { ...g, post };
+      const c = post ? await getDoc(doc(db, 'socialPosts', g.postId, 'comments', g.commentId)) : null;
+      return { ...g, post, comment: c && c.exists() ? { id: c.id, ...c.data() } : null };
+    } catch (_) { return { ...g, post: null, comment: null }; }
   }));
 }
 
 /** Admin: remover apaga o post (com curtidas) e as denúncias; dispensar só marca as denúncias (não voltam à fila).
  *  Denúncia de post que já não existe é apagada. */
 export async function resolveReports(group, { removePost }) {
-  if (removePost && group.post) await deletePost(group.postId);
+  const target = group.commentId ? group.comment : group.post;
+  if (removePost && target) await (group.commentId ? deleteComment(group.postId, group.commentId) : deletePost(group.postId));
   for (const r of group.reports) {
-    if (removePost || !group.post) await deleteDoc(doc(db, 'socialReports', r.id));
+    if (removePost || !target) await deleteDoc(doc(db, 'socialReports', r.id));
     else await updateDoc(doc(db, 'socialReports', r.id), { status: 'dismissed' });
   }
 }
@@ -109,6 +119,37 @@ export async function likesOnMyPosts(uid, max = 5) {
   const lists = await Promise.all(posts.docs.map(async (p) => {
     const likes = await getDocs(collection(db, 'socialPosts', p.id, 'likes'));
     return likes.docs.filter((l) => l.id !== uid).map((l) => ({ postId: p.id, title: p.data().title, likerId: l.id, at: l.data().at || '' }));
+  }));
+  return lists.flat().sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+
+// ---- comentários ----
+// A data do comentário é a do servidor (o cliente não escolhe); aqui vira texto ISO para a tela.
+const isoOf = (v) => (typeof v?.toDate === 'function' ? v.toDate().toISOString() : String(v || ''));
+
+/** Os 50 comentários mais recentes, em ordem de conversa (mais antigo em cima). */
+export async function listComments(postId) {
+  const snap = await getDocs(query(collection(db, 'socialPosts', postId, 'comments'), orderBy('createdAt', 'desc'), limit(50)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data(), createdAt: isoOf(d.data().createdAt) })).reverse();
+}
+
+export async function addComment(uid, postId, text) {
+  const ref = await addDoc(collection(db, 'socialPosts', postId, 'comments'), { authorId: uid, text, createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+export const deleteComment = (postId, commentId) => deleteDoc(doc(db, 'socialPosts', postId, 'comments', commentId));
+
+export async function reportComment(uid, post, comment, reason) {
+  await setDoc(doc(db, 'socialReports', `${uid}_${post.id}_${comment.id}`), { reporterId: uid, postId: post.id, commentId: comment.id, authorId: comment.authorId, reason, createdAt: new Date().toISOString() });
+}
+
+/** Comentários de amigos nos meus posts mais recentes (os meus não contam), do mais novo ao mais antigo. */
+export async function commentsOnMyPosts(uid, max = 5) {
+  const posts = await getDocs(query(collection(db, 'socialPosts'), where('authorId', '==', uid), orderBy('createdAt', 'desc'), limit(max)));
+  const lists = await Promise.all(posts.docs.map(async (p) => {
+    const cs = await getDocs(query(collection(db, 'socialPosts', p.id, 'comments'), orderBy('createdAt', 'desc'), limit(10)));
+    return cs.docs.filter((c) => c.data().authorId !== uid).map((c) => ({ postId: p.id, title: p.data().title, authorId: c.data().authorId, text: c.data().text, at: isoOf(c.data().createdAt) }));
   }));
   return lists.flat().sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }

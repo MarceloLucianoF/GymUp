@@ -18,7 +18,7 @@ export default function ReportsSection({ names }) {
   useEffect(() => { load(); }, [load]);
 
   const act = async (group, removePost) => {
-    try { await resolveReports(group, { removePost }); toast.success(removePost ? 'Publicação removida.' : 'Denúncias dispensadas.'); load(); }
+    try { await resolveReports(group, { removePost }); toast.success(removePost ? (group.commentId ? 'Comentário removido.' : 'Publicação removida.') : 'Denúncias dispensadas.'); load(); }
     catch (error) { console.error(error); toast.error('Não foi possível concluir.'); }
   };
 
@@ -27,14 +27,16 @@ export default function ReportsSection({ names }) {
       <h2 id="soc-reports" className="mb-3 flex items-center gap-2 font-display text-lg font-black text-gray-900 dark:text-white"><Flag className="h-5 w-5 text-amber-800 dark:text-brand" aria-hidden="true" /> Denúncias do feed</h2>
       {state.loading ? <p className="text-sm text-gray-600 dark:text-gray-400">Carregando…</p>
         : state.error ? <p className="text-sm text-gray-600 dark:text-gray-400">Não foi possível carregar as denúncias.</p>
-          : state.groups.length === 0 ? <EmptyState icon={Flag} title="Nenhuma denúncia" description="Quando alguém denunciar uma publicação da aba Atividade, ela aparece aqui." /> : (
+          : state.groups.length === 0 ? <EmptyState icon={Flag} title="Nenhuma denúncia" description="Quando alguém denunciar uma publicação ou um comentário da aba Atividade, aparece aqui." /> : (
             <ul className="space-y-3">
               {state.groups.map((g) => (
-                <li key={g.postId} className="rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
-                  <p className="text-sm text-gray-900 dark:text-white"><b>{names[g.authorId] || 'Usuário'}</b> · {g.post ? <><b>{g.post.title}</b> <span className="text-xs text-gray-600 dark:text-gray-400">({postLine(g.post)})</span></> : <i>publicação já apagada</i>}</p>
+                <li key={g.key || g.postId} className="rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
+                  {g.commentId
+                    ? <p className="break-words text-sm text-gray-900 dark:text-white">Comentário de <b>{names[g.authorId] || 'Usuário'}</b>: {g.comment ? <span className="whitespace-pre-wrap">"{g.comment.text}"</span> : <i>comentário já apagado</i>}{g.post ? <span className="text-xs text-gray-600 dark:text-gray-400"> · no treino "{g.post.title}"</span> : null}</p>
+                    : <p className="text-sm text-gray-900 dark:text-white"><b>{names[g.authorId] || 'Usuário'}</b> · {g.post ? <><b>{g.post.title}</b> <span className="text-xs text-gray-600 dark:text-gray-400">({postLine(g.post)})</span></> : <i>publicação já apagada</i>}</p>}
                   <p className="text-xs text-gray-700 dark:text-gray-300">{g.reports.length} {g.reports.length === 1 ? 'denúncia' : 'denúncias'}: {g.reports.map((r) => REASON[r.reason] || r.reason).join(', ')}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {g.post && <button type="button" onClick={() => act(g, true)} className={`${btn} bg-rose-600 text-white`}>Remover publicação</button>}
+                    {(g.commentId ? g.comment : g.post) && <button type="button" onClick={() => act(g, true)} className={`${btn} bg-rose-600 text-white`}>{g.commentId ? 'Remover comentário' : 'Remover publicação'}</button>}
                     <button type="button" onClick={() => act(g, false)} className={`${btn} bg-gray-200 text-gray-900 dark:bg-white/10 dark:text-white`}>Dispensar</button>
                   </div>
                 </li>

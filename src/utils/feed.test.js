@@ -51,3 +51,15 @@ test('weekCountOf conta só desde segunda-feira', () => {
   const rows = [{ date: new Date(2026, 9, 19, 7).toISOString() }, { date: new Date(2026, 9, 22, 8).toISOString() }, { date: new Date(2026, 9, 18, 20).toISOString() }, { date: 'x' }];
   expect(weekCountOf(rows, now)).toBe(2);
 });
+
+test('checkComment: vazio, tamanho e links', () => {
+  const { checkComment } = require('./feed');
+  expect(checkComment('  Mandou   bem!  ')).toEqual({ ok: true, text: 'Mandou bem!' });
+  expect(checkComment('   ').ok).toBe(false);
+  expect(checkComment('x'.repeat(281)).ok).toBe(false);
+  expect(checkComment('olha www.site.com').ok).toBe(false);
+  expect(checkComment('linha\nsite.com.br').ok).toBe(false);
+  expect(checkComment('Peguei 2.5 kg a mais').ok).toBe(true);
+  expect(checkComment('entra em discord.gg/abc').ok).toBe(false);
+  expect(checkComment('meu app x.dev').ok).toBe(false);
+});

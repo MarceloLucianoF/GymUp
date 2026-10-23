@@ -67,3 +67,9 @@ export function notifyLike(postId) {
   if (!ENABLED) return;
   api('like', 'POST', { postId }).catch(() => { /* sem aviso: a curtida já está salva */ });
 }
+
+/** Pede ao Worker para avisar o autor do post de um comentário novo (ele confere o comentário no Firestore). */
+export function notifyComment(postId, commentId) {
+  if (!ENABLED) return;
+  api('comment', 'POST', { postId, commentId }).catch(() => { /* sem aviso: o comentário já está salvo */ });
+}

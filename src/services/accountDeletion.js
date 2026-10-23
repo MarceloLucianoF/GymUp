@@ -122,10 +122,12 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     const tryDelete = async (ref) => {
       try { await deps.deleteDoc(ref); removed += 1; } catch (error) { if (error?.code !== 'permission-denied') throw error; }
     };
-    // Posts de atividade e as curtidas deles: saem antes do perfil (as regras de leitura dependem dele).
+    // Posts de atividade com as curtidas e os comentários deles: saem antes do perfil (as regras de leitura dependem dele).
     for (const post of await refsOf(deps, 'socialPosts', deps.where('authorId', '==', uid))) {
-      const likes = await deps.getDocs(deps.collection(deps.db, 'socialPosts', post.id, 'likes'));
-      for (const like of likes.docs) await tryDelete(like.ref);
+      for (const sub of ['likes', 'comments']) {
+        const docs = await deps.getDocs(deps.collection(deps.db, 'socialPosts', post.id, sub));
+        for (const d of docs.docs) await tryDelete(d.ref);
+      }
       await tryDelete(post.ref);
     }
     // Denúncias que fiz (o admin perde a fila dessas, mas são dados meus).
@@ -135,9 +137,12 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
       try {
         const given = await deps.getDocs(deps.query(deps.collectionGroup(deps.db, 'likes'), deps.where('likerId', '==', uid)));
         for (const like of given.docs) await tryDelete(like.ref);
+        // Comentários que fiz em posts de amigos.
+        const written = await deps.getDocs(deps.query(deps.collectionGroup(deps.db, 'comments'), deps.where('authorId', '==', uid)));
+        for (const c of written.docs) await tryDelete(c.ref);
       } catch (error) {
         if (error?.code !== 'permission-denied' && error?.code !== 'failed-precondition') throw error;
-        console.warn('Curtidas dadas não foram apagadas (índice ou regra indisponível):', error.code);
+        console.warn('Curtidas ou comentários dados não foram apagados (índice ou regra indisponível):', error.code);
       }
     }
     try {

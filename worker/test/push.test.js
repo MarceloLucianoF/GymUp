@@ -145,3 +145,18 @@ test('revisão: desligar exige o aparelho (ou all), chaves validadas, um aparelh
     assert.deepEqual([a.sent, b.reason], [1, 'limite']);
   } finally { globalThis.fetch = globalThis.__f; }
 });
+
+test('comentário: só avisa se o comentário é de quem chama, e nunca o próprio autor do post', async () => {
+  const { jwk } = await vapidJwk();
+  const { env } = fakeEnv(jwk);
+  const docs = { 'socialPosts/p1/comments/k1': { authorId: { stringValue: 'bia' }, text: { stringValue: 'Mandou bem' } }, 'socialPosts/p1/comments/k2': { authorId: { stringValue: 'ana' }, text: { stringValue: 'oi' } }, 'socialPosts/p1': { authorId: { stringValue: 'ana' }, title: { stringValue: 'Treino A' } }, 'publicProfiles/bia': { displayName: { stringValue: 'Bia' } } };
+  const fetchImpl = async (u) => { const path = decodeURIComponent(String(u).split('/documents/')[1] || ''); return docs[path] ? new Response(JSON.stringify({ fields: docs[path] })) : new Response('{}', { status: 404 }); };
+  const r1 = await (await handlePushRequest(req('comment', 'POST', { postId: 'p1', commentId: 'k1' }, 'tok-b'), env, { verify, fetchImpl })).json();
+  assert.equal(r1.sent, 0);                 // ana sem aparelho: chega ao envio, 0 entregues
+  assert.equal(r1.reason, undefined);
+  const r2 = await (await handlePushRequest(req('comment', 'POST', { postId: 'p1', commentId: 'k2' }, 'tok-b'), env, { verify, fetchImpl })).json();
+  assert.equal(r2.reason, 'sem-comentario'); // comentário de outra pessoa
+  const r3 = await (await handlePushRequest(req('comment', 'POST', { postId: 'p1', commentId: 'k2' }, 'tok-a'), env, { verify, fetchImpl })).json();
+  assert.equal(r3.reason, 'sem-autor');      // a autora comentando o próprio post
+  assert.equal((await handlePushRequest(req('comment', 'POST', { postId: 'p1', commentId: '../x' }, 'tok-b'), env, { verify, fetchImpl })).status, 400);
+});

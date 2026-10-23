@@ -74,3 +74,15 @@ export function weekCountOf(checkIns, now = new Date()) {
   const from = weekStart(now).getTime();
   return (checkIns || []).filter((c) => { const t = new Date(c.date || c.createdAt).getTime(); return Number.isFinite(t) && t >= from; }).length;
 }
+
+export const COMMENT_MAX = 280;
+const LINK_RE = /(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]{2,}([/:?#]|\b))/i;   // mesma conferência das regras do Firestore
+
+/** Confere e limpa um comentário antes de enviar (as regras do Firestore repetem a conferência). */
+export function checkComment(raw) {
+  const text = String(raw || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  if (!text) return { ok: false, error: 'Escreva algo antes de enviar.' };
+  if (text.length > COMMENT_MAX) return { ok: false, error: `No máximo ${COMMENT_MAX} caracteres.` };
+  if (LINK_RE.test(text)) return { ok: false, error: 'Links não são permitidos nos comentários.' };
+  return { ok: true, text };
+}
