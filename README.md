@@ -86,6 +86,7 @@ O Firebase Hosting está desativado: o app roda só na Cloudflare. Mais detalhes
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md): Worker, domínio e configurações no console
 - [docs/APPCHECK.md](docs/APPCHECK.md): roteiro do enforce do App Check e da proteção contra enumeração de e-mail
 - [docs/V2_ACADEMIAS.md](docs/V2_ACADEMIAS.md): desenho da V2 para academias (multiempresa, papéis, isolamento de dados, roadmap); sem código
+- [docs/PLANO_APP_ANDROID.md](docs/PLANO_APP_ANDROID.md): plano do app Android (Capacitor, cronômetro nativo, Health Connect, Play Store)
 - [docs/INTEGRACOES_SAUDE_E_RELOGIO.md](docs/INTEGRACOES_SAUDE_E_RELOGIO.md): Health Connect/Samsung Health e Wear OS (o que a web faz e o que exige app Android)
 - [docs/PLANO_SOCIAL.md](docs/PLANO_SOCIAL.md): plano de amigos, ranking e desafios (MVP de amizade e ranking semanal implementado; pontos e desafios planejados)
 - [CLAUDE.md](CLAUDE.md) e [AGENTS.md](AGENTS.md): regras de trabalho para os agentes
