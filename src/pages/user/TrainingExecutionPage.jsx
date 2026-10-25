@@ -42,6 +42,7 @@ import { publishPost } from '../../services/feedService';
 import { buildPostPayload, weekCountOf } from '../../utils/feed';
 import { disablePush, enablePush, pushEnabled, scheduleRestPush } from '../../services/pushService';
 import { isNativeApp } from '../../services/nativeApp';
+import { onWorkoutTimerAction, stopWorkoutTimer, updateWorkoutTimer } from '../../services/workoutTimerNative';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
 
 // --- PÁGINA PRINCIPAL DE EXECUÇÃO ---
@@ -538,10 +539,25 @@ export default function TrainingExecutionPage() {
     const restPushRef = useRef(restPushText);
     restPushRef.current = restPushText;
     useEffect(() => {
-        if (!notifEnabled) return undefined;
+        if (!notifEnabled || nativeApp) return undefined;   // no app o próprio aparelho avisa (WorkoutTimer)
         scheduleRestPush(restEndsAt, restPushRef.current);
         return () => { if (restEndsAt) scheduleRestPush(null); };
-    }, [restEndsAt, notifEnabled]);
+    }, [restEndsAt, notifEnabled, nativeApp]);
+    // App Android: notificação nativa com o cronômetro do descanso correndo e botões que agem no treino.
+    const nativeTitle = mediaEx ? `${mediaEx.name} · ${training?.name || 'Treino'}` : '';
+    const nativeBody = mediaEx ? `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}\n${Object.values(sessionData).filter((x) => x?.completed).length} de ${notifTotal} séries concluídas` : '';
+    useEffect(() => {
+        if (!nativeApp || !notifEnabled || !nativeTitle) return;
+        updateWorkoutTimer({ title: nativeTitle, body: nativeBody, endsAt: restEndsAt || 0, alertTitle: `Descanso acabou · ${mediaEx?.name || ''}`.slice(0, 80) });
+    }, [nativeApp, notifEnabled, nativeTitle, nativeBody, restEndsAt]);   // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        if (!nativeApp || !notifEnabled) return undefined;
+        const off = onWorkoutTimerAction((action) => {
+            if (action === 'restOver') { setRestTimerObj(null); return; }
+            notifHandlersRef.current?.[action]?.();
+        });
+        return () => { off(); stopWorkoutTimer(); };   // sair do treino (ou desligar) tira a notificação
+    }, [nativeApp, notifEnabled]);
     const setNotif = async (on) => {
         if (nativeApp) {
             try { window.localStorage.setItem('bt_workout_notif', on ? '1' : '0'); } catch (e) { /* sem storage */ }

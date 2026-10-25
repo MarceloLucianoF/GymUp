@@ -26,11 +26,15 @@ Gera `android/app/build/outputs/apk/release/app-release.apk` (assinado). Para in
 - Ao ativar a Play App Signing, cadastrar no Firebase a impressão digital SHA-1 da chave da Play (Play Console → Integridade do app), senão o login com Google falha na versão da loja.
 - Conta pessoal: teste fechado com 12 testadores por 14 dias antes da produção.
 
-## Limites desta fase
-- Sem cronômetro na notificação e sem Samsung Health (fases 2 e 3).
+## Fase 2: treino na notificação (1.1)
+- Plugin nativo `WorkoutTimer` (`android/app/src/main/java/dev/marcelolabs/bohtreinar/`): serviço em primeiro plano (tipo `specialUse`) só durante o treino, com a notificação do exercício e da série; no descanso, **cronômetro regressivo do próprio Android** e botões Pular descanso / +30 s; fora do descanso, Concluir série / Desfazer série. No fim do descanso, alerta no canal "Fim do descanso" (toca e vibra) gerado no aparelho, sem servidor. No Android 16 a notificação pede destaque como atualização ao vivo (`requestPromotedOngoing`).
+- No app, o sino do treino liga essa notificação e os avisos do FCM (curtidas e comentários); o aviso de descanso do servidor não é usado no app.
+- Para a Play Store: justificar o serviço `specialUse` (cronômetro de descanso iniciado pelo usuário).
+
+## Limites
+- Sem Samsung Health (fase 3).
 - O app depende do site no ar; sem internet no primeiro uso, não abre.
 - O conteúdo embutido no APK é só `mobile-shell/` (página "Sem conexão"); o app carrega o site publicado.
 - **Ponte nativa e o site:** como o app abre o site publicado, um XSS no site poderia chamar os plugins nativos (login Google, avisos). Mantemos só esses dois plugins; antes da Play Store, avaliar uma Content-Security-Policy no Worker.
 - Backup do Android desligado (`allowBackup=false`): o login e o cache do WebView não vão para o backup do Google.
 - Antes da loja: ligar `minifyEnabled` e separar a senha da chave da senha do keystore.
-
