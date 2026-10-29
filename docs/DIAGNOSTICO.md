@@ -808,3 +808,8 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Revisão (revisor-diff):** nenhum segredo no git; corrigidos aparelho apagado por erro de formato do FCM, links de aviso só internos, backup do Android desligado, ouvintes duplicados, logout depois de reiniciar o app, liberação do aparelho ao desligar, página "Sem conexão" ligada (`errorPath`).
 - **Pendente:** teste no aparelho do dono; CSP no site antes da loja; minificação e senhas separadas antes da Play Store; SHA-1 da Play App Signing no Firebase quando publicar.
 
+## Atualização — fotos do iPhone, importação de PDF e avisos do app (28/10/2026)
+- **Fotos (perfil do aluno, do treinador e foto do shape):** antes recusavam arquivos acima de 500 KB (toda foto de iPhone). Agora a foto é redesenhada e reduzida no aparelho (`prepareImage`, tipos `avatar` 400 px e `progress` 1080 px, JPEG sem metadados) e aceita HEIC.
+- **Importar treino de PDF:** a IA levava mais de 40 s para montar uma ficha de 3 treinos e o app desistia em 40 s (o servidor em 42 s): falhava em qualquer navegador, não só no iPhone. Respostas longas (max_tokens ≥ 2000) ganham 55 s por modelo e 85 s no total no Worker; o app espera até 90 s, avisa "pode levar até 1 minuto" e diferencia "demorou demais" de outros erros.
+- **App Android:** a notificação do treino não dependia mais só da permissão: ficava presa ao cadastro no FCM; agora liga só com a permissão e o FCM roda à parte, guardando o motivo da falha. Diagnóstico em Perfil → Notificações (só no app): permissão, plugins, cadastro no FCM, último erro e botões de teste (notificação do treino com 15 s e aviso pelo servidor, rota `/api/push/test`).
+

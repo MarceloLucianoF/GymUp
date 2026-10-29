@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { Bell } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import { disablePush, enablePush, pushEnabled, pushSupported } from '../../services/pushService';
+import { isNativeApp } from '../../services/nativeApp';
+import AppDiagnostics from './AppDiagnostics';
 
 const Toggle = ({ label, checked, onChange, disabled }) => (
   <label className="flex items-center justify-between gap-3 min-h-[44px] cursor-pointer">
@@ -67,6 +69,8 @@ export default function NotificationSettings({ uid }) {
           <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1">O aviso aparece ao abrir o app depois desse horário, se não houver treino hoje. Sem servidor, não é possível avisar com o app fechado.</p>
         </div>
       )}
+
+      {isNativeApp() && <AppDiagnostics />}
 
       <button type="button" onClick={test} className="mt-4 w-full min-h-[48px] rounded-2xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-800 dark:text-white">Testar notificação</button>
     </section>

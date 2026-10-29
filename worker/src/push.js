@@ -114,6 +114,10 @@ export async function handlePushRequest(request, env, deps = {}) {
     const payload = { kind: 'like', title: 'Curtidas no BohTreinar', body: `${who} curtiu seu treino "${clip(post.title, 60)}".`, url: '/amigos?aba=atividade', tag: 'bt-likes' };
     return json(200, await call(post.authorId, 'like', { key: `${uid}:${postId}`, payload }), cors);
   }
+  if (route === 'test' && request.method === 'POST') {
+    // Diagnóstico: aviso de teste só para os aparelhos da própria conta.
+    return json(200, await call(uid, 'test', { payload: { kind: 'test', title: 'Teste de aviso do BohTreinar', body: 'Se você está lendo isto, os avisos com o app fechado funcionam neste aparelho.', url: '/profile', tag: 'bt-test' } }), cors);
+  }
   if (route === 'comment' && request.method === 'POST') {
     const postId = clip(body.postId, 64);
     const commentId = clip(body.commentId, 64);
@@ -176,6 +180,10 @@ export class PushBox {
       const previous = (await this.state.storage.get('owner')) || null;
       await this.state.storage.put('owner', data.uid);
       return json(200, { previous });
+    }
+    if (op === 'test') {
+      const subs = await this.subs();
+      return json(200, { devices: subs.length, kinds: subs.map((x) => (x.fcm ? 'app' : 'web')), sent: await this.deliver(data.payload, 60) });
     }
     if (op === 'release') {
       if ((await this.state.storage.get('owner')) === data.uid) await this.state.storage.delete('owner');

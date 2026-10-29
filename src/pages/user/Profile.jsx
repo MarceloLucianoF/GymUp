@@ -5,6 +5,7 @@ import { useTheme } from '../../hooks/ThemeContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
+import { ImageError, prepareImage } from '../../utils/imageAttach';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import usePageMeta from '../../hooks/usePageMeta';
@@ -114,25 +115,19 @@ export default function Profile() {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  const handleImageUpload = (e) => {
+  // Foto reduzida no aparelho (sem localização do GPS) em vez de recusar fotos grandes, como as do iPhone.
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
+    e.target.value = '';
     if (!file) return;
-
-    if (file.size > 500 * 1024) {
-        toast.error("Imagem muito grande! Máximo 500KB.");
-        return;
-    }
-
     const loadingToast = toast.loading("Processando foto...");
-    const reader = new FileReader();
-
-    reader.onloadend = () => {
-        const base64String = reader.result;
-        setFormData(prev => ({ ...prev, photoURL: base64String }));
-        toast.success("Foto pronta! Não esqueça de salvar.", { id: loadingToast });
-    };
-
-    reader.readAsDataURL(file);
+    try {
+      const url = await prepareImage(file, 'avatar');
+      setFormData(prev => ({ ...prev, photoURL: url }));
+      toast.success("Foto pronta! Não esqueça de salvar.", { id: loadingToast });
+    } catch (error) {
+      toast.error(error instanceof ImageError ? error.message : 'Não consegui usar esta foto.', { id: loadingToast });
+    }
   };
 
   const handleSave = async (e) => {

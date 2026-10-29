@@ -2,6 +2,7 @@ import { parseFee } from '../../services/coachLinkService';
 import React, { useState, useEffect, useCallback } from 'react';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { ImageError, prepareImage } from '../../utils/imageAttach';
 import { Camera, Copy, Save } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
@@ -45,14 +46,17 @@ export default function CoachSettings() {
 
   const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // Imagem em base64 (MVP). Limite de 500kb para não inflar o documento.
-  const handleImageUpload = (e) => {
+  // Foto reduzida no aparelho (JPEG pequeno, sem metadados) para não inflar o documento.
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
+    e.target.value = '';
     if (!file) return;
-    if (file.size > 500 * 1024) return toast.error('Imagem muito grande (máx. 500kb)');
-    const reader = new FileReader();
-    reader.onloadend = () => setFormData((prev) => ({ ...prev, photoURL: reader.result }));
-    reader.readAsDataURL(file);
+    try {
+      const url = await prepareImage(file, 'avatar');
+      setFormData((prev) => ({ ...prev, photoURL: url }));
+    } catch (error) {
+      toast.error(error instanceof ImageError ? error.message : 'Não consegui usar esta foto.');
+    }
   };
 
   const handleSave = async (e) => {
