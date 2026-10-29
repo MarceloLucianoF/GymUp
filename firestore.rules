@@ -308,6 +308,138 @@ service cloud.firestore {
       allow delete: if ownerOrAdmin(resource.data.userId);
     }
 
+    // ---- Saúde (itens 15/19): avaliação física, anamnese e consentimento (LGPD art. 11, dado sensível) ----
+    // Quem lê: o próprio aluno e o professor VINCULADO (mesmo critério de linkedStudent) com consentimento em
+    // healthConsents/{uid} em nome dele. Admin NÃO lê. Apagar o consentimento corta o acesso na hora.
+    function healthConsentPath(uid) {
+      return /databases/$(database)/documents/healthConsents/$(uid);
+    }
+
+    function healthOwner(uid) {
+      return signedIn() && uid is string && request.auth.uid == uid;
+    }
+
+    function healthCoach(uid) {
+      return signedIn() && uid is string && uid != request.auth.uid
+        && linkedStudent(get(/databases/$(database)/documents/users/$(uid)).data)
+        && exists(healthConsentPath(uid))
+        && get(healthConsentPath(uid)).data.coachId == request.auth.uid;
+    }
+
+    function hNum(m, k, lo, hi) {
+      return !(k in m) || (m[k] is number && m[k] >= lo && m[k] <= hi);
+    }
+
+    function hText(m, k, max) {
+      return !(k in m) || (m[k] is string && m[k].size() <= max);
+    }
+
+    function hIso(v) {
+      return v is string && v.size() <= 40 && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}([T ].*)?$');
+    }
+
+    function validPerimeters(m) {
+      return m is map && m.keys().hasOnly(['arm', 'chest', 'waist', 'hip', 'thigh', 'calf'])
+        && hNum(m, 'arm', 5, 250) && hNum(m, 'chest', 5, 250) && hNum(m, 'waist', 5, 250)
+        && hNum(m, 'hip', 5, 250) && hNum(m, 'thigh', 5, 250) && hNum(m, 'calf', 5, 250);
+    }
+
+    // Dobras cutâneas em mm. pollock3: peito/abdome/coxa (homem) ou tríceps/suprailíaca/coxa (mulher); pollock7: as 7.
+    function validSkinfolds(m) {
+      return m is map
+        && m.keys().hasOnly(['protocol', 'chest', 'abdomen', 'thigh', 'triceps', 'suprailiac', 'subscapular', 'midaxillary'])
+        && m.get('protocol', '') in ['pollock3', 'pollock7']
+        && hNum(m, 'chest', 1, 90) && hNum(m, 'abdomen', 1, 90) && hNum(m, 'thigh', 1, 90) && hNum(m, 'triceps', 1, 90)
+        && hNum(m, 'suprailiac', 1, 90) && hNum(m, 'subscapular', 1, 90) && hNum(m, 'midaxillary', 1, 90);
+    }
+
+    function validBioimpedance(m) {
+      return m is map && m.keys().hasOnly(['bodyFat', 'leanMass', 'water', 'visceralFat'])
+        && hNum(m, 'bodyFat', 1, 80) && hNum(m, 'leanMass', 5, 200) && hNum(m, 'water', 10, 90) && hNum(m, 'visceralFat', 0, 60);
+    }
+
+    function validAssessment(d) {
+      return d.keys().hasOnly(['userId', 'coachId', 'kind', 'date', 'createdAt', 'updatedAt', 'createdBy', 'sex', 'age',
+          'weight', 'height', 'perimeters', 'skinfolds', 'bodyFat', 'bioimpedance', 'notes'])
+        && d.keys().hasAll(['userId', 'kind', 'date', 'createdAt', 'createdBy'])
+        && d.userId is string && d.userId.size() > 0 && d.userId.size() <= 128
+        && d.createdBy is string && d.createdBy.size() <= 128
+        && (!('coachId' in d) || (d.coachId is string && d.coachId.size() <= 128))
+        && d.kind in ['instructor', 'bioimpedance', 'self']
+        && hIso(d.date) && hIso(d.createdAt) && (!('updatedAt' in d) || hIso(d.updatedAt))
+        && (!('sex' in d) || d.sex in ['male', 'female'])
+        && (!('age' in d) || (d.age is int && d.age >= 10 && d.age <= 100))
+        && hNum(d, 'weight', 20, 400) && hNum(d, 'height', 80, 250) && hNum(d, 'bodyFat', 2, 70)
+        && (!('perimeters' in d) || validPerimeters(d.perimeters))
+        && (!('skinfolds' in d) || validSkinfolds(d.skinfolds))
+        && (!('bioimpedance' in d) || validBioimpedance(d.bioimpedance))
+        && hText(d, 'notes', 500);
+    }
+
+    // Avaliação do instrutor: só o professor que a lançou, enquanto vinculado e com consentimento.
+    function instructorAssessmentBy(d) {
+      return d.kind == 'instructor' && d.get('coachId', null) == request.auth.uid && healthCoach(d.userId);
+    }
+
+    match /assessments/{assessmentId} {
+      allow get, list: if healthOwner(resource.data.userId) || healthCoach(resource.data.userId);
+      allow create: if validAssessment(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && ((healthOwner(request.resource.data.userId) && request.resource.data.kind in ['self', 'bioimpedance']
+            && !('coachId' in request.resource.data))
+          || instructorAssessmentBy(request.resource.data));
+      allow update: if validAssessment(request.resource.data)
+        && request.resource.data.diff(resource.data).unchangedKeys().hasAll(['userId', 'kind', 'createdBy', 'createdAt'])
+        && request.resource.data.get('coachId', null) == resource.data.get('coachId', null)
+        && resource.data.createdBy == request.auth.uid
+        && ((healthOwner(resource.data.userId) && resource.data.kind in ['self', 'bioimpedance'])
+          || instructorAssessmentBy(resource.data));
+      // O aluno apaga qualquer avaliação dele (inclusive a do instrutor); o professor, só as que lançou.
+      allow delete: if healthOwner(resource.data.userId) || instructorAssessmentBy(resource.data);
+    }
+
+    function validParq(l) {
+      return l is list && l.size() == 7
+        && l[0] is bool && l[1] is bool && l[2] is bool && l[3] is bool && l[4] is bool && l[5] is bool && l[6] is bool;
+    }
+
+    function validAnamnesis(d) {
+      return d.keys().hasOnly(['userId', 'version', 'createdAt', 'parq', 'injuries', 'surgeries', 'medications',
+          'diseases', 'goals', 'routine', 'notes'])
+        && d.keys().hasAll(['userId', 'version', 'createdAt', 'parq'])
+        && d.userId is string && d.userId.size() > 0 && d.userId.size() <= 128
+        && d.version is int && d.version >= 1 && d.version <= 1000
+        && hIso(d.createdAt) && validParq(d.parq)
+        && hText(d, 'injuries', 1000) && hText(d, 'surgeries', 1000) && hText(d, 'medications', 1000)
+        && hText(d, 'diseases', 1000) && hText(d, 'goals', 1000) && hText(d, 'routine', 1000) && hText(d, 'notes', 1000);
+    }
+
+    // Anamnese: só o aluno escreve; cada envio é uma versão nova (sem edição). O professor com consentimento lê.
+    match /anamneses/{anamnesisId} {
+      allow get, list: if healthOwner(resource.data.userId) || healthCoach(resource.data.userId);
+      allow create: if validAnamnesis(request.resource.data) && healthOwner(request.resource.data.userId);
+      allow update: if false;
+      allow delete: if healthOwner(resource.data.userId);
+    }
+
+    // Consentimento (1 por aluno), só para o professor vinculado atual; o aluno revoga apagando. O professor nomeado pode
+    // apagar (encerrar o vínculo também encerra o consentimento), nunca criar nem alterar.
+    match /healthConsents/{uid} {
+      allow get: if healthOwner(uid) || (signedIn()
+        && linkedStudent(get(/databases/$(database)/documents/users/$(uid)).data)
+        && (resource == null || resource.data.coachId == request.auth.uid));
+      allow list: if false;
+      allow create, update: if healthOwner(uid)
+        && request.resource.data.keys().hasOnly(['coachId', 'version', 'acceptedAt'])
+        && request.resource.data.keys().hasAll(['coachId', 'version', 'acceptedAt'])
+        && request.resource.data.coachId is string
+        && request.resource.data.coachId == get(/databases/$(database)/documents/users/$(uid)).data.get('coachId', null)
+        && request.resource.data.version is string && request.resource.data.version.size() >= 1
+        && request.resource.data.version.size() <= 20
+        && hIso(request.resource.data.acceptedAt);
+      allow delete: if healthOwner(uid) || (signedIn() && resource != null && resource.data.coachId == request.auth.uid);
+    }
+
     // Contador de check-ins por aluno (sem dados de saúde). O cliente só o altera junto da criação ou remoção de um
     // check-in no mesmo lote/transação: as regras conferem o estado "depois" (existsAfter/getAfter), então não dá para
     // inflar ou zerar o número sozinho. O admin lê a lista e pode reconciliar.

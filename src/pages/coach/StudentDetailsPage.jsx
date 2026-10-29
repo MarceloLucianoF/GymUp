@@ -20,6 +20,7 @@ import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import AdherenceHeatmap from '../../components/coach/AdherenceHeatmap';
 import CoachBriefCard from '../../components/coach/CoachBriefCard';
+import CoachHealthPanel from '../../components/health/CoachHealthPanel';
 import { adherenceGrid, adherencePct } from '../../utils/coachInsights';
 import { useConfirm } from '../../hooks/useConfirm';
 import { endStudentLink } from '../../services/coachLinkService';
@@ -30,6 +31,7 @@ const TABS = [
   { id: 'summary', label: 'Resumo' },
   { id: 'workouts', label: 'Treinos' },
   { id: 'progress', label: 'Evolução' },
+  { id: 'health', label: 'Saúde' },
   { id: 'notes', label: 'Notas' }
 ];
 
@@ -303,6 +305,12 @@ export default function StudentDetailsPage() {
                 </div>
               </section>
             )}
+          </div>
+        )}
+
+        {tab === 'health' && (
+          <div role="tabpanel" id="panel-health" aria-labelledby="tab-health">
+            <CoachHealthPanel studentId={studentId} coachId={uid} student={student} />
           </div>
         )}
 

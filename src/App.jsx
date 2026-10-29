@@ -33,6 +33,7 @@ const TrainingExecutionPage = lazy(() => import('./pages/user/TrainingExecutionP
 const HistoryPage = lazy(() => import('./pages/user/HistoryPage'));
 const Profile = lazy(() => import('./pages/user/Profile'));
 const MeasurementsPage = lazy(() => import('./pages/user/MeasurementsPage'));
+const HealthRecordsPage = lazy(() => import('./pages/user/HealthRecordsPage'));
 const ExerciseAnalytics = lazy(() => import('./pages/user/ExerciseAnalytics'));
 const ExerciseProgressList = lazy(() => import('./pages/user/ExerciseProgressList'));
 const Onboarding = lazy(() => import('./pages/user/Onboarding'));
@@ -74,6 +75,7 @@ const ROUTE_META = [
   ['/execution', 'Treino em andamento', 'Execução do treino.', true],
   ['/history', 'Histórico', 'Histórico de treinos.', true],
   ['/analytics', 'Evolução por exercício', 'Evolução de carga por exercício.', true],
+  ['/measurements/saude', 'Avaliações e anamnese', 'Avaliação física e anamnese.', true],
   ['/measurements', 'Medidas', 'Evolução das suas medidas.', true],
   ['/profile', 'Meu perfil', 'Dados, medidas e preferências.', true],
   ['/chat', 'Chat', 'Conversa com seu treinador.', true],
@@ -281,6 +283,7 @@ function AppRoutes() {
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/ferramentas" element={<ProtectedRoute allowedRoles={['user']}><Tools /></ProtectedRoute>} />
           <Route path="/measurements" element={<ProtectedRoute allowedRoles={['user']}><MeasurementsPage /></ProtectedRoute>} />
+          <Route path="/measurements/saude" element={<ProtectedRoute allowedRoles={['user']}><HealthRecordsPage /></ProtectedRoute>} />
 
           
           {/* Fluxo de Treino */}

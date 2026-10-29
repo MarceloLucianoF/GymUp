@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { ImageError, prepareImage } from '../../utils/imageAttach';
 import { useConfirm } from '../../hooks/useConfirm';
 import { Link } from 'react-router-dom';
-import { Camera, Scale, TrendingDown, X, Plus, Trash2, LineChart } from 'lucide-react';
+import { Camera, Scale, TrendingDown, X, Plus, Trash2, LineChart, HeartPulse } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatDate } from '../../utils/format';
 import Modal from '../../components/common/Modal';
@@ -318,6 +318,15 @@ export default function MeasurementsPage() {
           <span className="min-w-0 flex-1">
             <span className="block font-display text-base font-black text-gray-900 dark:text-white">Evolução por exercício</span>
             <span className="block text-xs text-gray-600 dark:text-gray-400">Carga, 1RM estimado, volume e recordes de cada exercício.</span>
+          </span>
+          <span aria-hidden="true" className="text-gray-600 dark:text-gray-400">›</span>
+        </Link>
+
+        <Link to="/measurements/saude" className="surface surface-hover pressable flex items-center gap-4 p-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-brand"><HeartPulse className="h-6 w-6" aria-hidden="true" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-base font-black text-gray-900 dark:text-white">Avaliações e anamnese</span>
+            <span className="block text-xs text-gray-600 dark:text-gray-400">Avaliação física, bioimpedância, PAR-Q e o que o professor pode ver.</span>
           </span>
           <span aria-hidden="true" className="text-gray-600 dark:text-gray-400">›</span>
         </Link>

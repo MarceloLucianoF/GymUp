@@ -20,6 +20,9 @@ describe('exportData', () => {
     expect(out.checkIns[0].date).toBe('2026-01-02T00:00:00.000Z');
     expect(out.checkIns[0].sets[0].kg).toBe(10);
     expect(out.measurements).toHaveLength(1);
+    expect(out.health).toEqual({ assessments: [], anamneses: [], consent: null });
+    const withHealth = buildExportPayload({ user: null, health: { assessments: [{ id: 'a', weight: 80 }], consent: { coachId: 'c1' } } }, now);
+    expect(withHealth.health).toEqual({ assessments: [{ id: 'a', weight: 80 }], anamneses: [], consent: { coachId: 'c1' } });
     expect(() => JSON.stringify(out)).not.toThrow();
   });
 
