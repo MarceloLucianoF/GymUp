@@ -18,6 +18,8 @@ import { WORKOUT_PRESETS, getPreset, applyPreset, reorder, formatMinutes } from 
 import { btnPrimary, btnGhost, iconBtn, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 
 import { stillSrc } from '../../utils/exerciseMedia';
+import { buildWarmupStretch, startsWithWarmup } from '../../utils/stretchWorkout';
+import { exercises as BUILTIN_LIBRARY } from '../../data/exercises';
 const LEVELS = ['Iniciante', 'Intermediário', 'Avançado', 'Elite'];
 const norm = (s) => String(s || '').trim().toLowerCase();
 const cap = (s) => { const t = String(s || '').trim(); return t ? t[0].toUpperCase() + t.slice(1) : 'Outros'; };
@@ -214,6 +216,15 @@ export default function WorkoutEditor() {
     toast.success(`${lib.name} adicionado`);
   };
 
+  // Alongamento geral antes do treino: sequência curta (por tempo) da biblioteca no início da ficha, uma vez só.
+  const warmup = useMemo(() => buildWarmupStretch([...library.filter((l) => !l.archived), ...BUILTIN_LIBRARY]), [library]);
+  const hasWarmup = startsWithWarmup((training?.exercises || []).map((e) => e.name), warmup);
+  const addWarmup = () => {
+    if (hasWarmup || warmup.length === 0) return;
+    update({ exercises: [...warmup.map(fromLibrary), ...training.exercises] });
+    toast.success('Alongamento geral adicionado no início');
+  };
+
   const summary = useMemo(() => {
     const exs = training?.exercises || [];
     const est = estimateWorkout(exs);
@@ -321,6 +332,11 @@ export default function WorkoutEditor() {
             <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Rotina ({training.exercises.length})</h2>
             <button type="button" onClick={() => setShowAdd(true)} className={btnGhost}><Plus className="h-4 w-4" /> Adicionar</button>
           </div>
+          {warmup.length > 0 && (
+            <button type="button" onClick={addWarmup} disabled={hasWarmup} className={`${btnGhost} w-full justify-center disabled:opacity-50`}>
+              <Timer className="h-4 w-4" aria-hidden="true" /> {hasWarmup ? 'Alongamento geral já está no início' : `Adicionar alongamento geral antes do treino (${warmup.length} exercícios)`}
+            </button>
+          )}
 
           <div className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
             <div className="flex-1">

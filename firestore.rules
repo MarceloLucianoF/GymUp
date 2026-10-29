@@ -667,8 +667,12 @@ service cloud.firestore {
             && get(friendPath(request.auth.uid, profileId)).data.blockedBy != request.auth.uid)
           && (resource.data.discoverable == true
             || (exists(friendPath(request.auth.uid, profileId)) && get(friendPath(request.auth.uid, profileId)).data.status in ['active', 'pending']))));
-      // Sem listagem para usuários: a busca por nome não existe (as regras não filtram bloqueios em listas). Só get por @usuário/código.
-      allow list: if isAdmin();
+      // Busca por nome/@ (prefixo): só entre quem escolheu ser encontrado (a consulta precisa filtrar discoverable == true)
+      // e com no máximo 20 resultados por página. Listas não conseguem consultar bloqueios por documento: o app esconde
+      // quem bloqueou ou foi bloqueado; quem quer sumir de vez desliga "ser encontrado" (ver docs/PLANO_SOCIAL.md).
+      allow list: if isAdmin()
+        || (signedIn() && resource.data.discoverable == true
+          && request.query.limit is int && request.query.limit <= 20);
       allow create: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)
         && claims(profileId, request.resource.data);
       allow update: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)

@@ -1,7 +1,8 @@
-import { pairId, otherOf, relationOf, normalizeHandle, normalizeCode, lowerName, newFriendCode, validateHandle, sendRequest, respond } from './socialService';
+import { pairId, otherOf, relationOf, normalizeHandle, normalizeCode, lowerName, newFriendCode, validateHandle, sendRequest, respond, searchProfiles } from './socialService';
+import { getDocs, orderBy, startAt, endAt, limit, where } from 'firebase/firestore';
 
 jest.mock('../firebase/config', () => ({ db: {} }));
-jest.mock('firebase/firestore', () => ({ addDoc: jest.fn(), collection: jest.fn(), deleteField: jest.fn(), doc: jest.fn(), getDoc: jest.fn(), getDocs: jest.fn(), limit: jest.fn(), query: jest.fn(), setDoc: jest.fn(), Timestamp: { fromMillis: (ms) => ({ toMillis: () => ms }) }, where: jest.fn(), writeBatch: jest.fn() }));
+jest.mock('firebase/firestore', () => ({ addDoc: jest.fn(), collection: jest.fn(), deleteField: jest.fn(), doc: jest.fn(), getDoc: jest.fn(), endAt: jest.fn(), getDocs: jest.fn(), limit: jest.fn(), orderBy: jest.fn(), query: jest.fn(), startAt: jest.fn(), setDoc: jest.fn(), Timestamp: { fromMillis: (ms) => ({ toMillis: () => ms }) }, where: jest.fn(), writeBatch: jest.fn() }));
 
 describe('identificadores', () => {
   it('pairId é o mesmo nos dois sentidos e otherOf acha o outro', () => {
@@ -91,5 +92,55 @@ describe('pedidos de amizade', () => {
     batch.update.mockClear();
     await respond('a', 'b', 'cancel');
     expect(batch.update.mock.calls[0][1]).not.toHaveProperty('declines');
+  });
+});
+
+describe('searchProfiles (busca por nome e @)', () => {
+  const snap = (rows) => ({ docs: rows.map((r) => ({ id: r.uid, data: () => r })) });
+  const p = (uid, over = {}) => ({ uid, displayName: uid, displayNameLower: uid, handle: uid, discoverable: true, ...over });
+  beforeEach(() => { jest.clearAllMocks(); });
+
+  it('filtra descobríveis, ordena por prefixo e limita a 10 (a regra aceita até 20)', async () => {
+    getDocs.mockResolvedValueOnce(snap([p('marcelo')])).mockResolvedValueOnce(snap([]));
+    const out = await searchProfiles('  Marc ', { uid: 'eu', friendships: [] });
+    expect(out.map((x) => x.uid)).toEqual(['marcelo']);
+    expect(where).toHaveBeenCalledWith('discoverable', '==', true);
+    expect(orderBy).toHaveBeenCalledWith('displayNameLower');
+    expect(orderBy).toHaveBeenCalledWith('handle');
+    expect(startAt).toHaveBeenCalledWith('marc');
+    expect(endAt).toHaveBeenCalledWith('marc\uf8ff');
+    expect(limit).toHaveBeenCalledWith(10);
+  });
+
+  it('esconde quem bloqueou, quem foi bloqueado e o próprio usuário; junta nome e @ sem repetir', async () => {
+    getDocs.mockResolvedValueOnce(snap([p('ana1'), p('ana2'), p('ana3'), p('eu')])).mockResolvedValueOnce(snap([p('ana1'), p('ana4')]));
+    const friendships = [
+      { userA: 'ana1', userB: 'eu', status: 'blocked', blockedBy: 'ana1' },   // ela me bloqueou
+      { userA: 'ana2', userB: 'eu', status: 'blocked', blockedBy: 'eu' },     // eu bloqueei
+      { userA: 'ana3', userB: 'eu', status: 'active' }
+    ];
+    const out = await searchProfiles('ana', { uid: 'eu', friendships });
+    expect(out.map((x) => x.uid)).toEqual(['ana3', 'ana4']);
+  });
+
+  it('com @ busca só pelo usuário; nome com espaço busca só pelo nome; menos de 2 letras não consulta', async () => {
+    getDocs.mockResolvedValue(snap([]));
+    await searchProfiles('@ma', { uid: 'eu', friendships: [] });
+    expect(orderBy).toHaveBeenCalledTimes(1);
+    expect(orderBy).toHaveBeenCalledWith('handle');
+    jest.clearAllMocks(); getDocs.mockResolvedValue(snap([]));
+    await searchProfiles('Ana Lu', { uid: 'eu', friendships: [] });
+    expect(orderBy).toHaveBeenCalledTimes(1);
+    expect(startAt).toHaveBeenCalledWith('ana lu');
+    jest.clearAllMocks();
+    expect(await searchProfiles('a', { uid: 'eu', friendships: [] })).toEqual([]);
+    expect(getDocs).not.toHaveBeenCalled();
+  });
+
+  it('se as duas consultas falham, avisa o erro; se só uma falha, usa a outra', async () => {
+    getDocs.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'permission-denied' })).mockResolvedValueOnce(snap([p('bia')]));
+    expect((await searchProfiles('bia', { uid: 'eu', friendships: [] })).map((x) => x.uid)).toEqual(['bia']);
+    getDocs.mockRejectedValueOnce(new Error('a')).mockRejectedValueOnce(new Error('b'));
+    await expect(searchProfiles('bia', { uid: 'eu', friendships: [] })).rejects.toThrow('a');
   });
 });

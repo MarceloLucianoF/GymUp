@@ -2,7 +2,7 @@ import { exercises as defaultExercises } from '../data/exercises';
 import { auth, app } from '../firebase/config';
 import { stripEmojis } from '../utils/text';
 import { buildCardioWorkout, isCardioRequest } from '../utils/cardioWorkout';
-import { buildStretchWorkout, isStretchRequest } from '../utils/stretchWorkout';
+import { buildStretchWorkout, isFocusedStretchRequest, isStretchRequest } from '../utils/stretchWorkout';
 import { prescriptionLabel } from '../utils/exerciseKind';
 import { describeEquipment, filterByEquipment, sanitizeEquipment } from '../utils/equipment';
 import { catalogKey } from '../utils/exerciseCatalog';
@@ -299,6 +299,8 @@ REGRAS:
 export const needsTools = (prompt) => {
   const text = String(prompt || '');
   if (/\b(mont[ae]r?|ger[ae]r?|cri[ae]r?)\b[^.?!]*\b(treino|ficha)\b/i.test(text)) return true;
+  // "quero um treino de mobilidade de ombro", "sequência de alongamento para lombar": monta a ficha de mobilidade
+  if (isFocusedStretchRequest(text) && /\b(treino|ficha|sequ[eê]ncia|rotina|sess[aã]o)\b/i.test(text)) return true;
   const spec = parseRequest(text);
   if (!spec) return false;
   return !!parseEquipmentConstraint(text) || /\b(quero|preciso|me d[aeê]|fa[cç]a)\b[^.?!]*\b(treino|ficha)\b/i.test(text);
@@ -626,7 +628,7 @@ export const aiService = {
   async generateAIWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [], excludeNames = [] }) {
     // Pedido aeróbico (esteira, bicicleta...) sem grupo muscular: a biblioteca não tem cardio, a ficha vem de regras.
     if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
-    if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
+    if (isStretchRequest(userRequest) && (!parseRequest(userRequest) || isFocusedStretchRequest(userRequest))) { const w = buildStretchWorkout([...customExercises, ...defaultExercises], userRequest); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
     const { library, constraint } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment, excludeNames);
@@ -636,7 +638,7 @@ export const aiService = {
   /** Mesma regra de composição, sem IA e sem rede. */
   generateLocalWorkout({ goal = 'Hipertrofia', muscleFocus = 'Peito e Tríceps', durationMinutes = 45, customExercises = [], userRequest = '', equipment = [], excludeNames = [] }) {
     if (isCardioRequest(userRequest) && !parseRequest(userRequest)) return buildCardioWorkout(userRequest, { goal, durationMinutes: durationMinutes === 45 ? 40 : durationMinutes });
-    if (isStretchRequest(userRequest) && !parseRequest(userRequest)) { const w = buildStretchWorkout([...customExercises, ...defaultExercises]); if (w) return w; }
+    if (isStretchRequest(userRequest) && (!parseRequest(userRequest) || isFocusedStretchRequest(userRequest))) { const w = buildStretchWorkout([...customExercises, ...defaultExercises], userRequest); if (w) return w; }
     const spec = parseRequest(userRequest) || specFromFocus(muscleFocus);
     const total = durationMinutes >= 60 ? 6 : 5;
     const { library } = libraryFor([...customExercises, ...defaultExercises], userRequest, equipment, excludeNames);

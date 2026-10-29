@@ -38,8 +38,8 @@ describe('biblioteca embutida de exercícios', () => {
 
 describe('ampliação do catálogo (ex71 em diante)', () => {
   const novos = exercises.filter((e) => Number(e.id.replace('ex', '')) > 70);
-  test('são 71 novos (50 + 21 do lote 2), com ids seguidos e nomes únicos em toda a biblioteca', () => {
-    expect(novos).toHaveLength(71);
+  test('são 98 novos (50 + 21 do lote 2 + 27 do lote 3), com ids seguidos e nomes únicos em toda a biblioteca', () => {
+    expect(novos).toHaveLength(98);
     expect(new Set(exercises.map((e) => e.id)).size).toBe(exercises.length);
     expect(new Set(exercises.map((e) => e.name.toLowerCase())).size).toBe(exercises.length);
   });
@@ -47,6 +47,13 @@ describe('ampliação do catálogo (ex71 em diante)', () => {
     novos.filter((e) => e.muscleGroup === 'mobilidade').forEach((e) => { expect(e.kind).toBe('timed'); expect(e.reps).toBeGreaterThanOrEqual(20); expect(e.sets).toBeLessThanOrEqual(3); });
     novos.filter((e) => e.muscleGroup === 'cardio').forEach((e) => { expect(e.kind).toBe('cardio'); expect(e.sets).toBe(1); expect(e.rest).toBe(0); });
     expect(novos.filter((e) => e.muscleGroup === 'mobilidade').length).toBeGreaterThanOrEqual(10);
+  });
+  test('lote 3 cobre mobilidade de torácica, escápula, ombro, quadril, tornozelo e punho, além de alongamento geral', () => {
+    const lote3 = exercises.filter((e) => Number(e.id.replace('ex', '')) >= 142);
+    expect(lote3).toHaveLength(27);
+    lote3.forEach((e) => { expect(e.muscleGroup).toBe('mobilidade'); expect(e.kind).toBe('timed'); expect(e.equipment).toBe('livre'); });
+    const names = lote3.map((e) => e.name).join(' | ');
+    [/Torácica/, /Escápula/, /Deslizamento na Parede/, /Rotação Externa de Ombro/, /Quadril/, /Tornozelo/, /Punho/, /Corpo Inteiro/, /Pescoço/].forEach((re) => expect(names).toMatch(re));
   });
   test('o gerador de fichas de musculação não usa alongamento nem cardio', () => {
     const lib = normalizeLibrary(exercises).filter((e) => ['mobilidade', 'cardio'].includes(e.primaryGroup));

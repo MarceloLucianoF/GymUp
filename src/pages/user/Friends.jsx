@@ -15,7 +15,7 @@ import usePageMeta from '../../hooks/usePageMeta';
 import { REPORT_REASONS, addComment, commentsOnMyPosts, deleteComment, deleteMyPosts, deletePost, likesOnMyPosts, likesSeenAt, listComments, listFeed, markLikesSeen, reportComment, reportPost, setLike } from '../../services/feedService';
 import { COMMENT_MAX, checkComment, newLikes, postLine, timeAgo } from '../../utils/feed';
 import { notifyComment, notifyLike } from '../../services/pushService';
-import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
+import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, searchProfiles, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
 
 const TABS = [['ranking', 'Ranking'], ['activity', 'Atividade'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
 const medal = (pos) => (pos === 1 ? 'bg-amber-400 text-black' : pos === 2 ? 'bg-gray-300 text-black' : pos === 3 ? 'bg-orange-300 text-black' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200');
@@ -104,8 +104,13 @@ function SearchTab({ social, uid, initialQuery, reload }) {
     if (!term.trim()) return;
     setBusy(true);
     try {
-      const direct = await findByHandleOrCode(term);
-      setResults(direct ? [direct] : []);
+      // @usuário/código exatos e, junto, o prefixo do nome/@ entre quem escolheu ser encontrado (sem quem tem bloqueio com você)
+      const [direct, byName] = await Promise.all([
+        findByHandleOrCode(term).catch(() => null),
+        searchProfiles(term, { uid }).catch((error) => { console.error(error); return []; })
+      ]);
+      const seen = new Set();
+      setResults([...(direct ? [direct] : []), ...byName].filter((p) => (seen.has(p.uid) ? false : seen.add(p.uid))));
     } catch (error) { console.error(error); toast.error('Não foi possível buscar agora.'); setResults([]); }
     finally { setBusy(false); }
   };
@@ -126,11 +131,11 @@ function SearchTab({ social, uid, initialQuery, reload }) {
       <form onSubmit={run} className="surface flex flex-col gap-3 p-4 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-600 dark:text-gray-400" aria-hidden="true" />
-          <input type="search" aria-label="Buscar por @usuário ou código" placeholder="@usuário ou código do amigo" value={term} onChange={(e) => setTerm(e.target.value)} className={`${inputCls} !pl-11`} />
+          <input type="search" aria-label="Buscar por nome, @usuário ou código" placeholder="Nome, @usuário ou código" value={term} onChange={(e) => setTerm(e.target.value)} className={`${inputCls} !pl-11`} />
         </div>
         <button type="submit" disabled={busy || !term.trim()} className={btnPrimary}>{busy ? 'Buscando...' : 'Buscar'}</button>
       </form>
-      {results && results.length === 0 && <EmptyState icon={Search} title="Ninguém encontrado" description="Confira o @usuário ou o código de amigo e tente de novo. Peça à pessoa que o envie." />}
+      {results && results.length === 0 && <EmptyState icon={Search} title="Ninguém encontrado" description="A busca por nome só mostra quem ativou “Pessoas podem me encontrar pelo nome”. Confira o nome, o @usuário ou o código de amigo, ou peça à pessoa que o envie." />}
       {results && results.length > 0 && (
         <ul className="space-y-2">
           {results.filter((p) => p.uid !== uid).map((p) => {
@@ -350,7 +355,7 @@ function ProfileTab({ social, user, profile: studentProfile, reload }) {
         <input id="sp-handle" value={form.handle} onChange={set('handle')} className={`${inputCls} font-mono`} autoCapitalize="none" spellCheck={false} aria-describedby="sp-handle-hint" />
         <p id="sp-handle-hint" className="mt-1 text-xs text-gray-600 dark:text-gray-400">De 3 a 20 letras minúsculas, números ou _. Único no app.</p>
       </div>
-      <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.discoverable} onChange={set('discoverable')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Mostrar meu nome a quem me achar</span><span className="text-xs text-gray-600 dark:text-gray-400">Desligado, quem tem seu @usuário ou código vê só o @usuário até vocês serem amigos.</span></span></label>
+      <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.discoverable} onChange={set('discoverable')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Pessoas podem me encontrar pelo nome</span><span className="text-xs text-gray-600 dark:text-gray-400">Ligado, você aparece na busca por nome e @usuário de quem usa o app (nome e @usuário). Desligado, só quem tem seu @usuário ou código acha você, e vê só o @usuário até vocês serem amigos.</span></span></label>
       <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.shareRanking} onChange={set('shareRanking')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Participar do ranking entre amigos</span><span className="text-xs text-gray-600 dark:text-gray-400">Amigos que também participam veem seus treinos da semana, dias ativos e sequência.</span></span></label>
       <label className="flex min-h-[48px] items-start gap-3"><input type="checkbox" checked={form.shareWorkouts} onChange={set('shareWorkouts')} className="mt-1 h-5 w-5 accent-brand" /><span><span className="block font-bold text-gray-900 dark:text-white">Publicar meus treinos para amigos</span><span className="text-xs text-gray-600 dark:text-gray-400">Ao concluir um treino, seus amigos veem o nome, a duração e o número de séries. Nunca cargas, medidas ou saúde. Dá para apagar cada publicação.</span></span></label>
       <div><label htmlFor="sp-goal" className={labelCls}>Meta semanal (treinos)</label><input id="sp-goal" type="number" min={2} max={7} value={form.weeklyGoal} onChange={set('weeklyGoal')} className={`${inputCls} sm:w-40`} /></div>
