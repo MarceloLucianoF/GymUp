@@ -346,9 +346,9 @@ const askNvidiaProxy = async (messages, { timeoutMs = 46000, maxTokens = 1800, t
 
 
 /** Importação de treino por PDF: só texto higienizado, temperatura baixa, resposta validada fora daqui. Sem proxy não há importação por IA. */
-export const askWorkoutImport = async (messages) => {
+export const askWorkoutImport = async (messages, { timeoutMs = 90000 } = {}) => {
   if (!USE_NVIDIA_PROXY || !auth.currentUser) throw new Error('IA indisponível.');
-  const { text } = await askNvidiaProxy(messages, { timeoutMs: 90000, maxTokens: 2200, temperature: 0.1 });   // ficha inteira: o servidor dá até 85 s
+  const { text } = await askNvidiaProxy(messages, { timeoutMs, maxTokens: 2200, temperature: 0.1 });   // ficha inteira: o servidor dá até 85 s
   return text;
 };
 

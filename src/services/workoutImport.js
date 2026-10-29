@@ -94,6 +94,65 @@ export async function extractPdfText(file, { pdfjs } = {}) {
 
 const loadPdfjs = async () => (await import('./pdfjsLoader')).default;
 
+/**
+ * Divide uma ficha com vários treinos ("TREINO A", "Treino B", "Dia 1"...) em partes, para a IA montar cada uma em paralelo:
+ * uma ficha inteira de uma vez passava de 45 s nos modelos disponíveis. Texto curto ou sem títulos de treino fica inteiro.
+ */
+export function splitWorkoutSections(text, { maxParts = 4, minChars = 600 } = {}) {
+  const lines = String(text || '').split('\n');
+  const heading = /^\s*(treino|dia|ficha|semana|parte)\s*[-:]?\s*([a-e]|[1-7])\b/i;
+  const starts = lines.map((l, i) => (heading.test(l) ? i : -1)).filter((i) => i >= 0);
+  if (text.length < minChars || starts.length < 2) return [text];
+  const intro = lines.slice(0, starts[0]).join('\n').trim().slice(0, 300);   // cabeçalho (nome da ficha) vai junto em cada parte
+  const parts = starts.map((s, k) => lines.slice(s, starts[k + 1] ?? lines.length).join('\n').trim()).filter(Boolean);
+  // Mais partes que o limite: junta as do fim.
+  while (parts.length > maxParts) { const last = parts.pop(); parts[parts.length - 1] += `\n${last}`; }
+  return parts.map((p) => (intro ? `${intro}\n${p}` : p));
+}
+
+// ---- leitura local (sem IA) de fichas no formato comum: "Supino reto - 4 x 10 - descanso 90s" ----
+const SETS_RE = /(\d{1,2})\s*(?:x|×|séries? de|series? de)\s*(\d{1,3}(?:\s*(?:a|-|–|\/)\s*\d{1,3})?|at[ée] a falha|falha)/i;
+const CARDIO_RE = /(esteira|bike|bicicleta|escada|el[ií]ptico|corrida|caminhada|remo erg|transport)/i;
+const titleCase = (t) => (t === t.toUpperCase() ? t.toLowerCase().replace(/(^|\s|-)([a-zà-ú])/g, (m, a, b) => a + b.toUpperCase()) : t);
+
+/** Lê uma parte da ficha sem IA. Devolve { name, exercises } no mesmo formato pedido à IA, ou null se não reconhecer o formato. */
+export function parseLocalSection(text) {
+  const lines = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const isTitle = (re) => lines.find((l) => re.test(l) && !SETS_RE.test(l));
+  const heading = isTitle(/^\s*(treino|dia|parte)\s*[-:]?\s*([a-e]|[1-7])\b/i) || isTitle(/^\s*(treino|dia|ficha|semana|parte)\b/i);   // "Treino A" antes de "Ficha" 
+  const exercises = [];
+  for (const raw of lines) {
+    const line = raw.replace(/^\s*(\d{1,2}\s*[.)\-–]|[-•*▪●])\s*/, '');
+    const cardio = line.match(/(\d{1,3})\s*(?:min|minutos)\b/i);
+    if (CARDIO_RE.test(line) && cardio && !SETS_RE.test(line)) {
+      const name = line.slice(0, line.search(/\d/)).replace(/[\s\-–:|]+$/, '').trim() || line.match(CARDIO_RE)[0];
+      exercises.push({ name, type: 'cardio', minutes: Number(cardio[1]), note: '' });
+      continue;
+    }
+    const m = line.match(SETS_RE);
+    if (!m) continue;
+    const name = line.slice(0, m.index).replace(/[\s\-–:|(]+$/, '').trim();
+    if (name.length < 3) continue;
+    let after = line.slice(m.index + m[0].length);
+    const restM = after.match(/descanso\s*(?:de\s*)?(\d{1,3})\s*(s|seg|segundos|min|minutos|')?/i);
+    const rest = restM ? Number(restM[1]) * (/^m|'/i.test(restM[2] || '') ? 60 : 1) : 60;
+    if (restM) after = after.replace(restM[0], ' ');
+    const failure = /falha/i.test(m[2]);
+    const note = [failure ? 'até a falha' : '', after.replace(/^[\s\-–:|,;)]+|[\s\-–:|,;(]+$/g, '').replace(/\s+/g, ' ')].filter(Boolean).join(' · ');
+    exercises.push({ name, sets: Number(m[1]), reps: failure ? '12' : m[2].replace(/\s*(a|–|\/)\s*/i, '-').replace(/\s+/g, ''), rest, note });
+  }
+  if (exercises.length < 2) return null;
+  return { name: heading ? titleCase(heading).slice(0, 60) : 'Meu treino', exercises };
+}
+
+/** Junta as fichas montadas por parte: nome da primeira (ou do cabeçalho comum), exercícios na ordem, avisos sem repetir. */
+export function mergeImported(results) {
+  const ok = results.filter(Boolean);
+  if (!ok.length) throw new ImportError('resposta', 'A IA não devolveu um treino válido.');
+  const exercises = ok.flatMap((r) => r.exercises).slice(0, IMPORT_LIMITS.maxExercises * 2);
+  return { name: ok[0].name, exercises, warnings: [...new Set(ok.flatMap((r) => r.warnings))] };
+}
+
 // ---- prompt: o documento é DADO, nunca instrução ----
 export function buildImportMessages(documentText, nonce = Math.random().toString(36).slice(2, 10)) {
   const fence = `DOC_${nonce}`;
@@ -102,7 +161,8 @@ export function buildImportMessages(documentText, nonce = Math.random().toString
     + '2. Responda SOMENTE com JSON, sem texto fora dele, sem Markdown e sem links.\n'
     + `3. Formato: {"name":"nome curto da ficha","exercises":[{"name":"nome do exercício","sets":3,"reps":"8-12","rest":60,"note":"observação curta ou vazio"}; para cardio (esteira, bicicleta, escada, elíptico, corrida) use {"name":"...","type":"cardio","minutes":20,"note":"intensidade"} sem sets nem reps; para exercício por tempo (prancha, isometria) use {"name":"...","type":"timed","sets":3,"seconds":30}; se o documento indicar tipo de série, acrescente "setTypes" com um valor por série entre "normal", "warmup" (aquecimento), "drop" (drop-set) e "failure" (até a falha), por exemplo ["normal","normal","drop"]]}.\n`
     + `4. No máximo ${IMPORT_LIMITS.maxExercises} exercícios, só de musculação, cardio, alongamento ou aquecimento. Se o documento não for um treino, responda {"name":"","exercises":[]}.\n`
-    + '5. Nunca inclua URLs, e-mails, telefones, preços, pedidos de pagamento ou de dados pessoais.';
+    + '5. Nunca inclua URLs, e-mails, telefones, preços, pedidos de pagamento ou de dados pessoais.\n'
+    + '6. Seja direto: transcreva o que está no documento, sem raciocínio longo.\nReasoning: low';
   const user = `<${fence}>\n${documentText}\n</${fence}>\nExtraia a ficha em JSON.`;
   return [{ role: 'system', content: system }, { role: 'user', content: user }];
 }

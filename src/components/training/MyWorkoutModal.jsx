@@ -9,7 +9,7 @@ import { saveMyWorkout, updateMyWorkout } from '../../services/myWorkouts';
 import { myExerciseToLibrary } from '../../services/myExercises';
 import { ImageError, isSafePhoto, prepareImage } from '../../utils/imageAttach';
 import { KIND_LABELS, cardioMinutes, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
-import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, parseImportedWorkout, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
+import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, mergeImported, parseImportedWorkout, parseLocalSection, splitWorkoutSections, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -36,6 +36,9 @@ const fromSaved = (ex) => {
 
 export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRARY, myExercises = [], editing = null, onSaved }) {
   const [step, setStep] = useState('choose');
+  const [sections, setSections] = useState([]);   // PDF com vários treinos (A, B, C)
+  const [sectionNote, setSectionNote] = useState('');
+  const [reviewing, setReviewing] = useState(null);
   const [busy, setBusy] = useState('');
   const [name, setName] = useState('');
   const [items, setItems] = useState([]);
@@ -68,9 +71,18 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
 
   if (!isOpen) return null;
 
-  const reset = () => { setStep('choose'); setName(''); setItems([]); setWarnings([]); setQuery(''); setSource('manual'); setPhoto(null); setBusy(''); };
+  const reset = () => { setSections([]); setReviewing(null); setStep('choose'); setName(''); setItems([]); setWarnings([]); setQuery(''); setSource('manual'); setPhoto(null); setBusy(''); };
   const close = () => { reset(); onClose(); };
   const startManual = () => { setSource('manual'); setName('Meu treino'); setItems([]); setStep('edit'); };
+
+  // Executa as tarefas com no máximo `limit` ao mesmo tempo; devolve { ok, value | error } na ordem original.
+  const runPool = async (items, fn, limit) => {
+    const out = new Array(items.length);
+    let next = 0;
+    const worker = async () => { while (next < items.length) { const i = next++; try { out[i] = { ok: true, value: await fn(items[i]) }; } catch (error) { out[i] = { ok: false, error }; } } };
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+    return out;
+  };
 
   const importPdf = async (file) => {
     if (!file) return;
@@ -80,8 +92,36 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
       const { text, removed } = sanitizeDocumentText(raw);
       if (text.length < 20) throw new ImportError('sem_texto', 'Não encontrei texto útil neste PDF. Monte o treino manualmente.');
       setBusy('A IA está montando o treino (pode levar até 1 minuto)...');
-      const reply = await askWorkoutImport(buildImportMessages(text));
-      const parsed = parseImportedWorkout(reply, library);
+      // Ficha com vários treinos: uma chamada por treino, em paralelo (de uma vez a IA passava do tempo).
+      // Cada treino da ficha: primeiro a leitura local (instantânea, sem IA); só o que ela não reconhece vai para a IA,
+      // no máximo 2 ao mesmo tempo (mais que isso o provedor trava), 55 s por parte e uma nova tentativa da que falhar.
+      const parts = splitWorkoutSections(text);
+      const results = parts.map((part) => { const local = parseLocalSection(part); try { return local ? { ok: true, value: parseImportedWorkout(JSON.stringify(local), library), local: true } : null; } catch (_) { return null; } });
+      const needAi = results.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0);
+      if (needAi.length) {
+        setBusy('A IA está montando o treino (pode levar até 1 minuto)...');
+        const one = (part) => askWorkoutImport(buildImportMessages(part), { timeoutMs: parts.length > 1 ? 55000 : 90000 }).then((reply) => parseImportedWorkout(reply, library));
+        const first = await runPool(needAi.map((i) => parts[i]), one, 2);
+        needAi.forEach((i, k) => { results[i] = first[k]; });
+        const failed = results.map((r, i) => (r.ok ? -1 : i)).filter((i) => i >= 0);
+        if (failed.length && failed.length < parts.length) {
+          setBusy('Quase lá: lendo de novo uma parte do documento...');
+          const again = await runPool(failed.map((i) => parts[i]), one, 2);
+          failed.forEach((i, k) => { if (again[k].ok) results[i] = again[k]; });
+        }
+      }
+      const done = results.filter((r) => r.ok).map((r) => r.value);
+      if (!done.length) throw results[0].error;
+      const missing = results.filter((r) => !r.ok).length;
+      if (done.length > 1) {   // vários treinos (A, B, C): escolher salvar todos ou revisar um por um
+        setSections(done.map((d, i) => ({ id: i, name: d.name || `Treino ${String.fromCharCode(65 + i)}`, exercises: d.exercises, warnings: d.warnings, selected: true, saved: false })));
+        setSectionNote(missing ? `A IA não conseguiu ler ${missing} de ${parts.length} partes do documento. Confira se faltou algum treino.` : '');
+        setSource('pdf');
+        setStep('sections');
+        return;
+      }
+      const parsed = mergeImported(done);
+      if (missing) parsed.warnings.push(`A IA não conseguiu ler ${missing} de ${parts.length} partes do documento. Confira se faltou algum treino e complete à mão.`);
       const notes = [...parsed.warnings];
       if (removed.links || removed.contacts) notes.push('Links, e-mails e telefones do documento foram ignorados por segurança.');
       if (removed.suspicious) notes.push('Trechos suspeitos do documento (pedidos de pagamento ou instruções para a IA) foram ignorados.');
@@ -97,6 +137,27 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     } finally {
       setBusy('');
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const toItems = (exercises) => exercises.map((e) => ({ ...blank(e.name, e.ref), kind: e.kind, setTypes: e.setTypes || null, sets: e.kind === 'cardio' ? '1' : e.sets, reps: e.kind === 'cardio' ? String(e.durationMin) : e.kind === 'timed' ? String(e.seconds) : e.reps, rest: e.kind === 'cardio' ? 0 : e.rest, note: e.note }));
+  const reviewSection = (sec) => { setReviewing(sec.id); setName(sec.name); setItems(toItems(sec.exercises)); setWarnings(sec.warnings || []); setStep('edit'); };
+  const saveSections = async () => {
+    const chosen = sections.filter((sec) => sec.selected && !sec.saved);
+    if (!chosen.length) { toast.error('Escolha ao menos um treino.'); return; }
+    setBusy('Salvando...');
+    try {
+      for (const sec of chosen) {
+        const exs = sec.exercises.slice(0, 30).map((e, i) => toWorkoutExercise(e, e.ref, i));
+        await saveMyWorkout(user.uid, { name: sec.name.slice(0, 80), exercises: exs, source: 'pdf', photo: null, description: 'Importado de um PDF seu.' });
+      }
+      toast.success(chosen.length === 1 ? 'Treino salvo em "Meus treinos".' : `${chosen.length} treinos salvos em "Meus treinos".`);
+      onSaved?.();
+      close();
+    } catch (error) {
+      console.error(error);
+      toast.error('Não consegui salvar os treinos.');
+      setBusy('');
     }
   };
 
@@ -129,6 +190,11 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
         toast.success('Treino salvo em "Meus treinos".');
       }
       onSaved?.();
+      if (reviewing !== null && sections.some((sec) => !sec.saved && sec.id !== reviewing)) {   // volta à lista dos treinos do PDF
+        setSections((list) => list.map((sec) => (sec.id === reviewing ? { ...sec, saved: true } : sec)));
+        setReviewing(null); setBusy(''); setStep('sections');
+        return;
+      }
       close();
     } catch (error) {
       console.error(error);
@@ -141,7 +207,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/85 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={editing ? 'Editar meu treino' : 'Meu treino'}>
       <div className="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-t-3xl bg-white p-5 text-gray-900 dark:bg-[#111827] dark:text-white sm:rounded-3xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-black">{editing ? 'Editar meu treino' : step === 'choose' ? 'Cadastrar meu treino' : 'Revise seu treino'}</h2>
+          <h2 className="text-xl font-black">{editing ? 'Editar meu treino' : step === 'choose' ? 'Cadastrar meu treino' : step === 'sections' ? 'Treinos do PDF' : 'Revise seu treino'}</h2>
           <button type="button" onClick={close} aria-label="Fechar" className="grid h-11 w-11 place-items-center rounded-full bg-gray-100 dark:bg-white/10"><X className="h-5 w-5" aria-hidden="true" /></button>
         </div>
 
@@ -151,13 +217,36 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
             <input ref={fileRef} type="file" accept="application/pdf,.pdf" className="sr-only" id="my-workout-pdf" onChange={(e) => importPdf(e.target.files?.[0])} disabled={!!busy} />
             <label htmlFor="my-workout-pdf" className={`flex min-h-[64px] cursor-pointer items-center gap-3 rounded-2xl bg-brand/10 p-4 font-bold ${busy ? 'opacity-60' : ''}`}>
               {busy ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" /> : <FileText className="h-6 w-6" aria-hidden="true" />}
-              <span>{busy || 'Importar de um PDF'}<span className="block text-sm font-normal text-gray-600 dark:text-gray-300">A IA lê o documento e monta a ficha para você revisar.</span></span>
+              <span>{busy || 'Importar de um PDF'}<span className="block text-sm font-normal text-gray-600 dark:text-gray-300">O app lê a ficha (e a IA ajuda quando o formato é diferente) para você revisar.</span></span>
             </label>
             <button type="button" onClick={startManual} disabled={!!busy} className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl bg-gray-100 p-4 text-left font-bold dark:bg-white/10">
               <PencilLine className="h-6 w-6" aria-hidden="true" />
               <span>Montar do zero<span className="block text-sm font-normal text-gray-600 dark:text-gray-300">Escolha os exercícios da biblioteca ou digite os seus.</span></span>
             </button>
             <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />O PDF é lido no seu aparelho e não é guardado. Só o texto, sem links, e-mails e telefones, vai para a IA. Nada do documento é aberto ou executado.</p>
+          </div>
+        )}
+
+        {step === 'sections' && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">Encontrei <b>{sections.length} treinos</b> neste PDF. Salve todos de uma vez ou revise um por um.</p>
+            {sectionNote && <p className="rounded-2xl bg-amber-100 p-3 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-200" role="status">{sectionNote}</p>}
+            <ul className="space-y-2">
+              {sections.map((sec) => (
+                <li key={sec.id} className="flex items-center gap-3 rounded-2xl bg-gray-100 p-3 dark:bg-white/5">
+                  <input type="checkbox" checked={sec.selected && !sec.saved} disabled={sec.saved} onChange={(e) => setSections((l) => l.map((x) => (x.id === sec.id ? { ...x, selected: e.target.checked } : x)))} className="h-5 w-5 accent-brand" aria-label={`Incluir ${sec.name}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold">{sec.name}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{sec.saved ? 'Salvo' : `${sec.exercises.length} exercícios`}</p>
+                  </div>
+                  {!sec.saved && <button type="button" onClick={() => reviewSection(sec)} className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-amber-800 dark:text-brand">Revisar</button>}
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={saveSections} disabled={!!busy} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-brand text-base font-black text-black disabled:opacity-60">
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
+              {busy || `Salvar ${sections.filter((x) => x.selected && !x.saved).length} treinos`}
+            </button>
           </div>
         )}
 
