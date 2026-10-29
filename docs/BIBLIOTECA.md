@@ -1,8 +1,20 @@
 # Biblioteca de exercícios
 
-Estado em 21/10/2026. A biblioteca embutida (`src/data/exercises.js`) tem **141 exercícios, todos com GIF** em `public/exercises/<slug>.gif` (e foto em `public/exercicios/<slug>.jpg`, usada em miniaturas). O app junta esta lista com a coleção `exercises` do Firestore (51 exercícios, todos com GIF local), sem duplicar por nome: catálogo final de 143 (confira com o auditor `scripts/audit-catalog.cjs`).
+Estado em 29/10/2026. A biblioteca embutida (`src/data/exercises.js`) tem **168 exercícios, todos com GIF** em `public/exercises/<slug>.gif` (e foto em `public/exercicios/<slug>.jpg`, usada em miniaturas). O app junta esta lista com a coleção `exercises` do Firestore (51 exercícios, todos com GIF local), sem duplicar por nome (confira o catálogo final com o auditor `scripts/audit-catalog.cjs`; a contagem abaixo é de 21/10, antes do lote 3, que soma 27 em alongamento e mobilidade).
 
 Por grupo (catálogo final): costas 17, pernas 17, peito 14, core 12, ombros 11, bíceps 11, alongamento e mobilidade 11, tríceps 9, cardio 9, glúteos 6, panturrilha 3.
+
+## Lote 3 de 29/10/2026 (27 exercícios novos de mobilidade e alongamento, ex142 a ex168)
+Pedido de aluno que precisou criar "Mobilidade de Escápula" e "Mobilidade Torácica" por conta própria. Todos no grupo "mobilidade", por tempo (segundos), sem carga.
+- **Coluna torácica (2):** mobilidade torácica em pé (rotação de tronco) e sentado.
+- **Escápula (3):** rolar os ombros, retração (cotovelos para trás) e abrir as escápulas (costas altas).
+- **Ombro (4):** círculos de cotovelo, deslizamento na parede (wall slide; a imagem mostra o movimento dos braços, o texto pede para fazer encostado na parede), deslocamento com bastão e rotação externa com elástico.
+- **Quadril (4):** círculos em quatro apoios, rotação deitado (joelho cruzado), moinho (quadril e tronco) e o "maior alongamento do mundo". O 90/90 não existe no Free Exercise DB; ficou de fora para não usar imagem errada.
+- **Tornozelo (2):** círculos e dorsiflexão em pé. **Punho (1):** círculos de punho. **Aquecimento dinâmico (2):** caminhada com as mãos (inchworm) e abertura de peito dinâmica.
+- **Alongamento geral de corpo inteiro (9):** braços para cima, lateral de tronco, posterior em pé, do corredor, adutores sentado, borboleta, lateral de pescoço, peito e ombro com bastão e grande dorsal na parede.
+- **Treinos prontos:** no Coach IA, "treino de mobilidade de ombro" (ou quadril, coluna, tornozelo, punho) monta a sequência da região, aquecimentos dinâmicos primeiro e até 3 alongamentos estáticos no fim (5 a 8 exercícios); "mobilidade geral" ou "treino de alongamento" monta a de corpo inteiro (`src/utils/stretchWorkout.js`).
+- **Antes do treino:** o editor de Meus treinos e o editor de fichas do treinador têm o botão "Adicionar alongamento geral antes do treino", que põe no início 6 exercícios por tempo (1 série cada, cerca de 5 minutos) e não repete se já estiverem lá.
+- Mídia e textos como nos lotes anteriores (`python3 scripts/catalogo-novo.py --write`, Free Exercise DB, domínio público). Os textos precisam de revisão de um treinador.
 
 ## Lote 2 de 21/10/2026 (21 exercícios novos, ex121 a ex141)
 - **Panturrilha (4):** leg press, sentado unilateral com halter, Smith e burrinho. **Glúteos (4):** hip thrust com barra, chute na polia, coice em quatro apoios e ponte na bola suíça.

@@ -6,7 +6,7 @@ const path = require('path');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds
 } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, collectionGroup, query, where, writeBatch, deleteField, Timestamp, serverTimestamp } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, collectionGroup, query, where, orderBy, startAt, endAt, limit, writeBatch, deleteField, Timestamp, serverTimestamp } = require('firebase/firestore');
 
 let env;
 const cache = new Map();
@@ -369,10 +369,21 @@ test('social: perfil público só nasce junto das reservas de @usuário e códig
   await assertFails(setDoc(doc(db('stu2'), 'publicProfiles/stu1'), p));        // não é dele
 });
 
-test('social: sem listagem de perfis (só admin); perfil privado só para dono, admin e amigo ativo; get de descobrível por @usuário/código', async () => {
+test('social: listagem só de descobríveis e com limite; perfil privado só para dono, admin e amigo ativo; get de descobrível por @usuário/código', async () => {
   await seedSocial();
-  await assertFails(getDocs(query(collection(db('coach1'), 'publicProfiles'), where('discoverable', '==', true))));   // sem busca por nome
+  await assertFails(getDocs(query(collection(db('coach1'), 'publicProfiles'), where('discoverable', '==', true))));   // sem limite
   await assertFails(getDocs(collection(db('coach1'), 'publicProfiles')));
+  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), limit(10))));                              // sem filtrar descobríveis
+  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('discoverable', '==', false), limit(10))));
+  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('discoverable', '==', true), limit(21)))); // acima de 20
+  await assertFails(getDocs(query(collection(anonDb(), 'publicProfiles'), where('discoverable', '==', true), limit(10))));  // sem login
+  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('handle', '==', 'user_stu3'), limit(1)))); // @ exato sem o filtro
+  const byName = await assertSucceeds(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('discoverable', '==', true),
+    orderBy('displayNameLower'), startAt('pessoa'), endAt('pessoa\uf8ff'), limit(20))));
+  assert.deepEqual(byName.docs.map((x) => x.id).sort(), ['stu1', 'stu2']);                                            // stu3 (privado) fica de fora
+  const byHandle = await assertSucceeds(getDocs(query(collection(db('stu2'), 'publicProfiles'), where('discoverable', '==', true),
+    orderBy('handle'), startAt('user_s'), endAt('user_s\uf8ff'), limit(10))));
+  assert.ok(!byHandle.docs.some((x) => x.id === 'stu3'));
   await assertSucceeds(getDocs(collection(db('admin1'), 'publicProfiles')));
   await assertSucceeds(getDoc(doc(db('stu1'), 'publicProfiles/stu2')));        // descobrível: get por @usuário/código
   await assertFails(getDoc(doc(db('stu1'), 'publicProfiles/stu3')));           // stu3 não é descobrível
@@ -465,6 +476,17 @@ test('social: ler amizade inexistente do próprio par funciona; de outro par nã
   await seedSocial();
   await assertSucceeds(getDoc(doc(db('stu1'), 'friendships/' + pair('stu1', 'stu2'))));
   await assertFails(getDoc(doc(db('stu9'), 'friendships/' + pair('stu1', 'stu2'))));
+});
+
+test('social: busca por nome não filtra bloqueio no servidor (limitação documentada: o app esconde; quem quer sumir desliga "ser encontrado")', async () => {
+  await seedSocial();
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + pair('stu1', 'stu2')), { ...fr('stu1', 'stu2'), status: 'blocked', blockedBy: 'stu1' }); });
+  await assertFails(getDoc(doc(db('stu2'), 'publicProfiles/stu1')));                 // get continua negado
+  const q = query(collection(db('stu2'), 'publicProfiles'), where('discoverable', '==', true), orderBy('displayNameLower'), startAt('pessoa stu1'), endAt('pessoa stu1\uf8ff'), limit(5));
+  const res = await assertSucceeds(getDocs(q));
+  assert.deepEqual(res.docs.map((x) => x.id), ['stu1']);                                // a lista devolve: o filtro é do app
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'publicProfiles/stu1'), { discoverable: false }); });
+  assert.equal((await assertSucceeds(getDocs(q))).size, 0);                            // desligar "ser encontrado" tira da busca
 });
 
 test('social: bloqueado só apaga o bloqueio junto com a exclusão da própria conta', async () => {
