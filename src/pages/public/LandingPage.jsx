@@ -47,7 +47,7 @@ const JSON_LD = {
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' }
 };
 
-// Aparelho desenhado em CSS (peças chapadas, sem sombra nem degradê) que guarda uma tela real do app; as telas trocam por fusão.
+// Aparelho desenhado em CSS (peças chapadas, sem sombra nem degradê) que guarda uma tela real do app; as telas trocam por fusão (só no passo a passo, por escolha de quem lê).
 function Phone({ slides, active, className = '' }) {
   return (
     <div className={`phone ${className}`}>
@@ -96,15 +96,12 @@ export default function LandingPage() {
   const [sticky, setSticky] = useState(false);
   const [away, setAway] = useState(false);
   const [ctaSeen, setCtaSeen] = useState(false);
-  const [frame, setFrame] = useState(0);
   const [ask, setAsk] = useState(EXAMPLES[0]);
   const [on, setOn] = useState([true, false, true, false, false]);
   const [stage, setStage] = useState(0);
   const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const lastY = useRef(0);
-  const reducedSlides = REEL.map((s) => (reduceMotion ? { ...s, video: undefined } : s));
-  const heroRef = useRef(null);
-  const stageRef = useRef(null);
+  const heroSlides = [reduceMotion ? { ...REEL[0], video: undefined } : REEL[0]];
   const ficha = useFicha(ask);
 
   useEffect(() => { setJs(true); }, []);
@@ -113,21 +110,13 @@ export default function LandingPage() {
     try { setActiveSession(activeWorkoutService.getActiveSession(user.uid)); } catch { setActiveSession(null); }
   }, [user]);
 
-  // A abertura fica parada e a tela do aparelho troca conforme a rolagem; o aparelho gira um pouco. A página rola normalmente (nada é sequestrado).
+  // A página rola de forma natural: nenhuma seção prende a rolagem nem troca de tela sozinha.
+  // Só o cabeçalho e a barra do celular reagem: rolando para baixo saem do caminho; ao rolar para cima voltam.
   useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let raf = 0;
     const tick = () => {
       raf = 0;
-      const hero = heroRef.current; const st = stageRef.current;
-      if (!hero || !st) return;
-      const range = hero.offsetHeight - window.innerHeight;
-      const progress = reduce || range <= 0 ? 0 : Math.min(1, Math.max(0, -hero.getBoundingClientRect().top / range));
-      st.style.setProperty('--p', progress.toFixed(3));
-      const index = Math.min(REEL.length - 1, Math.floor((progress / 0.86) * REEL.length));
-      setFrame((f) => (f === index ? f : index));
       const y = window.scrollY;
-      // Rolando para baixo o cabeçalho e a barra do celular saem do caminho; ao rolar para cima eles voltam.
       const down = y > lastY.current + 2; const up = y < lastY.current - 2;
       if (down || up) {
         lastY.current = y;
@@ -137,11 +126,9 @@ export default function LandingPage() {
       }
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick); };
-    tick();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (raf) cancelAnimationFrame(raf); };
-  }, [js]);
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, []);
 
   // Entrada das partes de cada seção, uma vez, na ordem de leitura.
   useEffect(() => {
@@ -184,20 +171,36 @@ export default function LandingPage() {
       <main id="main-content" tabIndex={-1} style={{ outline: 'none' }}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
 
-        <section ref={heroRef} className={`hero ${js ? 'pinned' : ''}`} aria-label="Apresentação">
-          <div className="stage" ref={stageRef}>
+        <section className="hero" aria-label="Apresentação">
+          <div className="stage">
             <h1 className="sentence"><span className="half l display">Seu treino</span><span className="half r display">cabe numa mão.</span></h1>
-            <div className="frame" role="group" aria-roledescription="carrossel" aria-label="Telas do app">
+            <div className="frame">
               <span className="disc" aria-hidden="true" />
-              <Phone slides={reducedSlides} active={frame} className="tilt" />
-              <span className="dots" aria-hidden="true">{REEL.map((s, i) => <i key={s.src} className={i === frame ? 'on' : ''} />)}</span>
+              <Phone slides={heroSlides} active={0} />
             </div>
-            <div className="right"><p className="cap" aria-live="polite">{REEL[frame].cap}</p></div>
+            <div className="right"><p className="cap">{REEL[0].cap}</p></div>
             <div className="hero-copy">
               <p>Fichas, cronômetro de descanso, evolução e Coach de IA. Funciona até sem sinal na academia.</p>
             </div>
             <div className="hero-action"><button type="button" className="btn" onClick={primary}>{primaryLabel}</button></div>
           </div>
+        </section>
+
+        <section className="reel" aria-labelledby="reel-title">
+          <h2 id="reel-title" className="reel-title display" data-in>Telas do app</h2>
+          <ul className="reel-grid">
+            {REEL.map((s, i) => (
+              <li key={s.src} data-in style={{ '--i': i }}>
+                <figure>
+                  <div className="phone shot">
+                    <span className="island" aria-hidden="true" />
+                    <div className="screen"><img src={s.src} alt={s.alt} width="780" height="1688" decoding="async" loading="lazy" style={{ objectPosition: 'top' }} /></div>
+                  </div>
+                  <figcaption>{s.cap}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section id="ficha" className="field section-pad ask" aria-labelledby="ask-title">
