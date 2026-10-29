@@ -1,7 +1,7 @@
 import { deleteUserData, purgeLocalData, chunk, providerOf, friendlyDeletionError, DELETION_STEPS } from './accountDeletion';
 
 // Firestore falso: registra a ordem das operações.
-const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = [], profileCoachId = null, noteDenied = [], noteError = null, failOn = null, friendships = [] } = {}) => {
+const makeDeps = ({ checkIns = [], measurements = [], assessments = [], anamneses = [], chats = [], trainings = [], profileCoachId = null, noteDenied = [], noteError = null, failOn = null, friendships = [] } = {}) => {
   const log = [];
   const docsOf = (list, prefix) => list.map((d) => ({ id: d.id, ref: { path: `${prefix}/${d.id}` }, data: () => d.data || (d.participants ? { participants: d.participants } : {}) }));
   const deps = {
@@ -14,6 +14,8 @@ const makeDeps = ({ checkIns = [], measurements = [], chats = [], trainings = []
       if (failOn === path) throw Object.assign(new Error('x'), { code: 'permission-denied' });
       if (path === 'checkIns') return { docs: docsOf(checkIns, 'checkIns') };
       if (path === 'measurements') return { docs: docsOf(measurements, 'measurements') };
+      if (path === 'assessments') return { docs: docsOf(assessments, 'assessments') };
+      if (path === 'anamneses') return { docs: docsOf(anamneses, 'anamneses') };
       if (path === 'trainings') return { docs: docsOf(trainings, 'trainings') };
       if (path === 'chats') return { docs: docsOf(chats, 'chats') };
       const match = path.match(/^chats\/(.+)\/messages$/);
@@ -66,13 +68,15 @@ describe('deleteUserData', () => {
     const { deps, log } = makeDeps({
       checkIns: [{ id: 'c1' }, { id: 'c2' }],
       measurements: [{ id: 'm1' }],
+      assessments: [{ id: 'a1' }, { id: 'a2' }],
+      anamneses: [{ id: 'n1' }],
       chats: [{ id: 'chatA', participants: ['u1', 'coachX'], messages: [{ id: 'x' }, { id: 'y' }] }],
       trainings: [{ id: 't1', data: { isAIGenerated: true } }, { id: 't2', data: { isAIGenerated: false } }, { id: 't3', data: { isAIGenerated: true, coachId: 'coach' } }]
     });
     const steps = [];
     const counts = await deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) });
-    expect(counts).toEqual({ checkIns: 2, measurements: 1, chats: 3, trainings: 1, notes: 1, social: 3, profile: 1 });   // social: perfil, índice da busca e handle
-    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:profileSearch/u1', 'delete:publicProfiles/u1', 'delete:publicStats/u1', 'batch:1']);
+    expect(counts).toEqual({ checkIns: 2, measurements: 1, health: 4, chats: 3, trainings: 1, notes: 1, social: 3, profile: 1 });   // social: perfil, índice da busca e handle
+    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'delete:healthConsents/u1', 'batch:2', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:profileSearch/u1', 'delete:publicProfiles/u1', 'delete:publicStats/u1', 'batch:1']);
     expect(steps.slice(0, 2)).toEqual(['checkIns:running', 'checkIns:done']);
     expect(steps[steps.length - 1]).toBe('profile:done');
   });
@@ -89,6 +93,19 @@ describe('deleteUserData', () => {
     await expect(deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) })).rejects.toMatchObject({ step: 'measurements' });
     expect(steps).toContain('measurements:error');
     expect(log.some((entry) => entry[1] === 'users/u1' || entry[3]?.includes('users/u1'))).toBe(false);
+  });
+
+  test('saúde: apaga o consentimento antes das avaliações e anamneses; falha para antes do perfil', async () => {
+    const { deps, log } = makeDeps({ assessments: [{ id: 'a1' }], anamneses: [{ id: 'n1' }, { id: 'n2' }] });
+    const counts = await deleteUserData('u1', { deps });
+    expect(counts.health).toBe(4);
+    const i = log.findIndex((e) => e[1] === 'healthConsents/u1');
+    expect(i).toBeGreaterThan(-1);
+    expect(log[i + 1][2]).toBe('assessments/a1');
+    expect(log[i + 2][3]).toEqual(['anamneses/n1', 'anamneses/n2']);
+    const failing = makeDeps({ failOn: 'anamneses' });
+    await expect(deleteUserData('u1', { deps: failing.deps })).rejects.toMatchObject({ step: 'health' });
+    expect(failing.log.some((entry) => entry[3]?.includes('users/u1'))).toBe(false);
   });
 
   test('sem uid lança erro', async () => {
@@ -155,7 +172,7 @@ describe('providerOf e mensagens', () => {
   });
 
   test('as etapas exibidas cobrem o fluxo inteiro', () => {
-    expect(DELETION_STEPS.map((s) => s.id)).toEqual(['reauth', 'checkIns', 'measurements', 'chats', 'trainings', 'notes', 'social', 'profile', 'login']);
+    expect(DELETION_STEPS.map((s) => s.id)).toEqual(['reauth', 'checkIns', 'measurements', 'health', 'chats', 'trainings', 'notes', 'social', 'profile', 'login']);
   });
 });
 

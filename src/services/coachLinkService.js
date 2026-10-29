@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, increment, limit, query, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, increment, limit, query, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 // Vínculo aluno-treinador. Quem pede é o aluno; quem aceita é o treinador. As regras do Firestore garantem que
@@ -169,6 +169,8 @@ export async function endMyLink(uid) {
   const batch = writeBatch(db);
   batch.update(doc(db, 'users', uid), { coachId: null, updatedAt: now() });
   if (link) batch.update(doc(db, 'coachLinks', uid), { status: LINK_STATUS.revoked, updatedAt: now() });
+  // Consentimento de saúde é para aquele professor: sai junto (não revive se o vínculo voltar).
+  batch.delete(doc(db, 'healthConsents', uid));
   await batch.commit();
 }
 
@@ -216,4 +218,6 @@ export async function endStudentLink(studentId) {
   batch.update(doc(db, 'users', studentId), { coachId: null, updatedAt: now() });
   if (link) batch.update(doc(db, 'coachLinks', studentId), { status: LINK_STATUS.revoked, updatedAt: now() });
   await batch.commit();
+  // Encerra também o consentimento de saúde dado a este professor (sem consentimento ou de outro: a regra nega e seguimos).
+  await deleteDoc(doc(db, 'healthConsents', studentId)).catch(() => {});
 }
