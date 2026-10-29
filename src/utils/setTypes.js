@@ -43,6 +43,9 @@ export const planSummary = (types) => {
 // ---- supersets ----
 const letter = (v) => (typeof v === 'string' && /^[A-Z]$/.test(v) ? v : null);
 
+/** Rótulo do grupo combinado pelo tamanho (só interface; o campo salvo continua `superset`): 2 Bi-set, 3 Tri-set, 4+ Circuito. */
+export const comboLabel = (size) => (size === 2 ? 'Bi-set' : size === 3 ? 'Tri-set' : size >= 4 ? 'Circuito' : 'Exercícios combinados');
+
 /** Posição do exercício dentro do superset: { group, first, last, firstIndex, nextIndex } ou null. */
 export function supersetRole(exercises, index) {
   const group = letter(exercises?.[index]?.superset);

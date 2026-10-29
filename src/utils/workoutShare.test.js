@@ -11,7 +11,7 @@ test('texto do treino: prescrição por tipo, plano de séries, anotação e sup
   const t = workoutShareText(workout);
   expect(t.split('\n')).toEqual([
     'Treino: Treino de Braço',
-    'Superset A:',
+    'Bi-set A:',
     '  - Rosca Scott Martelo com Halteres: 3 x 6-10 [3 Drop] (carga 16 kg)',
     '  - Tríceps Francês na Polia Unilateral: 3 x 12',
     '- Esteira: 15 min',
@@ -30,4 +30,10 @@ test('duplicar: nome com "(cópia)" sem acumular, conteúdo copiado sem comparti
   expect(copy.exercises[0]).not.toBe(workout.exercises[0]);
   expect(duplicatePayload({ name: 'x'.repeat(90), exercises: [] }).name).toHaveLength(80);
   expect(duplicatePayload({ name: 'A', exercises: [], photo: 'data:image/jpeg;base64,/9j/', source: 'ai' })).toMatchObject({ source: 'ai', photo: 'data:image/jpeg;base64,/9j/' });
+});
+
+test('rótulo do grupo pelo tamanho: tri-set e circuito', () => {
+  const ex = (name, g) => ({ name, sets: '3', reps: '10', superset: g });
+  expect(workoutShareText({ name: 'T', exercises: [ex('a', 'A'), ex('b', 'A'), ex('c', 'A')] })).toMatch(/^Tri-set A:$/m);
+  expect(workoutShareText({ name: 'T', exercises: [ex('a', 'B'), ex('b', 'B'), ex('c', 'B'), ex('d', 'B')] })).toMatch(/^Circuito B:$/m);
 });

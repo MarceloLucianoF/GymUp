@@ -7,6 +7,7 @@ import Navbar from './components/layout/Navbar';
 import PwaLayer from './components/pwa/PwaLayer';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import usePageMeta from './hooks/usePageMeta';
+import { isAppLaunch } from './utils/appLaunch';
 import { ACADEMY_API_ENABLED } from './services/academyApi';   // com a API da academia ativa, o aluno usa o Worker/D1; sem ela, o caminho antigo (Firestore)
 
 // --- PÁGINAS: AUTH ---
@@ -237,6 +238,12 @@ const RoleRedirect = () => {
   return destination ? <Navigate to={destination} replace /> : <ProfileAccessError />;
 };
 
+// "/" aberto como app (PWA instalado ou Android) vai à Home do papel (ou ao login); no navegador, a página de divulgação.
+const RootRoute = () => {
+  const { search } = useLocation();
+  return isAppLaunch(search) ? <RoleRedirect /> : <LandingPage />;
+};
+
 // --- DEFINIÇÃO DAS ROTAS ---
 function AppRoutes() {
   const { pathname } = useLocation();
@@ -259,7 +266,7 @@ function AppRoutes() {
           <Route path="/auth/action" element={<main id="main-content" tabIndex={-1} className="outline-none"><AuthAction /></main>} />
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/instalar" element={<InstallGuide />} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/termos" element={<Termos />} />

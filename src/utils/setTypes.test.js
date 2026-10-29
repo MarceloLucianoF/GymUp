@@ -1,4 +1,4 @@
-import { afterSetAction, assignSupersetLetters, countsAsWork, hasPlan, nextSetType, normalizeSetTypes, planSummary, supersetLinks, supersetRole } from './setTypes';
+import { afterSetAction, assignSupersetLetters, comboLabel, countsAsWork, hasPlan, nextSetType, normalizeSetTypes, planSummary, supersetLinks, supersetRole } from './setTypes';
 
 test('normaliza o plano para o número de séries e troca valor inválido por normal', () => {
   expect(normalizeSetTypes(['warmup', 'laser', 'drop'], 4)).toEqual(['warmup', 'normal', 'drop', 'normal']);
@@ -47,4 +47,12 @@ describe('superset', () => {
     expect(assignSupersetLetters([true])).toEqual([null]);   // o último não liga a ninguém
     expect(assignSupersetLetters([false, false])).toEqual([null, null]);
   });
+});
+
+test('rótulo de exercícios combinados pelo tamanho do grupo', () => {
+  expect(comboLabel(2)).toBe('Bi-set');
+  expect(comboLabel(3)).toBe('Tri-set');
+  expect(comboLabel(4)).toBe('Circuito');
+  expect(comboLabel(6)).toBe('Circuito');
+  expect(comboLabel(undefined)).toBe('Exercícios combinados');
 });

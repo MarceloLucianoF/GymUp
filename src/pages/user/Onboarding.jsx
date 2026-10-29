@@ -9,11 +9,11 @@ import {
   TOTAL_STEPS, LIMITS, bmiCategory,
 } from '../../utils/onboarding';
 
-const GOAL_OPTIONS = [
-  { value: 'Hipertrofia', label: 'Hipertrofia', hint: 'Ganhar massa muscular', icon: Dumbbell },
-  { value: 'Emagrecimento', label: 'Emagrecimento', hint: 'Perder gordura', icon: Flame },
-  { value: 'Força', label: 'Força', hint: 'Levantar mais pesado', icon: Zap },
-  { value: 'Resistência', label: 'Resistência', hint: 'Mais fôlego e disposição', icon: Wind },
+export const GOAL_OPTIONS = [
+  { value: 'Hipertrofia', label: 'Hipertrofia', hint: 'Aumentar a massa muscular, com volume de treino moderado a alto e repetições intermediárias', icon: Dumbbell },
+  { value: 'Emagrecimento', label: 'Emagrecimento', hint: 'Reduzir a gordura corporal preservando a massa muscular, com treino resistido e maior gasto calórico', icon: Flame },
+  { value: 'Força', label: 'Força', hint: 'Ganhar força máxima nos exercícios principais, com cargas altas e poucas repetições', icon: Zap },
+  { value: 'Resistência', label: 'Resistência', hint: 'Melhorar o condicionamento e a resistência muscular, com mais repetições e descansos curtos', icon: Wind },
 ];
 const LEVEL_OPTIONS = [
   { value: 'iniciante', label: 'Iniciante', hint: 'Menos de 6 meses de treino' },
