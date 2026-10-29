@@ -105,3 +105,42 @@ describe('tipos de exercício na importação', () => {
     expect(toWorkoutExercise(supino, null, 3)).toMatchObject({ kind: 'strength', sets: '4', reps: '8-12', rest: 90 });
   });
 });
+
+describe('ficha com vários treinos', () => {
+  const { splitWorkoutSections, mergeImported } = require('./workoutImport');
+  const ficha = ['FICHA HIPERTROFIA - Joao', 'TREINO A - PEITO', '1. Supino 4x10', '2. Crucifixo 3x12', 'TREINO B - COSTAS', '1. Remada 4x10', 'Treino C: pernas', '1. Agachamento 4x8', ...Array(40).fill('obs: manter a técnica e controlar a descida')].join('\n');
+  test('divide por treino e repete o cabeçalho', () => {
+    const parts = splitWorkoutSections(ficha);
+    expect(parts).toHaveLength(3);
+    expect(parts[0]).toMatch(/^FICHA HIPERTROFIA[\s\S]*TREINO A[\s\S]*Crucifixo/);
+    expect(parts[1]).toMatch(/TREINO B[\s\S]*Remada/);
+    expect(parts[1]).not.toMatch(/Supino/);
+  });
+  test('texto curto ou sem títulos fica inteiro; limite de partes', () => {
+    expect(splitWorkoutSections('Treino A\n1. Supino')).toHaveLength(1);
+    expect(splitWorkoutSections('x'.repeat(800))).toHaveLength(1);
+    const many = Array.from({ length: 7 }, (_, i) => `DIA ${i + 1}\n${'exercicio 3x10\n'.repeat(10)}`).join('\n');
+    expect(splitWorkoutSections(many, { maxParts: 4 })).toHaveLength(4);
+  });
+  test('junta as partes', () => {
+    const m = mergeImported([{ name: 'Ficha', exercises: [{ name: 'A' }], warnings: ['x'] }, null, { name: 'B', exercises: [{ name: 'C' }], warnings: ['x', 'y'] }]);
+    expect(m).toEqual({ name: 'Ficha', exercises: [{ name: 'A' }, { name: 'C' }], warnings: ['x', 'y'] });
+  });
+});
+
+describe('leitura local da ficha (sem IA)', () => {
+  const { parseLocalSection, parseImportedWorkout } = require('./workoutImport');
+  test('lê séries, repetições, descanso e observação', () => {
+    const r = parseLocalSection('TREINO A - PEITO E TRICEPS\n1. Supino reto com barra - 4 x 8 a 10 - descanso 90s\n4. Crossover na polia - 3 x 15 - drop set na ultima serie\n7. Mergulho no banco - 3 x ate a falha\nEsteira - 20 min');
+    expect(r.name).toBe('Treino A - Peito E Triceps');
+    expect(r.exercises[0]).toEqual({ name: 'Supino reto com barra', sets: 4, reps: '8-10', rest: 90, note: '' });
+    expect(r.exercises[1]).toMatchObject({ name: 'Crossover na polia', sets: 3, reps: '15', note: 'drop set na ultima serie' });
+    expect(r.exercises[2]).toMatchObject({ name: 'Mergulho no banco', reps: '12', note: 'até a falha' });
+    expect(r.exercises[3]).toMatchObject({ name: 'Esteira', type: 'cardio', minutes: 20 });
+    const parsed = parseImportedWorkout(JSON.stringify(r), []);   // passa pela mesma validação da resposta da IA
+    expect(parsed.exercises).toHaveLength(4);
+  });
+  test('formato desconhecido devolve null (aí entra a IA)', () => {
+    expect(parseLocalSection('Faça supino, depois crucifixo e termine com tríceps.')).toBeNull();
+  });
+});
