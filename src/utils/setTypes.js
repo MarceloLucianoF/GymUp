@@ -1,14 +1,15 @@
-// Tipos de série: normal, aquecimento, drop-set e até a falha. O tipo de cada série pode vir planejado na ficha (`setTypes`) e o aluno
+// Tipos de série: normal, aquecimento, drop-set, até a falha e cluster. O tipo de cada série pode vir planejado na ficha (`setTypes`) e o aluno
 // ajusta na hora. Aquecimento não entra em volume, recorde nem 1RM. Superset: exercícios seguidos com a mesma letra (`superset: 'A'`)
 // são feitos alternando, sem descanso entre eles; o descanso vem depois do último do grupo.
-export const SET_TYPES = ['normal', 'warmup', 'drop', 'failure'];
-export const SET_LABELS = { normal: 'Normal', warmup: 'Aquecimento', drop: 'Drop-set', failure: 'Até a falha' };
-export const SET_SHORT = { normal: 'Normal', warmup: 'Aquec.', drop: 'Drop', failure: 'Falha' };
+export const SET_TYPES = ['normal', 'warmup', 'drop', 'failure', 'cluster'];
+export const SET_LABELS = { normal: 'Normal', warmup: 'Aquecimento', drop: 'Drop-set', failure: 'Até a falha', cluster: 'Cluster' };
+export const SET_SHORT = { normal: 'Normal', warmup: 'Aquec.', drop: 'Drop', failure: 'Falha', cluster: 'Cluster' };
 export const SET_HINTS = {
   normal: 'Série de trabalho.',
   warmup: 'Série leve para preparar. Não conta no volume nem nos recordes.',
   drop: 'Ao terminar, reduza cerca de 30% da carga e continue até a falha.',
-  failure: 'Vá até não conseguir mais uma repetição com boa forma.'
+  failure: 'Vá até não conseguir mais uma repetição com boa forma.',
+  cluster: 'Faça a série em blocos curtos, com poucos segundos de pausa entre eles.'
 };
 
 export const isSetType = (t) => SET_TYPES.includes(t);
@@ -39,6 +40,136 @@ export const planSummary = (types) => {
   }
   return out.join(' + ');
 };
+
+// ---- plano por série (`setPlan`) ----
+// Array opcional por exercício, índice = série. Cada item tem campos opcionais:
+// { reps: '6-10', isoBeforeSec: 10, isoAfterSec: 5, drops: [{ load: 16 }, { load: 12 }], failure: true, blocks: [4, 4, 4], blockRestSec: 10 }.
+// Item vazio ({}) = série como a prescrição geral. Sem `setPlan`, a ficha funciona como antes.
+export const PLAN_LIMITS = { sets: 12, drops: 4, blocks: 6, isoSec: 120, blockRestSec: 60, blockReps: 50, load: 1000, reps: 12 };
+
+const int = (v, max) => { const n = Math.round(Number(String(v ?? '').replace(',', '.'))); return Number.isFinite(n) && n > 0 ? Math.min(max, n) : null; };
+const kg = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) && n > 0 ? Math.min(PLAN_LIMITS.load, Math.round(n * 100) / 100) : null; };
+const REPS_RE = /^\d{1,3}(-\d{1,3})?$/;
+
+/** Item do plano limpo (números válidos, listas no limite); null quando não sobra nada. */
+export function normalizePlanItem(item) {
+  if (!item || typeof item !== 'object') return null;
+  const out = {};
+  const reps = String(item.reps ?? '').replace(/\s+/g, '').slice(0, PLAN_LIMITS.reps);
+  if (REPS_RE.test(reps)) out.reps = reps;
+  const before = int(item.isoBeforeSec, PLAN_LIMITS.isoSec);
+  const after = int(item.isoAfterSec, PLAN_LIMITS.isoSec);
+  if (before) out.isoBeforeSec = before;
+  if (after) out.isoAfterSec = after;
+  if (Array.isArray(item.drops) && item.drops.length) {
+    out.drops = item.drops.slice(0, PLAN_LIMITS.drops).map((d) => { const load = kg(d?.load); return load ? { load } : {}; });
+  }
+  if (item.failure === true) out.failure = true;
+  if (Array.isArray(item.blocks)) {
+    const blocks = item.blocks.slice(0, PLAN_LIMITS.blocks).map((b) => int(b, PLAN_LIMITS.blockReps) || 1);
+    if (blocks.length >= 2) {
+      out.blocks = blocks;
+      out.blockRestSec = int(item.blockRestSec, PLAN_LIMITS.blockRestSec) || 10;
+    }
+  }
+  if (out.drops && out.blocks) { delete out.blocks; delete out.blockRestSec; }   // drop e cluster na mesma série não combinam
+  return Object.keys(out).length ? out : null;
+}
+
+/** Plano com exatamente `count` posições (vazias = {}); null quando nenhuma série tem algo próprio. */
+export function normalizeSetPlan(plan, count) {
+  if (!Array.isArray(plan)) return null;
+  const n = Math.max(0, Math.min(PLAN_LIMITS.sets, Number(count) || 0));
+  const items = Array.from({ length: n }, (_, i) => normalizePlanItem(plan[i]));
+  return items.some(Boolean) ? items.map((it) => it || {}) : null;
+}
+
+export const hasSetPlan = (plan) => Array.isArray(plan) && plan.some((it) => !!normalizePlanItem(it));
+
+/** Tipo da série que o item implica (drop, cluster, falha) ou null quando só muda reps/isometria. */
+export const planItemType = (item) => (item?.drops?.length ? 'drop' : item?.blocks?.length >= 2 ? 'cluster' : item?.failure ? 'failure' : null);
+
+/** Repetições previstas da série: as próprias do plano, senão as do exercício. */
+export const planReps = (ex, i) => {
+  const item = Array.isArray(ex?.setPlan) ? ex.setPlan[i] : null;
+  return item?.reps ? String(item.reps) : String(ex?.reps ?? '10');
+};
+
+const fmt = (n) => String(n).replace('.', ',');
+
+/** Rótulo curto de uma série: "10'' iso + 15", "15 + 5'' iso", "6-10 + drop 16/12", "6-10 até a falha", "4-4-4 (10 s)". */
+export function planLabel(item, defaultReps = '') {
+  const it = normalizePlanItem(item) || {};
+  if (it.blocks) return `${it.blocks.join('-')} (${it.blockRestSec} s)`;
+  let out = String(it.reps || defaultReps || '');
+  if (it.isoBeforeSec) out = `${it.isoBeforeSec}'' iso${out ? ` + ${out}` : ''}`;
+  if (it.isoAfterSec) out = `${out ? `${out} + ` : ''}${it.isoAfterSec}'' iso`;
+  if (it.drops) {
+    const loads = it.drops.map((d) => d.load).filter(Boolean);
+    out = `${out ? `${out} + ` : ''}drop${loads.length ? ` ${loads.map(fmt).join('/')}` : it.drops.length > 1 ? ` x${it.drops.length}` : ''}`;
+  }
+  if (it.failure) out = `${out ? `${out} ` : ''}até a falha`;
+  return out;
+}
+
+/** "S1 15 · S2 10'' iso + 15 · ...": o plano inteiro em uma linha (vazio sem plano). Aquecimento ganha "Aquec.". */
+export function setPlanSummary(ex) {
+  if (!hasSetPlan(ex?.setPlan)) return '';
+  const count = Math.max(1, Math.min(PLAN_LIMITS.sets, parseInt(ex.sets, 10) || ex.setPlan.length));
+  return Array.from({ length: count }, (_, i) => {
+    const label = planLabel(ex.setPlan[i], ex.reps);
+    return `S${i + 1} ${ex.setTypes?.[i] === 'warmup' ? `Aquec. ${label}` : label}`;
+  }).join(' · ');
+}
+
+// Técnica escolhida no editor: um menu por série. Cada uma vira um tipo (`setTypes`) e campos do item (`setPlan`).
+export const TECHNIQUES = [
+  { id: 'normal', label: 'Normal', type: 'normal' },
+  { id: 'warmup', label: 'Aquecimento', type: 'warmup' },
+  { id: 'isoBefore', label: 'Isometria antes', type: 'normal' },
+  { id: 'isoAfter', label: 'Isometria depois', type: 'normal' },
+  { id: 'drop', label: 'Drop', type: 'drop' },
+  { id: 'dropFailure', label: 'Drop + falha', type: 'drop' },
+  { id: 'failure', label: 'Até a falha', type: 'failure' },
+  { id: 'cluster', label: 'Cluster', type: 'cluster' }
+];
+
+/** Técnica atual de uma série a partir do tipo e do item. */
+export function techniqueOf(type, item) {
+  const it = item || {};
+  if (it.blocks?.length >= 2 || type === 'cluster') return 'cluster';
+  if (it.drops?.length || type === 'drop') return it.failure ? 'dropFailure' : 'drop';
+  if (it.failure || type === 'failure') return 'failure';
+  if (type === 'warmup') return 'warmup';
+  if (it.isoBeforeSec) return 'isoBefore';
+  if (it.isoAfterSec) return 'isoAfter';
+  return 'normal';
+}
+
+/** Troca a técnica de uma série: mantém as reps próprias e aproveita o que já havia (cargas do drop, blocos); preenche o padrão do resto. */
+export function applyTechnique(id, item = {}) {
+  const tech = TECHNIQUES.find((t) => t.id === id) || TECHNIQUES[0];
+  const next = item?.reps ? { reps: item.reps } : {};
+  if (id === 'isoBefore') next.isoBeforeSec = item?.isoBeforeSec || 10;
+  if (id === 'isoAfter') next.isoAfterSec = item?.isoAfterSec || 5;
+  if (id === 'drop' || id === 'dropFailure') next.drops = item?.drops?.length ? item.drops : [{}];
+  if (id === 'dropFailure' || id === 'failure') next.failure = true;
+  if (id === 'cluster') { next.blocks = item?.blocks?.length >= 2 ? item.blocks : [4, 4, 4]; next.blockRestSec = item?.blockRestSec || 10; delete next.reps; }
+  return { type: tech.type, item: next };
+}
+
+// ---- partes registradas na execução (drop e cluster) ----
+// A série guarda weight/reps da 1ª parte (recorde e 1RM usam só ela) e `parts: [{ weight, reps }]` com todas, em ordem.
+
+/** Volume da série: soma das partes quando houver, senão carga x reps. */
+export const setVolume = (s) => {
+  const n = (v) => { const x = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(x) ? x : 0; };
+  if (Array.isArray(s?.parts) && s.parts.length) return s.parts.reduce((acc, p) => acc + n(p?.weight) * n(p?.reps), 0);
+  return n(s?.weight) * n(s?.reps);
+};
+
+/** "20+16+12" e "8+6+4" para mostrar uma série com partes (ou os valores simples). */
+export const partsText = (s, field) => (Array.isArray(s?.parts) && s.parts.length > 1 ? s.parts.map((p) => fmt(p?.[field] ?? 0)).join('+') : (s?.[field] || ''));
 
 // ---- supersets ----
 const letter = (v) => (typeof v === 'string' && /^[A-Z]$/.test(v) ? v : null);

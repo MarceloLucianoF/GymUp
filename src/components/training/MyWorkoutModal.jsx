@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import SetPlanEditor from './SetPlanEditor';
-import { assignSupersetLetters, hasPlan, normalizeSetTypes, supersetLinks } from '../../utils/setTypes';
+import { assignSupersetLetters, hasPlan, normalizeSetPlan, normalizeSetTypes, supersetLinks } from '../../utils/setTypes';
 import { ArrowDown, ArrowUp, FileText, ImagePlus, Loader2, PencilLine, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { exercises as LIBRARY } from '../../data/exercises';
 import { askWorkoutImport } from '../../services/aiService';
@@ -19,7 +19,7 @@ const blank = (name, ref = null) => {
   const kind = exerciseKind({ name, muscleGroup: ref?.muscleGroup, kind: ref?.kind });
   const d = defaultsForKind(kind);
   // exercício meu traz a prescrição que o aluno definiu; o da biblioteca começa com o padrão do tipo
-  return { key: newKey(), name, kind, setTypes: null, link: false, ...d, ...(ref?.mine ? { sets: String(ref.sets || d.sets), reps: String(ref.reps || d.reps), rest: ref.rest ?? d.rest } : {}), note: ref?.mine ? ref.description || '' : '', photo: ref?.mine ? ref.machineImage : null, ref };
+  return { key: newKey(), name, kind, setTypes: null, setPlan: null, link: false, ...d, ...(ref?.mine ? { sets: String(ref.sets || d.sets), reps: String(ref.reps || d.reps), rest: ref.rest ?? d.rest } : {}), note: ref?.mine ? ref.description || '' : '', photo: ref?.mine ? ref.machineImage : null, ref };
 };
 
 // Exercício já salvo na ficha -> linha do editor. Só o que veio da biblioteca ou dos exercícios do aluno mantém o vínculo (imagem e texto).
@@ -31,7 +31,7 @@ const fromSaved = (ex) => {
     key: newKey(), name: ex.name || '', kind, sets: String(ex.sets ?? defaultsForKind(kind).sets),
     reps: kind === 'cardio' ? String(cardioMinutes(ex)) : String(ex.reps ?? defaultsForKind(kind).reps), rest: kind === 'cardio' ? 0 : (ex.rest ?? defaultsForKind(kind).rest),
     note: ex.note || '', photo: custom && isSafePhoto(ex.machineImage, 45000) ? ex.machineImage : null,
-    setTypes: Array.isArray(ex.setTypes) ? ex.setTypes : null, link: false,
+    setTypes: Array.isArray(ex.setTypes) ? ex.setTypes : null, setPlan: Array.isArray(ex.setPlan) ? ex.setPlan : null, link: false,
     ref: linked ? { ...ex, id: ex.firestoreId, mine: String(ex.firestoreId).startsWith('mine_') } : null
   };
 };
@@ -189,7 +189,8 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
       const letters = assignSupersetLetters(valid.slice(0, 30).map((it) => it.link));
       const exs = valid.slice(0, 30).map((it, i) => toWorkoutExercise({
         name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), kind: it.kind, photo: it.ref ? null : it.photo, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note,
-        setTypes: hasPlan(it.setTypes) ? normalizeSetTypes(it.setTypes, Math.min(10, Math.max(1, Number(it.sets) || 3))) : null, superset: letters[i]
+        setTypes: hasPlan(it.setTypes) ? normalizeSetTypes(it.setTypes, Math.min(10, Math.max(1, Number(it.sets) || 3))) : null,
+        setPlan: normalizeSetPlan(it.setPlan, Math.min(10, Math.max(1, Number(it.sets) || 3))), superset: letters[i]
       }, it.ref, i));
       if (editing) {
         await updateMyWorkout(user.uid, editing.docId, { name, exercises: exs, source, photo, createdAt: editing.workout.createdAt, description: editing.workout.description });
@@ -309,7 +310,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
                     </select>
                   </label>
                   {it.kind === 'strength' && (
-                    <SetPlanEditor idBase={`plan-${it.key}`} sets={it.sets} types={it.setTypes} onTypes={(t) => patch(it.key, { setTypes: t })} link={it.link} onLink={(v) => patch(it.key, { link: v })} canLink={index < items.length - 1} />
+                    <SetPlanEditor idBase={`plan-${it.key}`} sets={it.sets} reps={it.reps} types={it.setTypes} plan={it.setPlan} onChange={(t, p) => patch(it.key, { setTypes: t, setPlan: p })} link={it.link} onLink={(v) => patch(it.key, { link: v })} canLink={index < items.length - 1} />
                   )}
                   {it.kind === 'cardio' ? (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-bold">

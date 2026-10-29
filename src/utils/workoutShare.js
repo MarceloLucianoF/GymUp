@@ -1,6 +1,6 @@
 // Texto de um treino para compartilhar (WhatsApp, mensagem, anotações). Só texto: nada de foto, link ou dado pessoal.
 import { prescriptionLabel } from './exerciseKind';
-import { comboLabel, planSummary } from './setTypes';
+import { comboLabel, planSummary, setPlanSummary } from './setTypes';
 
 export function workoutShareText(workout) {
   const lines = [`Treino: ${workout?.name || 'Meu treino'}`];
@@ -22,7 +22,8 @@ export function workoutShareText(workout) {
 
 function exLine(ex) {
   const label = prescriptionLabel(ex);
-  const plan = planSummary(ex.setTypes);
+  // com plano por série, cada série aparece com a própria meta; sem ele, o resumo dos tipos como antes
+  const plan = setPlanSummary(ex) || planSummary(ex.setTypes);
   const note = ex.note ? ` (${ex.note})` : '';
   return `- ${ex.name}: ${label}${plan ? ` [${plan}]` : ''}${note}`;
 }

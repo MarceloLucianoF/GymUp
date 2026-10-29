@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import ExecutionExerciseCard from './ExecutionExerciseCard';
 
 const ex = { name: 'Supino Reto Máquina', muscleGroup: 'peito', sets: '3', reps: '8-12', rest: 60, setTypes: ['warmup', 'normal', 'drop'] };
@@ -34,4 +34,39 @@ test('sem histórico mostra a dica antiga e sem botão Usar; o botão Trocar cha
   expect(screen.queryByText('Usar')).toBeNull();
   fireEvent.click(screen.getByLabelText('Trocar Supino Reto Máquina'));
   expect(onSwap).toHaveBeenCalledWith(0);
+});
+
+describe('plano por série na execução', () => {
+  const planned = { name: 'Rosca', muscleGroup: 'biceps', sets: '3', reps: '6-10', rest: 90, setTypes: ['normal', 'drop', 'cluster'],
+    setPlan: [{ reps: '15', isoBeforeSec: 10 }, { drops: [{ load: 16 }, { load: 12 }] }, { blocks: [4, 4, 4], blockRestSec: 10 }] };
+  const p = { ...props, ex: planned, historyMap: {}, rawHistoryDocs: [] };
+
+  test('isometria vira instrução e a série usa as próprias reps', () => {
+    render(<ExecutionExerciseCard {...p} />);
+    expect(screen.getByText(/Antes das repetições, segure 10 s parado/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Repetições da série 1')).toHaveAttribute('placeholder', '15');
+    fireEvent.click(screen.getByLabelText('Concluir série 1'));
+    expect(props.onCheckSet).toHaveBeenLastCalledWith(0, 0, '15', 3, 90, 'Rosca', null);
+  });
+
+  test('drop tem um campo de carga por parte, com a carga planejada como dica', () => {
+    render(<ExecutionExerciseCard {...p} sessionData={{ '0-1': { weight: '20' } }} />);
+    expect(screen.getByLabelText('Carga do drop 1 da série 2 (kg)')).toHaveAttribute('placeholder', '16');
+    expect(screen.getByLabelText('Carga do drop 2 da série 2 (kg)')).toHaveAttribute('placeholder', '12');
+    fireEvent.change(screen.getByLabelText('Repetições do drop 1 da série 2'), { target: { value: '6' } });
+    expect(props.onInput).toHaveBeenLastCalledWith(0, 1, 'extra', [{ reps: '6' }, {}]);
+  });
+
+  test('cluster: blocos com pausa curta que não conclui a série nem chama o descanso', () => {
+    jest.useFakeTimers();
+    render(<ExecutionExerciseCard {...p} />);
+    expect(screen.getByLabelText('Repetições da série 3')).toHaveAttribute('placeholder', '4');
+    expect(screen.getByLabelText('Repetições do bloco 2 da série 3')).toHaveAttribute('placeholder', '4');
+    fireEvent.click(screen.getByLabelText('Pausa antes do bloco 2: iniciar pausa de 10 segundos'));
+    expect(screen.getByText('Pausa: 10 s')).toBeInTheDocument();
+    [1, 2, 3].forEach(() => act(() => { jest.advanceTimersByTime(1000); }));
+    expect(screen.getByText('Pausa: 7 s')).toBeInTheDocument();
+    expect(props.onCheckSet).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
 });

@@ -1,13 +1,37 @@
-import React from 'react';
-import { Check, Circle, Trophy } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, Circle, Timer, Trophy } from 'lucide-react';
 import { SET_HINTS, SET_LABELS, SET_SHORT, nextSetType } from '../../utils/setTypes';
 
 const TYPE_STYLE = {
     normal: 'bg-gray-200 text-gray-700 dark:bg-white/10 dark:text-gray-300',
     warmup: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
     drop: 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200',
-    failure: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200'
+    failure: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200',
+    cluster: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200'
 };
+const partInput = 'min-w-0 flex-1 min-h-[44px] rounded-xl bg-gray-100 dark:bg-white/5 px-2 text-center text-base font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand';
+
+// Pausa curta entre blocos do cluster: contagem local, não dispara o descanso principal.
+function BlockRest({ seconds, label }) {
+    const [left, setLeft] = useState(0);
+    useEffect(() => {
+        if (left <= 0) return undefined;
+        const t = setTimeout(() => {
+            if (left === 1 && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(150);
+            setLeft(left - 1);
+        }, 1000);
+        return () => clearTimeout(t);
+    }, [left]);
+    const running = left > 0;
+    return (
+        <button
+            type="button" onClick={() => setLeft(running ? 0 : seconds)} aria-label={running ? `${label}: faltam ${left} segundos. Toque para parar` : `${label}: iniciar pausa de ${seconds} segundos`}
+            className={`min-h-[44px] w-full inline-flex items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${running ? 'bg-violet-700 text-white' : 'bg-violet-100 text-violet-900 dark:bg-violet-500/20 dark:text-violet-100'}`}
+        >
+            <Timer className="w-4 h-4" aria-hidden="true" /> <span aria-live="polite">{running ? `Pausa: ${left} s` : `Pausa de ${seconds} s`}</span>
+        </button>
+    );
+}
 
 const inputClass = (isFocusMode) =>
     `w-full bg-gray-100 dark:bg-white/5 rounded-2xl px-3 py-3 text-center font-black text-xl text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand transition-all min-h-[52px] ${isFocusMode ? 'h-16 text-2xl' : ''}`;
@@ -16,9 +40,17 @@ const inputClass = (isFocusMode) =>
 const RPE_OPTIONS = [6, 7, 8, 9, 10];
 const stepBtn = 'min-h-[36px] flex-1 rounded-xl bg-gray-100 dark:bg-white/5 text-xs font-bold text-gray-600 dark:text-gray-300 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 
-const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMode, isPR, kind = 'strength', type = 'normal', onType, onInput, onCheck, onAdjust }) => {
+// `parts`: partes extras planejadas (drop: carga prevista; cluster: reps do bloco), digitadas em data.extra[k]; `instruction`: meta da série.
+const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMode, isPR, kind = 'strength', type = 'normal', onType, onInput, onCheck, onAdjust, parts = [], blockRestSec = 10, instruction = '' }) => {
     const timed = kind === 'timed';
     const isDone = data.completed;
+    const cluster = type === 'cluster';
+    const extra = Array.isArray(data.extra) ? data.extra : [];
+    const setExtra = (k, field, value) => {
+        const next = parts.map((_, j) => ({ ...(extra[j] || {}) }));
+        next[k][field] = value;
+        onInput(setIndex, 'extra', next);
+    };
 
     return (
         <div className={`p-3 sm:p-4 transition-colors duration-500 ${isDone ? 'bg-emerald-500/10' : ''}`}>
@@ -71,6 +103,25 @@ const SetRow = ({ setIndex, data, weightPlaceholder, repsPlaceholder, isFocusMod
                 </button>
                 {type !== 'normal' && <span className="text-[11px] leading-tight text-gray-600 dark:text-gray-300">{SET_HINTS[type]}</span>}
             </div>
+        )}
+        {instruction && <p className="mt-2 ml-11 text-xs font-bold leading-snug text-gray-700 dark:text-gray-200">{instruction}</p>}
+        {!timed && parts.length > 0 && (
+            <ul className="mt-2 ml-11 mr-[4.5rem] space-y-2" aria-label={cluster ? `Blocos da série ${setIndex + 1}` : `Drops da série ${setIndex + 1}`}>
+                {parts.map((p, k) => {
+                    const name = cluster ? `Bloco ${k + 2}` : `Drop ${k + 1}`;
+                    const where = `${cluster ? `do bloco ${k + 2}` : `do drop ${k + 1}`} da série ${setIndex + 1}`;
+                    return (
+                        <li key={k} className="space-y-1.5">
+                            {cluster && <BlockRest seconds={blockRestSec} label={`Pausa antes do bloco ${k + 2}`} />}
+                            <div className="flex items-center gap-2">
+                                <span className="w-14 shrink-0 text-[11px] font-black uppercase text-gray-600 dark:text-gray-300">{name}</span>
+                                <input type="number" inputMode="decimal" value={extra[k]?.weight || ''} placeholder={p.weightHint || '-'} onChange={(e) => setExtra(k, 'weight', e.target.value)} aria-label={`Carga ${where} (kg)`} className={partInput} />
+                                <input type="number" inputMode="numeric" value={extra[k]?.reps || ''} placeholder={p.reps ? String(p.reps) : 'reps'} onChange={(e) => setExtra(k, 'reps', e.target.value)} aria-label={`Repetições ${where}`} className={partInput} />
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
         )}
         {isPR && (
             <div role="status" className="mt-2 ml-11 inline-flex items-center gap-1 rounded-full bg-brand/15 border border-brand/40 px-2.5 py-1 text-[11px] font-black text-amber-800 dark:text-brand">
