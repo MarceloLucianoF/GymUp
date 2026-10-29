@@ -1,5 +1,5 @@
 import { KINDS, exerciseKind } from '../utils/exerciseKind';
-import { hasPlan, isSetType, normalizeSetTypes } from '../utils/setTypes';
+import { hasPlan, isSetType, normalizeSetPlan, normalizeSetTypes } from '../utils/setTypes';
 
 // Importação de treino a partir de um PDF do próprio aluno.
 // O PDF é lido NO APARELHO (nada dele é enviado ou guardado): só o texto, já higienizado, vai para a IA, e a resposta da IA
@@ -201,7 +201,8 @@ export function matchLibrary(name, library = []) {
 
 export const toWorkoutExercise = (e, ref, idx) => {
   const kind = KINDS.includes(e.kind) ? e.kind : exerciseKind({ name: e.name, muscleGroup: ref?.muscleGroup });
-  const plan = kind === 'strength' && hasPlan(e.setTypes) ? { setTypes: normalizeSetTypes(e.setTypes, e.sets) } : {};
+  const setPlan = kind === 'strength' ? normalizeSetPlan(e.setPlan, e.sets) : null;
+  const plan = { ...(kind === 'strength' && hasPlan(e.setTypes) ? { setTypes: normalizeSetTypes(e.setTypes, e.sets) } : {}), ...(setPlan ? { setPlan } : {}) };
   const base = {
     firestoreId: ref?.firestoreId || ref?.id || `custom-${idx}`,
     name: ref?.name || e.name,

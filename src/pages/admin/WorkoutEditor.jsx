@@ -12,7 +12,7 @@ import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import { estimateWorkout } from '../../components/coach/helpers';
 import SetPlanEditor from '../../components/training/SetPlanEditor';
-import { assignSupersetLetters, supersetLinks } from '../../utils/setTypes';
+import { assignSupersetLetters, hasPlan, normalizeSetPlan, normalizeSetTypes, supersetLinks } from '../../utils/setTypes';
 import { KIND_LABELS, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { WORKOUT_PRESETS, getPreset, applyPreset, reorder, formatMinutes } from '../../utils/coachWorkout';
 import { btnPrimary, btnGhost, iconBtn, inputCls, labelCls, pageCls } from '../../components/coach/styles';
@@ -57,8 +57,14 @@ const fromLibrary = (lib) => normalizeExercise({
   videoUrl: lib.videoUrl || null, execution: lib.execution || '', description: lib.description || ''
 }, [lib]);
 
-// Remove campos auxiliares/undefined antes de gravar.
-const serializeExercise = ({ _key, ...ex }) => Object.fromEntries(Object.entries(ex).filter(([, v]) => v !== undefined));
+// Remove campos auxiliares/undefined antes de gravar; plano por série limpo (tipos e itens no tamanho das séries).
+const serializeExercise = ({ _key, ...ex }) => {
+  const strength = exerciseKind(ex) === 'strength';
+  const out = { ...ex,
+    setTypes: strength && hasPlan(ex.setTypes) ? normalizeSetTypes(ex.setTypes, Number(ex.sets) || 3) : undefined,
+    setPlan: strength ? normalizeSetPlan(ex.setPlan, Number(ex.sets) || 3) || undefined : undefined };
+  return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined));
+};
 
 function AddExerciseModal({ library, onAdd, onClose, onGoLibrary }) {
   const [term, setTerm] = useState('');
@@ -176,6 +182,7 @@ export default function WorkoutEditor() {
 
   const update = useCallback((patch) => { setTraining((prev) => ({ ...prev, ...patch })); setDirty(true); }, []);
   const updateExercise = (index, field, value) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)) });
+  const updatePlan = (index, setTypes, setPlan) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, setTypes, setPlan } : ex)) });
   // Trocar o tipo troca a prescrição junto: 3 x 10 não faz sentido para esteira.
   const changeKind = (index, kind) => update({ exercises: training.exercises.map((ex, i) => (i === index ? { ...ex, kind, ...defaultsForKind(kind) } : ex)) });
   // Superset: liga o exercício ao seguinte; as letras do grupo são refeitas para a lista toda.
@@ -385,7 +392,7 @@ export default function WorkoutEditor() {
                     </select>
                   </div>
                   {exerciseKind(ex) === 'strength' && (
-                    <SetPlanEditor idBase={`plan-${ex._key}`} sets={ex.sets} types={ex.setTypes} onTypes={(t) => updateExercise(i, 'setTypes', t)} link={supersetLinks(training.exercises)[i]} onLink={(v) => setLink(i, v)} canLink={i < training.exercises.length - 1} />
+                    <SetPlanEditor idBase={`plan-${ex._key}`} sets={ex.sets} reps={ex.reps} types={ex.setTypes} plan={ex.setPlan} onChange={(t, p) => updatePlan(i, t, p)} link={supersetLinks(training.exercises)[i]} onLink={(v) => setLink(i, v)} canLink={i < training.exercises.length - 1} />
                   )}
                   <div className={`mt-3 grid ${exerciseKind(ex) === 'cardio' ? 'grid-cols-1' : 'grid-cols-3'} gap-2`}>
                     {exerciseKind(ex) !== 'cardio' && (

@@ -26,7 +26,7 @@ export function buildSessionFacts({ training, executedExercises = [], totalVolum
   const prevVolume = prevSame ? num(prevSame.totalVolume) : 0;
   const volumePct = prevVolume > 0 ? Math.round(((totalVolume - prevVolume) / prevVolume) * 100) : null;
 
-  const counts = { warmup: 0, drop: 0, failure: 0 };
+  const counts = { warmup: 0, drop: 0, failure: 0, cluster: 0 };
   executedExercises.forEach((e) => e.sets.forEach((s) => { if (isSetType(s.type) && s.type !== 'normal') counts[s.type] += 1; }));
 
   const exercises = executedExercises.map((e) => {

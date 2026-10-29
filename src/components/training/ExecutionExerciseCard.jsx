@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote, Repeat2 } from 'lucide-react';
 import SetRow from './SetRow';
 import { cardioMinutes, exerciseKind, prescriptionLabel, timedSeconds } from '../../utils/exerciseKind';
-import { comboLabel, isSetType } from '../../utils/setTypes';
+import { comboLabel, isSetType, planLabel, normalizePlanItem } from '../../utils/setTypes';
 import { dropLoad, fmtKg, suggestNext } from '../../utils/progression';
-import { getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
+import { extraPartsPlan, getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
 
 // Card de exercício da execução do treino (modo lista ou foco).
 const ExecutionExerciseCard = ({
@@ -47,17 +47,44 @@ const ExecutionExerciseCard = ({
     const nextUndoneIndex = setsArray.findIndex((_, sIdx) => !isSetDone(sIdx));
 
     const typeOf = (i) => (isSetType(sessionData[`${exIndex}-${i}`]?.type) ? sessionData[`${exIndex}-${i}`].type : (isSetType(ex.setTypes?.[i]) ? ex.setTypes[i] : 'normal'));
-    const checkSet = (setIndex) => onCheckSet(exIndex, setIndex, repsHint, setsCount, cardio ? 5 : restSeconds, exName, suggestion && suggestion.load > 0 ? (typeOf(setIndex) === 'drop' ? dropLoad(suggestion.load) : suggestion.load) : null);
-    // Preenche as séries ainda vazias com a sugestão (aquecimento fica de fora; drop-set usa cerca de 70% da carga)
+    // Plano por série (setPlan): reps próprias, isometria, cargas do drop e blocos do cluster. Sem plano, tudo como antes.
+    const itemOf = (i) => (Array.isArray(ex.setPlan) ? normalizePlanItem(ex.setPlan[i]) : null) || {};
+    const repsHintOf = (i) => {
+        const it = itemOf(i);
+        if (typeOf(i) === 'cluster' && it.blocks) return String(it.blocks[0]);
+        return it.reps ? String(it.reps).split('-')[0] : repsHint;
+    };
+    // Drop planejado com cargas: a série começa com a carga cheia e os drops descem; drop sem plano (fichas antigas) usa ~70% na série.
+    const plannedDrops = (i) => typeOf(i) === 'drop' && !!itemOf(i).drops;
+    const loadFor = (i, load) => (typeOf(i) === 'drop' && !plannedDrops(i) ? dropLoad(load) : load);
+    const checkSet = (setIndex) => onCheckSet(exIndex, setIndex, repsHintOf(setIndex), setsCount, cardio ? 5 : restSeconds, exName, suggestion && suggestion.load > 0 ? loadFor(setIndex, suggestion.load) : null);
+    // Preenche as séries ainda vazias com a sugestão (aquecimento fica de fora)
     const applySuggestion = () => {
         if (!suggestion) return;
         setsArray.forEach((_, i) => {
             const d = sessionData[`${exIndex}-${i}`] || {};
             if (d.completed || typeOf(i) === 'warmup') return;
-            const w = typeOf(i) === 'drop' ? dropLoad(suggestion.load) : suggestion.load;
+            const w = loadFor(i, suggestion.load);
+            const own = itemOf(i).reps || (typeOf(i) === 'cluster' && itemOf(i).blocks);
             if (!d.weight && w > 0) onInput(exIndex, i, 'weight', String(w));
-            if (!d.reps) onInput(exIndex, i, 'reps', String(suggestion.reps));
+            if (!d.reps) onInput(exIndex, i, 'reps', own ? repsHintOf(i) : String(suggestion.reps));
         });
+    };
+    const partsOf = (i) => {
+        const d = sessionData[`${exIndex}-${i}`] || {};
+        const main = parseFloat(d.weight) || parseFloat(loadHint) || 0;
+        return extraPartsPlan(typeOf(i), itemOf(i)).map((p) => ({ reps: p.reps, weightHint: p.load ? String(p.load) : (p.load === null ? (main ? String(main) : '') : (main ? String(dropLoad(main)) : '')) }));
+    };
+    const instructionOf = (i) => {
+        const it = itemOf(i);
+        const t = typeOf(i);
+        const out = [];
+        if (Object.keys(it).length) out.push(`Meta da série: ${planLabel(it, ex.reps)}.`);
+        if (it.isoBeforeSec) out.push(`Antes das repetições, segure ${it.isoBeforeSec} s parado (isometria).`);
+        if (it.isoAfterSec) out.push(`Depois das repetições, segure ${it.isoAfterSec} s parado (isometria).`);
+        if (t === 'drop' && it.drops) out.push(it.failure ? 'Sem descanso entre as cargas; o último drop vai até a falha.' : 'Sem descanso entre as cargas.');
+        if (t === 'cluster') out.push('A pausa entre blocos é curta e não conta como descanso.');
+        return out.join(' ');
     };
 
     return (
@@ -187,10 +214,13 @@ const ExecutionExerciseCard = ({
                         setIndex={setIndex}
                         data={sessionData[`${exIndex}-${setIndex}`] || {}}
                         weightPlaceholder={loadHint}
-                        repsPlaceholder={repsHint}
+                        repsPlaceholder={repsHintOf(setIndex)}
                         isFocusMode={isFocusMode}
                         kind={kind}
-                        type={isSetType(sessionData[`${exIndex}-${setIndex}`]?.type) ? sessionData[`${exIndex}-${setIndex}`].type : (isSetType(ex.setTypes?.[setIndex]) ? ex.setTypes[setIndex] : 'normal')}
+                        type={typeOf(setIndex)}
+                        parts={timed ? [] : partsOf(setIndex)}
+                        blockRestSec={itemOf(setIndex).blockRestSec || 10}
+                        instruction={timed ? '' : instructionOf(setIndex)}
                         onType={(sIdx, t) => onInput(exIndex, sIdx, 'type', t)}
                         isPR={!!sessionData[`${exIndex}-${setIndex}`]?.completed && isPRSet(sessionData[`${exIndex}-${setIndex}`]?.weight, lastLoad)}
                         onAdjust={(sIdx, field, delta) => onAdjust(exIndex, sIdx, field, delta, field === 'weight' ? lastLoad : targetRepsNum)}

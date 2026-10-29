@@ -1,5 +1,6 @@
 import { formatDate } from './format';
-import { countsAsWork, isSetType, normalizeSetTypes } from './setTypes';
+import { dropLoad } from './progression';
+import { countsAsWork, isSetType, normalizeSetPlan, normalizeSetTypes, setVolume } from './setTypes';
 
 // Normaliza/hidrata os exercícios de um treino cruzando a biblioteca (Firestore + defaults).
 export const hydrateExercises = (rawExercises, combinedLibrary) => rawExercises.map((ex, idx) => {
@@ -41,11 +42,15 @@ export const hydrateExercises = (rawExercises, combinedLibrary) => rawExercises.
     if (!rest || String(rest) === 'undefined') rest = 60;
 
     const plan = Array.isArray(exObj.setTypes) ? normalizeSetTypes(exObj.setTypes, Number(sets) || 3) : null;
+    const setPlan = normalizeSetPlan(exObj.setPlan, Number(sets) || 3);
 
+    const others = { ...exObj };
+    delete others.setPlan;   // só o plano limpo segue (e nada de undefined indo para o Firestore)
     return {
         ...libEx,
-        ...exObj,
+        ...others,
         ...(plan ? { setTypes: plan } : {}),
+        ...(setPlan ? { setPlan } : {}),
         firestoreId: idToFind || libEx?.firestoreId || `ex-${idx}`,
         name,
         muscleGroup,
@@ -124,6 +129,23 @@ export const getSmartTip = (lastLoad, lastReps, targetRepsNum) => {
     return smartTip;
 };
 
+// Partes extras digitadas na execução ficam em sessionData[chave].extra (índice 0 = 2ª parte). Drop: uma por drop planejado (carga
+// prevista, ou ~70% da série, quando não digitada; reps só as digitadas). Cluster: uma por bloco depois do 1º (carga da série e reps do
+// bloco por padrão). Drop sem `setPlan` (fichas antigas) não tem partes.
+const num = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+export const extraPartsPlan = (type, item) => {
+    if (type === 'drop' && item?.drops?.length) return item.drops.map((d) => ({ load: d.load || 0, reps: 0 }));
+    if (type === 'cluster') return (item?.blocks?.length >= 2 ? item.blocks : [0, 0, 0]).slice(1).map((b) => ({ load: null, reps: b }));
+    return [];
+};
+export const buildSetParts = (type, item, data, weight, reps) => {
+    const extras = extraPartsPlan(type, item).map((p, k) => ({
+        weight: num(data?.extra?.[k]?.weight) || (p.load == null ? weight : p.load || dropLoad(weight)),
+        reps: num(data?.extra?.[k]?.reps) || p.reps
+    })).filter((p) => p.reps > 0);
+    return extras.length ? [{ weight, reps }, ...extras] : null;
+};
+
 // Resumo da sessão: log por exercício, volume total e séries concluídas.
 export const summarizeSession = (exercises, sessionData) => {
     let totalVolume = 0;
@@ -138,10 +160,16 @@ export const summarizeSession = (exercises, sessionData) => {
                 const type = isSetType(data.type) ? data.type : (isSetType(ex.setTypes?.[i]) ? ex.setTypes[i] : 'normal');
                 const w = parseFloat(data.weight) || 0;
                 const r = parseFloat(data.reps) || 0;
-                // aquecimento é registrado no histórico, mas não entra no volume nem na contagem de séries de trabalho
-                if (countsAsWork(type)) { setsCompleted++; totalVolume += w * r; }
+                const item = Array.isArray(ex.setPlan) ? ex.setPlan[i] : null;
                 const set = { weight: w, reps: r, completed: true };
                 if (type !== 'normal') set.type = type;
+                // drop e cluster: weight/reps = 1ª parte (recorde e 1RM); volume = soma das partes
+                const parts = buildSetParts(type, item, data, w, r);
+                if (parts) set.parts = parts;
+                const iso = (Number(item?.isoBeforeSec) || 0) + (Number(item?.isoAfterSec) || 0);
+                if (iso > 0) set.isoSec = iso;
+                // aquecimento é registrado no histórico, mas não entra no volume nem na contagem de séries de trabalho
+                if (countsAsWork(type)) { setsCompleted++; totalVolume += setVolume(set); }
                 const rpe = normalizeRpe(data.rpe);
                 if (rpe) set.rpe = rpe;
                 exSets.push(set);
