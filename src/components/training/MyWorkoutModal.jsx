@@ -69,7 +69,9 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     const q = plain(query).trim();
     if (q.length < 2) return [];
     const hit = (e) => plain(e.name).includes(q);
-    return [...mineAsLibrary.filter(hit), ...library.filter(hit)].slice(0, 7);
+    // Nome que começa com o termo vem antes; até 20 sugestões (com 7, "Alongamento" só mostrava os antigos)
+    const starts = (e) => (plain(e.name).startsWith(q) ? 0 : 1);
+    return [...mineAsLibrary.filter(hit), ...[...library.filter(hit)].sort((a, b) => starts(a) - starts(b))].slice(0, 20);
   }, [query, library, mineAsLibrary]);
 
   const warmup = useMemo(() => buildWarmupStretch(library), [library]);
@@ -331,7 +333,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
                 <button type="button" onClick={addFree} disabled={query.trim().length < 2} aria-label="Adicionar o que digitei" className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-black disabled:opacity-40"><Plus className="h-5 w-5" aria-hidden="true" /></button>
               </div>
               {suggestions.length > 0 && (
-                <ul className="mt-2 space-y-1">
+                <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto overscroll-contain">
                   {suggestions.map((s) => <li key={s.id}><button type="button" onClick={() => addFromLibrary(s)} className="flex w-full items-center justify-between rounded-xl bg-gray-100 p-3 text-left text-sm font-bold dark:bg-white/10">{s.name}{s.mine && <span className="ml-2 rounded-full bg-brand/20 px-2 py-0.5 text-[11px] text-amber-800 dark:text-brand">meu</span>}</button></li>)}
                 </ul>
               )}

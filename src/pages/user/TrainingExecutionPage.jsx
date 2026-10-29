@@ -558,6 +558,7 @@ export default function TrainingExecutionPage() {
         });
         return () => { off(); stopWorkoutTimer(); };   // sair do treino (ou desligar) tira a notificação
     }, [nativeApp, notifEnabled]);
+    const goHome = () => { toast('Treino salvo. Para voltar, toque em Continuar no início.', { id: 'workout-left-toast' }); navigate('/dashboard'); };
     const setNotif = async (on) => {
         if (nativeApp) {
             try { window.localStorage.setItem('bt_workout_notif', on ? '1' : '0'); } catch (e) { /* sem storage */ }
@@ -641,7 +642,7 @@ export default function TrainingExecutionPage() {
             />
 
             <ExecutionHeader
-                onGoHome={() => { toast('Treino salvo. Para voltar, toque em Continuar no início.', { id: 'workout-left-toast' }); navigate('/dashboard'); }}
+                onGoHome={goHome}
                 trainingName={training.name}
                 isOnline={isOnline}
                 elapsedTime={elapsedTime}
@@ -717,6 +718,7 @@ export default function TrainingExecutionPage() {
                     onFinish={() => { setRestTimerObj(null); alertRestOver(); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
                     onClose={() => setRestTimerObj(null)} 
                     onAdjust={(ms) => setRestTimerObj(prev => prev ? ({ ...prev, endTime: prev.endTime + ms }) : null)}
+                    onGoHome={goHome}
                 />
             )}
 

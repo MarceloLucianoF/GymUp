@@ -1,12 +1,12 @@
 import React, { useCallback } from 'react';
-import { Timer, SkipForward, Pause, Play } from 'lucide-react';
+import { Home, Timer, SkipForward, Pause, Play } from 'lucide-react';
 import { useRestTimer } from '../../hooks/useRestTimer';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 // Overlay de descanso (tela cheia). Não fecha por clique fora para evitar pulos acidentais.
-const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
+const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust, onGoHome }) => {
     useBodyScrollLock();
     const { user } = useAuthContext();
     const { prefs, notify } = useNotifications(user?.uid);
@@ -30,6 +30,11 @@ const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
 
     return (
         <div role="dialog" aria-modal="true" aria-label="Descanso entre séries" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-fade-in p-6">
+            {onGoHome && (
+                <button type="button" onClick={onGoHome} aria-label="Ir para o início (o treino continua em andamento)" className="absolute left-3 grid min-h-[44px] min-w-[44px] place-items-center rounded-lg text-gray-300 hover:text-brand" style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}>
+                    <Home className="h-5 w-5" aria-hidden="true" />
+                </button>
+            )}
             <div className="text-center text-white w-full max-w-sm">
                 <div className="flex items-center justify-center gap-2 mb-6">
                     <Timer className="w-5 h-5 text-brand animate-spin" style={{ animationDuration: '3s' }} />
