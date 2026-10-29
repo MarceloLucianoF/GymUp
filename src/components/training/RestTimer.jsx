@@ -3,9 +3,11 @@ import { Timer, SkipForward, Pause, Play } from 'lucide-react';
 import { useRestTimer } from '../../hooks/useRestTimer';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 // Overlay de descanso (tela cheia). Não fecha por clique fora para evitar pulos acidentais.
 const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust }) => {
+    useBodyScrollLock();
     const { user } = useAuthContext();
     const { prefs, notify } = useNotifications(user?.uid);
 

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CalendarDays, CheckCircle2, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { generateWeekPlan, resolvePlanText } from '../../services/weekPlanService';
 import { saveMyWorkout } from '../../services/myWorkouts';
-import { DAY_LABELS, MAX_DAYS, MIN_DAYS, saveDescription, saveName } from '../../utils/weekPlan';
+import { DAY_LABELS, MAX_DAYS, MAX_STRENGTH_DAYS, MIN_DAYS, saveDescription, saveName, wantsRecoveryDay } from '../../utils/weekPlan';
 import { describeEquipment } from '../../utils/equipment';
 import { prescriptionLabel } from '../../utils/exerciseKind';
 
@@ -14,7 +14,11 @@ const dayKey = (d) => `${d.weekday}-${d.label}`;
 // Semana inteira pela IA: escolhe os dias, monta uma ficha por dia (sem repetir exercício entre dias do mesmo foco) e salva em "Meus treinos".
 export default function WeekPlanTab({ user, userProfile, customExercises = [], onSaved }) {
   const goalDays = Math.min(MAX_DAYS, Math.max(MIN_DAYS, Number(userProfile?.weeklyGoal) || 3));
-  const [days, setDays] = useState(goalDays);
+  const [days, setDaysState] = useState(goalDays);
+  // Segue a meta do perfil (que pode chegar depois de abrir a aba) até a pessoa escolher outro número aqui
+  const touched = useRef(false);
+  useEffect(() => { if (!touched.current) setDaysState(goalDays); }, [goalDays]);
+  const setDays = (n) => { touched.current = true; setDaysState(n); };
   const [minutes, setMinutes] = useState(45);
   const [cardio, setCardio] = useState(false);
   const [stretch, setStretch] = useState(false);
@@ -71,6 +75,7 @@ export default function WeekPlanTab({ user, userProfile, customExercises = [], o
               <button key={n} type="button" aria-pressed={days === n} onClick={() => setDays(n)} className={chip(days === n)}>{n}</button>
             ))}
           </div>
+          {wantsRecoveryDay(days) && <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">{MAX_STRENGTH_DAYS} treinos e 1 dia de alongamento e mobilidade para o corpo recuperar.</p>}
         </div>
         <div>
           <label htmlFor="week-min" className={fieldLabel}>Duração de cada treino</label>

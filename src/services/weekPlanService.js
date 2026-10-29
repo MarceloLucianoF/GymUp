@@ -5,7 +5,7 @@ import { InsufficientExercisesError } from '../utils/workoutComposer';
 import { exercises as defaultExercises } from '../data/exercises';
 import { buildCardioWorkout } from '../utils/cardioWorkout';
 import { buildStretchWorkout } from '../utils/stretchWorkout';
-import { chooseSplit, freeWeekdays, localPlanText, pickFreeDay, planAiMessages, planTextMatches } from '../utils/weekPlan';
+import { chooseSplit, freeWeekdays, localPlanText, pickFreeDay, planAiMessages, planTextMatches, wantsRecoveryDay } from '../utils/weekPlan';
 
 const withTimeout = (promise, ms) => new Promise((resolve, reject) => {
   const t = setTimeout(() => reject(new Error('demorou')), ms);
@@ -28,7 +28,7 @@ export async function generateWeekPlan({ days = 3, goal = 'Hipertrofia', experie
       }
     }
     done += 1;
-    onProgress?.({ done, total: split.length + (includeCardio ? 1 : 0) + (includeStretch ? 1 : 0), label: item.label });
+    onProgress?.({ done, total: split.length + (includeCardio ? 1 : 0) + (includeStretch || wantsRecoveryDay(days) ? 1 : 0), label: item.label });
     results[index] = { ...item, kind: 'strength', workout, error };
   };
 
@@ -45,15 +45,20 @@ export async function generateWeekPlan({ days = 3, goal = 'Hipertrofia', experie
   const days_ = [...results];
   const taken = [];
   const free = freeWeekdays(split);
-  if (includeCardio) {
+  const addCardio = () => {
     const wd = pickFreeDay(free, taken);
     if (wd !== null) { taken.push(wd); days_.push({ focus: 'Cardio', weekday: wd, label: 'Cardio', occurrence: 1, kind: 'cardio', workout: buildCardioWorkout('', { goal, durationMinutes: 30 }), error: null }); onProgress?.({ done: days_.length, total: days_.length, label: 'Cardio' }); }
-  }
-  if (includeStretch) {
+  };
+  const addStretch = () => {
     const wd = pickFreeDay(free, taken);
     const w = buildStretchWorkout([...customExercises, ...defaultExercises]);
     if (wd !== null && w) { taken.push(wd); days_.push({ focus: 'Alongamento', weekday: wd, label: 'Alongamento e mobilidade', occurrence: 1, kind: 'stretch', workout: w, error: null }); }
-  }
+  };
+  // 7 dias: a divisão tem 6 de musculação e o dia que sobra é sempre alongamento e mobilidade (vem antes do cardio)
+  const recovery = wantsRecoveryDay(days);
+  if (recovery) addStretch();
+  if (includeCardio) addCardio();
+  if (includeStretch && !recovery) addStretch();
   days_.sort((a, b) => a.weekday - b.weekday);
   const plan = { goal, durationMinutes, days: days_, warnings: days_.filter((d) => d.error).map((d) => `${d.label}: ${d.error}`) };
   return plan;

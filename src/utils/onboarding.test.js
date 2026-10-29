@@ -48,16 +48,27 @@ describe('IMC', () => {
 });
 
 describe('plano', () => {
-  test('limita iniciante a 4 dias', () => {
-    const p = suggestPlan({ goal: 'Hipertrofia', experience: 'iniciante', weeklyGoal: 7 });
-    expect(p.days).toBe(4);
-    expect(p.adjusted).toBe(true);
+  test('usa todos os dias escolhidos, inclusive 5 e 6 para iniciante (backlog 28/10, itens 2 e 17)', () => {
+    [2, 3, 4, 5, 6, 7].forEach((n) => {
+      const p = suggestPlan({ goal: 'Hipertrofia', experience: 'iniciante', weeklyGoal: n });
+      expect(p.days).toBe(n);
+      expect(p.adjusted).toBe(false);
+    });
+    expect(suggestPlan({ goal: 'Hipertrofia', experience: 'iniciante', weeklyGoal: 5 }).note).toMatch(/descanso/);
+    expect(suggestPlan({ goal: 'Hipertrofia', experience: 'avancado', weeklyGoal: 5 }).note).toBe('');
   });
-  test('avançado mantém e define divisão', () => {
-    const p = suggestPlan({ goal: 'Força', experience: 'avancado', weeklyGoal: 5 });
-    expect(p.days).toBe(5);
-    expect(p.split).toMatch(/ABC/);
-    expect(p.quote).toBeTruthy();
+  test('fora do intervalo ajusta para 2 a 7', () => {
+    expect(suggestPlan({ experience: 'avancado', weeklyGoal: 9 })).toMatchObject({ days: 7, adjusted: true });
+    expect(suggestPlan({ experience: 'avancado', weeklyGoal: 1 })).toMatchObject({ days: 2, adjusted: true });
+  });
+  test('divisão coerente com a semana que a IA monta', () => {
+    expect(suggestPlan({ experience: 'iniciante', weeklyGoal: 3 }).split).toMatch(/Corpo todo/);
+    const p5 = suggestPlan({ goal: 'Força', experience: 'avancado', weeklyGoal: 5 });
+    expect(p5.split).toMatch(/^ABCDE:/);
+    expect(p5.split).toMatch(/Posterior e Glúteos/);
+    expect(p5.quote).toBeTruthy();
+    expect(suggestPlan({ experience: 'intermediario', weeklyGoal: 6 }).split).toMatch(/^ABCDEF:/);
+    expect(suggestPlan({ experience: 'intermediario', weeklyGoal: 7 }).split).toMatch(/alongamento e mobilidade/);
   });
 });
 

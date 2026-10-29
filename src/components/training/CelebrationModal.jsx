@@ -4,6 +4,7 @@ import { Trophy, Share2, RotateCcw, Sparkles, ArrowUpRight, ArrowDownRight, Minu
 import { buildShareText } from '../../utils/training';
 import { TREND_LABEL } from '../../utils/sessionSummary';
 import { fmtKg } from '../../utils/progression';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 const TREND_STYLE = {
     load: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200',
@@ -16,6 +17,7 @@ const TrendIcon = ({ trend }) => (trend === 'load' || trend === 'reps' ? <ArrowU
 
 // Tela de treino concluído (sem fechar por clique fora: o treino já foi salvo).
 const CelebrationModal = ({ stats, summary, onFinish, onRepeat }) => {
+    useBodyScrollLock();
     const facts = summary?.facts;
     const handleShare = async () => {
         const text = buildShareText(stats);

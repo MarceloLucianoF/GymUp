@@ -3,14 +3,15 @@
 export const DAY_LABELS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 export const DAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 export const MIN_DAYS = 2;
-export const MAX_DAYS = 6;
+export const MAX_DAYS = 7;          // dias que o aluno pode escolher (a meta do perfil vai de 2 a 7)
+export const MAX_STRENGTH_DAYS = 6; // dias de musculação; o 7º vira alongamento e mobilidade (descanso ativo)
 
 const WEEKDAYS = { 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5] };
 const FULL = 'Full Body (Corpo Todo)';
 
 /** Divisão (foco de cada dia) conforme os dias por semana e a experiência. Iniciante em 3 dias treina corpo todo em dias alternados. */
 export function chooseSplit(days, experience = 'iniciante') {
-  const n = Math.max(MIN_DAYS, Math.min(MAX_DAYS, Number(days) || 3));
+  const n = Math.max(MIN_DAYS, Math.min(MAX_STRENGTH_DAYS, Number(days) || 3));
   const level = String(experience || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   let foci;
   if (n === 2) foci = [FULL, FULL];
@@ -25,6 +26,19 @@ export function chooseSplit(days, experience = 'iniciante') {
     const letter = String.fromCharCode(64 + seen[focus]);
     return { focus, weekday: WEEKDAYS[n][i], label: repeats > 1 ? `${focus === FULL ? 'Corpo todo' : focus} ${letter}` : (focus === FULL ? 'Corpo todo' : focus), occurrence: seen[focus] };
   });
+}
+
+/** Com 7 dias escolhidos, o 7º é de alongamento e mobilidade (dia livre que sobra da divisão de 6). */
+export const wantsRecoveryDay = (days) => Number(days) >= MAX_DAYS;
+
+/** Resumo da divisão em uma linha (mesmos focos que a Semana pela IA monta), para o onboarding e textos. */
+export function splitSummary(days, experience = 'iniciante') {
+  const split = chooseSplit(days, experience);
+  const labels = split.map((d) => d.label);
+  const allFull = split.every((d) => d.focus === FULL);
+  let text = allFull ? `Corpo todo em ${split.length} dias alternados` : `${'ABCDEF'.slice(0, split.length)}: ${labels.join(', ')}`;
+  if (wantsRecoveryDay(days)) text += ' + 1 dia de alongamento e mobilidade';
+  return text;
 }
 
 /** Dias livres (sem treino de musculação) para o cardio e o alongamento extras. */
