@@ -369,26 +369,29 @@ test('social: perfil público só nasce junto das reservas de @usuário e códig
   await assertFails(setDoc(doc(db('stu2'), 'publicProfiles/stu1'), p));        // não é dele
 });
 
-test('social: listagem só de descobríveis e com limite; perfil privado só para dono, admin e amigo ativo; get de descobrível por @usuário/código', async () => {
+test('social: perfil completo não é listável; busca por nome/@ só no índice profileSearch (nome, @ e uid, sem código)', async () => {
   await seedSocial();
-  await assertFails(getDocs(query(collection(db('coach1'), 'publicProfiles'), where('discoverable', '==', true))));   // sem limite
-  await assertFails(getDocs(collection(db('coach1'), 'publicProfiles')));
-  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), limit(10))));                              // sem filtrar descobríveis
-  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('discoverable', '==', false), limit(10))));
-  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('discoverable', '==', true), limit(21)))); // acima de 20
-  await assertFails(getDocs(query(collection(anonDb(), 'publicProfiles'), where('discoverable', '==', true), limit(10))));  // sem login
-  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('handle', '==', 'user_stu3'), limit(1)))); // @ exato sem o filtro
-  const byName = await assertSucceeds(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('discoverable', '==', true),
-    orderBy('displayNameLower'), startAt('pessoa'), endAt('pessoa\uf8ff'), limit(20))));
-  assert.deepEqual(byName.docs.map((x) => x.id).sort(), ['stu1', 'stu2']);                                            // stu3 (privado) fica de fora
-  const byHandle = await assertSucceeds(getDocs(query(collection(db('stu2'), 'publicProfiles'), where('discoverable', '==', true),
-    orderBy('handle'), startAt('user_s'), endAt('user_s\uf8ff'), limit(10))));
-  assert.ok(!byHandle.docs.some((x) => x.id === 'stu3'));
+  await assertFails(getDocs(query(collection(db('stu1'), 'publicProfiles'), where('discoverable', '==', true), limit(10))));   // o perfil inteiro não se lista
   await assertSucceeds(getDocs(collection(db('admin1'), 'publicProfiles')));
-  await assertSucceeds(getDoc(doc(db('stu1'), 'publicProfiles/stu2')));        // descobrível: get por @usuário/código
-  await assertFails(getDoc(doc(db('stu1'), 'publicProfiles/stu3')));           // stu3 não é descobrível
-  await assertSucceeds(getDoc(doc(db('stu3'), 'publicProfiles/stu3')));
-  await assertSucceeds(getDoc(doc(db('stu1'), 'publicProfiles/stu2')));
+  // índice: entra só quem é descobrível, no mesmo lote do perfil, com campos fechados
+  const entry = (uid, over = {}) => ({ uid, displayName: 'Pessoa ' + uid, displayNameLower: 'pessoa ' + uid, handle: 'user_' + uid, ...over });
+  await assertSucceeds(setDoc(doc(db('stu1'), 'profileSearch/stu1'), entry('stu1')));
+  await assertSucceeds(setDoc(doc(db('stu2'), 'profileSearch/stu2'), entry('stu2')));
+  await assertFails(setDoc(doc(db('stu3'), 'profileSearch/stu3'), entry('stu3')));                    // stu3 não é descobrível
+  await assertFails(setDoc(doc(db('stu1'), 'profileSearch/stu2'), entry('stu2')));                    // não é dele
+  await assertFails(setDoc(doc(db('stu1'), 'profileSearch/stu1'), entry('stu1', { friendCode: 'ABCD2345' })));   // sem código de amigo
+  await assertFails(setDoc(doc(db('stu1'), 'profileSearch/stu1'), entry('stu1', { handle: 'outro_nome' })));      // @ tem de ser o do perfil
+  await assertFails(getDoc(doc(db('stu2'), 'profileSearch/stu1')));                                   // sem get direto
+  await assertFails(getDocs(collection(db('stu2'), 'profileSearch')));                                // sem limite
+  await assertFails(getDocs(query(collection(db('stu2'), 'profileSearch'), limit(11))));              // acima de 10
+  await assertFails(getDocs(query(collection(anonDb(), 'profileSearch'), limit(5))));                 // sem login
+  const byName = await assertSucceeds(getDocs(query(collection(db('stu3'), 'profileSearch'), orderBy('displayNameLower'), startAt('pessoa'), endAt('pessoa\uf8ff'), limit(10))));
+  assert.deepEqual(byName.docs.map((x) => x.id).sort(), ['stu1', 'stu2']);
+  assert.deepEqual(Object.keys(byName.docs[0].data()).sort(), ['displayName', 'displayNameLower', 'handle', 'uid']);
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'profileSearch/stu1')));                             // sair da busca
+  await assertFails(deleteDoc(doc(db('stu1'), 'profileSearch/stu2')));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'publicProfiles/stu2')));        // descobrível: get por @usuário/código continua
+  await assertFails(getDoc(doc(db('stu1'), 'publicProfiles/stu3')));
 });
 
 test('social: pedir, aceitar só quem recebeu, remover, pedir de novo', async () => {
@@ -478,15 +481,16 @@ test('social: ler amizade inexistente do próprio par funciona; de outro par nã
   await assertFails(getDoc(doc(db('stu9'), 'friendships/' + pair('stu1', 'stu2'))));
 });
 
-test('social: busca por nome não filtra bloqueio no servidor (limitação documentada: o app esconde; quem quer sumir desliga "ser encontrado")', async () => {
+test('social: busca não filtra bloqueio no servidor (limitação documentada: só nome e @ aparecem; o app esconde; pedido continua barrado)', async () => {
   await seedSocial();
-  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'friendships/' + pair('stu1', 'stu2')), { ...fr('stu1', 'stu2'), status: 'blocked', blockedBy: 'stu1' }); });
-  await assertFails(getDoc(doc(db('stu2'), 'publicProfiles/stu1')));                 // get continua negado
-  const q = query(collection(db('stu2'), 'publicProfiles'), where('discoverable', '==', true), orderBy('displayNameLower'), startAt('pessoa stu1'), endAt('pessoa stu1\uf8ff'), limit(5));
-  const res = await assertSucceeds(getDocs(q));
-  assert.deepEqual(res.docs.map((x) => x.id), ['stu1']);                                // a lista devolve: o filtro é do app
-  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'publicProfiles/stu1'), { discoverable: false }); });
-  assert.equal((await assertSucceeds(getDocs(q))).size, 0);                            // desligar "ser encontrado" tira da busca
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await setDoc(doc(d, 'profileSearch/stu1'), { uid: 'stu1', displayName: 'Pessoa stu1', displayNameLower: 'pessoa stu1', handle: 'user_stu1' });
+    await setDoc(doc(d, 'friendships/' + pair('stu1', 'stu2')), { ...fr('stu1', 'stu2'), status: 'blocked', blockedBy: 'stu1' });
+  });
+  await assertFails(getDoc(doc(db('stu2'), 'publicProfiles/stu1')));                 // o perfil completo continua negado
+  const res = await assertSucceeds(getDocs(query(collection(db('stu2'), 'profileSearch'), orderBy('displayNameLower'), startAt('pessoa stu1'), endAt('pessoa stu1\uf8ff'), limit(5))));
+  assert.deepEqual(res.docs.map((x) => x.id), ['stu1']);                              // só nome e @ (o filtro de bloqueio é do app)
 });
 
 test('social: bloqueado só apaga o bloqueio junto com a exclusão da própria conta', async () => {

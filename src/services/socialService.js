@@ -60,6 +60,9 @@ export async function saveSocialProfile(user, input, existing) {
     friendCode = newFriendCode();
     batch.set(doc(db, 'friendCodes', friendCode), { uid: user.uid });
   }
+  // Índice de busca: só nome e @, e só enquanto a pessoa quer ser encontrada (as regras conferem no mesmo lote).
+  if (input.discoverable) batch.set(doc(db, 'profileSearch', user.uid), { uid: user.uid, displayName, displayNameLower: lowerName(displayName), handle });
+  else if (existing?.discoverable) batch.delete(doc(db, 'profileSearch', user.uid));
   batch.set(doc(db, 'publicProfiles', user.uid), {
     uid: user.uid,
     displayName,
@@ -97,7 +100,7 @@ export async function findByHandleOrCode(raw) {
   catch (_) { return { uid, displayName: 'Usuário', handle: foundBy === 'handle' ? handle : '', restricted: true }; }
 }
 
-export const SEARCH_LIMIT = 10;   // as regras aceitam até 20 por consulta
+export const SEARCH_LIMIT = 10;   // as regras aceitam até 10 por consulta
 export const SEARCH_MIN = 2;
 
 /**
@@ -110,8 +113,8 @@ export async function searchProfiles(raw, { uid, friendships } = {}) {
   const name = lowerName(text.replace(/^@/, '')).slice(0, 60);
   const handle = normalizeHandle(text);
   if (name.length < SEARCH_MIN) return [];
-  const col = collection(db, 'publicProfiles');
-  const prefix = (field, value) => query(col, where('discoverable', '==', true), orderBy(field), startAt(value), endAt(`${value}\uf8ff`), limit(SEARCH_LIMIT));
+  const col = collection(db, 'profileSearch');   // só nome, @ e uid de quem quer ser encontrado
+  const prefix = (field, value) => query(col, orderBy(field), startAt(value), endAt(`${value}\uf8ff`), limit(SEARCH_LIMIT));
   const queries = [];
   if (!text.startsWith('@')) queries.push(prefix('displayNameLower', name));
   if (/^[a-z0-9_]{2,20}$/.test(handle)) queries.push(prefix('handle', handle));
@@ -121,7 +124,7 @@ export async function searchProfiles(raw, { uid, friendships } = {}) {
   settled.forEach((r) => { if (r.status === 'fulfilled') r.value.docs.forEach((d) => { if (!byUid.has(d.id)) byUid.set(d.id, { ...d.data(), uid: d.id }); }); });
   const pairs = friendships || (uid ? await listFriendships(uid) : []);
   const hidden = new Set(pairs.filter((f) => f.status === 'blocked').map((f) => otherOf(f, uid)));
-  return [...byUid.values()].filter((p) => p.uid !== uid && !hidden.has(p.uid) && p.discoverable === true).slice(0, SEARCH_LIMIT);
+  return [...byUid.values()].filter((p) => p.uid !== uid && !hidden.has(p.uid)).slice(0, SEARCH_LIMIT);
 }
 
 // ---- amizades ----

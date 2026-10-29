@@ -43,3 +43,7 @@ Coleção `socialPosts` (autor, título, minutos, séries, exercícios, recordes
 
 ## Fases seguintes
 Convites por QR, desafios cooperativos, temporadas mensais, notificações configuráveis, grupos e equipes, painel admin (engajamento, badges, denúncias e bloqueios).
+
+## Busca por nome (29/10/2026, após revisão)
+A busca não lista o perfil público inteiro: usa o índice `profileSearch/{uid}` com só `uid`, nome e @ (sem código de amigo nem preferências), escrito no mesmo lote do perfil e só enquanto "Pessoas podem me encontrar pelo nome" estiver ligado (as regras conferem com `getAfter`). Listagem com login e no máximo 10 por consulta; sem leitura direta. Limites aceitos: dá para juntar os nomes e @ de quem escolheu ser encontrado; quem bloqueou ainda aparece por nome/@ para o bloqueado (o app esconde; o perfil completo e o pedido de amizade continuam barrados pelas regras). Perfis que já eram descobríveis entram na busca na próxima vez que salvarem o perfil social.
+

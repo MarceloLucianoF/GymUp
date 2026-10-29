@@ -1,5 +1,5 @@
 import { pairId, otherOf, relationOf, normalizeHandle, normalizeCode, lowerName, newFriendCode, validateHandle, sendRequest, respond, searchProfiles } from './socialService';
-import { getDocs, orderBy, startAt, endAt, limit, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, startAt, endAt, limit, where } from 'firebase/firestore';
 
 jest.mock('../firebase/config', () => ({ db: {} }));
 jest.mock('firebase/firestore', () => ({ addDoc: jest.fn(), collection: jest.fn(), deleteField: jest.fn(), doc: jest.fn(), getDoc: jest.fn(), endAt: jest.fn(), getDocs: jest.fn(), limit: jest.fn(), orderBy: jest.fn(), query: jest.fn(), startAt: jest.fn(), setDoc: jest.fn(), Timestamp: { fromMillis: (ms) => ({ toMillis: () => ms }) }, where: jest.fn(), writeBatch: jest.fn() }));
@@ -100,11 +100,11 @@ describe('searchProfiles (busca por nome e @)', () => {
   const p = (uid, over = {}) => ({ uid, displayName: uid, displayNameLower: uid, handle: uid, discoverable: true, ...over });
   beforeEach(() => { jest.clearAllMocks(); });
 
-  it('filtra descobríveis, ordena por prefixo e limita a 10 (a regra aceita até 20)', async () => {
+  it('consulta o índice profileSearch (só quem é descobrível), ordena por prefixo e limita a 10', async () => {
     getDocs.mockResolvedValueOnce(snap([p('marcelo')])).mockResolvedValueOnce(snap([]));
     const out = await searchProfiles('  Marc ', { uid: 'eu', friendships: [] });
     expect(out.map((x) => x.uid)).toEqual(['marcelo']);
-    expect(where).toHaveBeenCalledWith('discoverable', '==', true);
+    expect(collection).toHaveBeenCalledWith(expect.anything(), 'profileSearch');
     expect(orderBy).toHaveBeenCalledWith('displayNameLower');
     expect(orderBy).toHaveBeenCalledWith('handle');
     expect(startAt).toHaveBeenCalledWith('marc');
