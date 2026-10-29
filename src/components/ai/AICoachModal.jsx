@@ -11,6 +11,7 @@ import { db } from '../../firebase/config';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { btnPrimary, btnGhost, iconBtn } from '../coach/styles';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 const selectCls = 'w-full min-h-[48px] appearance-none rounded-2xl border border-transparent bg-gray-100 px-4 pr-11 text-base font-semibold text-gray-900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30 dark:bg-white/5 dark:text-white [&>option]:text-gray-900';
 const fieldLabel = 'mb-1.5 block text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400';
@@ -23,6 +24,7 @@ const TABS = [
 ];
 
 export default function AICoachModal({ isOpen, onClose, userProfile, user, customExercises = [], onWorkoutSaved }) {
+  useBodyScrollLock(isOpen);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'generator' | 'week' | 'nutrition'
   const [aiMeta, setAiMeta] = useState(null); // provedor/modelo da última resposta
   const [historyDocs, setHistoryDocs] = useState([]);

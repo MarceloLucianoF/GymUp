@@ -1,23 +1,22 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { iconBtn } from '../../../components/coach/styles';
+import useBodyScrollLock from '../../../hooks/useBodyScrollLock';
 
 // Painel lateral (tela inteira no celular). Esc e clique fora fecham; o foco volta ao elemento de origem.
 export default function Drawer({ title, subtitle, onClose, children, footer }) {
   const panelRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  useBodyScrollLock();
 
   useEffect(() => {
     const previous = document.activeElement;
     panelRef.current?.focus();
     const onKey = (e) => { if (e.key === 'Escape') closeRef.current(); };
     document.addEventListener('keydown', onKey);
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
       previous?.focus?.();
     };
   }, []);

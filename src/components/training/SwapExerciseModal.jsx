@@ -3,10 +3,12 @@ import { Dumbbell, X } from 'lucide-react';
 import { equivalentsFor } from '../../utils/exerciseSwap';
 import { stillSrc } from '../../utils/exerciseMedia';
 import { isSafePhoto } from '../../utils/imageAttach';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 // Escolha de um exercício equivalente durante o treino. "Só hoje" troca nesta sessão; "Na minha ficha" (treino pessoal) troca também
 // no treino salvo. A prescrição (séries, repetições, descanso, tipos de série e superset) continua a do exercício trocado.
 export default function SwapExerciseModal({ isOpen, onClose, exercise, library, owned, excludeNames, canPersist, onPick }) {
+  useBodyScrollLock(!!(isOpen && exercise));
   if (!isOpen || !exercise) return null;
   const options = equivalentsFor(exercise, library, { owned, excludeNames, limit: 8 });
   return (

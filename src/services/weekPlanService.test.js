@@ -52,6 +52,16 @@ test('extras: cardio e alongamento entram em dias livres, sem tocar nos treinos'
   expect(new Set(plan.days.map((d) => d.weekday)).size).toBe(5);
 });
 
+test('5 e 6 dias montam todos os treinos; 7 dias = 6 treinos + alongamento no domingo (backlog 28/10, itens 2 e 17)', async () => {
+  const ai = fakeAi(async (a) => workoutOf(a.muscleFocus, ['X1', 'X2', 'X3', 'X4', 'X5']));
+  const p5 = await generateWeekPlan({ days: 5, experience: 'iniciante', ai });
+  expect(p5.days.filter((d) => d.workout && d.kind === 'strength').map((d) => d.weekday)).toEqual([0, 1, 2, 3, 4]);
+  const p6 = await generateWeekPlan({ days: 6, ai });
+  expect(p6.days.filter((d) => d.workout).map((d) => d.weekday)).toEqual([0, 1, 2, 3, 4, 5]);
+  const p7 = await generateWeekPlan({ days: 7, includeCardio: true, ai });
+  expect(p7.days.map((d) => `${d.weekday}:${d.kind}`)).toEqual(['0:strength', '1:strength', '2:strength', '3:strength', '4:strength', '5:strength', '6:stretch']);
+});
+
 test('texto da semana: IA validada ou local, nunca lança', async () => {
   const ai = fakeAi(async (a) => workoutOf(a.muscleFocus, ['X1', 'X2', 'X3', 'X4', 'X5']));
   const plan = await generateWeekPlan({ days: 3, experience: 'avancado', durationMinutes: 45, ai });

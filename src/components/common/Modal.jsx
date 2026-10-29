@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 // Modal base acessível: role="dialog", fecha com Esc/clique fora, devolve o foco ao fechar.
 export default function Modal({ onClose, label, children, className = '', layer = 'z-50' }) {
   const panelRef = useRef(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose; // evita refocar a cada render quando onClose é inline
+  useBodyScrollLock();
 
   useEffect(() => {
     const previouslyFocused = document.activeElement;

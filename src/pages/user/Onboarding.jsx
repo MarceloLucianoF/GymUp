@@ -111,7 +111,8 @@ function Step({ step, data, setField, bmi, plan, coachError, onContinueWithoutCo
             <p className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white"><Flame aria-hidden="true" className="w-5 h-5 text-brand" /> {plan.days} dias por semana</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Divisão:</strong> {plan.split}</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Foco ({data.goal}):</strong> {plan.focus}</p>
-            {plan.adjusted && <p className="text-xs text-gray-600 dark:text-gray-400">Ajustamos a frequência ao seu nível para uma progressão segura.</p>}
+            {plan.adjusted && <p className="text-xs text-gray-600 dark:text-gray-400">Ajustamos a frequência para ficar entre 2 e 7 treinos por semana.</p>}
+            {plan.note && <p className="text-xs text-gray-600 dark:text-gray-400">{plan.note}</p>}
             <p className="italic text-gray-800 dark:text-gray-100">“{plan.quote}”</p>
           </div>
           <div>

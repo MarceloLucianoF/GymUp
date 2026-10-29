@@ -10,6 +10,7 @@ import { myExerciseToLibrary } from '../../services/myExercises';
 import { ImageError, isSafePhoto, prepareImage } from '../../utils/imageAttach';
 import { KIND_LABELS, cardioMinutes, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, mergeImported, parseImportedWorkout, parseLocalSection, splitWorkoutSections, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -35,6 +36,7 @@ const fromSaved = (ex) => {
 };
 
 export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRARY, myExercises = [], editing = null, onSaved }) {
+  useBodyScrollLock(isOpen);
   const [step, setStep] = useState('choose');
   const [sections, setSections] = useState([]);   // PDF com vários treinos (A, B, C)
   const [sectionNote, setSectionNote] = useState('');
