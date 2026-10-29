@@ -1,17 +1,12 @@
 import React from 'react';
 import toast from 'react-hot-toast';
-import { Bell } from 'lucide-react';
+import { Bell, BellRing, Send } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import { disablePush, enablePush, pushEnabled, pushSupported } from '../../services/pushService';
 import { isNativeApp } from '../../services/nativeApp';
 import AppDiagnostics from './AppDiagnostics';
-
-const Toggle = ({ label, checked, onChange, disabled }) => (
-  <label className="flex items-center justify-between gap-3 min-h-[44px] cursor-pointer">
-    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{label}</span>
-    <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} className="w-5 h-5 accent-brand" />
-  </label>
-);
+import SwitchRow from '../ui/Switch';
+import { btnGhost, btnPrimary, inputCls, labelCls } from '../coach/styles';
 
 // Seção "Notificações e app" do Perfil. Notificações locais e, opcionalmente, avisos com o app fechado (Web Push pelo Worker).
 export default function NotificationSettings({ uid }) {
@@ -40,39 +35,46 @@ export default function NotificationSettings({ uid }) {
   };
 
   return (
-    <section aria-labelledby="notif-title" className="mt-6 bg-white dark:bg-[#161b26] border border-gray-200 dark:border-white/10 rounded-3xl p-5">
-      <h2 id="notif-title" className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">
-        <Bell className="w-4 h-4 text-brand" aria-hidden="true" /> Notificações e app
+    <section aria-labelledby="notif-title" className="surface mt-6 p-5">
+      <h2 id="notif-title" className="flex items-center gap-2 text-base font-bold text-gray-800 dark:text-white">
+        <Bell className="h-5 w-5 text-brand" aria-hidden="true" /> Notificações e app
       </h2>
 
-      <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
-        {permission === 'unsupported' && 'Este navegador não suporta notificações.'}
+      <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+        {permission === 'unsupported' && <p>Este navegador não suporta notificações.</p>}
         {permission === 'default' && (
-          <button type="button" onClick={enable} className="min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] text-black text-sm font-black">Permitir notificações</button>
+          <div className="flex flex-col gap-3 rounded-2xl bg-gray-50 p-4 dark:bg-white/5 sm:flex-row sm:items-center sm:justify-between">
+            <p>Permita as notificações para saber quando o descanso acabar.</p>
+            <button type="button" onClick={enable} className={`${btnPrimary} w-full sm:w-auto`}>
+              <BellRing className="h-4 w-4" aria-hidden="true" /> Permitir notificações
+            </button>
+          </div>
         )}
-        {permission === 'granted' && 'Permissão concedida.'}
-        {permission === 'denied' && 'Permissão negada. Libere nas configurações do navegador/app (ícone de cadeado ou Configurações do site > Notificações) e recarregue.'}
+        {permission === 'granted' && <p className="font-bold text-emerald-700 dark:text-emerald-400">Permissão concedida.</p>}
+        {permission === 'denied' && <p className="rounded-2xl bg-rose-500/10 p-4 text-rose-700 dark:text-rose-300">Permissão negada. Libere nas configurações do navegador/app (ícone de cadeado ou Configurações do site &gt; Notificações) e recarregue.</p>}
       </div>
 
       <div className="mt-2 divide-y divide-gray-100 dark:divide-white/5">
-        <Toggle label="Avisar quando o descanso acabar" checked={prefs.restDone} onChange={(v) => updatePrefs({ restDone: v })} />
-        {pushSupported() && <Toggle label="Avisos com o app fechado (curtidas e fim do descanso)" checked={push} onChange={togglePush} />}
-        <Toggle label="Vibrar" checked={prefs.vibrate} onChange={(v) => updatePrefs({ vibrate: v })} />
-        <Toggle label="Som curto" checked={prefs.sound} onChange={(v) => updatePrefs({ sound: v })} />
-        <Toggle label="Lembrete de treino" checked={prefs.reminder} onChange={(v) => updatePrefs({ reminder: v })} />
+        <SwitchRow label="Avisar quando o descanso acabar" checked={prefs.restDone} onChange={(v) => updatePrefs({ restDone: v })} />
+        {pushSupported() && <SwitchRow label="Avisos com o app fechado" hint="Curtidas e fim do descanso" checked={push} onChange={togglePush} />}
+        <SwitchRow label="Vibrar" checked={prefs.vibrate} onChange={(v) => updatePrefs({ vibrate: v })} />
+        <SwitchRow label="Som curto" checked={prefs.sound} onChange={(v) => updatePrefs({ sound: v })} />
+        <SwitchRow label="Lembrete de treino" checked={prefs.reminder} onChange={(v) => updatePrefs({ reminder: v })} />
       </div>
 
       {prefs.reminder && (
         <div className="mt-2">
-          <label htmlFor="reminder-time" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase block mb-1">Horário do lembrete</label>
-          <input id="reminder-time" type="time" value={prefs.reminderTime} onChange={(e) => updatePrefs({ reminderTime: e.target.value })} className="min-h-[44px] bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 dark:text-white font-bold" />
-          <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1">O aviso aparece ao abrir o app depois desse horário, se não houver treino hoje. Sem servidor, não é possível avisar com o app fechado.</p>
+          <label htmlFor="reminder-time" className={labelCls}>Horário do lembrete</label>
+          <input id="reminder-time" type="time" value={prefs.reminderTime} onChange={(e) => updatePrefs({ reminderTime: e.target.value })} className={`${inputCls} font-bold sm:w-48`} />
+          <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400">O aviso aparece ao abrir o app depois desse horário, se não houver treino hoje. Sem servidor, não é possível avisar com o app fechado.</p>
         </div>
       )}
 
       {isNativeApp() && <AppDiagnostics />}
 
-      <button type="button" onClick={test} className="mt-4 w-full min-h-[48px] rounded-2xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-800 dark:text-white">Testar notificação</button>
+      <button type="button" onClick={test} className={`${btnGhost} mt-4 w-full`}>
+        <Send className="h-4 w-4" aria-hidden="true" /> Testar notificação
+      </button>
     </section>
   );
 }

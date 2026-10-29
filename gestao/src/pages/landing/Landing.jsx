@@ -105,7 +105,12 @@ export default function Landing() {
           <div className="shot-grid">
             {SHOTS.map((s, i) => (
               <figure key={s.title} className={`shot sh${i}`} data-reveal>
-                <div className="pic"><img src={s.img} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" /></div>
+                <div className="pic">
+                  <div className="device">
+                    <span className="device-island" aria-hidden="true" />
+                    <div className="device-screen"><img src={s.img} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" /></div>
+                  </div>
+                </div>
                 <figcaption><b>{s.title}</b> {s.text}</figcaption>
               </figure>
             ))}
