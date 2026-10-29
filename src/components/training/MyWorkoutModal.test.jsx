@@ -165,7 +165,7 @@ describe('tipos de série e superset no editor', () => {
     render(<MyWorkoutModal isOpen onClose={jest.fn()} user={{ uid: 'u1' }} library={lib} editing={{ docId: 'w1', workout: saved }} />);
     expect(await screen.findByText('Editar meu treino')).toBeInTheDocument();
     expect(screen.getByLabelText('Série 3: Drop-set. Toque para mudar')).toBeInTheDocument();    // plano carregado
-    const links = screen.getAllByLabelText('Superset com o próximo exercício');
+    const links = screen.getAllByLabelText(/Combinar com o próximo exercício/);
     expect(links).toHaveLength(2);                                                               // o último não liga a ninguém
     expect(links[0].checked).toBe(true);
     expect(links[1].checked).toBe(false);

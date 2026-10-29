@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, BellOff, List, Search, Wifi, WifiOff } from 'lucide-react';
+import { Bell, BellOff, Home, List, Search, Wifi, WifiOff } from 'lucide-react';
 
 // 75 min aparece como 1:15:00, não 75:00.
 export const formatElapsed = (sec) => {
@@ -8,10 +8,15 @@ export const formatElapsed = (sec) => {
     return h ? `${h}:${String(m).padStart(2, '0')}:${r}` : `${m}:${r}`;
 };
 
-// Cabeçalho fixo da execução: nome, conectividade, cronômetro, progresso e modo de visualização.
-const ExecutionHeader = ({ trainingName, isOnline, elapsedTime, completedSetsCount, totalSetsInTraining, progressPercent, viewMode, onChangeViewMode, notifSupported = false, notifEnabled = false, onToggleNotif }) => (
+// Cabeçalho fixo da execução: início (sai sem finalizar; o rascunho fica salvo), nome, conectividade, cronômetro, progresso e modo de visualização.
+const ExecutionHeader = ({ onGoHome, trainingName, isOnline, elapsedTime, completedSetsCount, totalSetsInTraining, progressPercent, viewMode, onChangeViewMode, notifSupported = false, notifEnabled = false, onToggleNotif }) => (
     <div className="fixed top-0 md:top-20 left-0 right-0 bg-white/85 dark:bg-[#0B0F19]/85 backdrop-blur-xl z-40 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shadow-sm">
         <div className="flex justify-between items-center gap-2">
+            {onGoHome && (
+                <button type="button" onClick={onGoHome} aria-label="Ir para o início (o treino continua em andamento)" title="Início (o treino continua salvo)" className="shrink-0 -ml-2 min-h-[44px] min-w-[44px] grid place-items-center rounded-lg text-gray-600 dark:text-gray-300 hover:text-amber-800 dark:hover:text-brand transition-colors">
+                    <Home className="w-5 h-5" aria-hidden="true" />
+                </button>
+            )}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
                     <h2 className="font-bold text-gray-800 dark:text-white text-sm leading-tight truncate">{trainingName}</h2>

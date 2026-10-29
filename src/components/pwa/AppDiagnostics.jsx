@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import toast from 'react-hot-toast';
 import { lastPushError, nativeFcmToken, nativeNotificationPermission, pushEnabled, retryNativeFcm, sendTestPush } from '../../services/pushService';
 import { stopWorkoutTimer, updateWorkoutTimer } from '../../services/workoutTimerNative';
+import { btnGhost } from '../coach/styles';
 
 const Row = ({ label, ok, value }) => (
   <li className="flex items-start justify-between gap-3 py-1.5 text-sm">
@@ -10,7 +11,7 @@ const Row = ({ label, ok, value }) => (
     <span className={`text-right font-bold ${ok === undefined ? 'text-gray-900 dark:text-white' : ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>{value}</span>
   </li>
 );
-const btn = 'min-h-[44px] rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-800 disabled:opacity-50 dark:border-white/10 dark:text-white';
+const btn = `${btnGhost} px-3 text-center disabled:cursor-not-allowed disabled:opacity-50`;
 
 // Diagnóstico dos avisos no app Android: mostra o que está ativo e testa a notificação do treino e o aviso pelo servidor.
 export default function AppDiagnostics() {
@@ -49,16 +50,16 @@ export default function AppDiagnostics() {
 
   if (!info) return null;
   return (
-    <section aria-labelledby="diag-title" className="mt-4 rounded-2xl border border-dashed border-gray-300 p-4 dark:border-white/15">
-      <h3 id="diag-title" className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Diagnóstico do app</h3>
-      <ul className="mt-2 divide-y divide-gray-100 dark:divide-white/5">
+    <section aria-labelledby="diag-title" className="mt-4 rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
+      <h3 id="diag-title" className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Diagnóstico do app</h3>
+      <ul className="mt-2 divide-y divide-gray-200/70 dark:divide-white/5">
         <Row label="Permissão de notificação" ok={info.perm === 'granted'} value={info.perm === 'granted' ? 'permitida' : info.perm} />
         <Row label="Notificação do treino (nativa)" ok={info.timer} value={info.timer ? 'disponível' : 'ausente'} />
         <Row label="Avisos do servidor (FCM)" ok={info.push && info.fcm} value={!info.push ? 'ausente' : info.fcm ? 'cadastrado' : info.on ? 'não cadastrado' : 'desligado'} />
         <Row label="Login Google nativo" ok={info.google} value={info.google ? 'disponível' : 'ausente'} />
       </ul>
       {info.err && <p className="mt-2 break-words text-xs text-rose-700 dark:text-rose-400">Último erro: {info.err}</p>}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
         <button type="button" onClick={testTimer} disabled={!!busy || !info.timer} className={btn}>{busy === 'timer' ? 'Testando…' : 'Testar notificação do treino'}</button>
         <button type="button" onClick={testServer} disabled={!!busy || !info.push} className={btn}>{busy === 'server' ? 'Enviando…' : 'Testar aviso do servidor'}</button>
       </div>

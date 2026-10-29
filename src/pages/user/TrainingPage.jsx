@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { fromMyTrainingId, isMyTrainingId } from '../../services/myWorkouts';
 import { exerciseKind, prescriptionLabel } from '../../utils/exerciseKind';
 import { isSafePhoto } from '../../utils/imageAttach';
-import { planSummary } from '../../utils/setTypes';
+import { comboLabel, planSummary, supersetRole } from '../../utils/setTypes';
 import { Dumbbell, Flame, Scale, ClipboardList, Wrench } from 'lucide-react';
 import { formatDate, formatTonnage } from '../../utils/format';
 
@@ -276,6 +276,7 @@ export default function TrainingPage() {
             {exerciseList.map((exercise, index) => {
                 const isSelected = selectedExercises[index];
                 const lastLoad = historyMap[exercise.name];
+                const comboSize = supersetRole(exerciseList, index)?.size || 0;
 
                 return (
                     <div 
@@ -330,7 +331,7 @@ export default function TrainingPage() {
                                     {prescriptionLabel(exercise)}
                                 </span>
                                 {planSummary(exercise.setTypes) && <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">{planSummary(exercise.setTypes)}</span>}
-                                {exercise.superset && <span className="text-[10px] font-bold text-sky-800 dark:text-sky-200 bg-sky-100 dark:bg-sky-500/20 px-1.5 py-0.5 rounded">Superset {exercise.superset}</span>}
+                                {comboSize > 0 && <span className="text-[10px] font-bold text-sky-800 dark:text-sky-200 bg-sky-100 dark:bg-sky-500/20 px-1.5 py-0.5 rounded">{comboLabel(comboSize)} {exercise.superset}</span>}
                                 {lastLoad && (
                                     <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-800/30">
                                         {lastLoad}kg

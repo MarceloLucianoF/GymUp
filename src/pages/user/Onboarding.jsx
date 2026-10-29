@@ -9,11 +9,11 @@ import {
   TOTAL_STEPS, LIMITS, bmiCategory,
 } from '../../utils/onboarding';
 
-const GOAL_OPTIONS = [
-  { value: 'Hipertrofia', label: 'Hipertrofia', hint: 'Ganhar massa muscular', icon: Dumbbell },
-  { value: 'Emagrecimento', label: 'Emagrecimento', hint: 'Perder gordura', icon: Flame },
-  { value: 'Força', label: 'Força', hint: 'Levantar mais pesado', icon: Zap },
-  { value: 'Resistência', label: 'Resistência', hint: 'Mais fôlego e disposição', icon: Wind },
+export const GOAL_OPTIONS = [
+  { value: 'Hipertrofia', label: 'Hipertrofia', hint: 'Aumentar a massa muscular, com volume de treino moderado a alto e repetições intermediárias', icon: Dumbbell },
+  { value: 'Emagrecimento', label: 'Emagrecimento', hint: 'Reduzir a gordura corporal preservando a massa muscular, com treino resistido e maior gasto calórico', icon: Flame },
+  { value: 'Força', label: 'Força', hint: 'Ganhar força máxima nos exercícios principais, com cargas altas e poucas repetições', icon: Zap },
+  { value: 'Resistência', label: 'Resistência', hint: 'Melhorar o condicionamento e a resistência muscular, com mais repetições e descansos curtos', icon: Wind },
 ];
 const LEVEL_OPTIONS = [
   { value: 'iniciante', label: 'Iniciante', hint: 'Menos de 6 meses de treino' },
@@ -111,7 +111,8 @@ function Step({ step, data, setField, bmi, plan, coachError, onContinueWithoutCo
             <p className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white"><Flame aria-hidden="true" className="w-5 h-5 text-brand" /> {plan.days} dias por semana</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Divisão:</strong> {plan.split}</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Foco ({data.goal}):</strong> {plan.focus}</p>
-            {plan.adjusted && <p className="text-xs text-gray-600 dark:text-gray-400">Ajustamos a frequência ao seu nível para uma progressão segura.</p>}
+            {plan.adjusted && <p className="text-xs text-gray-600 dark:text-gray-400">Ajustamos a frequência para ficar entre 2 e 7 treinos por semana.</p>}
+            {plan.note && <p className="text-xs text-gray-600 dark:text-gray-400">{plan.note}</p>}
             <p className="italic text-gray-800 dark:text-gray-100">“{plan.quote}”</p>
           </div>
           <div>

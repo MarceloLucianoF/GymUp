@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Onboarding from './Onboarding';
+import Onboarding, { GOAL_OPTIONS } from './Onboarding';
 
 const mockUpdateDoc = jest.fn();
 jest.mock('firebase/firestore', () => ({ doc: jest.fn(() => 'ref'), updateDoc: (...a) => mockUpdateDoc(...a) }));
@@ -46,5 +46,14 @@ describe('Onboarding', () => {
     expect(payload).toMatchObject({ goal: 'Força', age: 30, weight: 70, height: 175, experience: 'intermediario', weeklyGoal: 5 });
     expect(payload).not.toHaveProperty('coachId');
     expect(localStorage.getItem('academyup:weeklyGoal:u1')).toBe('5');
+  });
+
+  test('objetivos com descrição profissional (sem tom de brincadeira)', () => {
+    const forca = GOAL_OPTIONS.find((g) => g.value === 'Força');
+    expect(forca.hint).toBe('Ganhar força máxima nos exercícios principais, com cargas altas e poucas repetições');
+    GOAL_OPTIONS.forEach((g) => {
+      expect(g.hint.length).toBeGreaterThan(40);
+      expect(g.hint).not.toMatch(/levantar mais|pesado/i);
+    });
   });
 });

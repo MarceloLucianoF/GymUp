@@ -8,11 +8,13 @@ import { MY_EXERCISE_GROUPS, deleteMyExercise, listMyExercises, saveMyExercise, 
 import { EQUIPMENT, EQUIPMENT_LABELS } from '../../utils/equipment';
 import { KIND_LABELS, defaultsForKind, prescriptionLabel, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { ImageError, isSafePhoto, IMAGE_LIMITS, prepareImage } from '../../utils/imageAttach';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 const EMPTY = { name: '', kind: 'strength', muscleGroup: 'peito', equipment: 'livre', ...defaultsForKind('strength'), note: '', photo: null };
 const groupLabel = (g) => (MY_EXERCISE_GROUPS.find(([k]) => k === g) || [g, g])[1];
 
 function ExerciseForm({ initial, onSave, onClose, busy }) {
+  useBodyScrollLock();
   const [f, setF] = useState(initial);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const kind = f.kind;

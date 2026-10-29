@@ -667,14 +667,31 @@ service cloud.firestore {
             && get(friendPath(request.auth.uid, profileId)).data.blockedBy != request.auth.uid)
           && (resource.data.discoverable == true
             || (exists(friendPath(request.auth.uid, profileId)) && get(friendPath(request.auth.uid, profileId)).data.status in ['active', 'pending']))));
-      // Sem listagem para usuários: a busca por nome não existe (as regras não filtram bloqueios em listas). Só get por @usuário/código.
-      allow list: if isAdmin();
+      allow list: if isAdmin();   // a busca por nome usa profileSearch (só nome e @), nunca o perfil completo
       allow create: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)
         && claims(profileId, request.resource.data);
       allow update: if signedIn() && request.auth.uid == profileId && publicProfileShape(request.resource.data, profileId)
         && request.resource.data.friendCode == resource.data.friendCode
         && (request.resource.data.handle == resource.data.handle || claims(profileId, request.resource.data));
       allow delete: if signedIn() && request.auth.uid == profileId;
+    }
+
+    // Índice de busca por nome/@: só nome, @ e uid de quem escolheu ser encontrado (sem código de amigo nem preferências).
+    // Escrito junto com o perfil público (mesmo lote) e só existe enquanto discoverable == true. Listas não consultam bloqueios
+    // por documento: o app esconde quem bloqueou/foi bloqueado; o pedido de amizade continua barrado pelas regras de friendships.
+    match /profileSearch/{profileId} {
+      allow get: if false;
+      allow list: if signedIn() && request.query.limit is int && request.query.limit <= 10;
+      allow create, update: if signedIn() && request.auth.uid == profileId
+        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'displayNameLower', 'handle'])
+        && request.resource.data.uid == profileId
+        && request.resource.data.displayName is string && request.resource.data.displayName.size() > 0 && request.resource.data.displayName.size() <= 60
+        && request.resource.data.displayNameLower is string && request.resource.data.displayNameLower.size() <= 60
+        && request.resource.data.handle is string && request.resource.data.handle.matches('^[a-z0-9_]{3,20}$')
+        && existsAfter(profilePath(profileId))
+        && getAfter(profilePath(profileId)).data.discoverable == true
+        && getAfter(profilePath(profileId)).data.handle == request.resource.data.handle;
+      allow delete: if signedIn() && (request.auth.uid == profileId || isAdmin());
     }
 
     match /handles/{handle} {

@@ -54,3 +54,22 @@ test('semana sem nenhum dia possível mostra o aviso e não abre resultado', asy
   await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Peito e Tríceps: Poucos exercícios com os seus equipamentos.'));
   expect(screen.queryByText(/Sua semana/)).toBeNull();
 });
+
+test('aceita a meta de 5, 6 e 7 dias do perfil e oferece todos os botões (backlog 28/10, itens 2 e 17)', () => {
+  const { rerender } = render(<WeekPlanTab user={{ uid: 'u1' }} userProfile={{ ...profile, weeklyGoal: 5 }} />);
+  expect(screen.getByRole('button', { name: '5', pressed: true })).toBeInTheDocument();
+  ['2', '3', '4', '5', '6', '7'].forEach((n) => expect(screen.getByRole('button', { name: n })).toBeInTheDocument());
+  rerender(<WeekPlanTab user={{ uid: 'u1' }} userProfile={{ ...profile, weeklyGoal: 7 }} />);
+  expect(screen.getByRole('button', { name: '7', pressed: true })).toBeInTheDocument();
+  expect(screen.getByText(/6 treinos e 1 dia de alongamento/)).toBeInTheDocument();
+});
+
+test('perfil que chega depois de abrir a aba atualiza os dias (sem perder a escolha manual)', () => {
+  const { rerender } = render(<WeekPlanTab user={{ uid: 'u1' }} userProfile={null} />);
+  expect(screen.getByRole('button', { name: '3', pressed: true })).toBeInTheDocument();
+  rerender(<WeekPlanTab user={{ uid: 'u1' }} userProfile={{ ...profile, weeklyGoal: 5 }} />);
+  expect(screen.getByRole('button', { name: '5', pressed: true })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '4' }));
+  rerender(<WeekPlanTab user={{ uid: 'u1' }} userProfile={{ ...profile, weeklyGoal: 6 }} />);
+  expect(screen.getByRole('button', { name: '4', pressed: true })).toBeInTheDocument();
+});

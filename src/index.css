@@ -223,3 +223,11 @@ input[type='range'].range-brand:focus-visible { box-shadow: 0 0 0 3px rgba(255, 
 /* O selo do reCAPTCHA (canto inferior direito) cobria o botão Enviar do chat. Escondido, com o aviso exigido pelo Google
    nas telas de entrada e na Política de Privacidade. */
 .grecaptcha-badge { visibility: hidden !important; }
+
+/* Modais, wizards e painéis: a rolagem chegando ao fim não "vaza" para a página de trás (junto com useBodyScrollLock). */
+[aria-modal="true"],
+[aria-modal="true"] .overflow-y-auto,
+[aria-modal="true"] .overflow-auto,
+[role="dialog"] .overflow-y-auto {
+  overscroll-behavior: contain;
+}

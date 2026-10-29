@@ -7,12 +7,15 @@ import { MessageSquare, X } from 'lucide-react';
 import ChatMessages from './ChatMessages';
 import ChatComposer from './ChatComposer';
 import { getPublicCoach } from '../../services/coachProfile';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 export default function StudentChatWidget() {
     const { user } = useAuthContext();
     const { messages, sendMessage, openChatWithUser } = useChat(user);
     
     const [isOpen, setIsOpen] = useState(false);
+    // No celular o chat cobre a tela: trava o fundo. No computador é um painel lateral e a página continua rolando.
+    useBodyScrollLock(isOpen && typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 767px)').matches);
     const [coach, setCoach] = useState(null);
 
     // 1. Buscar Coach e Inicializar Conversa

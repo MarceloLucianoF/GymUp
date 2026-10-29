@@ -8,8 +8,10 @@ import { askWorkoutImport } from '../../services/aiService';
 import { saveMyWorkout, updateMyWorkout } from '../../services/myWorkouts';
 import { myExerciseToLibrary } from '../../services/myExercises';
 import { ImageError, isSafePhoto, prepareImage } from '../../utils/imageAttach';
+import { buildWarmupStretch, startsWithWarmup } from '../../utils/stretchWorkout';
 import { KIND_LABELS, cardioMinutes, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, mergeImported, parseImportedWorkout, parseLocalSection, splitWorkoutSections, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
+import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -35,6 +37,7 @@ const fromSaved = (ex) => {
 };
 
 export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRARY, myExercises = [], editing = null, onSaved }) {
+  useBodyScrollLock(isOpen);
   const [step, setStep] = useState('choose');
   const [sections, setSections] = useState([]);   // PDF com vários treinos (A, B, C)
   const [sectionNote, setSectionNote] = useState('');
@@ -66,9 +69,12 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     const q = plain(query).trim();
     if (q.length < 2) return [];
     const hit = (e) => plain(e.name).includes(q);
-    return [...mineAsLibrary.filter(hit), ...library.filter(hit)].slice(0, 7);
+    // Nome que começa com o termo vem antes; até 20 sugestões (com 7, "Alongamento" só mostrava os antigos)
+    const starts = (e) => (plain(e.name).startsWith(q) ? 0 : 1);
+    return [...mineAsLibrary.filter(hit), ...[...library.filter(hit)].sort((a, b) => starts(a) - starts(b))].slice(0, 20);
   }, [query, library, mineAsLibrary]);
 
+  const warmup = useMemo(() => buildWarmupStretch(library), [library]);
   if (!isOpen) return null;
 
   const reset = () => { setSections([]); setReviewing(null); setStep('choose'); setName(''); setItems([]); setWarnings([]); setQuery(''); setSource('manual'); setPhoto(null); setBusy(''); };
@@ -170,6 +176,9 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
   const patch = (key, changes) => setItems((list) => list.map((it) => (it.key === key ? { ...it, ...changes } : it)));
   const move = (index, delta) => setItems((l) => { const j = index + delta; if (j < 0 || j >= l.length) return l; const next = [...l]; [next[index], next[j]] = [next[j], next[index]]; return next; });
   const addFromLibrary = (ex) => { setItems((l) => [...l, blank(ex.name, ex)]); setQuery(''); };
+  // Alongamento geral antes do treino: insere no início a sequência curta da biblioteca (por tempo), uma vez só.
+  const hasWarmup = startsWithWarmup(items.map((it) => it.name), warmup);
+  const addWarmup = () => { if (hasWarmup || warmup.length === 0) return; setItems((l) => [...warmup.map((ex) => ({ ...blank(ex.name, ex), sets: String(ex.sets), reps: String(ex.reps), rest: ex.rest })), ...l]); };
   const addFree = () => { const n = query.trim().slice(0, IMPORT_LIMITS.maxName); if (n.length < 2) return; setItems((l) => [...l, blank(n, matchLibrary(n, [...mineAsLibrary, ...library]))]); setQuery(''); };
 
   const save = async () => {
@@ -324,11 +333,16 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
                 <button type="button" onClick={addFree} disabled={query.trim().length < 2} aria-label="Adicionar o que digitei" className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-black disabled:opacity-40"><Plus className="h-5 w-5" aria-hidden="true" /></button>
               </div>
               {suggestions.length > 0 && (
-                <ul className="mt-2 space-y-1">
+                <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto overscroll-contain">
                   {suggestions.map((s) => <li key={s.id}><button type="button" onClick={() => addFromLibrary(s)} className="flex w-full items-center justify-between rounded-xl bg-gray-100 p-3 text-left text-sm font-bold dark:bg-white/10">{s.name}{s.mine && <span className="ml-2 rounded-full bg-brand/20 px-2 py-0.5 text-[11px] text-amber-800 dark:text-brand">meu</span>}</button></li>)}
                 </ul>
               )}
             </div>
+            {warmup.length > 0 && (
+              <button type="button" onClick={addWarmup} disabled={hasWarmup} className="min-h-[44px] w-full rounded-2xl bg-gray-100 px-4 text-sm font-bold disabled:opacity-50 dark:bg-white/10">
+                {hasWarmup ? 'Alongamento geral já está no início' : `Adicionar alongamento geral antes do treino (${warmup.length} exercícios)`}
+              </button>
+            )}
             <div className="flex gap-2">
               <button type="button" onClick={editing ? close : reset} disabled={!!busy} className="min-h-[48px] flex-1 rounded-2xl bg-gray-100 font-bold dark:bg-white/10">{editing ? 'Cancelar' : 'Voltar'}</button>
               <button type="button" onClick={save} disabled={!!busy || items.length === 0} className="btn-primary-gradient min-h-[48px] flex-[2] font-black disabled:opacity-50">{busy || (editing ? 'Salvar alterações' : 'Salvar em Meus treinos')}</button>

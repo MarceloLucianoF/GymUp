@@ -1,4 +1,5 @@
 // Funções puras do onboarding (validação, IMC, plano sugerido).
+import { splitSummary } from './weekPlan';
 export const GOALS = ['Hipertrofia', 'Emagrecimento', 'Força', 'Resistência'];
 export const LEVELS = ['iniciante', 'intermediario', 'avancado'];
 export const LIMITS = {
@@ -96,15 +97,19 @@ const QUOTES = {
 };
 
 export function suggestPlan({ goal, experience, weeklyGoal }) {
+  // Respeita os dias que a pessoa escolheu (2 a 7). Antes o iniciante era cortado para 4 e o plano dizia "4 dias por semana"
+  // mesmo com 5 ou 6 escolhidos. A divisão é a mesma que a Semana pela IA monta.
   const [min, max] = LIMITS.weeklyGoal;
   let days = Math.round(Number(weeklyGoal));
   if (!Number.isFinite(days)) days = 3;
-  const cap = experience === 'iniciante' ? 4 : 6;
-  days = Math.min(Math.max(days, min), Math.min(max, cap));
-  const split = days <= 3 ? 'Full body' : days <= 5 ? 'Divisão superior/inferior ou ABC' : 'Divisão ABCD+';
+  days = Math.min(Math.max(days, min), max);
+  const note = experience === 'iniciante' && days >= 5
+    ? 'Começando com muitos dias: cada grupo muscular treina uma vez por semana, com descanso entre eles. Mantenha cargas leves nas primeiras semanas.'
+    : '';
   return {
     days,
-    split,
+    split: splitSummary(days, experience),
+    note,
     focus: FOCUS[goal] || 'Treino equilibrado para todo o corpo',
     quote: QUOTES[goal] || 'O primeiro treino é o mais importante.',
     adjusted: days !== Math.round(Number(weeklyGoal)),

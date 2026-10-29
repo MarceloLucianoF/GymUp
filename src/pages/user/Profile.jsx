@@ -15,6 +15,8 @@ import { Download, Trash2, ArrowLeft, AlertTriangle, User, Camera, Save, CheckCi
 import MyCoachCard from '../../components/coach/MyCoachCard';
 import NotificationSettings from '../../components/pwa/NotificationSettings';
 import DeleteAccountModal from '../../components/account/DeleteAccountModal';
+import { SwitchControl } from '../../components/ui/Switch';
+import { btnDanger, btnGhost, btnPrimary } from '../../components/coach/styles';
 
 export default function Profile() {
   const { confirm, dialog } = useConfirm();
@@ -277,7 +279,7 @@ export default function Profile() {
                             >
                                 <option value="Hipertrofia">Hipertrofia</option>
                                 <option value="Emagrecimento">Emagrecimento</option>
-                                <option value="Força">Força Pura</option>
+                                <option value="Força">Força</option>
                                 <option value="Resistência">Resistência</option>
                             </select>
                         </div>
@@ -385,23 +387,9 @@ export default function Profile() {
                                     {theme === 'dark' ? 'Identidade principal para uso no celular' : 'Visual claro alternativo'}
                                 </p>
                             </div>
-                            <button aria-label="Alternar tema"
-                                type="button"
-                                onClick={toggleTheme}
-                                role="switch" aria-checked={theme === 'dark'}
-                                className={`relative inline-flex h-8 w-14 before:absolute before:-inset-2 before:content-[''] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                                    theme === 'dark' ? 'bg-brand' : 'bg-gray-300'
-                                }`}
-                                title="Alternar entre modo escuro e claro"
-                            >
-                                <span
-                                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-black dark:bg-white shadow-lg ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
-                                        theme === 'dark' ? 'translate-x-6' : 'translate-x-0'
-                                    }`}
-                                >
-                                    {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-brand" /> : <Sun className="w-3.5 h-3.5 text-amber-800 dark:text-amber-400" />}
-                                </span>
-                            </button>
+                            <SwitchControl label="Alternar tema" checked={theme === 'dark'} onChange={toggleTheme}>
+                                {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-amber-600" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
+                            </SwitchControl>
                         </div>
                     </div>
 
@@ -409,20 +397,16 @@ export default function Profile() {
                         <button 
                             type="submit" 
                             disabled={!isDirty}
-                            className={`w-full min-h-[56px] font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
-                                isDirty 
-                                ? 'bg-gradient-to-r from-brand to-[#FF9800] hover:from-brand hover:to-brand-dark text-black shadow-lg shadow-brand/20 hover:shadow-[0_0_20px_rgba(255,193,7,0.35)]' 
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 cursor-not-allowed shadow-none'
-                            }`}
+                            className={`${btnPrimary} w-full min-h-[56px] text-base disabled:bg-none disabled:bg-gray-200 disabled:text-gray-600 disabled:opacity-100 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-gray-400`}
                         >
                             {isDirty ? (
                                 <><Save className="w-5 h-5 text-black" /> Salvar Alterações</>
                             ) : (
-                                <><CheckCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" /> Tudo atualizado</>
+                                <><CheckCircle className="w-5 h-5" /> Tudo atualizado</>
                             )}
                         </button>
                         
-                        <button type="button" onClick={handleLogout} className="w-full min-h-[52px] bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                        <button type="button" onClick={handleLogout} className={`${btnDanger} w-full min-h-[52px]`}>
                             <LogOut className="w-4 h-4" /> Sair da Conta
                         </button>
                     </div>
@@ -434,7 +418,7 @@ export default function Profile() {
         <NotificationSettings uid={user.uid} />
 
         {/* SEUS DADOS (LGPD) */}
-        <section aria-labelledby="seus-dados-title" className="mt-6 rounded-3xl bg-white dark:bg-white/5 p-5 shadow-sm">
+        <section aria-labelledby="seus-dados-title" className="surface mt-6 p-5">
           <h2 id="seus-dados-title" className="text-base font-bold text-gray-800 dark:text-white">Seus dados</h2>
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
             Baixe uma cópia do seu perfil, treinos concluídos e medidas, ou peça a exclusão da conta. Veja a{' '}
@@ -442,17 +426,17 @@ export default function Profile() {
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <button type="button" onClick={handleExport} disabled={exporting} aria-busy={exporting}
-              className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-bold text-white disabled:opacity-60 dark:bg-white dark:text-black">
+              className={`${btnGhost} min-h-[48px] flex-1 disabled:opacity-60`}>
               <Download className="h-4 w-4" aria-hidden="true" /> {exporting ? 'Gerando...' : 'Exportar meus dados (JSON)'}
             </button>
             {userProfile?.role === 'user' ? (
               <button type="button" onClick={() => setShowDelete(true)}
-                className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl border border-red-300 px-4 text-sm font-bold text-red-700 dark:border-red-400/40 dark:text-red-300">
+                className={`${btnDanger} min-h-[48px] flex-1`}>
                 <Trash2 className="h-4 w-4" aria-hidden="true" /> Excluir minha conta
               </button>
             ) : (
               <a href={deletionMailto(user)}
-                className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl border border-red-300 px-4 text-sm font-bold text-red-700 dark:border-red-400/40 dark:text-red-300">
+                className={`${btnDanger} min-h-[48px] flex-1`}>
                 <Trash2 className="h-4 w-4" aria-hidden="true" /> Solicitar exclusão
               </a>
             )}

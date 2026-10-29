@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteField, doc, getDoc, getDocs, query, setDoc, Timestamp, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteField, doc, endAt, getDoc, getDocs, limit, orderBy, query, setDoc, startAt, Timestamp, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { consistency, publicStatsOf, rankRows } from '../utils/consistency';
 
@@ -60,6 +60,9 @@ export async function saveSocialProfile(user, input, existing) {
     friendCode = newFriendCode();
     batch.set(doc(db, 'friendCodes', friendCode), { uid: user.uid });
   }
+  // Índice de busca: só nome e @, e só enquanto a pessoa quer ser encontrada (as regras conferem no mesmo lote).
+  if (input.discoverable) batch.set(doc(db, 'profileSearch', user.uid), { uid: user.uid, displayName, displayNameLower: lowerName(displayName), handle });
+  else if (existing?.discoverable) batch.delete(doc(db, 'profileSearch', user.uid));
   batch.set(doc(db, 'publicProfiles', user.uid), {
     uid: user.uid,
     displayName,
@@ -77,7 +80,7 @@ export async function saveSocialProfile(user, input, existing) {
   if (existing && existing.shareRanking !== !!input.shareRanking) log(user.uid, input.shareRanking ? 'entrar-ranking' : 'sair-ranking');
 }
 
-// ---- busca (só por @usuário ou código: a busca por nome fica para quando o servidor puder filtrar bloqueios) ----
+// ---- busca: @usuário ou código exatos, e prefixo do nome/@ entre quem escolheu ser encontrado ----
 /** Busca por @usuário ou por código de amigo (8 caracteres). Devolve o perfil, ou só o uid se o perfil for privado. */
 export async function findByHandleOrCode(raw) {
   const text = String(raw || '').trim();
@@ -95,6 +98,33 @@ export async function findByHandleOrCode(raw) {
   if (!uid) return null;
   try { return (await getSocialProfile(uid)) || { uid, displayName: 'Usuário', handle: '' }; }
   catch (_) { return { uid, displayName: 'Usuário', handle: foundBy === 'handle' ? handle : '', restricted: true }; }
+}
+
+export const SEARCH_LIMIT = 10;   // as regras aceitam até 10 por consulta
+export const SEARCH_MIN = 2;
+
+/**
+ * Busca por prefixo do nome ("marc" acha "Marcelo") e do @usuário, só entre perfis com discoverable == true (as regras
+ * exigem esse filtro e limite <= 20). As regras não conseguem filtrar bloqueios numa lista: aqui some quem bloqueou o
+ * usuário ou foi bloqueado por ele (pela amizade do par), e o próprio usuário.
+ */
+export async function searchProfiles(raw, { uid, friendships } = {}) {
+  const text = String(raw || '').trim();
+  const name = lowerName(text.replace(/^@/, '')).slice(0, 60);
+  const handle = normalizeHandle(text);
+  if (name.length < SEARCH_MIN) return [];
+  const col = collection(db, 'profileSearch');   // só nome, @ e uid de quem quer ser encontrado
+  const prefix = (field, value) => query(col, orderBy(field), startAt(value), endAt(`${value}\uf8ff`), limit(SEARCH_LIMIT));
+  const queries = [];
+  if (!text.startsWith('@')) queries.push(prefix('displayNameLower', name));
+  if (/^[a-z0-9_]{2,20}$/.test(handle)) queries.push(prefix('handle', handle));
+  const settled = await Promise.allSettled(queries.map((q) => getDocs(q)));
+  if (settled.every((r) => r.status === 'rejected')) throw settled[0].reason;
+  const byUid = new Map();
+  settled.forEach((r) => { if (r.status === 'fulfilled') r.value.docs.forEach((d) => { if (!byUid.has(d.id)) byUid.set(d.id, { ...d.data(), uid: d.id }); }); });
+  const pairs = friendships || (uid ? await listFriendships(uid) : []);
+  const hidden = new Set(pairs.filter((f) => f.status === 'blocked').map((f) => otherOf(f, uid)));
+  return [...byUid.values()].filter((p) => p.uid !== uid && !hidden.has(p.uid)).slice(0, SEARCH_LIMIT);
 }
 
 // ---- amizades ----

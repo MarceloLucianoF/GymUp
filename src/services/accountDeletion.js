@@ -150,6 +150,7 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
       const profile = await deps.getDoc(deps.doc(deps.db, 'publicProfiles', uid));
       if (profile?.exists?.()) {
         const data = profile.data() || {};
+        await tryDelete(deps.doc(deps.db, 'profileSearch', uid));   // índice da busca por nome
         await tryDelete(deps.doc(deps.db, 'publicProfiles', uid));
         if (data.handle) await tryDelete(deps.doc(deps.db, 'handles', data.handle));
         if (data.friendCode) await tryDelete(deps.doc(deps.db, 'friendCodes', data.friendCode));

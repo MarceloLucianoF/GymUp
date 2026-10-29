@@ -1,6 +1,6 @@
 // Texto de um treino para compartilhar (WhatsApp, mensagem, anotações). Só texto: nada de foto, link ou dado pessoal.
 import { prescriptionLabel } from './exerciseKind';
-import { planSummary } from './setTypes';
+import { comboLabel, planSummary } from './setTypes';
 
 export function workoutShareText(workout) {
   const lines = [`Treino: ${workout?.name || 'Meu treino'}`];
@@ -11,7 +11,7 @@ export function workoutShareText(workout) {
     const group = ex.superset;
     const members = group ? exs.slice(i).filter((e, k, arr) => e.superset === group && arr.slice(0, k).every((x) => x.superset === group)) : [ex];
     if (group && members.length > 1) {
-      lines.push(`Superset ${group}:`);
+      lines.push(`${comboLabel(members.length)} ${group}:`);
       members.forEach((m) => lines.push(`  ${exLine(m)}`));
       i += members.length;
     } else { lines.push(exLine(ex)); i += 1; }

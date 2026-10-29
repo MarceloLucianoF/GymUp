@@ -295,7 +295,7 @@ export default function TrainingExecutionPage() {
             // Superset: sem descanso até o último exercício do grupo; depois descansa e volta ao primeiro.
             const action = afterSetAction(training.exercises, exIndex, setIndex, totalSets);
             if (!action.rest) {
-                toast(`Sem descanso: agora ${training.exercises[action.goTo]?.name || 'o próximo exercício do superset'}.`, { duration: 2500 });
+                toast(`Sem descanso: agora ${training.exercises[action.goTo]?.name || 'o próximo exercício do grupo'}.`, { duration: 2500 });
                 if (viewMode === 'focus' && action.goTo != null) setActiveExerciseIndex(action.goTo);
                 return;
             }
@@ -558,6 +558,7 @@ export default function TrainingExecutionPage() {
         });
         return () => { off(); stopWorkoutTimer(); };   // sair do treino (ou desligar) tira a notificação
     }, [nativeApp, notifEnabled]);
+    const goHome = () => { toast('Treino salvo. Para voltar, toque em Continuar no início.', { id: 'workout-left-toast' }); navigate('/dashboard'); };
     const setNotif = async (on) => {
         if (nativeApp) {
             try { window.localStorage.setItem('bt_workout_notif', on ? '1' : '0'); } catch (e) { /* sem storage */ }
@@ -641,6 +642,7 @@ export default function TrainingExecutionPage() {
             />
 
             <ExecutionHeader
+                onGoHome={goHome}
                 trainingName={training.name}
                 isOnline={isOnline}
                 elapsedTime={elapsedTime}
@@ -716,6 +718,7 @@ export default function TrainingExecutionPage() {
                     onFinish={() => { setRestTimerObj(null); alertRestOver(); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
                     onClose={() => setRestTimerObj(null)} 
                     onAdjust={(ms) => setRestTimerObj(prev => prev ? ({ ...prev, endTime: prev.endTime + ms }) : null)}
+                    onGoHome={goHome}
                 />
             )}
 
