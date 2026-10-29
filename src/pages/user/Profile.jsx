@@ -277,7 +277,7 @@ export default function Profile() {
                             >
                                 <option value="Hipertrofia">Hipertrofia</option>
                                 <option value="Emagrecimento">Emagrecimento</option>
-                                <option value="Força">Força Pura</option>
+                                <option value="Força">Força</option>
                                 <option value="Resistência">Resistência</option>
                             </select>
                         </div>

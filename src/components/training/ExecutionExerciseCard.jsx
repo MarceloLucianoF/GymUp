@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote, Repeat2 } from 'lucide-react';
 import SetRow from './SetRow';
 import { cardioMinutes, exerciseKind, prescriptionLabel, timedSeconds } from '../../utils/exerciseKind';
-import { isSetType } from '../../utils/setTypes';
+import { comboLabel, isSetType } from '../../utils/setTypes';
 import { dropLoad, fmtKg, suggestNext } from '../../utils/progression';
 import { getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
 
@@ -115,7 +115,7 @@ const ExecutionExerciseCard = ({
 
             {superset && (
                 <div className="bg-sky-100 dark:bg-sky-500/15 px-4 py-2.5 text-xs font-bold text-sky-900 dark:text-sky-200" role="note">
-                    Superset {superset.group}: {superset.last ? `este é o último do grupo; descanse e volte para ${superset.goToName || 'o primeiro'}.` : `faça uma série e vá direto para ${superset.goToName || 'o próximo'}, sem descanso.`}
+                    {comboLabel(superset.size)} {superset.group}: {superset.last ? `este é o último do grupo; descanse e volte para ${superset.goToName || 'o primeiro'}.` : `faça uma série e vá direto para ${superset.goToName || 'o próximo'}, sem descanso.`}
                 </div>
             )}
 

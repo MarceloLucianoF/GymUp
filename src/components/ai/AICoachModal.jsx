@@ -380,10 +380,10 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                       onChange={e => setSelectedGoal(e.target.value)}
                       className={selectCls}
                     >
-                      <option value="Hipertrofia">Hipertrofia (Massa)</option>
-                      <option value="Emagrecimento">Emagrecimento (Definição)</option>
-                      <option value="Força">Força Máxima</option>
-                      <option value="Resistência">Resistência Física</option>
+                      <option value="Hipertrofia">Hipertrofia (massa muscular)</option>
+                      <option value="Emagrecimento">Emagrecimento (perda de gordura)</option>
+                      <option value="Força">Força (cargas altas)</option>
+                      <option value="Resistência">Resistência (condicionamento)</option>
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
                     </div>

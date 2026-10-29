@@ -295,7 +295,7 @@ export default function TrainingExecutionPage() {
             // Superset: sem descanso até o último exercício do grupo; depois descansa e volta ao primeiro.
             const action = afterSetAction(training.exercises, exIndex, setIndex, totalSets);
             if (!action.rest) {
-                toast(`Sem descanso: agora ${training.exercises[action.goTo]?.name || 'o próximo exercício do superset'}.`, { duration: 2500 });
+                toast(`Sem descanso: agora ${training.exercises[action.goTo]?.name || 'o próximo exercício do grupo'}.`, { duration: 2500 });
                 if (viewMode === 'focus' && action.goTo != null) setActiveExerciseIndex(action.goTo);
                 return;
             }
@@ -641,6 +641,7 @@ export default function TrainingExecutionPage() {
             />
 
             <ExecutionHeader
+                onGoHome={() => { toast('Treino salvo. Para voltar, toque em Continuar no início.', { id: 'workout-left-toast' }); navigate('/dashboard'); }}
                 trainingName={training.name}
                 isOnline={isOnline}
                 elapsedTime={elapsedTime}

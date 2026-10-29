@@ -36,7 +36,7 @@ export default function SetPlanEditor({ idBase, sets, types, onTypes, link, onLi
       {canLink && (
         <label className="flex min-h-[40px] cursor-pointer items-center gap-2 font-bold">
           <input type="checkbox" checked={!!link} onChange={(e) => onLink(e.target.checked)} className="h-5 w-5 accent-[#FFC107]" />
-          Superset com o próximo exercício
+          Combinar com o próximo exercício (bi-set, tri-set)
         </label>
       )}
     </div>
