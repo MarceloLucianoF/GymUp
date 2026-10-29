@@ -79,7 +79,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
       const { text: raw, truncatedPages } = await extractPdfText(file);
       const { text, removed } = sanitizeDocumentText(raw);
       if (text.length < 20) throw new ImportError('sem_texto', 'Não encontrei texto útil neste PDF. Monte o treino manualmente.');
-      setBusy('A IA está montando o treino...');
+      setBusy('A IA está montando o treino (pode levar até 1 minuto)...');
       const reply = await askWorkoutImport(buildImportMessages(text));
       const parsed = parseImportedWorkout(reply, library);
       const notes = [...parsed.warnings];
@@ -92,7 +92,8 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
       setSource('pdf');
       setStep('edit');
     } catch (error) {
-      toast.error(error instanceof ImportError ? error.message : 'Não consegui importar agora. Tente de novo ou monte o treino manualmente.');
+      const slow = /504|AbortError|aborted|tempo/i.test(`${error?.name} ${error?.message}`);
+      toast.error(error instanceof ImportError ? error.message : slow ? 'A IA demorou demais para montar o treino. Tente de novo em instantes ou monte o treino manualmente.' : 'Não consegui importar agora. Tente de novo ou monte o treino manualmente.');
     } finally {
       setBusy('');
       if (fileRef.current) fileRef.current.value = '';

@@ -3,6 +3,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
+import { ImageError, prepareImage } from '../../utils/imageAttach';
 import { useConfirm } from '../../hooks/useConfirm';
 import { Link } from 'react-router-dom';
 import { Camera, Scale, TrendingDown, X, Plus, Trash2, LineChart } from 'lucide-react';
@@ -94,19 +95,19 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
     const [preview, setPreview] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    const handleFile = (e) => {
+    // A foto é reduzida no aparelho (sem localização do GPS) em vez de recusar fotos grandes, como as do iPhone.
+    const handleFile = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            if (file.size > 500 * 1024) { // 500KB limit
-                toast.error("Foto muito grande (Max 500KB)");
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPhoto(reader.result);
-                setPreview(reader.result);
-            };
-            reader.readAsDataURL(file);
+        e.target.value = '';
+        if (!file) return;
+        const t = toast.loading('Preparando a foto...');
+        try {
+            const url = await prepareImage(file, 'progress');
+            setPhoto(url);
+            setPreview(url);
+            toast.dismiss(t);
+        } catch (error) {
+            toast.error(error instanceof ImageError ? error.message : 'Não consegui usar esta foto.', { id: t });
         }
     };
 

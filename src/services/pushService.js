@@ -29,21 +29,31 @@ const TOKEN_KEY = 'bt_push_fcm';
 let nativeToken = (() => { try { return localStorage.getItem(TOKEN_KEY); } catch (_) { return null; } })();   // sobrevive a reiniciar o app (logout)
 let tapListener = null;
 const safePath = (url) => (typeof url === 'string' && /^\/(?![/\\])/.test(url) ? url : null);   // só caminhos do próprio app
-async function enableNativePush() {
+const ERR_KEY = 'bt_push_err';
+const saveErr = (msg) => { try { if (msg) localStorage.setItem(ERR_KEY, `${new Date().toLocaleString('pt-BR')} · ${msg}`.slice(0, 300)); else localStorage.removeItem(ERR_KEY); } catch (_) { /* sem storage */ } };
+export const lastPushError = () => { try { return localStorage.getItem(ERR_KEY) || ''; } catch (_) { return ''; } };
+export const nativeFcmToken = () => nativeToken;
+
+/** Pede a permissão de notificação do Android (13+). Devolve 'granted', 'denied' ou 'prompt'. */
+export async function nativeNotificationPermission({ ask = true } = {}) {
   const { PushNotifications } = await import('@capacitor/push-notifications');
   let perm = await PushNotifications.checkPermissions();
-  if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') perm = await PushNotifications.requestPermissions();
-  if (perm.receive !== 'granted') return false;
-  await PushNotifications.createChannel({ id: 'bohtreinar', name: 'Treino e amigos', description: 'Fim do descanso, curtidas e comentários', importance: 5, vibration: true, visibility: 1 }).catch(() => {});
+  if (ask && (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale')) perm = await PushNotifications.requestPermissions();
+  return perm.receive;
+}
+
+/** Cadastra o aparelho no FCM e no Worker (curtidas, comentários). Guarda o motivo se falhar, para o diagnóstico. */
+async function registerFcm() {
+  const { PushNotifications } = await import('@capacitor/push-notifications');
+  await PushNotifications.createChannel({ id: 'bohtreinar', name: 'Treino e amigos', description: 'Curtidas e comentários', importance: 4, vibration: true, visibility: 1 }).catch(() => {});
   const handles = [];
   let timer;
   const token = await new Promise((resolve, reject) => {
     Promise.all([
       PushNotifications.addListener('registration', (t) => resolve(t.value)),
-      PushNotifications.addListener('registrationError', (e) => reject(new Error(e?.error || 'registro')))
-    ]).then((h) => handles.push(...h));
-    PushNotifications.register();
-    timer = setTimeout(() => reject(new Error('tempo')), 15000);
+      PushNotifications.addListener('registrationError', (e) => reject(new Error(`FCM: ${e?.error || 'erro no registro'}`)))
+    ]).then((h) => { handles.push(...h); PushNotifications.register(); });
+    timer = setTimeout(() => reject(new Error('FCM: sem resposta em 20 s')), 20000);
   }).finally(() => { clearTimeout(timer); handles.forEach((h) => h.remove()); });
   // Tocar no aviso abre a tela certa do app (um ouvinte só, mesmo ligando várias vezes).
   if (!tapListener) {
@@ -54,10 +64,25 @@ async function enableNativePush() {
   }
   nativeToken = token;
   try { localStorage.setItem(TOKEN_KEY, token); } catch (_) { /* sem storage */ }
-  await api('subscribe', 'POST', { fcm: token });
+  try { await api('subscribe', 'POST', { fcm: token }); } catch (e) { throw new Error(`servidor: ${e.message}`); }
+}
+
+/** App: liga com a permissão; o cadastro no FCM roda em seguida e não segura a notificação do treino. */
+async function enableNativePush() {
+  const perm = await nativeNotificationPermission();
+  if (perm !== 'granted') { saveErr(`permissão de notificação: ${perm}`); return false; }
   setFlag(true);
+  registerFcm().then(() => saveErr('')).catch((e) => saveErr(e?.message || String(e)));
   return true;
 }
+
+/** Diagnóstico: refaz o cadastro no FCM e devolve o erro (ou ''). */
+export async function retryNativeFcm() {
+  try { await registerFcm(); saveErr(''); return ''; } catch (e) { const m = e?.message || String(e); saveErr(m); return m; }
+}
+
+/** Diagnóstico: pede ao servidor um aviso de teste para os aparelhos desta conta. */
+export const sendTestPush = () => api('test', 'POST', {});
 
 /** Liga os avisos neste aparelho: pede permissão (se precisar), inscreve no serviço de push e registra no Worker. */
 export async function enablePush() {

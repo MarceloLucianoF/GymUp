@@ -26,6 +26,10 @@ const MAX_ATTEMPTS = 8;
 const ATTEMPT_TIMEOUT_MS = 20_000;
 const MAX_TOKENS_CAP = 2400;
 const TOTAL_TIMEOUT_MS = 42_000;
+// Respostas longas (importar uma ficha inteira de PDF, semana pela IA) levam mais de 40 s: prazo maior só para elas.
+const LONG_TOKENS = 2000;
+const LONG_ATTEMPT_TIMEOUT_MS = 55_000;
+const LONG_TOTAL_TIMEOUT_MS = 85_000;
 let lastWorkingModel = null;
 export const resetModelCache = () => { lastWorkingModel = null; };
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant']);
@@ -138,15 +142,18 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
 
   // Cada modelo tem um prazo próprio: um modelo travado não consome o tempo todo e o modo 'auto' passa ao próximo.
   const startedAt = Date.now();
+  const long = maxTokens >= LONG_TOKENS;
+  const attemptMs = long ? LONG_ATTEMPT_TIMEOUT_MS : ATTEMPT_TIMEOUT_MS;
+  const totalMs = long ? LONG_TOTAL_TIMEOUT_MS : TOTAL_TIMEOUT_MS;
   let lastStatus = null;
   try {
     const budgets = new Map();                                  // modelo -> max_tokens reforçado (uma vez)
     for (let index = 0; index < candidates.length; index += 1) {
       const candidate = candidates[index];
-      const remaining = TOTAL_TIMEOUT_MS - (Date.now() - startedAt);
+      const remaining = totalMs - (Date.now() - startedAt);
       if (remaining < 3_000) break;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), Math.min(ATTEMPT_TIMEOUT_MS, remaining));
+      const timer = setTimeout(() => controller.abort(), Math.min(attemptMs, remaining));
       try {
         const upstream = await fetchImpl(NVIDIA_API_URL, {
           method: 'POST',

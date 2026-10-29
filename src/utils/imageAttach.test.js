@@ -15,7 +15,7 @@ test('tipo pela assinatura real do arquivo', () => {
 test('recusa arquivo vazio, grande demais e de tipo falso', () => {
   expect(() => checkImageHeader(file(0), bytes())).toThrow(ImageError);
   expect(() => checkImageHeader(file(9 * 1024 * 1024), bytes(0xff, 0xd8, 0xff))).toThrow(/8 MB/);
-  expect(() => checkImageHeader(file(100), bytes(0x4d, 0x5a))).toThrow(/JPEG, PNG ou WebP/);
+  expect(() => checkImageHeader(file(100), bytes(0x4d, 0x5a))).toThrow(/JPEG, PNG, WebP ou HEIC/);
   expect(() => checkImageHeader(file(100), bytes(0xff, 0xd8, 0xff))).not.toThrow();
 });
 
@@ -55,6 +55,13 @@ describe('prepareImage com canvas simulado', () => {
     await expect(prepareImage(good, 'exercise', fakeEnv([90000]))).rejects.toThrow(/grande demais/);
   });
   test('arquivo com assinatura falsa nem chega ao canvas', async () => {
-    await expect(prepareImage(file(500, [0x4d, 0x5a, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), 'workout', fakeEnv([100]))).rejects.toThrow(/JPEG, PNG ou WebP/);
+    await expect(prepareImage(file(500, [0x4d, 0x5a, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), 'workout', fakeEnv([100]))).rejects.toThrow(/JPEG, PNG, WebP ou HEIC/);
   });
+});
+
+test('reconhece HEIC do iPhone pela assinatura', () => {
+  const { sniffImageType } = require('./imageAttach');
+  const heic = [0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63];   // ....ftypheic
+  expect(sniffImageType(heic)).toBe('heic');
+  expect(sniffImageType([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d])).toBe(null);   // mp4 (isom) não
 });
