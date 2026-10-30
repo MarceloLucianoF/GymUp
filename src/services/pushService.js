@@ -2,6 +2,7 @@
 // com permissão de notificação e service worker. Nada aqui atrapalha o app se falhar: cada chamada devolve false/null.
 import { auth } from '../firebase/config';
 import { isNativeApp } from './nativeApp';
+import { loadPrefs } from '../hooks/useNotifications';
 
 const ENABLED = process.env.REACT_APP_NVIDIA_PROXY === 'true';
 const KEY = 'bt_push_on';
@@ -145,4 +146,55 @@ export function notifyLike(postId) {
 export function notifyComment(postId, commentId) {
   if (!ENABLED) return;
   api('comment', 'POST', { postId, commentId }).catch(() => { /* sem aviso: o comentário já está salvo */ });
+}
+
+// ---- Lembrete de volta ao treino ----
+const INACT_KEY = 'bt_inact_sent';
+const toIso = (v) => {
+  if (!v) return null;
+  const d = v?.seconds ? new Date(v.seconds * 1000) : (v instanceof Date ? v : new Date(v));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
+/**
+ * Agenda no servidor o aviso de 7 (e 14) dias sem treinar a partir do último treino; cada chamada substitui a anterior.
+ * Só com os avisos com o app fechado ligados e a preferência ligada. Nunca lança: devolve true se agendou.
+ */
+export async function scheduleInactivityReminder({ lastWorkoutAt, coachName, loadCoachName } = {}) {
+  try {
+    const uid = auth.currentUser?.uid;
+    const iso = toIso(lastWorkoutAt);
+    if (!uid || !iso || !pushSupported() || !pushEnabled() || loadPrefs(uid).inactivityReminder === false) return false;
+    // loadCoachName (opcional): busca o nome só quando o lembrete vai mesmo ser agendado.
+    let raw = coachName;
+    if (raw === undefined && typeof loadCoachName === 'function') raw = await Promise.resolve().then(loadCoachName).catch(() => '');
+    const name = typeof raw === 'string' ? raw.trim().slice(0, 40) : '';
+    const key = `${uid}|${iso}|${name}`;
+    try { if (localStorage.getItem(INACT_KEY) === key) return true; } catch (_) { /* sem storage */ }   // nada mudou desde o último agendamento
+    await api('inactivity', 'POST', name ? { lastWorkoutAt: iso, coachName: name } : { lastWorkoutAt: iso });
+    try { localStorage.setItem(INACT_KEY, key); } catch (_) { /* sem storage */ }
+    return true;
+  } catch (_) { return false; }
+}
+
+/** Cancela o lembrete de inatividade no servidor (preferência desligada). Nunca lança. */
+export async function cancelInactivityReminder() {
+  try { localStorage.removeItem(INACT_KEY); } catch (_) { /* sem storage */ }
+  try {
+    if (!auth.currentUser || !pushSupported()) return false;
+    await api('inactivity', 'POST', { cancel: true });
+    return true;
+  } catch (_) { return false; }
+}
+
+/** O lembrete do treinador depende do Worker do app (no app Android também). */
+export const nudgeAvailable = () => ENABLED || isNativeApp();
+
+/** Treinador: pede ao Worker para lembrar o aluno parado. Devolve 'sent' | 'no-subscription' | 'rate-limited' | 'error'. */
+export async function nudgeStudent(studentId, days) {
+  try {
+    const r = await api('nudge', 'POST', { studentId, days: Math.max(1, Math.min(365, Math.floor(Number(days) || 0))) });
+    if (r?.sent) return 'sent';
+    return r?.reason === 'rate-limited' || r?.reason === 'no-subscription' ? r.reason : 'error';
+  } catch (_) { return 'error'; }
 }

@@ -43,7 +43,8 @@ import { loadAssignedTraining } from '../../services/academyTrainingSource';
 import { getSocialProfile } from '../../services/socialService';
 import { publishPost } from '../../services/feedService';
 import { buildPostPayload, weekCountOf } from '../../utils/feed';
-import { disablePush, enablePush, pushEnabled, scheduleRestPush } from '../../services/pushService';
+import { disablePush, enablePush, pushEnabled, scheduleInactivityReminder, scheduleRestPush } from '../../services/pushService';
+import { getPublicCoach } from '../../services/coachProfile';
 import { isNativeApp } from '../../services/nativeApp';
 import { onWorkoutTimerAction, stopWorkoutTimer, updateWorkoutTimer } from '../../services/workoutTimerNative';
 import { parseAcademyTrainingId } from '../../utils/academyTrainingId';
@@ -452,6 +453,11 @@ export default function TrainingExecutionPage() {
             }
             // Placar dos desafios em grupo: sobe na hora (antes só ao abrir a aba). Falha aqui não atrapalha o treino.
             if (saved) syncScoresAfterWorkout(user.uid, fetchStudentCheckIns).catch((e) => console.warn('Placar dos desafios não atualizado:', e?.code || e));
+            // Lembrete de volta ao treino: reagenda os avisos de 7/14 dias a partir deste treino (falha silenciosa).
+            if (saved) {
+                const coachId = userProfile?.coachId;
+                scheduleInactivityReminder({ lastWorkoutAt: checkInPayload.date, loadCoachName: coachId ? () => getPublicCoach(coachId).then((c) => c?.displayName || '') : undefined });
+            }
 
             try { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); } catch(e){}
 

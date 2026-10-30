@@ -6,6 +6,7 @@ export const DEFAULT_PREFS = {
   restDone: true,
   reminder: false,
   reminderTime: '18:00',
+  inactivityReminder: true,   // lembrete de volta ao treino (7 dias sem treinar), enviado pelo servidor de avisos
   vibrate: true,
   sound: true,
 };

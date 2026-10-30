@@ -27,9 +27,12 @@ import { endStudentLink } from '../../services/coachLinkService';
 import { getCoachShare, shareCovers } from '../../services/coachShare';
 import { listMyWorkoutsAndRoutine } from '../../services/myWorkouts';
 import StudentOwnWorkouts from '../../components/coach/StudentOwnWorkouts';
-import { chatState, studentStatus, timeAgo, startOfDay, toDate, DAY_MS } from '../../components/coach/helpers';
+import { chatState, studentStatus, timeAgo, startOfDay, toDate, daysSince, DAY_MS } from '../../components/coach/helpers';
+import NudgeButton from '../../components/coach/NudgeButton';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 import { plural } from '../../utils/text';
+
+const NUDGE_AFTER_DAYS = 5;   // o mesmo corte da fila de ação ("Parado")
 
 const TABS = [
   { id: 'summary', label: 'Resumo' },
@@ -193,6 +196,7 @@ export default function StudentDetailsPage() {
   const currentTraining = trainings.find((t) => t.id === student.currentTrainingId);
   const weightDelta = derived.firstWeight !== null && derived.latestWeight !== null ? derived.latestWeight - derived.firstWeight : null;
   const currentWeight = derived.latestWeight ?? (Number(student.weight) || null);
+  const idleDays = derived.lastWorkout ? daysSince(derived.lastWorkout) : null;
 
   return (
     <div className={pageCls}>
@@ -217,6 +221,7 @@ export default function StudentDetailsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2 sm:flex">
               <button type="button" onClick={() => navigate('/coach/chat', { state: chatState({ ...student, uid: student.id }) })} className={btnPrimary}><MessageSquare className="h-4 w-4" /> Mensagem</button>
+              {idleDays !== null && idleDays >= NUDGE_AFTER_DAYS && <NudgeButton studentId={student.id} days={idleDays} name={student.displayName || 'aluno'} className={btnGhost} />}
               <button type="button" onClick={() => setAssigning(true)} className={btnGhost}><ClipboardList className="h-4 w-4" /> Ficha</button>
               <button type="button" onClick={endLink} className={btnGhost}>Encerrar vínculo</button>
             </div>
