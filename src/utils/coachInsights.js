@@ -98,7 +98,8 @@ export const buildActionQueue = ({ students = [], lastWorkouts = {}, checkIns = 
       const created = toDate(s.createdAt);
       const isNew = created ? (now - created) / DAY_MS <= newDays : false;
       items.push({ id: `nofile-${uid}`, type: 'nofile', student: s, isNew, weight: isNew ? 1 : 0,
-        detail: isNew ? 'Aluno novo sem ficha' : 'Sem ficha atribuída' });
+        // Quem já treina (com treinos próprios) não é "aluno novo": falta só a ficha do treinador.
+        detail: days !== null ? 'Treina por conta própria, sem ficha sua' : isNew ? 'Aluno novo sem ficha' : 'Sem ficha atribuída' });
     }
     if (records[uid]) {
       const r = records[uid];

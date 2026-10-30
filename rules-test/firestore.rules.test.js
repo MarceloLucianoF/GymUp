@@ -71,6 +71,23 @@ test('usuários: aluno edita campos permitidos e valida onboarding/telefone', as
   await assertFails(updateDoc(ref, { monthlyFee: 0 }));
 });
 
+test('usuários: e-mail do perfil só copia o e-mail confirmado do login (troca de e-mail)', async () => {
+  const tok = (email, verified) => env.authenticatedContext('stu1', { email, email_verified: verified }).firestore();
+  await assertSucceeds(updateDoc(doc(tok('novo@ex.com', true), 'users/stu1'), { email: 'novo@ex.com' }));
+  await assertFails(updateDoc(doc(tok('novo@ex.com', true), 'users/stu1'), { email: 'outro@ex.com' }));
+  await assertFails(updateDoc(doc(tok('x@ex.com', false), 'users/stu1'), { email: 'x@ex.com' }));
+  await assertFails(updateDoc(doc(db('stu1'), 'users/stu1'), { email: 'qualquer@ex.com' }));
+  await assertFails(updateDoc(doc(env.authenticatedContext('stu2', { email: 'stu2@ex.com', email_verified: true }).firestore(), 'users/stu1'), { email: 'stu2@ex.com' }));
+  // token sem a claim email_verified, e-mail junto com campo proibido
+  await assertFails(updateDoc(doc(env.authenticatedContext('stu1', { email: 'y@ex.com' }).firestore(), 'users/stu1'), { email: 'y@ex.com' }));
+  await assertFails(updateDoc(doc(tok('z@ex.com', true), 'users/stu1'), { email: 'z@ex.com', role: 'coach' }));
+  await assertFails(updateDoc(doc(tok('z@ex.com', true), 'users/stu1'), { email: 'z@ex.com', monthlyFee: 0 }));
+  // treinador no próprio perfil segue a mesma regra
+  const coachTok = (email) => env.authenticatedContext('coach1', { email, email_verified: true }).firestore();
+  await assertSucceeds(updateDoc(doc(coachTok('treinador@ex.com'), 'users/coach1'), { email: 'treinador@ex.com' }));
+  await assertFails(updateDoc(doc(coachTok('treinador@ex.com'), 'users/coach1'), { email: 'outro@ex.com' }));
+});
+
 test('usuários: criação exige role user, termos e só os campos permitidos', async () => {
   const novo = db('novo');
   const base = { uid: 'novo', role: 'user', displayName: 'N', email: 'n@x.com', termsAcceptedAt: '2026-01-01', termsVersion: '1' };

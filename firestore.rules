@@ -73,18 +73,25 @@ service cloud.firestore {
         && data.get('phone', '').matches('^[0-9+() -]{0,20}$');
     }
 
+    // Troca de e-mail: o perfil só pode copiar o e-mail já confirmado do login (nunca um e-mail qualquer).
+    function emailCopyOk(fields) {
+      return !fields.hasAny(['email'])
+        || (request.auth.token.get('email_verified', false) == true && request.resource.data.email == request.auth.token.get('email', ''));
+    }
+
     function ownProfileChanges() {
       let fields = request.resource.data.diff(resource.data).affectedKeys();
       // coachId: o aluno só pode DESFAZER o vínculo (null). Vincular passa por coachLinks e o aceite do treinador.
       return (fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
         'updatedAt', 'lastWorkoutDate', 'coachId',
-        'experience', 'weeklyGoal', 'onboardedAt', 'phone', 'gymEquipment'
+        'experience', 'weeklyGoal', 'onboardedAt', 'phone', 'gymEquipment', 'email'
       ]) && validProfileExtras(request.resource.data)
+        && emailCopyOk(fields)
         && (!fields.hasAny(['coachId']) || request.resource.data.get('coachId', null) == null)) || (isCoach() && fields.hasOnly([
         'displayName', 'goal', 'height', 'weight', 'age', 'photoURL',
-        'updatedAt', 'lastWorkoutDate', 'bio', 'phone', 'pixKey', 'defaultMonthlyFee'
-      ]));
+        'updatedAt', 'lastWorkoutDate', 'bio', 'phone', 'pixKey', 'defaultMonthlyFee', 'email'
+      ]) && emailCopyOk(fields));
     }
 
     function validCoachAssignment() {

@@ -23,6 +23,7 @@ import {
     hydrateExercises, buildLoadMap, buildExerciseLoadLogs, summarizeSession, detectNewPRs,
     adjustValue, getLastSessionSets, buildCopyFromLast, noteKey, NOTE_MAX, formatDuration
 } from '../../utils/training';
+import { syncScoresAfterWorkout } from '../../services/challengeService';
 import { fetchStudentCheckIns, invalidateCheckIns } from '../../services/checkInsCache';
 import { saveCheckIn } from '../../services/checkInService';
 import { fromMyTrainingId, isMyTrainingId, replaceExerciseInMyWorkout } from '../../services/myWorkouts';
@@ -449,6 +450,8 @@ export default function TrainingExecutionPage() {
                     return publishPost(clientId, buildPostPayload(user.uid, { trainingName: training.name, durationSeconds: elapsedTime, setsCompleted, exercisesCount: executedExercises.length, newRecords: newPRs.length, weekCount }));
                 }).then((id) => { if (id) toast.success('Publicado para seus amigos.'); }).catch(() => {});
             }
+            // Placar dos desafios em grupo: sobe na hora (antes só ao abrir a aba). Falha aqui não atrapalha o treino.
+            if (saved) syncScoresAfterWorkout(user.uid, fetchStudentCheckIns).catch((e) => console.warn('Placar dos desafios não atualizado:', e?.code || e));
 
             try { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); } catch(e){}
 

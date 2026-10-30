@@ -8,7 +8,7 @@ import {
     updateProfile,
 } from "firebase/auth";
 import { auth, db, ensureAppCheck } from "../firebase/config"; 
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { syncPublicCoachProfile } from "../services/coachProfile";
 import { requestWithInvite } from "../services/coachLinkService";
 import { readCachedProfile, writeCachedProfile, clearCachedProfile } from "../utils/profileCache";
@@ -193,9 +193,17 @@ export function AuthProvider({ children }) {
                     if (creatingProfile.current) { setAuthLoading(false); return; }
                     const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
                     if (docSnap.exists()) {
-                        setUserProfile(docSnap.data());
-                        writeCachedProfile(docSnap.data());
-                        syncPublicCoachProfile(firebaseUser.uid, docSnap.data()).catch(() => {});
+                        let data = docSnap.data();
+                        // Trocou o e-mail (confirmado pelo link): o perfil passa a mostrar o novo, que é o que o treinador vê.
+                        if (firebaseUser.email && firebaseUser.emailVerified && String(data.email || '').toLowerCase() !== firebaseUser.email.toLowerCase()) {
+                            try {
+                                await updateDoc(doc(db, "users", firebaseUser.uid), { email: firebaseUser.email, updatedAt: new Date().toISOString() });
+                                data = { ...data, email: firebaseUser.email };
+                            } catch (e) { console.warn('E-mail do perfil não sincronizado:', e?.code || e); }
+                        }
+                        setUserProfile(data);
+                        writeCachedProfile(data);
+                        syncPublicCoachProfile(firebaseUser.uid, data).catch(() => {});
                     } else if (cached) {
                         setUserProfile(null);
                         clearCachedProfile();
