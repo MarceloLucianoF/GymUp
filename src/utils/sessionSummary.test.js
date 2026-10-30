@@ -31,7 +31,7 @@ test('números do treino: tempo, volume, variação contra a última vez do mesm
   expect(f.workSets).toBe(9);
   expect(f.plannedSets).toBe(12);              // 3 + 3 + 3 + 3 (o aquecimento planejado não conta)
   expect(f.adherencePct).toBe(75);
-  expect(f.counts).toEqual({ warmup: 1, drop: 0, failure: 0 });
+  expect(f.counts).toEqual({ warmup: 1, drop: 0, failure: 0, cluster: 0 });
   expect(f.daysSinceSame).toBe(2);
 });
 

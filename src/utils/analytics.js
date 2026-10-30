@@ -1,4 +1,5 @@
 // Funções puras de análise de evolução por exercício (sem Firebase, sem React).
+import { setVolume } from './setTypes';
 const DAY = 86400000;
 
 export const toDate = (value) => {
@@ -28,7 +29,7 @@ export const estimate1RM = (weight, reps) => {
 export const validSets = (sets) =>
   (Array.isArray(sets) ? sets : [])
     .filter((s) => s && s.completed !== false && s.type !== 'warmup' && num(s.reps) > 0 && num(s.weight) >= 0)   // aquecimento não entra em volume, recorde nem 1RM
-    .map((s) => ({ weight: num(s.weight), reps: num(s.reps) }));
+    .map((s) => ({ weight: num(s.weight), reps: num(s.reps), ...(Array.isArray(s.parts) && s.parts.length ? { parts: s.parts } : {}) }));   // partes (drop/cluster) só somam volume
 
 // Métricas de uma lista de séries de um treino.
 export const sessionMetrics = (sets) => {
@@ -45,7 +46,7 @@ export const sessionMetrics = (sets) => {
       bestSet = s;
       best1rm = e;
     }
-    volume += s.weight * s.reps;
+    volume += setVolume(s);
     totalReps += s.reps;
     if (s.weight > maxWeight) maxWeight = s.weight;
   });

@@ -8,7 +8,7 @@ test('normaliza o plano para o número de séries e troca valor inválido por no
 });
 
 test('o toque troca o tipo em ciclo e aquecimento não conta como trabalho', () => {
-  expect(['normal', 'warmup', 'drop', 'failure', 'normal'].map((t, i, a) => (i < 4 ? nextSetType(t) === a[i + 1] : true)).every(Boolean)).toBe(true);
+  expect(['normal', 'warmup', 'drop', 'failure', 'cluster', 'normal'].map((t, i, a) => (i < 5 ? nextSetType(t) === a[i + 1] : true)).every(Boolean)).toBe(true);
   expect(countsAsWork('warmup')).toBe(false);
   ['normal', 'drop', 'failure'].forEach((t) => expect(countsAsWork(t)).toBe(true));
 });

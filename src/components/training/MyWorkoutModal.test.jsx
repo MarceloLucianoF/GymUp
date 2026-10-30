@@ -164,21 +164,26 @@ describe('tipos de série e superset no editor', () => {
     svc.updateMyWorkout.mockClear();
     render(<MyWorkoutModal isOpen onClose={jest.fn()} user={{ uid: 'u1' }} library={lib} editing={{ docId: 'w1', workout: saved }} />);
     expect(await screen.findByText('Editar meu treino')).toBeInTheDocument();
-    expect(screen.getByLabelText('Série 3: Drop-set. Toque para mudar')).toBeInTheDocument();    // plano carregado
+    expect(screen.getAllByLabelText('Técnica da série 3')[0].value).toBe('drop');                 // plano carregado
     const links = screen.getAllByLabelText(/Combinar com o próximo exercício/);
     expect(links).toHaveLength(2);                                                               // o último não liga a ninguém
     expect(links[0].checked).toBe(true);
     expect(links[1].checked).toBe(false);
     // 1ª série do 2º exercício vira aquecimento; liga o 2º ao 3º
-    const second = screen.getAllByLabelText(/^Série 1: Normal/)[1];
-    fireEvent.click(second);
+    fireEvent.change(screen.getAllByLabelText('Técnica da série 1')[1], { target: { value: 'warmup' } });
     fireEvent.click(links[1]);
+    // 1ª série do 1º exercício: 15 reps com 10'' de isometria antes; 3ª: drop com carga 16
+    fireEvent.change(screen.getAllByLabelText('Repetições da série 1')[0], { target: { value: '15' } });
+    fireEvent.change(screen.getAllByLabelText('Técnica da série 1')[0], { target: { value: 'isoBefore' } });
+    fireEvent.change(screen.getByLabelText('Carga do drop 1 da série 3 (kg)'), { target: { value: '16' } });
     fireEvent.click(screen.getByText('Salvar alterações'));
     await waitFor(() => expect(svc.updateMyWorkout).toHaveBeenCalled());
     const exs = svc.updateMyWorkout.mock.calls[0][2].exercises;
     expect(exs.map((e) => e.superset)).toEqual(['A', 'A', 'A']);                                 // grupo de 3
     expect(exs[0].setTypes).toEqual(['normal', 'normal', 'drop']);
     expect(exs[1].setTypes).toEqual(['warmup', 'normal', 'normal']);
+    expect(exs[0].setPlan).toEqual([{ reps: '15', isoBeforeSec: 10 }, {}, { drops: [{ load: 16 }] }]);
+    expect('setPlan' in exs[1]).toBe(false);
   });
   test('treino sem plano não grava setTypes nem superset', async () => {
     const svc = require('../../services/myWorkouts');
@@ -191,6 +196,7 @@ describe('tipos de série e superset no editor', () => {
     await waitFor(() => expect(svc.saveMyWorkout).toHaveBeenCalled());
     const ex = svc.saveMyWorkout.mock.calls[0][1].exercises[0];
     expect('setTypes' in ex).toBe(false);
+    expect('setPlan' in ex).toBe(false);
     expect('superset' in ex).toBe(false);
   });
 });

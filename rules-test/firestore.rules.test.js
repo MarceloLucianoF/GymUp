@@ -1038,3 +1038,211 @@ test('comentários: amigo que vê o post comenta (curto, sem link, sem edição)
   await assertSucceeds(setDoc(doc(db('stu2'), 'socialPosts/p1/comments/c4'), c()));
   await assertSucceeds(deleteDoc(doc(db('admin1'), 'socialPosts/p1/comments/c4')));
 });
+
+// ---- Saúde (itens 15/19): avaliação física, anamnese e consentimento ----
+const ISO = '2026-10-29T12:00:00.000Z';
+const consent = (over = {}) => ({ coachId: 'coach1', version: '2026-10-29', acceptedAt: ISO, ...over });
+const selfAssessment = (over = {}) => ({
+  userId: 'stu1', kind: 'self', date: '2026-10-29', createdAt: ISO, createdBy: 'stu1',
+  sex: 'male', age: 30, weight: 80.5, height: 178,
+  perimeters: { arm: 35, chest: 100, waist: 82, hip: 98, thigh: 58, calf: 38 },
+  skinfolds: { protocol: 'pollock3', chest: 10, abdomen: 20, thigh: 15 }, bodyFat: 14.2, notes: 'ok', ...over
+});
+const bioAssessment = (over = {}) => ({
+  userId: 'stu1', kind: 'bioimpedance', date: '2026-10-29', createdAt: ISO, createdBy: 'stu1', weight: 80,
+  bioimpedance: { bodyFat: 18, leanMass: 60, water: 55, visceralFat: 7 }, ...over
+});
+const instructorAssessment = (over = {}) => selfAssessment({ kind: 'instructor', coachId: 'coach1', createdBy: 'coach1', ...over });
+const anamnesis = (over = {}) => ({
+  userId: 'stu1', version: 1, createdAt: ISO, parq: [false, false, false, false, false, false, true],
+  injuries: 'joelho', surgeries: '', medications: '', diseases: '', goals: 'saúde', routine: 'escritório', ...over
+});
+const seedHealth = async ({ withConsent = true } = {}) => env.withSecurityRulesDisabled(async (ctx) => {
+  const d = ctx.firestore();
+  if (withConsent) await setDoc(doc(d, 'healthConsents/stu1'), consent());
+  await setDoc(doc(d, 'assessments/a1'), selfAssessment());
+  await setDoc(doc(d, 'assessments/i1'), instructorAssessment());
+  await setDoc(doc(d, 'anamneses/n1'), anamnesis());
+  await setDoc(doc(d, 'users/stu3'), { uid: 'stu3', role: 'user', displayName: 'Aluno 3', coachId: 'admin1' });
+  await setDoc(doc(d, 'healthConsents/stu3'), consent({ coachId: 'admin1' }));
+  await setDoc(doc(d, 'assessments/a3'), selfAssessment({ userId: 'stu3', createdBy: 'stu3' }));
+});
+const listOf = (uid, col, owner = 'stu1') => getDocs(query(collection(db(uid), col), where('userId', '==', owner)));
+
+test('saúde: aluno lê, lista e escreve as próprias avaliações (self/bioimpedância) e anamneses', async () => {
+  await seedHealth({ withConsent: false });
+  await assertSucceeds(getDoc(doc(db('stu1'), 'assessments/i1')));
+  await assertSucceeds(listOf('stu1', 'assessments'));
+  await assertSucceeds(listOf('stu1', 'anamneses'));
+  await assertSucceeds(getDoc(doc(db('stu1'), 'healthConsents/stu1')));
+  await assertSucceeds(setDoc(doc(db('stu1'), 'assessments/a2'), selfAssessment()));
+  await assertSucceeds(setDoc(doc(db('stu1'), 'assessments/b1'), bioAssessment()));
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'assessments/a1'), { weight: 79, updatedAt: ISO }));
+  await assertSucceeds(setDoc(doc(db('stu1'), 'anamneses/n2'), anamnesis({ version: 2 })));
+  // aluno não lança avaliação "do instrutor", não forja autor, não edita a do instrutor nem a anamnese (versões)
+  await assertFails(setDoc(doc(db('stu1'), 'assessments/x1'), instructorAssessment({ createdBy: 'stu1' })));
+  await assertFails(setDoc(doc(db('stu1'), 'assessments/x2'), selfAssessment({ coachId: 'coach1' })));
+  await assertFails(setDoc(doc(db('stu1'), 'assessments/x3'), selfAssessment({ createdBy: 'coach1' })));
+  await assertFails(updateDoc(doc(db('stu1'), 'assessments/i1'), { weight: 70 }));
+  await assertFails(updateDoc(doc(db('stu1'), 'assessments/a1'), { kind: 'instructor' }));
+  await assertFails(updateDoc(doc(db('stu1'), 'assessments/a1'), { userId: 'stu2' }));
+  await assertFails(updateDoc(doc(db('stu1'), 'anamneses/n1'), { injuries: 'nenhuma' }));
+  // apaga tudo o que é dele, inclusive a avaliação do instrutor
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'assessments/i1')));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'assessments/a1')));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'anamneses/n1')));
+});
+
+test('saúde: professor vinculado SEM consentimento não lê nem escreve', async () => {
+  await seedHealth({ withConsent: false });
+  await assertFails(getDoc(doc(db('coach1'), 'assessments/a1')));
+  await assertFails(getDoc(doc(db('coach1'), 'anamneses/n1')));
+  await assertFails(listOf('coach1', 'assessments'));
+  await assertFails(listOf('coach1', 'anamneses'));
+  await assertFails(setDoc(doc(db('coach1'), 'assessments/i2'), instructorAssessment()));
+  await assertFails(updateDoc(doc(db('coach1'), 'assessments/i1'), { weight: 70 }));
+  await assertFails(deleteDoc(doc(db('coach1'), 'assessments/i1')));
+  // pode saber que ainda não há consentimento (documento inexistente), sem erro; outro professor não
+  await assertSucceeds(getDoc(doc(db('coach1'), 'healthConsents/stu1')));
+  await assertFails(getDoc(doc(db('coach2'), 'healthConsents/stu1')));
+});
+
+test('saúde: professor vinculado COM consentimento lê e lança só avaliação do instrutor', async () => {
+  await seedHealth();
+  await assertSucceeds(getDoc(doc(db('coach1'), 'healthConsents/stu1')));
+  await assertSucceeds(getDoc(doc(db('coach1'), 'assessments/a1')));
+  await assertSucceeds(getDoc(doc(db('coach1'), 'anamneses/n1')));
+  await assertSucceeds(listOf('coach1', 'assessments'));
+  await assertSucceeds(listOf('coach1', 'anamneses'));
+  await assertSucceeds(setDoc(doc(db('coach1'), 'assessments/i2'), instructorAssessment({ skinfolds: { protocol: 'pollock7', chest: 10, abdomen: 20, thigh: 15, triceps: 12, suprailiac: 14, subscapular: 16, midaxillary: 11 } })));
+  await assertSucceeds(updateDoc(doc(db('coach1'), 'assessments/i1'), { weight: 79.9, updatedAt: ISO }));
+  await assertFails(setDoc(doc(db('coach1'), 'assessments/x1'), selfAssessment({ createdBy: 'coach1' })));      // tipo do aluno
+  await assertFails(setDoc(doc(db('coach1'), 'assessments/x2'), instructorAssessment({ coachId: 'coach2' })));  // em nome de outro
+  await assertFails(setDoc(doc(db('coach1'), 'assessments/x3'), instructorAssessment({ createdBy: 'stu1' })));
+  await assertFails(setDoc(doc(db('coach1'), 'assessments/x4'), instructorAssessment({ userId: 'stu2' })));     // aluno de outro
+  await assertFails(updateDoc(doc(db('coach1'), 'assessments/a1'), { weight: 70 }));                            // a do aluno
+  await assertFails(updateDoc(doc(db('coach1'), 'assessments/i1'), { userId: 'stu2' }));
+  await assertFails(updateDoc(doc(db('coach1'), 'assessments/i1'), { coachId: 'coach2' }));
+  await assertFails(setDoc(doc(db('coach1'), 'anamneses/n9'), anamnesis()));                                    // anamnese é do aluno
+  await assertFails(deleteDoc(doc(db('coach1'), 'anamneses/n1')));
+  await assertFails(deleteDoc(doc(db('coach1'), 'assessments/a1')));
+  await assertSucceeds(deleteDoc(doc(db('coach1'), 'assessments/i1')));
+  // não cria, não altera nem lista consentimentos
+  await assertFails(setDoc(doc(db('coach1'), 'healthConsents/stu1'), consent({ version: 'x' })));
+  await assertFails(getDocs(collection(db('coach1'), 'healthConsents')));
+});
+
+test('saúde: outro aluno, outro professor, admin e anônimo não acessam', async () => {
+  await seedHealth();
+  for (const uid of ['stu2', 'coach2', 'admin1']) {
+    await assertFails(getDoc(doc(db(uid), 'assessments/a1')));
+    await assertFails(getDoc(doc(db(uid), 'anamneses/n1')));
+    await assertFails(getDoc(doc(db(uid), 'healthConsents/stu1')));
+    await assertFails(listOf(uid, 'assessments'));
+    await assertFails(listOf(uid, 'anamneses'));
+    await assertFails(setDoc(doc(db(uid), 'assessments/z1'), instructorAssessment({ coachId: uid, createdBy: uid })));
+    await assertFails(setDoc(doc(db(uid), 'anamneses/z1'), anamnesis()));
+    await assertFails(updateDoc(doc(db(uid), 'assessments/a1'), { weight: 70 }));
+    await assertFails(deleteDoc(doc(db(uid), 'assessments/a1')));
+    await assertFails(deleteDoc(doc(db(uid), 'anamneses/n1')));
+    await assertFails(deleteDoc(doc(db(uid), 'healthConsents/stu1')));
+  }
+  await assertFails(getDoc(doc(anonDb(), 'assessments/a1')));
+  await assertFails(getDoc(doc(anonDb(), 'healthConsents/stu1')));
+  await assertFails(getDocs(collection(db('admin1'), 'assessments')));
+  await assertFails(getDocs(collection(db('admin1'), 'anamneses')));
+  // admin como "treinador" vinculado e com consentimento também não lê: o acesso é só do papel professor
+  await assertFails(getDoc(doc(db('admin1'), 'assessments/a3')));
+  await assertFails(listOf('admin1', 'assessments', 'stu3'));
+  await assertFails(setDoc(doc(db('admin1'), 'assessments/z3'), instructorAssessment({ userId: 'stu3', coachId: 'admin1', createdBy: 'admin1' })));
+});
+
+test('saúde: consentimento só para o professor vinculado atual; revogar corta na hora', async () => {
+  await seedHealth({ withConsent: false });
+  const ref = doc(db('stu1'), 'healthConsents/stu1');
+  await assertFails(setDoc(ref, consent({ coachId: 'coach2' })));            // não é o professor dele
+  await assertFails(setDoc(ref, consent({ extra: true })));
+  await assertFails(setDoc(ref, consent({ version: 'x'.repeat(21) })));
+  await assertFails(setDoc(ref, consent({ acceptedAt: 'ontem' })));
+  await assertFails(setDoc(ref, { coachId: 'coach1', version: '1' }));
+  await assertFails(setDoc(doc(db('stu2'), 'healthConsents/stu1'), consent()));
+  await assertFails(setDoc(doc(db('stu2'), 'healthConsents/stu2'), consent()));   // o professor do stu2 é o coach2
+  await assertSucceeds(setDoc(ref, consent()));
+  await assertSucceeds(getDoc(doc(db('coach1'), 'assessments/a1')));
+  await assertSucceeds(deleteDoc(ref));                                           // revoga
+  await assertFails(getDoc(doc(db('coach1'), 'assessments/a1')));
+  await assertFails(listOf('coach1', 'anamneses'));
+  await assertFails(setDoc(doc(db('coach1'), 'assessments/i9'), instructorAssessment()));
+});
+
+test('saúde: vínculo trocado corta o acesso mesmo com consentimento antigo; o professor nomeado pode apagá-lo', async () => {
+  await seedHealth();
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await updateDoc(doc(ctx.firestore(), 'users/stu1'), { coachId: 'coach2' });
+  });
+  await assertFails(getDoc(doc(db('coach1'), 'assessments/a1')));
+  await assertFails(getDoc(doc(db('coach2'), 'assessments/a1')));               // o consentimento é para o coach1
+  await assertFails(getDoc(doc(db('coach2'), 'healthConsents/stu1')));
+  await assertFails(deleteDoc(doc(db('coach2'), 'healthConsents/stu1')));
+  await assertSucceeds(deleteDoc(doc(db('coach1'), 'healthConsents/stu1')));    // professor nomeado encerra
+  await assertFails(deleteDoc(doc(db('coach1'), 'healthConsents/stu2')));       // inexistente
+  await assertFails(deleteDoc(doc(db('coach1'), 'healthConsents/stu3')));       // de outro professor
+});
+
+test('saúde: o aluno encerra o vínculo e apaga o consentimento no mesmo lote (existindo ou não)', async () => {
+  await seedHealth();
+  const b = writeBatch(db('stu1'));
+  b.update(doc(db('stu1'), 'users/stu1'), { coachId: null, updatedAt: ISO });
+  b.delete(doc(db('stu1'), 'healthConsents/stu1'));
+  await assertSucceeds(b.commit());
+  await assertFails(getDoc(doc(db('coach1'), 'assessments/a1')));
+  const b2 = writeBatch(db('stu2'));
+  b2.update(doc(db('stu2'), 'users/stu2'), { coachId: null, updatedAt: ISO });
+  b2.delete(doc(db('stu2'), 'healthConsents/stu2'));                             // inexistente
+  await assertSucceeds(b2.commit());
+});
+
+test('saúde: campos extras, tipos e tamanhos são recusados', async () => {
+  await seedHealth({ withConsent: false });
+  const put = (data) => setDoc(doc(db('stu1'), 'assessments/v1'), data);
+  const bad = [
+    selfAssessment({ extra: 1 }),
+    selfAssessment({ kind: 'outro' }),
+    selfAssessment({ date: '29/10/2026' }),
+    selfAssessment({ weight: 5 }), selfAssessment({ weight: '80' }), selfAssessment({ height: 400 }),
+    selfAssessment({ bodyFat: 90 }), selfAssessment({ age: 30.5 }), selfAssessment({ sex: 'x' }),
+    selfAssessment({ notes: 'x'.repeat(501) }),
+    selfAssessment({ perimeters: { arm: 35, neck: 40 } }), selfAssessment({ perimeters: { waist: 1000 } }),
+    selfAssessment({ skinfolds: { protocol: 'durnin', chest: 10 } }), selfAssessment({ skinfolds: { chest: 10 } }),
+    selfAssessment({ skinfolds: { protocol: 'pollock3', chest: 200 } }), selfAssessment({ skinfolds: { protocol: 'pollock3', knee: 5 } }),
+    bioAssessment({ bioimpedance: { bodyFat: 18, bone: 3 } }), bioAssessment({ bioimpedance: { water: 150 } }),
+    bioAssessment({ bioimpedance: 'x' })
+  ];
+  for (const data of bad) await assertFails(put(data));
+  const { createdAt, ...noCreated } = selfAssessment();
+  await assertFails(put(noCreated));
+  await assertSucceeds(put(selfAssessment()));
+  const putA = (data) => setDoc(doc(db('stu1'), 'anamneses/v1'), data);
+  for (const data of [
+    anamnesis({ extra: 1 }), anamnesis({ parq: [false, false] }), anamnesis({ parq: [false, false, false, false, false, false, 'sim'] }),
+    anamnesis({ version: 0 }), anamnesis({ version: '1' }), anamnesis({ injuries: 'x'.repeat(1001) }), anamnesis({ goals: 5 }),
+    anamnesis({ userId: 'stu2' })
+  ]) await assertFails(putA(data));
+  await assertSucceeds(putA(anamnesis()));
+});
+
+test('saúde: professor encerra o vínculo e apaga o consentimento no mesmo lote; revinculado, não lê sem novo consentimento', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await setDoc(doc(d, 'users/stuH'), { uid: 'stuH', role: 'user', coachId: 'coach1', displayName: 'H' });
+    await setDoc(doc(d, 'healthConsents/stuH'), { coachId: 'coach1', version: '1', acceptedAt: '2026-10-29T10:00:00.000Z' });
+    await setDoc(doc(d, 'assessments/aH'), { userId: 'stuH', kind: 'self', date: '2026-10-29', createdAt: '2026-10-29T10:00:00.000Z', createdBy: 'stuH', weight: 70 });
+  });
+  await assertSucceeds(getDoc(doc(db('coach1'), 'assessments/aH')));
+  const b = writeBatch(db('coach1'));
+  b.update(doc(db('coach1'), 'users/stuH'), { coachId: null, updatedAt: '2026-10-29T11:00:00.000Z' });
+  b.delete(doc(db('coach1'), 'healthConsents/stuH'));
+  await assertSucceeds(b.commit());
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'users/stuH'), { coachId: 'coach1' }); });   // vinculado de novo
+  await assertFails(getDoc(doc(db('coach1'), 'assessments/aH')));                                     // sem consentimento novo
+});

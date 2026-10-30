@@ -13,13 +13,15 @@ const toPlain = (value) => {
   return value;
 };
 
-export const buildExportPayload = ({ user, profile, checkIns = [], measurements = [], academy }, now = new Date()) => ({
+export const buildExportPayload = ({ user, profile, checkIns = [], measurements = [], health, academy }, now = new Date()) => ({
   exportedAt: now.toISOString(),
   app: 'BohTreinar',
   account: { uid: user?.uid || null, email: user?.email || null },
   profile: toPlain(profile || {}),
   checkIns: toPlain(checkIns),
   measurements: toPlain(measurements),
+  // Saúde (itens 15/19): avaliações (inclusive as do professor), anamneses e o consentimento atual.
+  health: toPlain({ assessments: health?.assessments || [], anamneses: health?.anamneses || [], consent: health?.consent || null }),
   ...(academy !== undefined ? { academy } : {})   // vínculos com academias (Gestão), quando a integração está ligada
 });
 
@@ -40,8 +42,9 @@ export const downloadJson = (payload, fileName) => {
 
 export const exportMyData = async (user) => {
   const own = (name) => getDocs(query(collection(db, name), where('userId', '==', user.uid)));
-  const [profileSnap, checkSnap, measSnap] = await Promise.all([
-    getDoc(doc(db, 'users', user.uid)), own('checkIns'), own('measurements')
+  const [profileSnap, checkSnap, measSnap, assessSnap, anamSnap, consentSnap] = await Promise.all([
+    getDoc(doc(db, 'users', user.uid)), own('checkIns'), own('measurements'), own('assessments'), own('anamneses'),
+    getDoc(doc(db, 'healthConsents', user.uid))
   ]);
   const mapDocs = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   // Dados que a academia guarda sobre a pessoa (vínculos, consentimentos, professor, ficha atribuída). Falha aqui não impede o resto.
@@ -54,6 +57,7 @@ export const exportMyData = async (user) => {
     profile: profileSnap.exists() ? profileSnap.data() : {},
     checkIns: mapDocs(checkSnap),
     measurements: mapDocs(measSnap),
+    health: { assessments: mapDocs(assessSnap), anamneses: mapDocs(anamSnap), consent: consentSnap.exists() ? consentSnap.data() : null },
     academy
   });
   downloadJson(payload, exportFileName(user.uid));

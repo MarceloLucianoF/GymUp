@@ -45,6 +45,7 @@ export function buildSwapped(original, ref) {
     reps: original.reps,
     rest: original.rest,
     ...(original.setTypes ? { setTypes: original.setTypes } : {}),
+    ...(original.setPlan ? { setPlan: original.setPlan } : {}),
     ...(original.superset ? { superset: original.superset } : {}),
     note: original.note || '',
     swappedFrom: original.name

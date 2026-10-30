@@ -16,6 +16,7 @@ export const DELETION_STEPS = [
   { id: 'reauth', label: 'Confirmando sua identidade' },
   { id: 'checkIns', label: 'Apagando treinos realizados' },
   { id: 'measurements', label: 'Apagando medidas' },
+  { id: 'health', label: 'Apagando avaliações, anamneses e consentimento' },
   { id: 'chats', label: 'Apagando conversas' },
   { id: 'trainings', label: 'Apagando fichas criadas por IA' },
   { id: 'notes', label: 'Apagando anotações do treinador sobre você' },
@@ -71,6 +72,16 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     return removed;
   });
   await run('measurements', async () => deleteRefs((await refsOf(deps, 'measurements', deps.where('userId', '==', uid))).map((d) => d.ref), deps));
+  // Saúde: o consentimento sai primeiro (corta o acesso do professor na hora); depois avaliações (inclusive as do
+  // instrutor) e anamneses. As regras deixam o aluno apagar o próprio consentimento mesmo se ele não existir.
+  await run('health', async () => {
+    await deps.deleteDoc(deps.doc(deps.db, 'healthConsents', uid));
+    let removed = 1;
+    for (const name of ['assessments', 'anamneses']) {
+      removed += await deleteRefs((await refsOf(deps, name, deps.where('userId', '==', uid))).map((d) => d.ref), deps);
+    }
+    return removed;
+  });
 
   const knownCoachIds = new Set(); // treinadores que podem ter notas sobre o aluno
 

@@ -43,3 +43,4 @@ gestao-worker/wrangler.production.jsonc
 gestao/wrangler.production.jsonc
 .agents/
 skills-lock.json
+.claude/worktrees/
