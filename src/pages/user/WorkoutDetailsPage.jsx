@@ -1,12 +1,20 @@
 import { SET_SHORT } from '../../utils/setTypes';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuthContext } from '../../hooks/AuthContext';
 import { db } from '../../firebase/config';
-import { Clock, Scale, CheckCircle2, Dumbbell, FileText, XCircle, ArrowLeft, Download, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Clock, Scale, CheckCircle2, Dumbbell, FileText, XCircle, ArrowLeft, Download, Trophy, RotateCcw, Trash2, LineChart } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { formatDate, formatTonnage } from '../../utils/format';
-import { fetchStudentCheckIns } from '../../services/checkInsCache';
+import { fetchStudentCheckIns, invalidateCheckIns } from '../../services/checkInsCache';
+import { removeCheckIn } from '../../services/checkInService';
+import { activeWorkoutService } from '../../services/activeWorkoutService';
+import { trainingStillExists } from '../../services/trainingAvailability';
+import { findPreviousSession, compareSessions } from '../../utils/sessionCompare';
+import SessionComparison from '../../components/history/SessionComparison';
+import { useConfirm } from '../../hooks/useConfirm';
+import { btnPrimary, btnDanger } from '../../components/coach/styles';
 
 import { toHealthConnectSession } from '../../utils/healthExport';
 import { stillSrc } from '../../utils/exerciseMedia';
@@ -18,6 +26,10 @@ export default function WorkoutDetailsPage() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuthContext();
   const [past, setPast] = useState([]); // histórico do próprio aluno
+  const [repeatable, setRepeatable] = useState(null); // null = verificando; true/false = a ficha ainda existe?
+  const [deleting, setDeleting] = useState(false);
+  const { confirm, dialog } = useConfirm();
+  const isOwner = !!(user?.uid && workout?.userId === user.uid);
 
   // Baixa a sessão no formato do Health Connect (arquivo local, nada vai para a nuvem).
   const exportHealth = () => {
@@ -31,6 +43,8 @@ export default function WorkoutDetailsPage() {
 
   useEffect(() => {
     const fetchDetails = async () => {
+      setLoading(true);
+      setWorkout(null);
       try {
         const docRef = doc(db, 'checkIns', checkInId);
         const docSnap = await getDoc(docRef);
@@ -59,21 +73,67 @@ export default function WorkoutDetailsPage() {
     return () => { cancelled = true; };
   }, [user?.uid, workout]);
 
+  // "Repetir treino": só se a ficha ainda existir para este aluno
+  useEffect(() => {
+    if (!isOwner || !workout?.trainingId) { setRepeatable(false); return undefined; }
+    let alive = true;
+    setRepeatable(null);
+    trainingStillExists(workout.trainingId, user.uid).then((ok) => { if (alive) setRepeatable(ok); });
+    return () => { alive = false; };
+  }, [isOwner, workout?.trainingId, user?.uid]);
+
+  const comparison = useMemo(() => {
+    if (!workout) return null;
+    return compareSessions(workout, findPreviousSession(past, workout, checkInId));
+  }, [past, workout, checkInId]);
+
+  const handleRepeat = async () => {
+    const active = activeWorkoutService.getActiveSession(user.uid);
+    if (active && active.trainingId !== workout.trainingId) {
+      const ok = await confirm({
+        title: 'Há um treino em andamento',
+        message: `Repetir este treino descarta o que está em andamento (${active.trainingName || 'outro treino'}).`,
+        confirmLabel: 'Descartar e repetir',
+        danger: true,
+      });
+      if (!ok) return;
+      activeWorkoutService.clearActiveSession(user.uid);
+    }
+    navigate(`/execution/${workout.trainingId}`);
+  };
+
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: 'Excluir este treino?',
+      message: 'O registro sai do histórico e da contagem da semana. Não dá para desfazer.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await removeCheckIn(db, user.uid, checkInId);
+      invalidateCheckIns(user.uid);
+      toast.success('Treino excluído.');
+      navigate('/history', { replace: true });
+    } catch (e) {
+      console.error('Erro ao excluir treino:', e);
+      toast.error('Não foi possível excluir. Tente de novo.');
+      setDeleting(false);
+    }
+  };
+
   const summary = useMemo(() => {
     if (!workout) return null;
     const cur = new Date(workout.date).getTime();
     const before = past.filter((p) => p.id !== checkInId && new Date(p.date).getTime() < cur);
-    const prev = before.find((p) => p.trainingName === workout.trainingName) || null;
     const maxOf = (list, name) => list.reduce((m, p) => Math.max(m, ...(p.exercises || []).filter((e) => e.name === name).flatMap((e) => (e.sets || []).map((s) => Number(s.weight) || 0)), 0), 0);
     const records = (workout.exercises || []).map((ex) => {
       const now = Math.max(0, ...(ex.sets || []).map((s) => Number(s.weight) || 0));
       return { name: ex.name, weight: now, isPR: now > 0 && before.length > 0 && now > maxOf(before, ex.name) };
     });
-    const prevVol = prev ? Number(prev.totalVolume) || 0 : 0;
-    const curVol = Number(workout.totalVolume) || 0;
-    const delta = prev && prevVol > 0 ? ((curVol - prevVol) / prevVol) * 100 : null;
     const best = records.reduce((b, r) => (r.weight > (b?.weight || 0) ? r : b), null);
-    return { prev, delta, prs: records.filter((r) => r.isPR), best };
+    return { prs: records.filter((r) => r.isPR), best };
   }, [past, workout, checkInId]);
 
   if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8" role="status" aria-label="Carregando"><div className="max-w-3xl mx-auto space-y-4"><div className="skeleton-shimmer h-14 rounded-2xl"></div><div className="grid grid-cols-3 gap-3">{[0,1,2].map(i => <div key={i} className="skeleton-shimmer h-24 rounded-3xl"></div>)}</div><div className="skeleton-shimmer h-56 rounded-3xl"></div></div></div>;
@@ -91,6 +151,7 @@ export default function WorkoutDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 pb-32 transition-colors">
+      {dialog}
       <div className="max-w-3xl mx-auto space-y-6">
         
         {/* Header com Botão Voltar */}
@@ -128,6 +189,23 @@ export default function WorkoutDetailsPage() {
             </div>
         </div>
 
+        {/* Ações da sessão */}
+        {isOwner && (
+          <div className="flex flex-col gap-2 sm:flex-row" role="group" aria-label="Ações do treino">
+            {repeatable !== false && workout.trainingId && (
+              <button type="button" onClick={handleRepeat} disabled={repeatable === null} className={`${btnPrimary} min-h-[52px] flex-1 text-base`}>
+                <RotateCcw className="h-5 w-5" aria-hidden="true" /> {repeatable === null ? 'Verificando a ficha...' : 'Repetir treino'}
+              </button>
+            )}
+            <button type="button" onClick={handleDelete} disabled={deleting} className={`${btnDanger} min-h-[52px] sm:w-auto`}>
+              <Trash2 className="h-4 w-4" aria-hidden="true" /> {deleting ? 'Excluindo...' : 'Excluir'}
+            </button>
+          </div>
+        )}
+        {isOwner && repeatable === false && workout.trainingId && (
+          <p className="-mt-3 px-1 text-xs text-gray-600 dark:text-gray-400">A ficha deste treino não existe mais, então não dá para repeti-lo.</p>
+        )}
+
         {/* Texto do resumo pós-treino (gravado no fim do treino) */}
         {typeof workout.summary?.text === 'string' && workout.summary.text.length > 0 && workout.summary.text.length <= 700 && (
           <section className="surface p-4 sm:p-5 space-y-2" aria-label="Resumo do treino">
@@ -137,7 +215,7 @@ export default function WorkoutDetailsPage() {
         )}
 
         {/* Recordes e comparação */}
-        {summary && (summary.prs.length > 0 || summary.best || summary.prev) && (
+        {summary && (summary.prs.length > 0 || summary.best) && (
           <section className="surface p-4 sm:p-5 space-y-3" aria-label="Recordes e comparação">
             <h3 className="font-bold text-gray-700 dark:text-gray-300 text-sm uppercase tracking-wider">Resumo</h3>
             {summary.best && (
@@ -153,18 +231,11 @@ export default function WorkoutDetailsPage() {
                 ))}
               </ul>
             )}
-            {summary.prev && (
-              <p className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                {summary.delta === null ? <Minus className="w-4 h-4 text-gray-600 dark:text-gray-400 shrink-0" aria-hidden="true" />
-                  : summary.delta >= 0 ? <TrendingUp className="w-4 h-4 text-green-700 dark:text-green-400 shrink-0" aria-hidden="true" />
-                  : <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" aria-hidden="true" />}
-                {summary.delta === null
-                  ? 'Sem volume comparável no treino anterior.'
-                  : <>Volume <strong>{summary.delta >= 0 ? '+' : ''}{summary.delta.toFixed(1)}%</strong> vs. {formatDate(summary.prev.date, { day: 'numeric', month: 'short' })} (mesmo treino)</>}
-              </p>
-            )}
           </section>
         )}
+
+        {/* Comparação com a sessão anterior da mesma ficha */}
+        <SessionComparison comparison={comparison} />
 
         {/* Lista de Exercícios Detalhada */}
         <div className="space-y-4">
@@ -180,10 +251,15 @@ export default function WorkoutDetailsPage() {
                                 <Dumbbell className="w-6 h-6 text-gray-600 dark:text-gray-500" />
                              )}
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1">
                             <h4 className="font-bold text-gray-800 dark:text-white text-lg">{ex.name}</h4>
                             <p className="text-xs text-gray-600 dark:text-gray-400">{ex.muscleGroup}</p>
                         </div>
+                        {isOwner && ex.name && (
+                            <Link to={`/analytics/${encodeURIComponent(ex.name)}`} aria-label={`Ver evolução de ${ex.name}`} className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-amber-800 dark:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+                                <LineChart className="h-5 w-5" aria-hidden="true" />
+                            </Link>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wider">

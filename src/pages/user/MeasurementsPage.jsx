@@ -5,7 +5,8 @@ import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
 import { ImageError, prepareImage } from '../../utils/imageAttach';
 import { useConfirm } from '../../hooks/useConfirm';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import TrainingNumbers from '../../components/dashboard/TrainingNumbers';
 import { Camera, Scale, TrendingDown, X, Plus, Trash2, LineChart } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatDate } from '../../utils/format';
@@ -176,14 +177,24 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
 
 export default function MeasurementsPage() {
   const { confirm, dialog } = useConfirm();
-  const { user } = useAuthContext();
-  
+  const { user, userProfile } = useAuthContext();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [measurements, setMeasurements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [userHeight, setUserHeight] = useState(null);
+
+  // Atalho "Registrar medida" da Home: /measurements?nova=1 abre o formulário direto
+  useEffect(() => {
+    if (searchParams.get('nova') !== '1') return;
+    setShowModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('nova');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // 1. Carrega histórico e Altura do Perfil
   useEffect(() => {
@@ -300,8 +311,8 @@ export default function MeasurementsPage() {
         {/* Header */}
         <PageHeader
           eyebrow="Evolução"
-          title="Peso e medidas"
-          subtitle="Acompanhe seu corpo ao longo do tempo."
+          title="Sua evolução"
+          subtitle="Treinos, cargas, peso e medidas ao longo do tempo."
           actions={
             <button
                 type="button"
@@ -321,6 +332,10 @@ export default function MeasurementsPage() {
           </span>
           <span aria-hidden="true" className="text-gray-600 dark:text-gray-400">›</span>
         </Link>
+
+        <TrainingNumbers uid={user?.uid} weeklyGoal={userProfile?.weeklyGoal} />
+
+        <h2 className="font-display text-lg font-black text-gray-900 dark:text-white">Peso e medidas</h2>
 
         {measurements.length === 0 ? (
             <EmptyState
