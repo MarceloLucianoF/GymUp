@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageSquare, Eye, Check, ClipboardList, Trophy, AlertOctagon, Clock, ListChecks, Smile } from 'lucide-react';
 import Avatar from './Avatar';
+import NudgeButton from './NudgeButton';
 import EmptyState from '../common/EmptyState';
 import { brl } from './helpers';
 import { plural } from '../../utils/text';
@@ -47,6 +48,9 @@ export default function ActionQueue({ items, busyId, onMessage, onView, onMarkPa
                 )}
                 {item.type === 'nofile' && (
                   <button type="button" onClick={() => onAssign(s)} className={`${act} bg-gradient-to-r from-brand to-[#FF9800] text-black`}><ClipboardList className="h-4 w-4" /> Atribuir ficha</button>
+                )}
+                {item.type === 'inactive' && (
+                  <NudgeButton studentId={s.uid || s.id} days={item.days} name={name} className={`${act} bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200`} />
                 )}
                 {MESSAGE_LABEL[item.type] && (
                   <button type="button" onClick={() => onMessage(item)} aria-label={`${MESSAGE_LABEL[item.type]} ${name} por mensagem`} className={`${act} bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200`}><MessageSquare className="h-4 w-4" /> {MESSAGE_LABEL[item.type]}</button>

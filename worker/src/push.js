@@ -6,6 +6,9 @@
 //   POST   /api/push/rest          { endsAt, title, body } agenda (ou cancela, com endsAt null) o aviso de fim do descanso
 //   POST   /api/push/like          { postId }             avisa o autor do post, se quem chama curtiu mesmo (conferido no Firestore)
 //   POST   /api/push/comment       { postId, commentId }  avisa o autor do post de um comentário de quem chama (conferido no Firestore)
+//   POST   /api/push/inactivity    { lastWorkoutAt, coachName? } | { cancel: true }  agenda (substitui) o lembrete de 7 e 14 dias sem treinar
+//   POST   /api/push/nudge         { studentId, days }    o treinador vinculado lembra o aluno (conferido no Firestore, 1 a cada 24 h)
+// O alarme do Durable Object é um só: descanso e lembrete de inatividade são combinados e ele aponta para o mais próximo (rearm).
 import { verifyFirebaseIdToken } from '../../shared/firebaseAuth.js';
 import { sendPush, validEndpoint, validKeys, vapidPublicKey } from './webPush.js';
 import { sendFcm, serviceAccountOf } from './fcm.js';
@@ -22,6 +25,23 @@ const jwkOf = (env) => {
 };
 const sha = async (text) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 const LIKE_GAP_MS = 30 * 1000;
+const DAY_MS = 24 * 3600 * 1000;
+const INACTIVITY_DAYS = [7, 14];
+const NUDGE_GAP_MS = DAY_MS;
+const ALARM_SLACK_MS = 1000;   // o alarme pode disparar um pouco antes do horário registrado
+const UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+// Nome mostrado no aviso: até 40 caracteres, só letras, números, espaço e . ' - (lista do que pode, não do que não pode:
+// nada de links, marcação ou variantes Unicode de ponto). Texto com cara de URL é descartado, não recortado.
+export const safeName = (v) => {
+  const name = clip(v, 40);
+  if (!name || !/^[\p{L}\p{N} .'-]+$/u.test(name)) return '';
+  return /www\.|\.[a-z]{2,}(\/|\b)/i.test(name) ? '' : name;
+};
+export function inactivityPayload(info, at) {
+  const days = Math.max(1, Math.round((at - info.lastWorkoutAt) / DAY_MS));
+  const coach = info.coachName ? ` Seu treinador ${info.coachName} está esperando você.` : '';
+  return { kind: 'inactivity', title: 'Bora voltar?', body: `Faz ${days} dias do seu último treino.${coach}`, url: '/home', tag: 'bt-inactivity' };
+}
 const LIKES_PER_HOUR = 20;
 
 async function limited(binding, key) {
@@ -68,6 +88,7 @@ export async function handlePushRequest(request, env, deps = {}) {
   if (raw.length > 4000) return json(413, { error: 'Corpo grande demais.' }, cors);
   let body = {};
   if (raw) { try { body = JSON.parse(raw); } catch { return json(400, { error: 'Corpo inválido.' }, cors); } }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'Corpo inválido.' }, cors);
   const box = (id) => env.PUSH_BOX.get(env.PUSH_BOX.idFromName(id));
   const call = (id, op, data) => box(id).fetch('https://push-box/' + op, { method: 'POST', body: JSON.stringify(data) }).then((r) => r.json());
 
@@ -98,6 +119,37 @@ export async function handlePushRequest(request, env, deps = {}) {
     if (endsAt !== null && (!Number.isFinite(endsAt) || endsAt < now - 5000 || endsAt > now + 15 * 60 * 1000)) return json(400, { error: 'Horário inválido.' }, cors);
     const payload = { kind: 'rest', title: clip(body.title, 80) || 'Descanso acabou', body: clip(body.body, 160) || 'Bora para a próxima série!', url: '/', tag: 'bt-rest' };
     return json(200, await call(uid, 'rest', { endsAt, payload }), cors);
+  }
+  if (route === 'inactivity' && request.method === 'POST') {
+    if (body.cancel === true) return json(200, await call(uid, 'inactivity', { cancel: true }), cors);
+    const last = typeof body.lastWorkoutAt === 'string' && body.lastWorkoutAt.length <= 40 ? Date.parse(body.lastWorkoutAt) : NaN;
+    if (!Number.isFinite(last) || last > now + 10 * 60 * 1000) return json(400, { error: 'Data inválida.' }, cors);
+    if (body.coachName !== undefined && body.coachName !== null && typeof body.coachName !== 'string') return json(400, { error: 'Nome inválido.' }, cors);
+    // Só horários futuros: o que já passou não vira aviso retroativo.
+    const times = INACTIVITY_DAYS.map((d) => last + d * DAY_MS).filter((t) => t > now);
+    return json(200, await call(uid, 'inactivity', { lastWorkoutAt: last, coachName: safeName(body.coachName), times }), cors);
+  }
+  if (route === 'nudge' && request.method === 'POST') {
+    const studentId = typeof body.studentId === 'string' ? body.studentId : '';
+    const days = Number(body.days);
+    if (!UID_RE.test(studentId) || studentId === uid) return json(400, { error: 'Aluno inválido.' }, cors);
+    if (!Number.isInteger(days) || days < 1 || days > 365) return json(400, { error: 'Dias inválidos.' }, cors);
+    let student; let coach;
+    try {
+      // Lido com o token do treinador: a regra do Firestore só mostra o aluno ao treinador vinculado.
+      student = await firestoreGet(env, match[1], `users/${studentId}`, fetchImpl);
+      if (!student || student.coachId !== uid || student.role !== 'user') return json(403, { error: 'Aluno não vinculado a você.' }, cors);
+      coach = await firestoreGet(env, match[1], `users/${uid}`, fetchImpl);
+    } catch { return json(502, { error: 'Não foi possível conferir o vínculo.' }, cors); }
+    if (!coach || !['coach', 'admin'].includes(coach.role)) return json(403, { error: 'Apenas treinadores.' }, cors);
+    const who = safeName(coach.displayName) || 'Seu treinador';
+    // Dias reais desde o último treino registrado no perfil do aluno, quando houver (o número do cliente é só o padrão).
+    const lastAt = Date.parse(student.lastWorkoutDate || '');
+    const realDays = Number.isFinite(lastAt) ? Math.max(1, Math.floor((now - lastAt) / DAY_MS)) : days;
+    const payload = { kind: 'nudge', title: 'Lembrete do seu treinador', body: `${who}: faz ${realDays} dias do seu último treino. Bora voltar?`, url: '/home', tag: 'bt-nudge' };
+    let r;
+    try { r = await call(studentId, 'nudge', { payload, now }); } catch { return json(502, { error: 'Não foi possível enviar o lembrete.' }, cors); }
+    return json(200, r.sent ? { sent: true } : { sent: false, reason: r.reason === 'rate-limited' ? 'rate-limited' : 'no-subscription' }, cors);
   }
   if (route === 'like' && request.method === 'POST') {
     const postId = clip(body.postId, 64);
@@ -196,10 +248,41 @@ export class PushBox {
       return json(200, { ok: true, devices: subs.length });
     }
     if (op === 'rest') {
-      if (data.endsAt === null) { await this.state.storage.delete('rest'); await this.state.storage.deleteAlarm(); return json(200, { ok: true, scheduled: false }); }
+      if (data.endsAt === null) {
+        await this.state.storage.delete('rest'); await this.state.storage.delete('restAt');
+        await this.rearm();
+        return json(200, { ok: true, scheduled: false });
+      }
       await this.state.storage.put('rest', data.payload);
-      await this.state.storage.setAlarm(data.endsAt);
+      await this.state.storage.put('restAt', data.endsAt);
+      await this.rearm();
       return json(200, { ok: true, scheduled: true });
+    }
+    if (op === 'inactivity') {
+      // Cada chamada substitui a anterior; sem horário futuro (ou cancel), não fica nada agendado.
+      if (data.cancel === true || !Array.isArray(data.times) || !data.times.length) {
+        await this.state.storage.delete('inactivity');
+        await this.rearm();
+        return json(200, { ok: true, scheduled: false });
+      }
+      await this.state.storage.put('inactivity', { lastWorkoutAt: data.lastWorkoutAt, coachName: data.coachName || '', times: [...data.times].sort((a, b) => a - b) });
+      await this.rearm();
+      return json(200, { ok: true, scheduled: true, at: Math.min(...data.times) });
+    }
+    if (op === 'nudge') {
+      if (!(await this.subs()).length) return json(200, { sent: false, reason: 'no-subscription' });
+      const last = await this.state.storage.get('nudgeAt');
+      if (Number.isFinite(last) && data.now - last < NUDGE_GAP_MS) return json(200, { sent: false, reason: 'rate-limited' });
+      // Marca antes de enviar (o envio é assíncrono: dois toques seguidos não viram dois avisos); desfaz se nada foi entregue.
+      await this.state.storage.put('nudgeAt', data.now);
+      let sent = 0;
+      try { sent = await this.deliver(data.payload, 24 * 3600, 'normal'); }
+      finally {
+        // Nada entregue (ou erro no envio): o aluno não fica 24 h sem poder ser lembrado.
+        if (!(sent > 0)) { if (last === undefined) await this.state.storage.delete('nudgeAt'); else await this.state.storage.put('nudgeAt', last); }
+      }
+      if (sent > 0) return json(200, { sent: true });
+      return json(200, { sent: false, reason: 'no-subscription' });
     }
     if (op === 'like') {
       // Uma vez por pessoa e post, no máximo 1 aviso a cada 30 s e 20 por hora para quem recebe (o resto aparece na aba Atividade).
@@ -222,10 +305,47 @@ export class PushBox {
     return json(404, { error: 'op' });
   }
 
+  /** Um alarme por Durable Object: aponta para o próximo entre o fim do descanso e os lembretes de inatividade. */
+  async rearm() {
+    const st = this.state.storage;
+    const rest = await st.get('rest');
+    const restAt = await st.get('restAt');
+    // Descanso agendado antes desta versão (sem restAt): mantém o alarme que já existe para ele.
+    const legacy = rest && !Number.isFinite(restAt) && st.getAlarm ? await st.getAlarm() : null;
+    const ina = await st.get('inactivity');
+    const times = [rest ? restAt : null, legacy, ...(ina?.times || [])].filter((t) => Number.isFinite(t));
+    if (times.length) await st.setAlarm(Math.min(...times));
+    else await st.deleteAlarm();
+  }
+
   async alarm() {
-    const payload = await this.state.storage.get('rest');
-    if (!payload) return;
-    await this.state.storage.delete('rest');
-    await this.deliver(payload, 60);
+    const st = this.state.storage;
+    const now = Date.now();
+    const rest = await st.get('rest');
+    const restAt = await st.get('restAt');
+    if (rest && (!Number.isFinite(restAt) || restAt <= now + ALARM_SLACK_MS)) {
+      await st.delete('rest'); await st.delete('restAt');
+      await this.deliver(rest, 60);
+    }
+    const ina = await st.get('inactivity');
+    if (ina && Array.isArray(ina.times)) {
+      const due = ina.times.filter((t) => t <= now + ALARM_SLACK_MS);
+      const left = ina.times.filter((t) => t > now + ALARM_SLACK_MS);
+      if (due.length) {
+        // Vários vencidos de uma vez (alarme atrasado): um aviso só, com o mais recente. Só tira da fila depois de enviar,
+        // para uma falha no envio não perder o lembrete (o alarme tenta de novo).
+        try {
+          await this.deliver(inactivityPayload(ina, Math.max(...due)), 24 * 3600, 'normal');
+          if (left.length) await st.put('inactivity', { ...ina, times: left }); else await st.delete('inactivity');
+        } catch (e) {
+          // Tenta de novo em 1 h (no máximo 3 vezes), sem deixar o horário vencido no passado (o alarme dispararia sem parar).
+          console.warn('Lembrete de inatividade não enviado:', e?.message || e);
+          const retries = (ina.retries || 0) + 1;
+          const times = retries <= 3 ? [now + 3600 * 1000, ...left] : left;
+          if (times.length) await st.put('inactivity', { ...ina, times, retries }); else await st.delete('inactivity');
+        }
+      }
+    }
+    await this.rearm();
   }
 }

@@ -27,6 +27,7 @@ import { useFriendsPreview, useCoachMessage } from '../../hooks/useHomeExtras';
 import { getWeekDays } from '../../components/dashboard/WeekStrip';
 import Skeleton from '../../components/common/Skeleton';
 import EmptyState from '../../components/common/EmptyState';
+import { scheduleInactivityReminder } from '../../services/pushService';
 
 // Home do aluno = "o que eu faço agora?". No máximo 6 blocos, nesta ordem: treino de hoje (ou continuar),
 // atalhos, pendências, meta da semana com sequência, amigos e "Ver evolução". Os cartões de números,
@@ -75,6 +76,19 @@ export default function Home() {
   // O id de "Meus treinos" já vem como my_<docId>, o mesmo gravado no histórico.
   const ownRotation = useMemo(() => mineWorkouts.map((w) => ({ ...w, firestoreId: w.id })), [mineWorkouts]);
   const suggestFrom = !userProfile?.currentTrainingId && ownRotation.length > 0 ? ownRotation : trainings;
+
+  // Lembrete de volta ao treino: ao abrir o app, reagenda os avisos de 7/14 dias a partir do último check-in conhecido.
+  const lastWorkoutAt = useMemo(() => {
+    const times = history.map((h) => Date.parse(h?.date)).filter(Number.isFinite);
+    const fromProfile = Date.parse(userProfile?.lastWorkoutDate);
+    if (Number.isFinite(fromProfile)) times.push(fromProfile);
+    return times.length ? new Date(Math.max(...times)).toISOString() : null;
+  }, [history, userProfile?.lastWorkoutDate]);
+  const reminderCoach = mine.state === 'active' ? (mine.coach?.displayName || '') : '';
+  useEffect(() => {
+    if (loading || errors.history || mine.loading || !lastWorkoutAt) return;
+    scheduleInactivityReminder({ lastWorkoutAt, coachName: reminderCoach });
+  }, [loading, errors.history, mine.loading, lastWorkoutAt, reminderCoach]);
 
   const handleDiscardActiveWorkout = () => {
     discardActiveSession();

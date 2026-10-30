@@ -2,7 +2,7 @@ import React from 'react';
 import toast from 'react-hot-toast';
 import { Bell, BellRing, Send } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
-import { disablePush, enablePush, pushEnabled, pushSupported } from '../../services/pushService';
+import { cancelInactivityReminder, disablePush, enablePush, pushEnabled, pushSupported } from '../../services/pushService';
 import { isNativeApp } from '../../services/nativeApp';
 import AppDiagnostics from './AppDiagnostics';
 import SwitchRow from '../ui/Switch';
@@ -20,6 +20,12 @@ export default function NotificationSettings({ uid, className = 'mt-6', embedded
       if (ok) toast.success('Pronto: você recebe curtidas e o fim do descanso mesmo com o app fechado.');
       else toast.error('Sem permissão de notificação neste aparelho.');
     } catch (_) { setPush(false); toast.error('Não foi possível ligar os avisos agora.'); }
+  };
+
+  // Desligar cancela no servidor; ligar de novo agenda na próxima abertura da Home (é lá que o último treino é conhecido).
+  const toggleInactivity = (on) => {
+    updatePrefs({ inactivityReminder: on });
+    if (!on) cancelInactivityReminder();
   };
 
   const enable = async () => {
@@ -57,6 +63,10 @@ export default function NotificationSettings({ uid, className = 'mt-6', embedded
       <div className="mt-2 divide-y divide-gray-100 dark:divide-white/5">
         <SwitchRow label="Avisar quando o descanso acabar" checked={prefs.restDone} onChange={(v) => updatePrefs({ restDone: v })} />
         {pushSupported() && <SwitchRow label="Avisos com o app fechado" hint="Curtidas e fim do descanso" checked={push} onChange={togglePush} />}
+        {pushSupported() && push && (
+          <SwitchRow label="Lembrar quando eu ficar 7 dias sem treinar" hint="Aviso com o app fechado, uma vez aos 7 e aos 14 dias"
+            checked={prefs.inactivityReminder !== false} onChange={toggleInactivity} />
+        )}
         <SwitchRow label="Vibrar" checked={prefs.vibrate} onChange={(v) => updatePrefs({ vibrate: v })} />
         <SwitchRow label="Som curto" checked={prefs.sound} onChange={(v) => updatePrefs({ sound: v })} />
         <SwitchRow label="Lembrete de treino" checked={prefs.reminder} onChange={(v) => updatePrefs({ reminder: v })} />
