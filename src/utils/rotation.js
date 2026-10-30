@@ -70,7 +70,11 @@ export function suggestNext({ trainings = [], assignedId = null, history = [], w
   if (source === 'fallback' && group.length > 1) {
     const never = group.findIndex((t) => !done.some((h) => h.id === idOf(t)));
     if (never !== -1) index = never;
-    else if (last && ids[index] === last.id) index = (index + 1) % group.length;
+    else {
+      // Todas já feitas: a vez é da que está há mais tempo sem ser feita (rodízio de verdade, sem depender da ordem alfabética).
+      const lastDate = (id) => done.find((h) => h.id === id)?.date || new Date(0);
+      index = ids.reduce((best, id, i) => (lastDate(id) < lastDate(ids[best]) ? i : best), 0);
+    }
   }
 
   const training = group[index];
@@ -78,7 +82,7 @@ export function suggestNext({ trainings = [], assignedId = null, history = [], w
   const reason = (() => {
     if (source === 'sequence') return `Você concluiu ${last.name} ${whenLabel(last.daysAgo)}. A próxima da sequência (${position.index} de ${position.total}) é ${training.name}.`;
     if (source === 'first') return `Você ainda não concluiu nenhuma ficha deste programa. Comece por ${training.name}.`;
-    if (source === 'fallback') return last ? `Sua última ficha foi ${last.name} ${whenLabel(last.daysAgo)}. Para variar, a sugestão é ${training.name}.` : `Sugestão para começar: ${training.name}.`;
+    if (source === 'fallback') return last ? `Seu último treino foi ${last.name} ${whenLabel(last.daysAgo)}. Agora é a vez deste, o que você fez há mais tempo.` : '';
     return last ? `Sua ficha atual é ${training.name} (última vez ${whenLabel(last.daysAgo)}).` : `Sua ficha atual é ${training.name}.`;
   })();
   return { ...base, training, source, last, position, reason, isAssigned: !!assigned && group.some((t) => idOf(t) === idOf(assigned)) };
@@ -88,5 +92,5 @@ export function suggestNext({ trainings = [], assignedId = null, history = [], w
 export const goalSentence = ({ weeklyGoal, weekCount, remaining, met }, trainedToday = false) => {
   if (!weeklyGoal) return '';
   if (met) return `Meta da semana cumprida (${weekCount} de ${weeklyGoal}): um treino a mais é bônus.`;
-  return `${trainedToday ? 'Hoje já treinou. ' : ''}Faltam ${remaining} treino${remaining === 1 ? '' : 's'} para a meta (${weekCount} de ${weeklyGoal}).`;
+  return `${trainedToday ? 'Hoje já treinou. ' : ''}${remaining === 1 ? 'Falta 1 treino' : `Faltam ${remaining} treinos`} para a meta (${weekCount} de ${weeklyGoal}).`;
 };

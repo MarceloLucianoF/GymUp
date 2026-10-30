@@ -71,6 +71,10 @@ export default function Home() {
   const weekToday = useMemo(() => weekStatus({ mine: mineWorkouts, history }), [mineWorkouts, history]);
   // Minha ficha (ordem A, B, C... escolhida pelo aluno): tem prioridade sobre a semana da IA, porque é a escolha explícita dele.
   const routineToday = useMemo(() => routineNext({ items: routineItems, workouts: mineWorkouts, history }), [routineItems, mineWorkouts, history]);
+  // Sem ficha do treinador, quem tem treinos próprios recebe a sugestão entre eles (não entre as fichas do catálogo).
+  // O id de "Meus treinos" já vem como my_<docId>, o mesmo gravado no histórico.
+  const ownRotation = useMemo(() => mineWorkouts.map((w) => ({ ...w, firestoreId: w.id })), [mineWorkouts]);
+  const suggestFrom = !userProfile?.currentTrainingId && ownRotation.length > 0 ? ownRotation : trainings;
 
   const handleDiscardActiveWorkout = () => {
     discardActiveSession();
@@ -172,7 +176,7 @@ export default function Home() {
           ) : (
             <RecommendedWorkoutCard
               history={history}
-              trainings={trainings}
+              trainings={suggestFrom}
               assignedTrainingId={userProfile?.currentTrainingId}
               weekCount={weekCount}
               weekGoal={goal}

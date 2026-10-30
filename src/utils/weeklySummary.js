@@ -104,7 +104,7 @@ export function localNarrative(f) {
       : `Nenhum treino concluído nesta semana ainda. Sua meta é ${plural(f.goal.weekly, 'treino', 'treinos')} por semana: que tal começar hoje?`;
   }
   const parts = [`Você concluiu ${f.workouts}${f.goal.weekly ? ` de ${f.goal.weekly}` : ''} ${f.workouts === 1 && !f.goal.weekly ? 'treino' : 'treinos'} ${when}, em ${plural(f.activeDays, 'dia', 'dias')}, somando ${f.minutes} minutos e ${f.texts.volume}.`];
-  if (f.goal.weekly) parts.push(f.goal.met ? 'Meta da semana cumprida.' : `Faltam ${plural(f.goal.remaining, 'treino', 'treinos')} para a meta.`);
+  if (f.goal.weekly) parts.push(f.goal.met ? 'Meta da semana cumprida.' : `${f.goal.remaining === 1 ? 'Falta' : 'Faltam'} ${plural(f.goal.remaining, 'treino', 'treinos')} para a meta.`);
   if (f.streak > 1) parts.push(`Sequência atual: ${f.streak} dias.`);
   if (f.comparison) parts.push(f.comparison.volumePct === 0 ? 'O volume ficou igual ao da semana anterior.' : `O volume ${f.comparison.volumePct > 0 ? 'subiu' : 'caiu'} ${Math.abs(f.comparison.volumePct)}% em relação à semana anterior.`);
   if (f.records.length) parts.push(`${f.records.length === 1 ? 'Novo recorde' : 'Novos recordes'}: ${f.records.map((r) => `${r.exercise} (${r.weight} kg)`).join(', ')}.`);
