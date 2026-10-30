@@ -4,7 +4,7 @@ import { suggestNext, goalSentence } from '../../utils/rotation';
 
 // --- CARD "TREINO DE HOJE" ---
 // Sugestão por rotação (determinística): ver utils/rotation.js.
-const RecommendedWorkoutCard = ({ history = [], trainings, onStart, assignedTrainingId, weekCount = 0, weekGoal = 0, trainedToday = false, onBrowse }) => {
+const RecommendedWorkoutCard = ({ history = [], trainings, onStart, assignedTrainingId, weekCount = 0, weekGoal = 0, trainedToday = false, onBrowse, showWeekProgress = true }) => {
   const suggestion = suggestNext({ trainings, assignedId: assignedTrainingId, history, weeklyGoal: weekGoal, weekCount, trainedToday });
   const nextTraining = suggestion.training;
   const isAssigned = !!suggestion.isAssigned;
@@ -50,7 +50,7 @@ const RecommendedWorkoutCard = ({ history = [], trainings, onStart, assignedTrai
           <span className="flex items-center gap-1.5"><ClipboardList className="h-3.5 w-3.5" aria-hidden="true" /> {nextTraining.exercises?.length || 0} exercícios</span>
         </div>
 
-        {weekGoal > 0 && (
+        {showWeekProgress && weekGoal > 0 && (
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-[11px] font-bold text-black/75">
               <span>{trainedToday ? 'Treino de hoje concluído' : 'Progresso da semana'}</span>

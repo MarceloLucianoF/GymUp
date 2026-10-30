@@ -6,7 +6,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import toast from 'react-hot-toast';
 import MonthCalendar from '../../components/dashboard/MonthCalendar';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Dumbbell, Flame, Search, Trash2, ArrowUpRight, ChevronDown } from 'lucide-react';
+import { Clock, Dumbbell, Flame, Search, Trash2, ArrowUpRight, ChevronDown, X } from 'lucide-react';
 import { SkeletonList } from '../../components/common/Skeleton';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
@@ -14,6 +14,8 @@ import { formatDate as formatLocaleDate, formatTonnage } from '../../utils/forma
 import ChipRow from '../../components/dashboard/ChipRow';
 import { invalidateCheckIns } from '../../services/checkInsCache';
 import { removeCheckIn } from '../../services/checkInService';
+import { useConfirm } from '../../hooks/useConfirm';
+import { filterHistory, trainingOptions, exerciseOptions } from '../../utils/historyFilters';
 
 export default function HistoryPage() {
   const { user } = useAuthContext();
@@ -29,6 +31,10 @@ export default function HistoryPage() {
   // Filtros Locais
   const [searchTerm, setSearchTerm] = useState('');
   const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'month', 'last_month'
+  const [selectedDay, setSelectedDay] = useState(null); // 'AAAA-MM-DD' tocado no calendário
+  const [trainingFilter, setTrainingFilter] = useState('');
+  const [exerciseFilter, setExerciseFilter] = useState('');
+  const { confirm, dialog } = useConfirm();
 
   // 1. ARQUITETURA REAL-TIME (onSnapshot)
   useEffect(() => {
@@ -60,36 +66,16 @@ export default function HistoryPage() {
     return () => unsubscribe(); // Limpa listener ao desmontar
   }, [user, reloadKey]);
 
-  // 2. LÓGICA DE FILTRO MEMOIZADA (Performance)
-  const filteredHistory = useMemo(() => {
-      let filtered = history;
-
-      // Filtro de Texto (Busca profunda em nome do treino E exercícios)
-      if (searchTerm) {
-          const lowerTerm = searchTerm.toLowerCase();
-          filtered = filtered.filter(item => 
-              (item.trainingName && item.trainingName.toLowerCase().includes(lowerTerm)) ||
-              (item.exercises && item.exercises.some(ex => ex.name.toLowerCase().includes(lowerTerm)))
-          );
-      }
-
-      // Filtro de Tempo
-      const now = new Date();
-      if (timeFilter === 'month') {
-          filtered = filtered.filter(item => {
-              const d = new Date(item.date);
-              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-          });
-      } else if (timeFilter === 'last_month') {
-          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          filtered = filtered.filter(item => {
-              const d = new Date(item.date);
-              return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
-          });
-      }
-
-      return filtered;
-  }, [history, searchTerm, timeFilter]);
+  // 2. FILTROS (puros, em utils/historyFilters): dia do calendário > período; ficha, exercício e busca somam
+  const trainingsList = useMemo(() => trainingOptions(history), [history]);
+  const exercisesList = useMemo(() => exerciseOptions(history), [history]);
+  const filteredHistory = useMemo(
+      () => filterHistory(history, { search: searchTerm, time: timeFilter, day: selectedDay, training: trainingFilter, exercise: exerciseFilter }),
+      [history, searchTerm, timeFilter, selectedDay, trainingFilter, exerciseFilter]
+  );
+  const hasFilters = !!(searchTerm || selectedDay || trainingFilter || exerciseFilter || timeFilter !== 'all');
+  const clearFilters = () => { setSearchTerm(''); setSelectedDay(null); setTrainingFilter(''); setExerciseFilter(''); setTimeFilter('all'); };
+  const selectedDayLabel = selectedDay ? formatLocaleDate(new Date(`${selectedDay}T12:00:00`), { weekday: 'long', day: 'numeric', month: 'long' }) : '';
 
   // Agrupamento por mês com totais
   const groups = useMemo(() => {
@@ -113,30 +99,10 @@ export default function HistoryPage() {
       return [...map.values()];
   }, [filteredHistory]);
 
-  // 3. UX DE DELEÇÃO (Toast Custom)
-  const handleDeleteRequest = (itemId) => {
-    toast((t) => (
-      <div className="flex flex-col gap-2">
-        <span className="font-bold text-sm">Apagar este registro?</span>
-        <div className="flex gap-2">
-            <button 
-                onClick={() => {
-                    deleteItem(itemId);
-                    toast.dismiss(t.id);
-                }}
-                className="bg-red-500 text-white px-3 py-1 rounded text-xs font-bold"
-            >
-                Confirmar
-            </button>
-            <button 
-                onClick={() => toast.dismiss(t.id)}
-                className="bg-gray-200 text-gray-800 px-3 py-1 rounded text-xs font-bold"
-            >
-                Cancelar
-            </button>
-        </div>
-      </div>
-    ), { duration: 4000, icon: <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" /> });
+  // 3. EXCLUSÃO (diálogo de confirmação acessível)
+  const handleDeleteRequest = async (itemId) => {
+    const ok = await confirm({ title: 'Excluir este treino?', message: 'O registro sai do histórico e da contagem da semana. Não dá para desfazer.', confirmLabel: 'Excluir', danger: true });
+    if (ok) deleteItem(itemId);
   };
 
   const deleteItem = async (itemId) => {
@@ -176,39 +142,73 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 pb-32 transition-colors">
+      {dialog}
       <div className="max-w-4xl mx-auto space-y-6">
-        
+
         {/* Cabeçalho */}
         <PageHeader eyebrow="Diário" title="Histórico de treinos" subtitle="Veja tudo o que você já realizou." />
 
-        {/* Calendário Mensal */}
-        <MonthCalendar history={history} />
+        {/* Calendário Mensal: tocar num dia com treino filtra a lista */}
+        <MonthCalendar history={history} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
 
         {/* Barra de Filtros */}
         <div className="flex flex-col gap-3">
-            <div className="flex-1 flex gap-2">
-                <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 pointer-events-none absolute left-4 top-1/2 -translate-y-1/2" aria-hidden="true" />
-                    <input 
-                        type="text" 
-                        placeholder="Buscar treino ou exercício..." aria-label="Buscar treino ou exercício" 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full input-brand-dark !pl-11 pr-4 text-base"
-                    />
-                </div>
+            <div className="relative">
+                <Search className="w-4 h-4 text-gray-600 dark:text-gray-400 pointer-events-none absolute left-4 top-1/2 -translate-y-1/2" aria-hidden="true" />
+                <input
+                    type="search"
+                    placeholder="Buscar treino ou exercício..." aria-label="Buscar treino ou exercício"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full input-brand-dark min-h-[48px] !pl-11 pr-4 text-base"
+                />
             </div>
-            
-            <ChipRow
-                label="Filtrar por período"
-                value={timeFilter}
-                onChange={setTimeFilter}
-                options={[{ value: 'all', label: 'Sempre' }, { value: 'month', label: 'Este mês' }, { value: 'last_month', label: 'Mês passado' }]}
-            />
+
+            <div className="grid grid-cols-2 gap-2">
+                <label className="min-w-0">
+                    <span className="mb-1 block px-1 text-[11px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Ficha</span>
+                    <select value={trainingFilter} onChange={(e) => setTrainingFilter(e.target.value)} className="w-full min-w-0 input-brand-dark min-h-[48px] truncate !py-2 text-sm">
+                        <option value="">Todas</option>
+                        {trainingsList.map((o) => <option key={o.value} value={o.value}>{o.label} ({o.count})</option>)}
+                    </select>
+                </label>
+                <label className="min-w-0">
+                    <span className="mb-1 block px-1 text-[11px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Exercício</span>
+                    <select value={exerciseFilter} onChange={(e) => setExerciseFilter(e.target.value)} className="w-full min-w-0 input-brand-dark min-h-[48px] truncate !py-2 text-sm">
+                        <option value="">Todos</option>
+                        {exercisesList.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                </label>
+            </div>
+
+            {selectedDay ? (
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setSelectedDay(null)}
+                        aria-label={`Remover filtro do dia ${selectedDayLabel}`}
+                        className="pressable inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-[#FF9800] px-4 text-xs font-black text-black shadow-lg shadow-brand/20 first-letter:uppercase"
+                    >
+                        <span className="first-letter:uppercase">{selectedDayLabel}</span> <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                </div>
+            ) : (
+                <ChipRow
+                    label="Filtrar por período"
+                    value={timeFilter}
+                    onChange={setTimeFilter}
+                    options={[{ value: 'all', label: 'Sempre' }, { value: 'month', label: 'Este mês' }, { value: 'last_month', label: 'Mês passado' }]}
+                />
+            )}
 
             {/* Contador de Resultados */}
-            <div className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider px-1">
-                {filteredHistory.length} {filteredHistory.length === 1 ? 'atividade encontrada' : 'atividades encontradas'}
+            <div className="flex min-h-[44px] items-center justify-between gap-2 px-1">
+                <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider" aria-live="polite">
+                    {filteredHistory.length} {filteredHistory.length === 1 ? 'atividade encontrada' : 'atividades encontradas'}
+                </p>
+                {hasFilters && (
+                    <button type="button" onClick={clearFilters} className="pressable min-h-[44px] rounded-xl px-3 text-xs font-bold text-amber-800 dark:text-brand">Limpar filtros</button>
+                )}
             </div>
         </div>
 
@@ -218,6 +218,7 @@ export default function HistoryPage() {
             <Search className="w-12 h-12 text-gray-600 dark:text-gray-400 mb-4 opacity-50" />
             <h2 className="text-lg font-bold text-gray-700 dark:text-white">Nada encontrado</h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Tente mudar os filtros.</p>
+            {hasFilters && <button type="button" onClick={clearFilters} className="btn-primary-gradient mt-4 min-h-[44px] px-5 text-sm">Limpar filtros</button>}
           </div>
         ) : (
           <div className="space-y-6">
