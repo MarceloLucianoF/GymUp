@@ -7,6 +7,7 @@ import { fetchStudentCheckIns, invalidateCheckIns } from '../services/checkInsCa
 import { saveCheckIn } from '../services/checkInService';
 import { saveWeeklyGoal, reconcileWeeklyGoal } from '../services/goalService';
 import { computeAchievements as computeGameAchievements } from '../utils/achievements';
+import { plural } from '../utils/text';
 
 // --- Metas semanais (localStorage por usuário) ---
 export const GOAL_MIN = 2;
