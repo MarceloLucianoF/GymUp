@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { ArrowLeft, MessageSquare, Clock, Scale, Dumbbell, ClipboardList, StickyNote, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Clock, Scale, Dumbbell, ClipboardList, StickyNote, TrendingDown, TrendingUp, Minus, Lock } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { getCoachNote, saveCoachNote } from '../../services/coachNotes';
 import { useAuthContext } from '../../hooks/AuthContext';
@@ -24,6 +24,9 @@ import CoachHealthPanel from '../../components/health/CoachHealthPanel';
 import { adherenceGrid, adherencePct } from '../../utils/coachInsights';
 import { useConfirm } from '../../hooks/useConfirm';
 import { endStudentLink } from '../../services/coachLinkService';
+import { getCoachShare, shareCovers } from '../../services/coachShare';
+import { listMyWorkoutsAndRoutine } from '../../services/myWorkouts';
+import StudentOwnWorkouts from '../../components/coach/StudentOwnWorkouts';
 import { chatState, studentStatus, timeAgo, startOfDay, toDate, DAY_MS } from '../../components/coach/helpers';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
 import { plural } from '../../utils/text';
@@ -81,6 +84,8 @@ export default function StudentDetailsPage() {
   const [student, setStudent] = useState(null);
   const [history, setHistory] = useState([]);
   const [measurements, setMeasurements] = useState([]);
+  const [measurementsShared, setMeasurementsShared] = useState(false);
+  const [ownWorkouts, setOwnWorkouts] = useState(null);
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -102,15 +107,27 @@ export default function StudentDetailsPage() {
           navigate('/coach/students');
           return;
         }
-        const [historySnap, measSnap, trainingsSnap] = await Promise.all([
+        const [historySnap, trainingsSnap, share] = await Promise.all([
           getDocs(query(collection(db, 'checkIns'), where('userId', '==', studentId), orderBy('date', 'desc'), limit(60))),
-          getDocs(query(collection(db, 'measurements'), where('userId', '==', studentId), orderBy('date', 'asc'))),
-          getDocs(query(collection(db, 'trainings'), where('coachId', '==', uid)))
+          getDocs(query(collection(db, 'trainings'), where('coachId', '==', uid))),
+          getCoachShare(studentId)
+        ]);
+        // Peso/medidas/fotos e treinos próprios: só o que o aluno compartilhou com este treinador (coachShares).
+        // Sem autorização, a tela abre normalmente e mostra o aviso no lugar.
+        const allowed = async (key, fn) => {
+          if (!shareCovers(share, uid, key)) return null;
+          try { return await fn(); } catch (e) { if (e?.code === 'permission-denied') return null; throw e; }
+        };
+        const [measSnap, own] = await Promise.all([
+          allowed('measurements', () => getDocs(query(collection(db, 'measurements'), where('userId', '==', studentId), orderBy('date', 'asc')))),
+          allowed('workouts', () => listMyWorkoutsAndRoutine(studentId))
         ]);
         if (cancelled) return;
         setStudent({ id: userDoc.id, ...userDoc.data() });
         setHistory(historySnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setMeasurements(measSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setMeasurements(measSnap ? measSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : []);
+        setMeasurementsShared(!!measSnap);
+        setOwnWorkouts(own);
         setTrainings(trainingsSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.name).localeCompare(String(b.name))));
         try {
           const savedNote = await getCoachNote(uid, studentId);
@@ -256,7 +273,9 @@ export default function StudentDetailsPage() {
         )}
 
         {tab === 'workouts' && (
-          <section role="tabpanel" id="panel-workouts" aria-labelledby="tab-workouts" className="surface p-5">
+          <div role="tabpanel" id="panel-workouts" aria-labelledby="tab-workouts" className="space-y-5">
+          <StudentOwnWorkouts own={ownWorkouts} name={(student.displayName || 'O aluno').split(' ')[0]} />
+          <section className="surface p-5">
             <h2 className="mb-4 font-display text-base font-black text-gray-900 dark:text-white">Linha do tempo</h2>
             {history.length === 0 ? <EmptyState icon={Dumbbell} title="Nenhum treino registrado." /> : (
               <ol className="relative space-y-1 border-l-2 border-brand/30 pl-5">
@@ -277,10 +296,20 @@ export default function StudentDetailsPage() {
               </ol>
             )}
           </section>
+          </div>
         )}
 
         {tab === 'progress' && (
           <div role="tabpanel" id="panel-progress" aria-labelledby="tab-progress" className="space-y-5">
+            {!measurementsShared ? (
+              <section className="surface flex items-start gap-3 p-5" aria-label="Peso e medidas">
+                <Lock className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Peso, medidas e fotos de progresso são do aluno e aparecem aqui quando ele autorizar, em Perfil › Treinador.
+                  Avaliações físicas e anamnese ficam na aba Saúde, com autorização própria.
+                </p>
+              </section>
+            ) : (<>
             <section className="surface p-5">
               <h2 className="mb-4 font-display text-base font-black text-gray-900 dark:text-white">Peso corporal</h2>
               {derived.weightSeries.length === 0 ? (
@@ -309,6 +338,7 @@ export default function StudentDetailsPage() {
                 </div>
               </section>
             )}
+            </>)}
           </div>
         )}
 

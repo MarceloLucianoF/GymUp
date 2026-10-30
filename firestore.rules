@@ -306,7 +306,9 @@ service cloud.firestore {
     }
 
     match /measurements/{docId} {
-      allow get, list: if canAccessUserData(resource.data.userId);
+      // Peso, medidas e fotos: o dono, o admin e o treinador só com a autorização do aluno (coachShares.measurements).
+      allow get, list: if (signedIn() && (request.auth.uid == resource.data.userId || isAdmin()))
+        || sharedWithCoach(resource.data.userId, 'measurements');
       allow create: if validUserOwnedData(request.resource.data)
         && ownerOrAdmin(request.resource.data.userId);
       allow update: if validUserOwnedData(request.resource.data)
@@ -331,6 +333,17 @@ service cloud.firestore {
         && linkedStudent(get(/databases/$(database)/documents/users/$(uid)).data)
         && exists(healthConsentPath(uid))
         && get(healthConsentPath(uid)).data.coachId == request.auth.uid;
+    }
+
+    // O que o aluno escolheu mostrar ao treinador vinculado (coachShares/{uid}): treinos próprios e peso/medidas/fotos.
+    // Vale só para o treinador atual e só enquanto o item estiver ligado.
+    function coachSharePath(uid) { return /databases/$(database)/documents/coachShares/$(uid); }
+    function sharedWithCoach(uid, key) {
+      return signedIn() && uid is string && uid != request.auth.uid
+        && linkedStudent(get(/databases/$(database)/documents/users/$(uid)).data)
+        && exists(coachSharePath(uid))
+        && get(coachSharePath(uid)).data.coachId == request.auth.uid
+        && get(coachSharePath(uid)).data.get(key, false) == true;
     }
 
     function hNum(m, k, lo, hi) {
@@ -445,6 +458,22 @@ service cloud.firestore {
         && request.resource.data.version.size() <= 20
         && hIso(request.resource.data.acceptedAt);
       allow delete: if healthOwner(uid) || (signedIn() && resource != null && resource.data.coachId == request.auth.uid);
+    }
+
+    // Compartilhamento com o treinador (o aluno escolhe o que ele vê). Só o próprio aluno cria ou muda, e só para o treinador atual.
+    match /coachShares/{uid} {
+      allow get: if (signedIn() && request.auth.uid == uid) || (signedIn()
+        && linkedStudent(get(/databases/$(database)/documents/users/$(uid)).data)
+        && (resource == null || resource.data.coachId == request.auth.uid));
+      allow list: if false;
+      allow create, update: if signedIn() && request.auth.uid == uid && hasRole('user')
+        && request.resource.data.keys().hasOnly(['coachId', 'workouts', 'measurements', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['coachId', 'workouts', 'measurements', 'updatedAt'])
+        && request.resource.data.coachId is string
+        && request.resource.data.coachId == get(/databases/$(database)/documents/users/$(uid)).data.get('coachId', null)
+        && request.resource.data.workouts is bool && request.resource.data.measurements is bool
+        && request.resource.data.updatedAt is string && request.resource.data.updatedAt.size() <= 40;
+      allow delete: if (signedIn() && request.auth.uid == uid) || (signedIn() && resource != null && resource.data.coachId == request.auth.uid);
     }
 
     // Contador de check-ins por aluno (sem dados de saúde). O cliente só o altera junto da criação ou remoção de um
@@ -683,9 +712,9 @@ service cloud.firestore {
         && data.get('isAIGenerated', false) == true && data.get('coachId', null) == null;
     }
 
-    // Treinos pessoais do aluno (digitados ou importados de PDF): privados, fora da loja de fichas. Só o dono lê e grava.
+    // Treinos pessoais do aluno (digitados ou importados de PDF): fora da loja de fichas. Só o dono grava; o treinador lê só se o aluno compartilhou.
     match /users/{userId}/myWorkouts/{workoutId} {
-      allow get, list: if signedIn() && request.auth.uid == userId;
+      allow get, list: if (signedIn() && request.auth.uid == userId) || sharedWithCoach(userId, 'workouts');
       allow create, update: if signedIn() && request.auth.uid == userId && hasRole('user')
         && request.resource.data.keys().hasOnly(['name', 'category', 'description', 'estimatedTime', 'exercises', 'createdAt', 'updatedAt', 'source', 'photo', 'warmupStretch'])
         && (!('warmupStretch' in request.resource.data) || request.resource.data.warmupStretch is bool)   // etapa de alongamento antes do treino
