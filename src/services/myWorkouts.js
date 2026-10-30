@@ -2,6 +2,7 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { IMAGE_LIMITS, isSafePhoto } from '../utils/imageAttach';
+import { normalizeRoutine } from '../utils/routine';
 
 export const MY_PREFIX = 'my_';
 export const isMyTrainingId = (id) => typeof id === 'string' && id.startsWith(MY_PREFIX);
@@ -39,9 +40,34 @@ async function writeTolerant(write, data) {
   }
 }
 
-export async function listMyWorkouts(uid) {
+// "Minha ficha" (ordem dos treinos e dia da semana) mora num documento de ID fixo nesta mesma coleção, porque as regras atuais
+// só deixam o aluno gravar aqui (o perfil users/{uid} aceita uma lista fechada de campos). Para caber no formato aceito, os itens
+// vão em `exercises` ({ workoutId, day }) e `category` = 'routine'. Ele nunca aparece como treino: listMyWorkouts o separa.
+export const ROUTINE_DOC_ID = 'minha-ficha';
+const isRoutineDoc = (d) => d.id === ROUTINE_DOC_ID;
+
+/** Treinos e ficha na mesma leitura. `routine.items`: [{ workoutId (docId), day: 0..6 | null }]. */
+export async function listMyWorkoutsAndRoutine(uid) {
   const snap = await getDocs(query(col(uid), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => ({ id: toMyTrainingId(d.id), docId: d.id, isMine: true, ...d.data() }));
+  const workouts = snap.docs.filter((d) => !isRoutineDoc(d)).map((d) => ({ id: toMyTrainingId(d.id), docId: d.id, isMine: true, ...d.data() }));
+  const r = snap.docs.find(isRoutineDoc)?.data();
+  return { workouts, routine: { items: normalizeRoutine(r?.exercises, workouts), updatedAt: r?.updatedAt || null } };
+}
+
+export async function listMyWorkouts(uid) {
+  return (await listMyWorkoutsAndRoutine(uid)).workouts;
+}
+
+/** Grava a ficha (ou apaga, se vazia: as regras exigem ao menos um item). */
+export async function saveMyRoutine(uid, items) {
+  const clean = normalizeRoutine(items);
+  const ref = doc(db, 'users', uid, 'myWorkouts', ROUTINE_DOC_ID);
+  if (!clean.length) { await deleteDoc(ref); return clean; }
+  await setDoc(ref, {
+    name: 'Minha ficha', category: 'routine', description: '', estimatedTime: '15 min', source: 'manual',
+    exercises: clean, createdAt: new Date().toISOString(), updatedAt: serverTimestamp()
+  });
+  return clean;
 }
 
 export async function saveMyWorkout(uid, payload) {
@@ -70,5 +96,5 @@ export async function replaceExerciseInMyWorkout(uid, docId, originalName, swapp
     ...old, firestoreId: swapped.firestoreId, name: swapped.name, muscleGroup: swapped.muscleGroup, machineImage: swapped.machineImage,
     videoUrl: swapped.videoUrl, description: swapped.description, ...(swapped.kind ? { kind: swapped.kind } : {})
   };
-  await updateMyWorkout(uid, docId, { name: data.name, exercises: next, source: data.source, description: data.description, category: data.category, photo: data.photo, createdAt: data.createdAt });
+  await updateMyWorkout(uid, docId, { name: data.name, exercises: next, source: data.source, description: data.description, category: data.category, photo: data.photo, createdAt: data.createdAt, ...(typeof data.warmupStretch === 'boolean' ? { warmupStretch: data.warmupStretch } : {}) });
 }
