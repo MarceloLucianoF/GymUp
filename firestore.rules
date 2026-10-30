@@ -899,6 +899,172 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.uid == request.auth.uid && !exists(profilePath(request.auth.uid));
     }
 
+    // ---- Desafios em grupo (estilo GymRats, MVP): placar de dias ativos, sem chat e sem foto ----
+    // challenges/{id}: nome, 7 ou 30 dias, início/fim (AAAA-MM-DD no fuso do aparelho), dono, código de 8 caracteres e contador de
+    // membros (até 50). challengeCodes/{código} -> {challengeId} é o convite. Só membros leem o desafio e a lista de membros.
+    // O placar (activeDays/lastDay) é publicado por cada membro a partir dos próprios check-ins: as regras só limitam o valor
+    // (no máximo 1 dia ativo por dia de calendário, dentro do período, nunca no futuro, nunca diminui). NÃO é à prova de fraude:
+    // um cliente adulterado consegue marcar dias sem treino dentro desses limites.
+    function chPath(cid) {
+      return /databases/$(database)/documents/challenges/$(cid);
+    }
+    function chMemberPath(cid, uid) {
+      return /databases/$(database)/documents/challenges/$(cid)/members/$(uid);
+    }
+    function chCodePath(code) {
+      return /databases/$(database)/documents/challengeCodes/$(code);
+    }
+    function chIsMember(cid) {
+      return signedIn() && exists(chMemberPath(cid, request.auth.uid));
+    }
+    function chDayOk(s) {
+      return s is string && s.matches('^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+    }
+    // 'AAAA-MM-DD' -> meia-noite UTC desse dia (o dia local do aparelho fica entre -36 h e +14 h disso)
+    function chDayTs(s) {
+      return timestamp.date(int(s.split('-')[0]), int(s.split('-')[1]), int(s.split('-')[2]));
+    }
+    function chNotFuture(s) {
+      return chDayTs(s) <= request.time + duration.value(14, 'h');
+    }
+    function challengeShape(d) {
+      return d.keys().hasOnly(['name', 'durationDays', 'startDay', 'endDay', 'ownerId', 'code', 'memberCount', 'status', 'createdAt'])
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 40 && d.name.matches('(?s).*[^\\s].*')
+        && !d.name.lower().matches('(?s).*(https?://|www[.]|[a-z0-9-]+[.][a-z]{2,}([/:?#]|\\b)).*')
+        && d.durationDays is int && d.durationDays in [7, 30]
+        && chDayOk(d.startDay) && chDayOk(d.endDay)
+        && chDayTs(d.endDay) == chDayTs(d.startDay) + duration.value(d.durationDays - 1, 'd')
+        && d.ownerId is string
+        && d.code is string && d.code.matches('^[A-Z0-9]{8}$')
+        && d.memberCount is int && d.memberCount >= 0 && d.memberCount <= 50
+        && d.status in ['active', 'ended']
+        && d.createdAt is timestamp;
+    }
+    function chMemberShape(d, uid) {
+      return d.keys().hasOnly(['uid', 'displayName', 'handle', 'code', 'joinedAt', 'activeDays', 'lastDay', 'updatedAt'])
+        && d.uid == uid
+        && d.displayName is string && d.displayName.size() >= 1 && d.displayName.size() <= 60
+        && d.handle is string && d.handle.matches('^[a-z0-9_]{3,20}$')
+        && d.code is string && d.code.matches('^[A-Z0-9]{8}$')
+        && d.joinedAt is timestamp && d.updatedAt is timestamp
+        && d.activeDays is int && d.activeDays >= 0 && d.activeDays <= 30
+        && d.lastDay is string && (d.lastDay == '' || chDayOk(d.lastDay))
+        && ((d.activeDays == 0) == (d.lastDay == ''));
+    }
+    // Nome e @ do membro são os do perfil social (ninguém entra com o nome de outra pessoa).
+    function chProfileMatches(d) {
+      return exists(profilePath(request.auth.uid))
+        && get(profilePath(request.auth.uid)).data.displayName == d.displayName
+        && get(profilePath(request.auth.uid)).data.handle == d.handle;
+    }
+    // Último dia contado antes desta gravação (sem nenhum: o dia anterior ao início).
+    function chBase(old, ch) {
+      return old.lastDay == '' ? chDayTs(ch.startDay) - duration.value(1, 'd') : chDayTs(old.lastDay);
+    }
+    // Placar: só sobe, e cada dia novo exige um dia de calendário a mais em lastDay (no máximo 1 por dia),
+    // com lastDay dentro do período e não no futuro. Assim activeDays <= dias decorridos do desafio.
+    function chScoreOk(d, old, ch) {
+      return d.activeDays >= old.activeDays
+        && (d.activeDays == old.activeDays
+          ? d.lastDay == old.lastDay
+          : (ch.status == 'active'
+            && d.lastDay >= ch.startDay && d.lastDay <= ch.endDay && chNotFuture(d.lastDay)
+            && (chDayTs(d.lastDay) - chBase(old, ch)).seconds() >= (d.activeDays - old.activeDays) * 86400));
+    }
+
+    match /challenges/{challengeId} {
+      allow get: if chIsMember(challengeId);
+      allow list: if false;
+      // Criar: o dono entra como primeiro membro e reserva o código no mesmo lote; o início é "hoje" no fuso do aparelho.
+      allow create: if signedIn() && challengeShape(request.resource.data)
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.memberCount == 1 && request.resource.data.status == 'active'
+        && request.resource.data.createdAt == request.time
+        && chDayTs(request.resource.data.startDay) >= request.time - duration.value(36, 'h')
+        && chNotFuture(request.resource.data.startDay)
+        && existsAfter(chMemberPath(challengeId, request.auth.uid))
+        && getAfter(chCodePath(request.resource.data.code)).data.challengeId == challengeId;
+      allow update: if signedIn() && challengeShape(request.resource.data) && (
+          // entrar: só o contador sobe 1, junto com o próprio documento de membro (o limite de 50 está no formato)
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount'])
+            && request.resource.data.memberCount == resource.data.memberCount + 1
+            && resource.data.status == 'active'
+            && !exists(chMemberPath(challengeId, request.auth.uid)) && existsAfter(chMemberPath(challengeId, request.auth.uid)))
+          // sair: o contador desce 1 junto com a saída (o dono não sai: encerra ou apaga)
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount'])
+            && request.resource.data.memberCount == resource.data.memberCount - 1
+            && resource.data.ownerId != request.auth.uid
+            && exists(chMemberPath(challengeId, request.auth.uid)) && !existsAfter(chMemberPath(challengeId, request.auth.uid)))
+          // encerrar: só o dono; o placar congela e ninguém mais entra
+          || (resource.data.ownerId == request.auth.uid && resource.data.status == 'active'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status == 'ended')
+        );
+      // Apagar: só o dono, liberando o código no mesmo lote (o app apaga os membros no mesmo lote também).
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid
+        && !existsAfter(chCodePath(resource.data.code));
+
+      match /members/{memberId} {
+        allow get: if signedIn() && (memberId == request.auth.uid || chIsMember(challengeId));
+        allow list: if chIsMember(challengeId);
+        allow create: if signedIn() && memberId == request.auth.uid
+          && chMemberShape(request.resource.data, memberId)
+          && request.resource.data.joinedAt == request.time && request.resource.data.updatedAt == request.time
+          && request.resource.data.activeDays == 0 && request.resource.data.lastDay == ''
+          && chProfileMatches(request.resource.data)
+          && getAfter(chPath(challengeId)).data.code == request.resource.data.code
+          && (
+            // criação do desafio pelo dono (mesmo lote)
+            (!exists(chPath(challengeId)) && getAfter(chPath(challengeId)).data.ownerId == request.auth.uid)
+            // entrar pelo código: desafio ativo, ainda não terminado, e o contador sobe junto
+            || (exists(chPath(challengeId))
+              && get(chPath(challengeId)).data.status == 'active'
+              && chDayTs(get(chPath(challengeId)).data.endDay) + duration.value(36, 'h') >= request.time
+              && getAfter(chPath(challengeId)).data.memberCount == get(chPath(challengeId)).data.memberCount + 1)
+          );
+        // Cada membro atualiza só o próprio placar (e o nome/@ quando o perfil social mudou).
+        allow update: if signedIn() && memberId == request.auth.uid
+          && chMemberShape(request.resource.data, memberId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'handle', 'activeDays', 'lastDay', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time
+          && ((request.resource.data.displayName == resource.data.displayName && request.resource.data.handle == resource.data.handle)
+            || chProfileMatches(request.resource.data))
+          && chScoreOk(request.resource.data, resource.data, get(chPath(challengeId)).data);
+        allow delete: if signedIn() && (
+            // sair: o contador do desafio desce no mesmo lote; o dono não sai
+            (memberId == request.auth.uid && exists(chPath(challengeId))
+              && get(chPath(challengeId)).data.ownerId != request.auth.uid
+              && getAfter(chPath(challengeId)).data.memberCount == get(chPath(challengeId)).data.memberCount - 1)
+            // o dono apaga o desafio inteiro (o desafio some no mesmo lote)
+            || (exists(chPath(challengeId)) && get(chPath(challengeId)).data.ownerId == request.auth.uid
+              && !existsAfter(chPath(challengeId)))
+            // sobra de um desafio que não existe mais: cada um apaga a própria
+            || (memberId == request.auth.uid && !exists(chPath(challengeId)))
+          );
+      }
+    }
+
+    // Convite: quem sabe o código descobre o ID do desafio e entra (o membro também grava o código, conferido com o do desafio).
+    match /challengeCodes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && code.matches('^[A-Z0-9]{8}$')
+        && request.resource.data.keys().hasOnly(['challengeId'])
+        && request.resource.data.challengeId is string && request.resource.data.challengeId.size() <= 40
+        && !exists(chPath(request.resource.data.challengeId))
+        && getAfter(chPath(request.resource.data.challengeId)).data.ownerId == request.auth.uid
+        && getAfter(chPath(request.resource.data.challengeId)).data.code == code;
+      allow update: if false;
+      allow delete: if signedIn() && (!exists(chPath(resource.data.challengeId))
+        || get(chPath(resource.data.challengeId)).data.ownerId == request.auth.uid);
+    }
+
+    // Desafios de que o usuário participa (grupo de coleções, usado na lista e na exclusão da conta): só os próprios documentos.
+    // Atenção: qualquer subcoleção futura chamada 'members' com campo uid ficaria listável pelo próprio dono.
+    match /{path=**}/members/{memberId} {
+      allow list: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
     match /exercises/{docId} {
       allow get, list: if signedIn();
       allow create, update, delete: if isCoach() || isAdmin();

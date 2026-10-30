@@ -1,5 +1,5 @@
 import {
-  collection, collectionGroup, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc
+  collection, collectionGroup, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc, increment
 } from 'firebase/firestore';
 import {
   EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, deleteUser, browserPopupRedirectResolver
@@ -8,6 +8,7 @@ import { db } from '../firebase/config';
 import { ACADEMY_API_ENABLED, academyApi } from './academyApi';
 import { isNativeApp, nativeGoogleCredential } from './nativeApp';
 import { disablePush } from './pushService';
+import { leaveAllChallenges } from './challengeService';
 
 const BATCH_SIZE = 400; // limite do Firestore é 500 operações por lote
 
@@ -19,7 +20,7 @@ export const DELETION_STEPS = [
   { id: 'chats', label: 'Apagando conversas' },
   { id: 'trainings', label: 'Apagando fichas criadas por IA' },
   { id: 'notes', label: 'Apagando anotações do treinador sobre você' },
-  { id: 'social', label: 'Apagando perfil social e amizades' },
+  { id: 'social', label: 'Apagando perfil social, amizades e desafios' },
   { id: 'profile', label: 'Apagando perfil' },
   { id: 'login', label: 'Encerrando o login' }
 ];
@@ -30,7 +31,7 @@ export const chunk = (items, size = BATCH_SIZE) => {
   return out;
 };
 
-const realDeps = { db, collection, collectionGroup, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc };
+const realDeps = { db, collection, collectionGroup, query, where, getDocs, getDoc, doc, writeBatch, deleteDoc, increment };
 
 const deleteRefs = async (refs, deps) => {
   for (const group of chunk(refs)) {
@@ -123,6 +124,9 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     const tryDelete = async (ref) => {
       try { await deps.deleteDoc(ref); removed += 1; } catch (error) { if (error?.code !== 'permission-denied') throw error; }
     };
+    // Desafios em grupo: sai de todos e apaga os que criou (membros, código e desafio no mesmo lote). Falha aqui interrompe:
+    // o nome e o @ ficariam visíveis para os outros membros.
+    if (deps.collectionGroup) removed += await leaveAllChallenges(uid, { deps });
     // Posts de atividade com as curtidas e os comentários deles: saem antes do perfil (as regras de leitura dependem dele).
     for (const post of await refsOf(deps, 'socialPosts', deps.where('authorId', '==', uid))) {
       for (const sub of ['likes', 'comments']) {
