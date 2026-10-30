@@ -14,6 +14,7 @@ import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import Avatar from '../../components/coach/Avatar';
 import ActionQueue from '../../components/coach/ActionQueue';
+import CoachNotice from '../../components/coach/CoachNotice';
 import AssignTrainingModal from '../../components/coach/AssignTrainingModal';
 import { loadTemplates, draftForAction } from '../../utils/coachTemplates';
 import BarChart from '../../components/coach/BarChart';
@@ -87,6 +88,8 @@ export default function CoachHome() {
             )}
           />
         </section>
+
+        <CoachNotice uid={user?.uid} />
 
         {/* Atalhos (mobile: rolagem horizontal) */}
         <nav aria-label="Atalhos" className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto scroll-px-4 px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 scroll-snap-x">
