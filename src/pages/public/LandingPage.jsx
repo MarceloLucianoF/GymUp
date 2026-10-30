@@ -9,16 +9,20 @@ import './landing.css';
 // Telas reais do app (conta fictícia, dados de exemplo), recortadas como fotografias.
 const REEL = [
   { src: '/landing/descanso.webp', video: '/landing/descanso.webm', pos: '50% 48%', cap: 'Descanso automático entre as séries', alt: 'Tela do descanso: anel amarelo com a contagem 1:28 e botões de ajustar o tempo' },
-  { src: '/landing/treino.webp', pos: '50% 22%', cap: 'Carga e repetições com um toque', alt: 'Tela do treino em andamento: Supino Máquina, meta de 3 séries de 10 e botões de carga' },
-  { src: '/landing/coach-ia.webp', pos: '50% 62%', cap: 'O Coach de IA monta a ficha que você pede', alt: 'Conversa com o Coach de IA: ficha de pernas só com máquinas' },
-  { src: '/landing/fichas.webp', pos: '50% 38%', cap: 'Fichas prontas para começar hoje', alt: 'Biblioteca de fichas de treino do app' }
+  { src: '/landing/treino.webp', pos: '50% 22%', cap: 'Carga e repetições com um toque', alt: 'Tela do treino em andamento: Supino Reto com Barra, sugestão de subir para 42,5 kg e as séries' },
+  { src: '/landing/inicio.webp', pos: '50% 20%', cap: 'O treino de hoje e a meta da semana', alt: 'Início do app: treino de hoje (Treino C, Pernas), motivo da sugestão e meta da semana 3 de 4' },
+  { src: '/landing/evolucao.webp', pos: '50% 20%', cap: 'Evolução de cargas, medidas e nível', alt: 'Tela de evolução: treinos e volume do mês, minutos treinados e maior carga' },
+  { src: '/landing/compartilhar.webp', pos: '50% 50%', cap: 'Imagem do treino pronta para os stories', alt: 'Imagem de treino concluído: Treino A, 48 minutos, 12.346 kg de volume, recorde no supino' },
+  { src: '/landing/coach-ia.webp', pos: '50% 62%', cap: 'O Coach de IA monta a ficha que você pede', alt: 'Conversa com o Coach de IA: ficha de pernas só com máquinas' }
 ];
 
-const SWITCHES = [
+// Recursos em faixas, todos à vista (antes eram interruptores que pareciam recursos desligados).
+const FEATURES = [
   { say: 'O descanso entre séries conta sozinho.', then: 'Registrou a série, o cronômetro de descanso já está rodando.' },
   { say: 'Sem sinal, o treino continua salvo.', then: 'Tudo sincroniza sozinho quando a rede volta.' },
   { say: 'A IA monta a ficha que você pede.', then: 'Só máquinas, o grupo que quiser, em segundos.' },
-  { say: 'Cada carga vira gráfico de evolução.', then: 'Carga, volume e medidas ao longo das semanas.' },
+  { say: 'Cada carga vira gráfico de evolução.', then: 'Carga, volume, medidas e avaliação física ao longo das semanas.' },
+  { say: 'Amigos, desafios e conquistas.', then: 'Desafio em grupo com placar, níveis e a imagem do treino pronta para os stories.' },
   { say: 'Seu treinador ajusta e você recebe.', then: 'Chat e fichas atualizadas dentro do próprio app.' }
 ];
 
@@ -97,7 +101,6 @@ export default function LandingPage() {
   const [away, setAway] = useState(false);
   const [ctaSeen, setCtaSeen] = useState(false);
   const [ask, setAsk] = useState(EXAMPLES[0]);
-  const [on, setOn] = useState([true, false, true, false, false]);
   const [stage, setStage] = useState(0);
   const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const lastY = useRef(0);
@@ -152,7 +155,6 @@ export default function LandingPage() {
   const continueWorkout = () => navigate(`/execution/${activeSession.trainingId}`);
   const primaryLabel = activeSession ? 'Continuar treino ativo' : user ? 'Ir para o meu painel' : 'Criar conta grátis';
   const primary = activeSession ? continueWorkout : goPrimary;
-  const toggle = (i) => setOn((list) => list.map((v, k) => (k === i ? !v : v)));
 
   return (
     <div className={`lp ${js ? 'js' : ''}`}>
@@ -230,12 +232,12 @@ export default function LandingPage() {
         <section className="steps" aria-labelledby="steps-title">
           <h2 id="steps-title" className="sr-only">Como começar</h2>
           <div className="steps-left">
-            <div className="rail" data-in>
-              <ol aria-hidden="true">{STAGES.map((s, i) => <li key={s.name} className={i === stage ? 'now' : ''}>{s.name}</li>)}</ol>
-              <div className="track">
-                <span className="base" /><span className="fill" style={{ '--p': `${(stage / (STAGES.length - 1)) * 100}%` }} />
-                <input type="range" min="0" max={STAGES.length - 1} step="1" value={stage} onChange={(e) => setStage(Number(e.target.value))} aria-label="Etapa" aria-valuetext={STAGES[stage].clause} />
-              </div>
+            <div className="rail" data-in role="tablist" aria-label="Como começar">
+              {STAGES.map((st, i) => (
+                <button key={st.name} type="button" role="tab" aria-selected={i === stage} className={`step-tab ${i === stage ? 'now' : ''}`} onClick={() => setStage(i)}>
+                  <span className="n">{i + 1}</span>{st.name}
+                </button>
+              ))}
             </div>
             <p className="clause" aria-live="polite" data-in>{STAGES[stage].clause}</p>
             <p className="detail">{STAGES[stage].detail}</p>
@@ -247,11 +249,10 @@ export default function LandingPage() {
 
         <section id="recursos" className="bands" aria-labelledby="bands-title">
           <h2 id="bands-title" className="sr-only">O que o app faz</h2>
-          {SWITCHES.map((s, i) => (
-            <div key={s.say} className={`band c${i} ${on[i] ? 'on' : ''}`} data-in style={{ '--i': i % 2 }}>
-              <h3>{s.say}</h3>
-              <button type="button" role="switch" aria-checked={on[i]} aria-label={s.say} className="switch" onClick={() => toggle(i)} />
-              <p aria-hidden={!on[i]}>{s.then}</p>
+          {FEATURES.map((f, i) => (
+            <div key={f.say} className={`band c${i} on`} data-in style={{ '--i': i % 2 }}>
+              <h3>{f.say}</h3>
+              <p>{f.then}</p>
             </div>
           ))}
         </section>

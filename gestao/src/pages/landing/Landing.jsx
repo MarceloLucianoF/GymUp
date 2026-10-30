@@ -19,7 +19,8 @@ function useReveal() {
 
 // A coisa viva do herói: o quadro de mensalidades do mês. Dar baixa muda os totais na hora, como no produto.
 function Board() {
-  const [paid, setPaid] = useState([]);
+  // Começa com parte do mês já paga (como num dia real); dar baixa nos outros atualiza os totais.
+  const [paid, setPaid] = useState([3, 4]);
   const sum = (list) => list.reduce((t, c) => t + c.cents, 0);
   const received = sum(DEMO.filter((c) => paid.includes(c.id)));
   const late = sum(DEMO.filter((c) => c.late && !paid.includes(c.id)));
@@ -105,9 +106,10 @@ export default function Landing() {
           <div className="shot-grid">
             {SHOTS.map((s, i) => (
               <figure key={s.title} className={`shot sh${i}`} data-reveal>
-                <div className="pic">
-                  <div className="device">
-                    <span className="device-island" aria-hidden="true" />
+                <div className={`pic ${s.h / s.w < 1.6 ? 'fit' : ''}`}>
+                  {/* Print de celular vai na moldura de celular; recorte de tela (mais largo) vai num cartão do tamanho do print, sem sobrar tela vazia. */}
+                  <div className={`device ${s.h / s.w < 1.6 ? 'short' : ''}`}>
+                    {s.h / s.w >= 1.6 && <span className="device-island" aria-hidden="true" />}
                     <div className="device-screen"><img src={s.img} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" /></div>
                   </div>
                 </div>
@@ -134,7 +136,7 @@ export default function Landing() {
         <Link className="cta" to="/login?modo=cadastro" aria-label="Criar academia: cadastre os planos, convide a equipe e matricule o primeiro aluno">
           <span className="cta-note">Crie a academia, convide a equipe e cadastre o primeiro plano.</span>
           <svg className="cta-arrow" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><path d="M14 34 34 14M18 14h16v16" fill="none" stroke="currentColor" strokeWidth="4" /></svg>
-          <span className="cta-word" aria-hidden="true">Criar</span>
+          <span className="cta-word" aria-hidden="true">Criar academia</span>
         </Link>
       </main>
 
