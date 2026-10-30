@@ -15,7 +15,7 @@ jest.mock('../../hooks/useStudentHome', () => ({
 }));
 jest.mock('../../hooks/useMyCoach', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('../../hooks/useHomeExtras', () => ({ useFriendsPreview: () => ({ status: 'noFriends' }), useCoachMessage: jest.fn() }));
-jest.mock('../../services/myWorkouts', () => ({ listMyWorkouts: jest.fn() }));
+jest.mock('../../services/myWorkouts', () => ({ listMyWorkouts: jest.fn(), listMyWorkoutsAndRoutine: jest.fn() }));
 jest.mock('../../components/chat/StudentChatWidget', () => () => null);
 jest.mock('../../components/ai/AICoachModal', () => () => null);
 jest.mock('../../components/coach/CoachLinkModal', () => () => null);
@@ -26,7 +26,7 @@ const { useCoachMessage } = require('../../hooks/useHomeExtras');
 
 const today = new Date().toISOString();
 const history = [{ id: 'c1', trainingId: 't1', trainingName: 'Treino A', date: today, totalVolume: 2500, duration: 1800, exercises: [{ name: 'Supino', sets: [{ weight: 80, reps: 10 }] }] }];
-beforeEach(() => { require('../../services/myWorkouts').listMyWorkouts.mockResolvedValue([]); });
+beforeEach(() => { const m = require('../../services/myWorkouts'); m.listMyWorkouts.mockResolvedValue([]); m.listMyWorkoutsAndRoutine.mockResolvedValue({ workouts: [], routine: { items: [] } }); });
 const setup = ({ activeSession = null, unread = false, coachState = 'active' } = {}) => {
   const stats = computeStats(history);
   useStudentHome.mockReturnValue({

@@ -24,6 +24,32 @@ describe('buildMyWorkout', () => {
   });
 });
 
+describe('warmupStretch nos treinos pessoais', () => {
+  const firestore = require('firebase/firestore');
+  const { saveMyWorkout } = require('./myWorkouts');
+  beforeEach(() => { firestore.addDoc.mockReset(); });
+
+  test('só grava o campo quando é booleano', () => {
+    expect(buildMyWorkout({ name: 'X', exercises: [{ name: 'A' }], warmupStretch: true }).warmupStretch).toBe(true);
+    expect(buildMyWorkout({ name: 'X', exercises: [{ name: 'A' }], warmupStretch: false }).warmupStretch).toBe(false);
+    expect('warmupStretch' in buildMyWorkout({ name: 'X', exercises: [{ name: 'A' }] })).toBe(false);
+  });
+
+  test('regras ainda sem o campo: grava de novo sem ele em vez de perder o treino', async () => {
+    firestore.addDoc.mockRejectedValueOnce(Object.assign(new Error('negado'), { code: 'permission-denied' })).mockResolvedValueOnce({ id: 'abc' });
+    await expect(saveMyWorkout('u1', { name: 'X', exercises: [{ name: 'A' }], warmupStretch: true })).resolves.toBe('my_abc');
+    expect(firestore.addDoc).toHaveBeenCalledTimes(2);
+    expect(firestore.addDoc.mock.calls[0][1].warmupStretch).toBe(true);
+    expect('warmupStretch' in firestore.addDoc.mock.calls[1][1]).toBe(false);
+  });
+
+  test('outro erro não é mascarado', async () => {
+    firestore.addDoc.mockRejectedValueOnce(Object.assign(new Error('fora do ar'), { code: 'unavailable' }));
+    await expect(saveMyWorkout('u1', { name: 'X', exercises: [{ name: 'A' }], warmupStretch: true })).rejects.toThrow('fora do ar');
+    expect(firestore.addDoc).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('buildMyExercise', () => {
   test('normaliza tipo, grupo, equipamento e limita tamanhos', () => {
     const e = buildMyExercise({ name: '  Remada do condomínio  ', kind: 'magica', muscleGroup: 'cabelo', equipment: 'laser', sets: 99, reps: '8-12', rest: 9999, note: 'x'.repeat(300), photo: JPEG });

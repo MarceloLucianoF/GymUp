@@ -64,6 +64,20 @@ test('montar do zero: busca na biblioteca e adiciona exercício livre', async ()
   fireEvent.click(screen.getByText('Salvar em Meus treinos'));
   await waitFor(() => expect(saveMyWorkout).toHaveBeenCalled());
   expect(saveMyWorkout.mock.calls[0][1].source).toBe('manual');
+  expect(saveMyWorkout.mock.calls[0][1].warmupStretch).toBe(true);   // treino novo já vem com a etapa de alongamento
+});
+
+test('treino novo: interruptor desliga a etapa de alongamento na execução', async () => {
+  render(<MyWorkoutModal isOpen onClose={jest.fn()} user={{ uid: 'u1' }} library={lib} />);
+  fireEvent.click(screen.getByText('Montar do zero'));
+  const sw = screen.getByRole('switch', { name: 'Alongamento geral antes do treino' });
+  expect(sw).toHaveAttribute('aria-checked', 'true');
+  fireEvent.click(sw);
+  fireEvent.change(screen.getByLabelText('Adicionar exercício'), { target: { value: 'Esteira inclinada' } });
+  fireEvent.click(screen.getByLabelText('Adicionar o que digitei'));
+  fireEvent.click(screen.getByText('Salvar em Meus treinos'));
+  await waitFor(() => expect(saveMyWorkout).toHaveBeenCalled());
+  expect(saveMyWorkout.mock.calls[0][1].warmupStretch).toBe(false);
 });
 
 test('erro da IA mostra aviso e não abre a revisão', async () => {
@@ -74,6 +88,12 @@ test('erro da IA mostra aviso e não abre a revisão', async () => {
   fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [new File(['%PDF-'], 'a.pdf')] } });
   await waitFor(() => expect(toast.error).toHaveBeenCalled());
   expect(screen.queryByText('Revise seu treino')).toBeNull();
+});
+
+test('treino antigo (sem o campo) abre com a etapa de alongamento desligada', () => {
+  const old = { name: 'Antigo', source: 'manual', exercises: [{ name: 'Supino Reto Máquina', sets: '3', reps: '10', rest: 60 }] };
+  render(<MyWorkoutModal isOpen onClose={jest.fn()} user={{ uid: 'u1' }} library={lib} editing={{ docId: 'w0', workout: old }} />);
+  expect(screen.getByRole('switch', { name: 'Alongamento geral antes do treino' })).toHaveAttribute('aria-checked', 'false');
 });
 
 describe('edição do treino, foto e meus exercícios', () => {

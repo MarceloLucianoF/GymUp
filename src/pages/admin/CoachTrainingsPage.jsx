@@ -65,6 +65,8 @@ export default function CoachTrainingsPage() {
         description: base.description || '',
         difficulty: base.difficulty || 'Iniciante',
         exercises: base.exercises || [],
+        // ficha nova já vem com a etapa de alongamento na execução; a cópia mantém a escolha da original
+        warmupStretch: base.exercises ? base.warmupStretch === true : true,
         coachId: user.uid,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
