@@ -104,6 +104,10 @@
 .device-island { position: absolute; top: 10px; left: 50%; width: 30%; height: 14px; border-radius: 999px; background: #000; transform: translateX(-50%); }
 .device-screen { height: 100%; overflow: hidden; border-radius: 34px; background: #f5f6f8; }
 .shot img { width: 100%; height: auto; display: block; }
+.shot .pic.fit { height: auto; align-items: center; }
+.device.short { width: min(420px, 92%); padding: var(--bezel); border-radius: 22px; height: auto; align-self: center; }
+.device.short::before, .device.short::after { display: none; }
+.device.short .device-screen { height: auto; border-radius: 14px; }
 .shot:hover .device { transform: translateY(-6px); }
 .shot figcaption { max-width: 44ch; }
 .shot figcaption b { font-weight: 500; display: block; font-family: var(--display); text-transform: uppercase; font-size: 1.5rem; line-height: 1; margin-bottom: 6px; }
@@ -140,7 +144,7 @@ details[open] .plus::after { transform: rotate(0); }
 .cta-note { position: absolute; left: var(--m); top: 24px; max-width: 28ch; font-size: 1.25rem; font-weight: 500; line-height: 1.3; }
 .cta-arrow { position: absolute; right: var(--m); top: 20px; width: 48px; height: 48px; transition: transform .25s cubic-bezier(.16, 1, .3, 1); }
 .cta:hover .cta-arrow { transform: translate(6px, -6px); }
-.cta-word { position: absolute; left: var(--m); bottom: 12px; font-family: var(--display); font-weight: 700; text-transform: uppercase; font-size: 28vw; line-height: 0.78; letter-spacing: -0.02em; }
+.cta-word { position: absolute; left: var(--m); bottom: 12px; font-family: var(--display); font-weight: 700; text-transform: uppercase; font-size: clamp(64px, 11vw, 190px); line-height: 0.9; letter-spacing: -0.02em; max-width: 9ch; }
 
 /* ---------- rodapé: o nome volta em largura total ---------- */
 .foot { background: var(--bg); padding: 40px var(--m) 20px; min-height: 70svh; display: flex; flex-direction: column; justify-content: space-between; gap: 80px; }
@@ -187,6 +191,8 @@ details[open] .plus::after { transform: rotate(0); }
   .shot-grid { grid-template-columns: 1fr; }
   .sh0, .sh1, .sh2, .sh3 { grid-column: 1; }
   .shot .pic { height: 440px; }
+  .shot .pic.fit { height: auto; }
+  .device.short { width: 92%; border-radius: 20px; }
   .device { width: min(260px, 78%); border-radius: 40px; }
   .device-screen { border-radius: 30px; }
   .next { display: block; padding: 10vh var(--m); }
@@ -194,10 +200,10 @@ details[open] .plus::after { transform: rotate(0); }
   .faq { display: block; padding: 12vh var(--m); }
   .faq h2 { position: static; font-size: 9vw; margin-bottom: 20px; }
   .qa summary { font-size: 1.125rem; }
-  .cta { min-height: 46svh; }
+  .cta { min-height: 34svh; }
   .cta-note { font-size: 1.0625rem; max-width: 22ch; }
   .cta-arrow { width: 32px; height: 32px; }
-  .cta-word { font-size: 40vw; bottom: 8px; }
+  .cta-word { font-size: 19vw; bottom: 16px; }
   .foot { min-height: 0; gap: 56px; }
   .foot-top { display: flex; flex-direction: column; gap: 10px; }
   .foot-top nav { justify-content: flex-start; }
