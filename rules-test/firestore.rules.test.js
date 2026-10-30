@@ -1230,3 +1230,19 @@ test('saúde: campos extras, tipos e tamanhos são recusados', async () => {
   ]) await assertFails(putA(data));
   await assertSucceeds(putA(anamnesis()));
 });
+
+test('saúde: professor encerra o vínculo e apaga o consentimento no mesmo lote; revinculado, não lê sem novo consentimento', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    await setDoc(doc(d, 'users/stuH'), { uid: 'stuH', role: 'user', coachId: 'coach1', displayName: 'H' });
+    await setDoc(doc(d, 'healthConsents/stuH'), { coachId: 'coach1', version: '1', acceptedAt: '2026-10-29T10:00:00.000Z' });
+    await setDoc(doc(d, 'assessments/aH'), { userId: 'stuH', kind: 'self', date: '2026-10-29', createdAt: '2026-10-29T10:00:00.000Z', createdBy: 'stuH', weight: 70 });
+  });
+  await assertSucceeds(getDoc(doc(db('coach1'), 'assessments/aH')));
+  const b = writeBatch(db('coach1'));
+  b.update(doc(db('coach1'), 'users/stuH'), { coachId: null, updatedAt: '2026-10-29T11:00:00.000Z' });
+  b.delete(doc(db('coach1'), 'healthConsents/stuH'));
+  await assertSucceeds(b.commit());
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'users/stuH'), { coachId: 'coach1' }); });   // vinculado de novo
+  await assertFails(getDoc(doc(db('coach1'), 'assessments/aH')));                                     // sem consentimento novo
+});

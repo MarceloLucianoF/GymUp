@@ -164,7 +164,7 @@ export function applyTechnique(id, item = {}) {
 /** Volume da série: soma das partes quando houver, senão carga x reps. */
 export const setVolume = (s) => {
   const n = (v) => { const x = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(x) ? x : 0; };
-  if (Array.isArray(s?.parts) && s.parts.length) return s.parts.reduce((acc, p) => acc + n(p?.weight) * n(p?.reps), 0);
+  if (Array.isArray(s?.parts) && s.parts.length) return s.parts.slice(0, 8).reduce((acc, p) => acc + n(p?.weight) * n(p?.reps), 0);   // no máximo 8 partes (drop 1+4 ou cluster 6)
   return n(s?.weight) * n(s?.reps);
 };
 
