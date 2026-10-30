@@ -77,7 +77,7 @@ const ROUTE_META = [
   ['/analytics', 'Evolução por exercício', 'Evolução de carga por exercício.', true],
   ['/measurements/saude', 'Avaliações e anamnese', 'Avaliação física e anamnese.', true],
   ['/measurements', 'Medidas', 'Evolução das suas medidas.', true],
-  ['/profile', 'Meu perfil', 'Dados, medidas e preferências.', true],
+  ['/profile', 'Meu perfil', 'Seus dados, sua conta e suas preferências.', true],
   ['/chat', 'Chat', 'Conversa com seu treinador.', true],
   ['/amigos', 'Amigos', 'Amigos e ranking de consistência.', true],
   ['/ferramentas', 'Ferramentas', 'Calculadoras e ferramentas de treino.', true],

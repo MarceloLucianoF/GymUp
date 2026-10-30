@@ -1,7 +1,6 @@
 import { EQUIPMENT, EQUIPMENT_LABELS, sanitizeEquipment } from '../../utils/equipment';
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { useTheme } from '../../hooks/ThemeContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import toast from 'react-hot-toast';
@@ -11,21 +10,39 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import usePageMeta from '../../hooks/usePageMeta';
 import { exportMyData, deletionMailto } from '../../utils/exportData';
 import PageHeader from '../../components/ui/PageHeader';
-import { Download, Trash2, ArrowLeft, AlertTriangle, User, Camera, Save, CheckCircle, LogOut, Sun, Moon } from 'lucide-react';
+import { Accessibility, AlertTriangle, Bell, ArrowLeft, Camera, CheckCircle, ChevronRight, Download, Dumbbell, Lock, LogOut, Save, ShieldCheck, Trash2, User, Users } from 'lucide-react';
 import MyCoachCard from '../../components/coach/MyCoachCard';
 import NotificationSettings from '../../components/pwa/NotificationSettings';
 import DeleteAccountModal from '../../components/account/DeleteAccountModal';
-import { SwitchControl } from '../../components/ui/Switch';
+import AccountSecurity from '../../components/account/AccountSecurity';
+import AccessibilitySettings from '../../components/account/AccessibilitySettings';
+import CoachPaymentStatus from '../../components/account/CoachPaymentStatus';
 import { btnDanger, btnGhost, btnPrimary } from '../../components/coach/styles';
+
+const SECTIONS = [
+  ['perfil-dados', 'Dados'], ['perfil-treino', 'Treino'], ['perfil-treinador', 'Treinador'], ['perfil-conta', 'Conta e segurança'],
+  ['perfil-notificacoes', 'Notificações'], ['perfil-aparencia', 'Acessibilidade'], ['perfil-privacidade', 'Privacidade']
+];
+
+// Categoria do perfil: título curto acima de um cartão, como nas telas de ajustes dos apps de celular.
+function ProfileGroup({ id, icon: Icon, title, children }) {
+  return (
+    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-20">
+      <h2 id={`${id}-title`} className="mb-2 flex items-center gap-2 px-1 text-xs font-black uppercase tracking-wide text-gray-600 dark:text-gray-400">
+        <Icon className="h-4 w-4 text-brand" aria-hidden="true" /> {title}
+      </h2>
+      <div className="surface space-y-4 p-5">{children}</div>
+    </section>
+  );
+}
 
 export default function Profile() {
   const { confirm, dialog } = useConfirm();
   const { user, userProfile, logout } = useAuthContext();
   const [searchParams] = useSearchParams();
   const initialCoachCode = searchParams.get('coach') || '';
-  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  usePageMeta('Meu perfil', 'Dados, medidas e preferências.', { noindex: true });
+  usePageMeta('Meu perfil', 'Seus dados, sua conta e suas preferências.', { noindex: true });
   const [exporting, setExporting] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
@@ -188,13 +205,15 @@ export default function Profile() {
 
   if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8" role="status" aria-label="Carregando"><div className="max-w-2xl mx-auto space-y-4"><div className="skeleton-shimmer h-12 rounded-2xl"></div><div className="skeleton-shimmer h-[28rem] rounded-3xl"></div></div></div>;
 
+  const field = 'w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white';
+  const fieldLabel = 'text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block';
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] p-4 md:p-8 transition-colors duration-300 pb-32">
     {dialog}
       <div className="max-w-2xl mx-auto">
-        
-        {/* Header */}
-        <PageHeader eyebrow="Conta" title="Meu perfil" subtitle="Dados, medidas e preferências."
+
+        <PageHeader eyebrow="Conta" title="Meu perfil" subtitle="Seus dados, sua conta e suas preferências."
           actions={
             <button type="button" onClick={() => navigate('/home')} className="pressable min-h-[44px] px-3 text-sm font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
                 <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Voltar
@@ -202,229 +221,147 @@ export default function Profile() {
           }
         />
 
-        <div className="surface overflow-hidden relative animate-fade-up">
-            
-            {/* Aviso Alteração */}
-            {isDirty && (
-                <div className="bg-yellow-105 dark:bg-yellow-900/30 text-yellow-750 dark:text-yellow-405 text-center text-xs font-bold py-2 absolute top-0 w-full z-10 animate-fade-in flex items-center justify-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Você tem alterações não salvas
+        {/* Cabeçalho: foto, nome e e-mail */}
+        <div className="surface overflow-hidden animate-fade-up">
+            <div className="aurora-bg h-24 bg-gradient-to-r from-brand to-[#FF9800]" />
+            <div className="-mt-12 flex flex-col items-center px-5 pb-5 text-center">
+                <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl relative group">
+                    <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-600 dark:text-gray-400">
+                        {formData.photoURL ? (
+                            <img src={formData.photoURL} alt="Foto de perfil" loading="lazy" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-lg text-gray-600 dark:text-gray-400 flex items-center justify-center">
+                              {formData.displayName?.charAt(0).toUpperCase() || <User className="w-10 h-10" />}
+                            </span>
+                        )}
+                    </div>
+                    <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 cursor-pointer transition-opacity">
+                        <Camera className="w-5 h-5 mb-0.5" aria-hidden="true" />
+                        <span className="text-[10px] font-bold">Alterar</span>
+                        <input type="file" accept="image/*" aria-label="Alterar foto de perfil" onChange={handleImageUpload} className="sr-only" />
+                    </label>
+                    <span className="pointer-events-none absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-black shadow-md ring-2 ring-white dark:ring-gray-900 group-hover:opacity-0" aria-hidden="true"><Camera className="w-4 h-4" /></span>
                 </div>
-            )}
-
-            {/* Capa / Avatar */}
-            <div className="aurora-bg h-32 bg-gradient-to-r from-brand to-[#FF9800] relative">
-                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
-                    <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1 shadow-xl relative group">
-                        <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden font-bold text-gray-600 dark:text-gray-400">
-                            {formData.photoURL ? (
-                                <img src={formData.photoURL} alt="Foto de perfil" loading="lazy" className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-lg text-gray-600 dark:text-gray-400 flex items-center justify-center">
-                                  {formData.displayName?.charAt(0).toUpperCase() || <User className="w-10 h-10" />}
-                                </span>
-                            )}
-                        </div>
-                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 cursor-pointer transition-opacity">
-                            <Camera className="w-5 h-5 mb-0.5" />
-                            <span className="text-[10px] font-bold">Alterar</span>
-                            <input type="file" accept="image/*" aria-label="Alterar foto de perfil" onChange={handleImageUpload} className="sr-only" />
-                        </label>
-                        <span className="pointer-events-none absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-black shadow-md ring-2 ring-white dark:ring-gray-900 group-hover:opacity-0" aria-hidden="true"><Camera className="w-4 h-4" /></span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="pt-16 pb-8 px-8">
-                <form onSubmit={handleSave} className="space-y-6">
-                    
-                    {/* Dados Básicos */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="col-span-1 md:col-span-2">
-                            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Nome de exibição</label>
-                            <input 
-                                type="text" 
-                                name="displayName"
-                                value={formData.displayName} 
-                                onChange={handleChange}
-                                placeholder="Seu nome"
-                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-bold"
-                            />
-                        </div>
-
-                        <div className="col-span-1 md:col-span-2">
-                            <label htmlFor="profile-phone" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">WhatsApp ou telefone</label>
-                            <input
-                                id="profile-phone"
-                                type="tel"
-                                inputMode="tel"
-                                autoComplete="tel"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                maxLength={20}
-                                placeholder="(31) 99999-9999"
-                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white"
-                            />
-                            <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400">Opcional. Só o seu treinador vinculado consegue ver este número.</p>
-                        </div>
-
-                        <div className="col-span-1 md:col-span-2">
-                            <label htmlFor="goal" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Meta principal</label>
-                            <select 
-                                id="goal"
-                                name="goal"
-                                value={formData.goal} 
-                                onChange={handleChange}
-                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white cursor-pointer font-bold"
-                            >
-                                <option value="Hipertrofia">Hipertrofia</option>
-                                <option value="Emagrecimento">Emagrecimento</option>
-                                <option value="Força">Força</option>
-                                <option value="Resistência">Resistência</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* --- O que tem na minha academia: a IA e o gerador só montam fichas com isso --- */}
-                    <fieldset className="mt-6 rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
-                        <legend className="px-1 text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Equipamentos da minha academia</legend>
-                        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">Marque o que você tem. Treinos gerados pela IA usam só esses equipamentos. Sem nenhuma marcação, vale tudo.</p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                            {EQUIPMENT.map((key) => (
-                                <label key={key} className="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-xl bg-white p-3 text-sm font-bold text-gray-800 dark:bg-white/5 dark:text-gray-100">
-                                    <input type="checkbox" checked={formData.gymEquipment.includes(key)} onChange={() => toggleEquipment(key)} className="h-5 w-5 accent-[#FFC107]" />
-                                    {EQUIPMENT_LABELS[key]}
-                                </label>
-                            ))}
-                        </div>
-                    </fieldset>
-
-                    {/* --- MEU TREINADOR: estados, pedido por busca/código e encerramento --- */}
-                    <MyCoachCard user={user} profile={{ ...userProfile, ...formData, coachId: userProfile?.coachId }} initialOpen={!!initialCoachCode} initialCode={initialCoachCode} />
-
-                    <div className="border-t border-gray-100 dark:border-gray-700 my-6"></div>
-
-                    <Link to="/academia" className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-100 dark:bg-white/5 dark:text-gray-200">
-                        <span>Minha academia</span><span aria-hidden="true">›</span>
-                    </Link>
-
-                    <div className="border-t border-gray-100 dark:border-gray-700 my-6"></div>
-
-                    {/* Medidas Físicas + IMC */}
-                    <div>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-bold text-gray-800 dark:text-white">Medidas</h2>
-                            {imcData && (
-                                <div className="text-right">
-                                    <span className="text-[10px] text-gray-600 dark:text-gray-300 uppercase font-bold block">IMC estimado</span>
-                                    <span className={`text-sm font-bold ${imcData.color}`}>{imcData.value} ({imcData.label})</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Peso (kg)</label>
-                                <input 
-                                    type="text" 
-                                    inputMode="decimal"
-                                    name="weight"
-                                    placeholder="00.0"
-                                    value={formData.weight} 
-                                    onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Altura (cm)</label>
-                                <input 
-                                    type="text" 
-                                    inputMode="decimal"
-                                    name="height"
-                                    placeholder="000"
-                                    value={formData.height} 
-                                    onChange={handleDecimalChange}
-                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Idade</label>
-                                <input 
-                                    type="text" 
-                                    inputMode="numeric"
-                                    name="age"
-                                    placeholder="00"
-                                    value={formData.age} 
-                                    onChange={handleIntegerChange}
-                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 min-h-[48px] outline-none focus:ring-2 focus:ring-brand dark:text-white font-mono text-center"
-                                />
-                            </div>
-                        </div>
-                        
-                        <div className="mt-4 text-right">
-                            <button 
-                                type="button"
-                                onClick={() => navigate('/measurements')}
-                                className="min-h-[44px] text-xs text-amber-800 dark:text-amber-400 dark:text-brand font-bold hover:underline"
-                            >
-                                Ver histórico de evolução →
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* PREFERÊNCIAS DE APARÊNCIA */}
-                    <div className="rounded-3xl bg-gray-50 dark:bg-white/5 p-5 transition-colors">
-                        <h2 className="text-base font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-                            {theme === 'dark' ? <Moon className="w-5 h-5 text-brand" /> : <Sun className="w-5 h-5 text-amber-500" />}
-                            Aparência da Aplicação
-                        </h2>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-bold text-gray-800 dark:text-white">
-                                    {theme === 'dark' ? 'Modo escuro (nativo)' : 'Modo claro'}
-                                </p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                                    {theme === 'dark' ? 'Identidade principal para uso no celular' : 'Visual claro alternativo'}
-                                </p>
-                            </div>
-                            <SwitchControl label="Alternar tema" checked={theme === 'dark'} onChange={toggleTheme}>
-                                {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-amber-600" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
-                            </SwitchControl>
-                        </div>
-                    </div>
-
-                    <div className="pt-2 flex flex-col gap-4">
-                        <button 
-                            type="submit" 
-                            disabled={!isDirty}
-                            className={`${btnPrimary} w-full min-h-[56px] text-base disabled:bg-none disabled:bg-gray-200 disabled:text-gray-600 disabled:opacity-100 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-gray-400`}
-                        >
-                            {isDirty ? (
-                                <><Save className="w-5 h-5 text-black" /> Salvar alterações</>
-                            ) : (
-                                <><CheckCircle className="w-5 h-5" /> Tudo atualizado</>
-                            )}
-                        </button>
-                        
-                        <button type="button" onClick={handleLogout} className={`${btnDanger} w-full min-h-[52px]`}>
-                            <LogOut className="w-4 h-4" /> Sair da Conta
-                        </button>
-                    </div>
-
-                </form>
+                <p className="mt-3 font-display text-lg font-black text-gray-900 dark:text-white">{formData.displayName || 'Sem nome'}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
             </div>
         </div>
 
-        <NotificationSettings uid={user.uid} />
+        {/* Atalhos para as categorias */}
+        <nav aria-label="Seções do perfil" className="sticky top-0 z-20 -mx-4 mt-4 overflow-x-auto bg-gray-50/95 px-4 py-2 backdrop-blur dark:bg-[#0B0F19]/95">
+            <ul className="flex gap-2 whitespace-nowrap">
+                {SECTIONS.map(([id, label]) => (
+                    <li key={id}><a href={`#${id}`} className="inline-flex min-h-[40px] items-center rounded-full bg-white px-3 text-xs font-bold text-gray-700 shadow-sm dark:bg-white/10 dark:text-gray-200">{label}</a></li>
+                ))}
+            </ul>
+        </nav>
+
+        <div className="mt-4 space-y-8">
+        <form onSubmit={handleSave} className="space-y-8">
+            <ProfileGroup id="perfil-dados" icon={User} title="Dados pessoais">
+                <div>
+                    <label htmlFor="profile-name" className={fieldLabel}>Nome de exibição</label>
+                    <input id="profile-name" type="text" name="displayName" value={formData.displayName} onChange={handleChange} placeholder="Seu nome" autoComplete="name" className={`${field} font-bold`} />
+                </div>
+                <div>
+                    <label htmlFor="profile-phone" className={fieldLabel}>WhatsApp ou telefone</label>
+                    <input id="profile-phone" type="tel" inputMode="tel" autoComplete="tel" name="phone" value={formData.phone} onChange={handleChange} maxLength={20} placeholder="(31) 99999-9999" className={field} />
+                    <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400">Opcional. Só o seu treinador vinculado consegue ver este número.</p>
+                </div>
+                <div>
+                    <div className="mb-2 flex items-end justify-between gap-2">
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Medidas</span>
+                        {imcData && <span className={`text-xs font-bold ${imcData.color}`}>IMC {imcData.value} ({imcData.label})</span>}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div>
+                            <label htmlFor="profile-weight" className="mb-1 block text-xs text-gray-600 dark:text-gray-400">Peso (kg)</label>
+                            <input id="profile-weight" type="text" inputMode="decimal" name="weight" placeholder="00.0" value={formData.weight} onChange={handleDecimalChange} className={`${field} font-mono text-center`} />
+                        </div>
+                        <div>
+                            <label htmlFor="profile-height" className="mb-1 block text-xs text-gray-600 dark:text-gray-400">Altura (cm)</label>
+                            <input id="profile-height" type="text" inputMode="decimal" name="height" placeholder="000" value={formData.height} onChange={handleDecimalChange} className={`${field} font-mono text-center`} />
+                        </div>
+                        <div>
+                            <label htmlFor="profile-age" className="mb-1 block text-xs text-gray-600 dark:text-gray-400">Idade</label>
+                            <input id="profile-age" type="text" inputMode="numeric" name="age" placeholder="00" value={formData.age} onChange={handleIntegerChange} className={`${field} font-mono text-center`} />
+                        </div>
+                    </div>
+                </div>
+            </ProfileGroup>
+
+            <ProfileGroup id="perfil-treino" icon={Dumbbell} title="Treino">
+                <div>
+                    <label htmlFor="goal" className={fieldLabel}>Meta principal</label>
+                    <select id="goal" name="goal" value={formData.goal} onChange={handleChange} className={`${field} cursor-pointer font-bold`}>
+                        <option value="Hipertrofia">Hipertrofia</option>
+                        <option value="Emagrecimento">Emagrecimento</option>
+                        <option value="Força">Força</option>
+                        <option value="Resistência">Resistência</option>
+                    </select>
+                </div>
+                {/* O que tem na minha academia: a IA e o gerador só montam fichas com isso */}
+                <fieldset>
+                    <legend className={fieldLabel}>Equipamentos da minha academia</legend>
+                    <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">Treinos gerados pela IA usam só o que estiver marcado. Sem nenhuma marcação, vale tudo.</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                        {EQUIPMENT.map((key) => (
+                            <label key={key} className="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-xl bg-gray-50 p-3 text-sm font-bold text-gray-800 dark:bg-white/5 dark:text-gray-100">
+                                <input type="checkbox" checked={formData.gymEquipment.includes(key)} onChange={() => toggleEquipment(key)} className="h-5 w-5 accent-[#FFC107]" />
+                                {EQUIPMENT_LABELS[key]}
+                            </label>
+                        ))}
+                    </div>
+                </fieldset>
+                <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-gray-50 dark:divide-white/10 dark:bg-white/5">
+                    {[['/measurements', 'Peso, medidas e fotos'], ['/measurements/saude', 'Avaliações e anamnese'], ['/academia', 'Minha academia']].map(([to, label]) => (
+                        <li key={to}>
+                            <Link to={to} className="flex min-h-[48px] items-center justify-between px-4 text-sm font-bold text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10">
+                                <span>{label}</span><ChevronRight className="h-4 w-4 text-gray-500" aria-hidden="true" />
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            </ProfileGroup>
+
+            {/* Salvar: fica à vista enquanto houver alteração nos dados ou no treino */}
+            <div className={isDirty ? 'sticky bottom-24 z-20' : ''}>
+                {isDirty && (
+                    <p className="mb-2 flex items-center justify-center gap-1 rounded-xl bg-yellow-100 py-1.5 text-xs font-bold text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" role="status">
+                        <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" /> Você tem alterações não salvas
+                    </p>
+                )}
+                <button type="submit" disabled={!isDirty}
+                    className={`${btnPrimary} w-full min-h-[56px] text-base disabled:bg-none disabled:bg-gray-200 disabled:text-gray-600 disabled:opacity-100 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-gray-400`}>
+                    {isDirty ? <><Save className="w-5 h-5 text-black" aria-hidden="true" /> Salvar alterações</> : <><CheckCircle className="w-5 h-5" aria-hidden="true" /> Dados salvos</>}
+                </button>
+            </div>
+        </form>
+
+        <ProfileGroup id="perfil-treinador" icon={Users} title="Meu treinador">
+            <MyCoachCard user={user} profile={{ ...userProfile, ...formData, coachId: userProfile?.coachId }} initialOpen={!!initialCoachCode} initialCode={initialCoachCode} />
+            <CoachPaymentStatus profile={userProfile} />
+        </ProfileGroup>
+
+        <ProfileGroup id="perfil-conta" icon={ShieldCheck} title="Conta e segurança">
+            <AccountSecurity user={user} />
+        </ProfileGroup>
+
+        <ProfileGroup id="perfil-notificacoes" icon={Bell} title="Notificações">
+            <NotificationSettings uid={user.uid} className="" embedded />
+        </ProfileGroup>
+
+        <ProfileGroup id="perfil-aparencia" icon={Accessibility} title="Aparência e acessibilidade">
+            <AccessibilitySettings />
+        </ProfileGroup>
 
         {/* SEUS DADOS (LGPD) */}
-        <section aria-labelledby="seus-dados-title" className="surface mt-6 p-5">
-          <h2 id="seus-dados-title" className="text-base font-bold text-gray-800 dark:text-white">Seus dados</h2>
-          <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-            Baixe uma cópia do seu perfil, treinos concluídos e medidas, ou peça a exclusão da conta. Veja a{' '}
+        <ProfileGroup id="perfil-privacidade" icon={Lock} title="Privacidade e dados">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Baixe uma cópia do seu perfil, treinos concluídos e medidas, ou exclua a conta. Veja a{' '}
             <Link to="/privacidade" className="font-bold underline">Política de Privacidade</Link>.
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <button type="button" onClick={handleExport} disabled={exporting} aria-busy={exporting}
               className={`${btnGhost} min-h-[48px] flex-1 disabled:opacity-60`}>
               <Download className="h-4 w-4" aria-hidden="true" /> {exporting ? 'Gerando...' : 'Exportar meus dados (JSON)'}
@@ -441,12 +378,17 @@ export default function Profile() {
               </a>
             )}
           </div>
-          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+          <p className="text-xs text-gray-600 dark:text-gray-300">
             {userProfile?.role === 'user'
               ? 'A exclusão apaga seus treinos, medidas, conversas, perfil e login de forma definitiva. Baixe uma cópia antes, se quiser.'
               : 'Contas de treinador e administrador são removidas pelo suporte após o pedido por e-mail.'}
           </p>
-        </section>
+        </ProfileGroup>
+
+        <button type="button" onClick={handleLogout} className={`${btnDanger} w-full min-h-[52px]`}>
+            <LogOut className="w-4 h-4" aria-hidden="true" /> Sair da conta
+        </button>
+        </div>
 
         {showDelete && (
           <DeleteAccountModal
@@ -461,7 +403,6 @@ export default function Profile() {
         <div className="text-center mt-8 text-gray-600 dark:text-gray-400 text-xs">
             <p>BohTreinar v2.0</p>
             <p className="mt-1 font-mono text-gray-600 dark:text-gray-400">UID: {user.uid.slice(0, 8)}...</p>
-            <p className="mt-1">{user.email}</p>
         </div>
 
       </div>

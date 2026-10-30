@@ -4,6 +4,9 @@ import './index.css';
 import App from './App';
 import toast from 'react-hot-toast';
 import { reloadOnceForChunkError } from './utils/chunkReload';
+import { applyA11y, loadA11y } from './utils/a11yPrefs';
+
+applyA11y(loadA11y());
 
 // Promessas rejeitadas sem tratamento: registra, recarrega 1x se for chunk antigo, senão toast discreto.
 window.addEventListener('unhandledrejection', (event) => {
