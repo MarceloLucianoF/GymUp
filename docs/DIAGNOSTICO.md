@@ -892,3 +892,9 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Validação:** 806 testes; navegador (390 px, Firestore de produção, conta fictícia apagada): troca de senha real confirmada com login pela nova, texto "Muito grande" sem rolagem lateral, preferências persistem após recarregar.
 - **Pendente:** trocar o e-mail da conta (exige verificação do novo e-mail); conectar Google no app Android não foi testado em aparelho.
 - **Processo:** `~/bohtreinar-ops/ship.sh` agora para se a pasta tiver mudanças não commitadas (o build levaria código não revisado para produção; isso quase aconteceu em 30/10 e foi interrompido antes do envio).
+
+## Atualização — Perfil em abas e correções (30/10/2026)
+- **Perfil em abas** (pedido do dono: as categorias empilhadas com atalhos redondos confundiam): barra de 4 abas presa ao cartão — **Perfil** (dados pessoais, medidas, meta, equipamentos, atalhos), **Treinador** (vínculo e mensalidade), **Conta** (e-mail, senha, Google, privacidade e dados, sair), **Ajustes** (notificações, aparência e acessibilidade). Abas acessíveis (setas, Home/End, `role=tab`), aba na URL (`/profile?aba=conta`); o link de convite (`?coach=`) abre na aba Treinador; ponto amarelo na aba Perfil quando há alteração não salva.
+- **Exercício digitado com nome trocado** (achado do QA da onda 3): no editor de Meus treinos, "Adicionar o que digitei" casava com um exercício parecido da biblioteca ("Leg Press QA3" → "Leg Press") e gravava o nome da biblioteca, embora a tela mostrasse o digitado. Agora grava o nome que está na tela (com foto e explicação da biblioteca). Na revisão da importação por PDF, a tela já mostra o nome padronizado da biblioteca, que é o gravado.
+- **Texto:** "Meta da semana cumprida: 1 de 1 treino" (singular).
+- **Validação:** testes de regressão; navegador 16/16 (abas, URL, teclado, troca de senha real, acessibilidade), conta fictícia apagada.

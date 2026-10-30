@@ -104,7 +104,7 @@ export function localSummaryText(f) {
   if (down) parts.push(`Atenção: ${down.name} rendeu menos que da última vez; confira o descanso e a carga.`);
   if (skipped) parts.push(`Ficaram de fora: ${skipped.names.join(', ')}${skipped.count > skipped.names.length ? ' e mais' : ''}.`);
   if (f.next.length) parts.push(`No próximo treino: ${f.next.map((n) => `${n.name} com ${kgText(n.load)} kg por ${n.reps}`).join('; ')}.`);
-  if (f.week.goal) parts.push(f.week.done >= f.week.goal ? `Meta da semana cumprida: ${f.week.done} de ${f.week.goal} treinos.` : `Esta semana: ${f.week.done} de ${f.week.goal} treinos.`);
+  if (f.week.goal) parts.push(f.week.done >= f.week.goal ? `Meta da semana cumprida: ${f.week.done} de ${f.week.goal} ${f.week.goal === 1 ? 'treino' : 'treinos'}.` : `Esta semana: ${f.week.done} de ${f.week.goal} ${f.week.goal === 1 ? 'treino' : 'treinos'}.`);
   return parts.join(' ');
 }
 
@@ -115,7 +115,7 @@ export function summaryAiMessages(f) {
     recordes: f.records, destaques: f.highlights.map(highlightText),
     atencao: f.attention.map((a) => (a.kind === 'down' ? `${a.name} rendeu menos que da última vez` : `não feitos: ${a.names.join(', ')}`)),
     proximo_treino: f.next.map((n) => `${n.name}: ${kgText(n.load)} kg por ${n.reps} repetições`),
-    semana: f.week.goal ? `${f.week.done} de ${f.week.goal} treinos` : pluralize(f.week.done, 'treino feito', 'treinos feitos')
+    semana: f.week.goal ? `${f.week.done} de ${f.week.goal} ${f.week.goal === 1 ? 'treino' : 'treinos'}` : pluralize(f.week.done, 'treino feito', 'treinos feitos')
   };
   return [
     { role: 'system', content: 'Você escreve o resumo de um treino que acabou de terminar, para um aplicativo, em português do Brasil, em 2 a 4 frases curtas, falando com o aluno na segunda pessoa ("você"), no tom de um treinador atento e animado. Não repita a mesma informação. Use SOMENTE os números e nomes do JSON recebido: não calcule, não arredonde, não invente nem converta valores. Escreva frases naturais, sem copiar os nomes dos campos nem usar parênteses. Sem emojis, sem conselhos médicos, sem cobrança ou culpa.' },

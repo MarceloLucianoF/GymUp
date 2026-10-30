@@ -10,7 +10,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import usePageMeta from '../../hooks/usePageMeta';
 import { exportMyData, deletionMailto } from '../../utils/exportData';
 import PageHeader from '../../components/ui/PageHeader';
-import { Accessibility, AlertTriangle, Bell, ArrowLeft, Camera, CheckCircle, ChevronRight, Download, Dumbbell, Lock, LogOut, Save, ShieldCheck, Trash2, User, Users } from 'lucide-react';
+import { Accessibility, AlertTriangle, Bell, SlidersHorizontal, ArrowLeft, Camera, CheckCircle, ChevronRight, Download, Dumbbell, Lock, LogOut, Save, ShieldCheck, Trash2, User, Users } from 'lucide-react';
 import MyCoachCard from '../../components/coach/MyCoachCard';
 import NotificationSettings from '../../components/pwa/NotificationSettings';
 import DeleteAccountModal from '../../components/account/DeleteAccountModal';
@@ -19,19 +19,19 @@ import AccessibilitySettings from '../../components/account/AccessibilitySetting
 import CoachPaymentStatus from '../../components/account/CoachPaymentStatus';
 import { btnDanger, btnGhost, btnPrimary } from '../../components/coach/styles';
 
-const SECTIONS = [
-  ['perfil-dados', 'Dados'], ['perfil-treino', 'Treino'], ['perfil-treinador', 'Treinador'], ['perfil-conta', 'Conta e segurança'],
-  ['perfil-notificacoes', 'Notificações'], ['perfil-aparencia', 'Acessibilidade'], ['perfil-privacidade', 'Privacidade']
+const TABS = [
+  ['dados', 'Perfil', User], ['treinador', 'Treinador', Users], ['conta', 'Conta', ShieldCheck], ['ajustes', 'Ajustes', SlidersHorizontal]
 ];
+const TAB_IDS = TABS.map(([id]) => id);
 
-// Categoria do perfil: título curto acima de um cartão, como nas telas de ajustes dos apps de celular.
+// Grupo dentro da aba: título curto e conteúdo; os grupos ficam separados por uma linha.
 function ProfileGroup({ id, icon: Icon, title, children }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-20">
-      <h2 id={`${id}-title`} className="mb-2 flex items-center gap-2 px-1 text-xs font-black uppercase tracking-wide text-gray-600 dark:text-gray-400">
+    <section aria-labelledby={`${id}-title`} className="space-y-4 py-6 first:pt-0 last:pb-0">
+      <h2 id={`${id}-title`} className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-600 dark:text-gray-400">
         <Icon className="h-4 w-4 text-brand" aria-hidden="true" /> {title}
       </h2>
-      <div className="surface space-y-4 p-5">{children}</div>
+      {children}
     </section>
   );
 }
@@ -39,8 +39,24 @@ function ProfileGroup({ id, icon: Icon, title, children }) {
 export default function Profile() {
   const { confirm, dialog } = useConfirm();
   const { user, userProfile, logout } = useAuthContext();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialCoachCode = searchParams.get('coach') || '';
+  const askedTab = searchParams.get('aba');
+  const [tab, setTab] = useState(() => (TAB_IDS.includes(askedTab) ? askedTab : initialCoachCode ? 'treinador' : 'dados'));
+  const tabRefs = React.useRef({});
+  const selectTab = (id, focus = false) => {
+    setTab(id);
+    const next = new URLSearchParams(searchParams); next.set('aba', id); setSearchParams(next, { replace: true });
+    if (focus) tabRefs.current[id]?.focus();
+  };
+  const onTabKey = (e) => {
+    const i = TAB_IDS.indexOf(tab);
+    const j = e.key === 'ArrowRight' ? (i + 1) % TAB_IDS.length : e.key === 'ArrowLeft' ? (i - 1 + TAB_IDS.length) % TAB_IDS.length
+      : e.key === 'Home' ? 0 : e.key === 'End' ? TAB_IDS.length - 1 : -1;
+    if (j < 0) return;
+    e.preventDefault();
+    selectTab(TAB_IDS[j], true);
+  };
   const navigate = useNavigate();
   usePageMeta('Meu perfil', 'Seus dados, sua conta e suas preferências.', { noindex: true });
   const [exporting, setExporting] = useState(false);
@@ -247,17 +263,27 @@ export default function Profile() {
             </div>
         </div>
 
-        {/* Atalhos para as categorias */}
-        <nav aria-label="Seções do perfil" className="sticky top-0 z-20 -mx-4 mt-4 overflow-x-auto bg-gray-50/95 px-4 py-2 backdrop-blur dark:bg-[#0B0F19]/95">
-            <ul className="flex gap-2 whitespace-nowrap">
-                {SECTIONS.map(([id, label]) => (
-                    <li key={id}><a href={`#${id}`} className="inline-flex min-h-[40px] items-center rounded-full bg-white px-3 text-xs font-bold text-gray-700 shadow-sm dark:bg-white/10 dark:text-gray-200">{label}</a></li>
-                ))}
-            </ul>
-        </nav>
+        {/* Abas: cada assunto numa tela, sem misturar */}
+        <div className="surface mt-4 overflow-hidden">
+            <div role="tablist" aria-label="Seções do perfil" onKeyDown={onTabKey} className="grid grid-cols-4 border-b border-gray-200 dark:border-white/10">
+                {TABS.map(([id, label, Icon]) => {
+                    const active = tab === id;
+                    return (
+                        <button key={id} ref={(el) => { tabRefs.current[id] = el; }} type="button" role="tab" id={`tab-${id}`} aria-controls={`painel-${id}`}
+                            aria-selected={active} tabIndex={active ? 0 : -1} onClick={() => selectTab(id)}
+                            className={`relative flex min-h-[60px] flex-col items-center justify-center gap-1 px-1 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${active ? 'bg-brand/10 text-gray-900 dark:text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5'}`}>
+                            <Icon className={`h-5 w-5 ${active ? 'text-amber-700 dark:text-brand' : ''}`} aria-hidden="true" />
+                            {label}
+                            {id === 'dados' && isDirty && <span className="absolute right-3 top-2 h-2 w-2 rounded-full bg-amber-500" aria-label="alterações não salvas" />}
+                            {active && <span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand" aria-hidden="true" />}
+                        </button>
+                    );
+                })}
+            </div>
 
-        <div className="mt-4 space-y-8">
-        <form onSubmit={handleSave} className="space-y-8">
+            <div role="tabpanel" id={`painel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0} className="p-5 focus-visible:outline-none">
+            {tab === 'dados' && (
+        <form onSubmit={handleSave} className="divide-y divide-gray-100 dark:divide-white/10">
             <ProfileGroup id="perfil-dados" icon={User} title="Dados pessoais">
                 <div>
                     <label htmlFor="profile-name" className={fieldLabel}>Nome de exibição</label>
@@ -325,7 +351,7 @@ export default function Profile() {
             </ProfileGroup>
 
             {/* Salvar: fica à vista enquanto houver alteração nos dados ou no treino */}
-            <div className={isDirty ? 'sticky bottom-24 z-20' : ''}>
+            <div className={`pt-6 ${isDirty ? 'sticky bottom-24 z-20' : ''}`}>
                 {isDirty && (
                     <p className="mb-2 flex items-center justify-center gap-1 rounded-xl bg-yellow-100 py-1.5 text-xs font-bold text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" role="status">
                         <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" /> Você tem alterações não salvas
@@ -337,24 +363,20 @@ export default function Profile() {
                 </button>
             </div>
         </form>
-
+            )}
+            {tab === 'treinador' && (
+            <div className="divide-y divide-gray-100 dark:divide-white/10">
         <ProfileGroup id="perfil-treinador" icon={Users} title="Meu treinador">
             <MyCoachCard user={user} profile={{ ...userProfile, ...formData, coachId: userProfile?.coachId }} initialOpen={!!initialCoachCode} initialCode={initialCoachCode} />
             <CoachPaymentStatus profile={userProfile} />
         </ProfileGroup>
-
+            </div>
+            )}
+            {tab === 'conta' && (
+            <div className="divide-y divide-gray-100 dark:divide-white/10">
         <ProfileGroup id="perfil-conta" icon={ShieldCheck} title="Conta e segurança">
             <AccountSecurity user={user} />
         </ProfileGroup>
-
-        <ProfileGroup id="perfil-notificacoes" icon={Bell} title="Notificações">
-            <NotificationSettings uid={user.uid} className="" embedded />
-        </ProfileGroup>
-
-        <ProfileGroup id="perfil-aparencia" icon={Accessibility} title="Aparência e acessibilidade">
-            <AccessibilitySettings />
-        </ProfileGroup>
-
         {/* SEUS DADOS (LGPD) */}
         <ProfileGroup id="perfil-privacidade" icon={Lock} title="Privacidade e dados">
           <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -384,10 +406,22 @@ export default function Profile() {
               : 'Contas de treinador e administrador são removidas pelo suporte após o pedido por e-mail.'}
           </p>
         </ProfileGroup>
-
-        <button type="button" onClick={handleLogout} className={`${btnDanger} w-full min-h-[52px]`}>
+        <section className="py-6 last:pb-0"><button type="button" onClick={handleLogout} className={`${btnDanger} w-full min-h-[52px]`}>
             <LogOut className="w-4 h-4" aria-hidden="true" /> Sair da conta
-        </button>
+        </button></section>
+            </div>
+            )}
+            {tab === 'ajustes' && (
+            <div className="divide-y divide-gray-100 dark:divide-white/10">
+        <ProfileGroup id="perfil-notificacoes" icon={Bell} title="Notificações">
+            <NotificationSettings uid={user.uid} className="" embedded />
+        </ProfileGroup>
+        <ProfileGroup id="perfil-aparencia" icon={Accessibility} title="Aparência e acessibilidade">
+            <AccessibilitySettings />
+        </ProfileGroup>
+            </div>
+            )}
+            </div>
         </div>
 
         {showDelete && (

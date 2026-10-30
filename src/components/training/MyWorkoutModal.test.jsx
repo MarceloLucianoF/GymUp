@@ -242,3 +242,16 @@ test('PDF com vários treinos: lista para salvar todos de uma vez', async () => 
   await waitFor(() => expect(saveMyWorkout).toHaveBeenCalledTimes(2));
   expect(saveMyWorkout.mock.calls.map((c) => c[1].name)).toEqual(['Treino A - Peito', 'Treino B - Pernas']);
 });
+
+test('exercício digitado parecido com um da biblioteca grava o nome digitado, com a foto da biblioteca', async () => {
+  render(<MyWorkoutModal isOpen onClose={jest.fn()} user={{ uid: 'u1' }} library={lib} />);
+  fireEvent.click(screen.getByText('Montar do zero'));
+  fireEvent.change(screen.getByLabelText('Adicionar exercício'), { target: { value: 'Supino Reto Máquina Unilateral' } });
+  fireEvent.click(screen.getByLabelText('Adicionar o que digitei'));
+  fireEvent.click(screen.getByText('Salvar em Meus treinos'));
+  await waitFor(() => expect(saveMyWorkout).toHaveBeenCalled());
+  const [ex] = saveMyWorkout.mock.calls[0][1].exercises;
+  expect(ex.name).toBe('Supino Reto Máquina Unilateral');
+  expect(ex.machineImage).toBe('/exercises/supino.gif');
+  expect(ex).not.toHaveProperty('keepName');
+});

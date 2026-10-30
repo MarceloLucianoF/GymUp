@@ -206,7 +206,8 @@ export const toWorkoutExercise = (e, ref, idx) => {
   const plan = { ...(kind === 'strength' && hasPlan(e.setTypes) ? { setTypes: normalizeSetTypes(e.setTypes, e.sets) } : {}), ...(setPlan ? { setPlan } : {}) };
   const base = {
     firestoreId: ref?.firestoreId || ref?.id || `custom-${idx}`,
-    name: ref?.name || e.name,
+    // No editor vale o nome que a pessoa vê na tela; na importação direta, o nome da biblioteca padroniza.
+    name: e.keepName ? e.name : ref?.name || e.name,
     kind,
     ...(/^[A-Z]$/.test(e.superset || '') ? { superset: e.superset } : {}),
     machineImage: ref?.machineImage || ref?.demoUrl || e.photo || null,
