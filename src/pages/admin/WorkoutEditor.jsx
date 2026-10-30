@@ -20,6 +20,7 @@ import { btnPrimary, btnGhost, iconBtn, inputCls, labelCls, pageCls } from '../.
 import { stillSrc } from '../../utils/exerciseMedia';
 import { buildWarmupStretch, startsWithWarmup } from '../../utils/stretchWorkout';
 import { exercises as BUILTIN_LIBRARY } from '../../data/exercises';
+import SwitchRow from '../../components/ui/Switch';
 const LEVELS = ['Iniciante', 'Intermediário', 'Avançado', 'Elite'];
 const norm = (s) => String(s || '').trim().toLowerCase();
 const cap = (s) => { const t = String(s || '').trim(); return t ? t[0].toUpperCase() + t.slice(1) : 'Outros'; };
@@ -158,6 +159,7 @@ export default function WorkoutEditor() {
           name: data.name || '',
           description: data.description || '',
           difficulty: data.difficulty || 'Iniciante',
+          warmupStretch: data.warmupStretch === true,   // fichas antigas (sem o campo) ficam sem a etapa
           exercises: (data.exercises || []).map((ex) => normalizeExercise(ex, lib))
         });
         setDirty(false);
@@ -249,6 +251,7 @@ export default function WorkoutEditor() {
         name: training.name.trim(),
         description: training.description,
         difficulty: training.difficulty,
+        warmupStretch: training.warmupStretch === true,
         exercises: training.exercises.map(serializeExercise),
         updatedAt: serverTimestamp()
       });
@@ -300,6 +303,7 @@ export default function WorkoutEditor() {
             <label htmlFor="we-desc" className={labelCls}>Instruções</label>
             <textarea id="we-desc" rows={3} value={training.description} onChange={(e) => update({ description: e.target.value })} className={`${inputCls} resize-none py-3`} placeholder="Ex: Descanso de 60s entre séries, foco na execução..." />
           </div>
+          <SwitchRow label="Alongamento geral antes do treino" hint="O aluno vê uma etapa opcional de 5 min antes do 1º exercício, com Pular. Não conta séries nem volume." checked={training.warmupStretch === true} onChange={(v) => update({ warmupStretch: v })} />
         </section>
 
         <section className="surface animate-fade-up p-5" style={{ animationDelay: '60ms' }} aria-label="Volume estimado">

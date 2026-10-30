@@ -6,6 +6,7 @@ import { activeWorkoutService } from '../services/activeWorkoutService';
 import { fetchStudentCheckIns, invalidateCheckIns } from '../services/checkInsCache';
 import { saveCheckIn } from '../services/checkInService';
 import { saveWeeklyGoal, reconcileWeeklyGoal } from '../services/goalService';
+import { computeAchievements as computeGameAchievements } from '../utils/achievements';
 
 // --- Metas semanais (localStorage por usuário) ---
 export const GOAL_MIN = 2;
@@ -113,24 +114,16 @@ export const computeStats = (history) => {
       });
     });
   });
-  let level = 'Iniciante';
-  let nextLevelTreinos = 10;
-  let base = 0;
-  if (totalTreinos >= 100) { level = 'Lenda'; nextLevelTreinos = 1000; base = 100; }
-  else if (totalTreinos >= 50) { level = 'Monstro'; nextLevelTreinos = 100; base = 50; }
-  else if (totalTreinos >= 25) { level = 'Atleta'; nextLevelTreinos = 50; base = 25; }
-  else if (totalTreinos >= 10) { level = 'Focado'; nextLevelTreinos = 25; base = 10; }
-  const progress = Math.min(100, Math.max(0, ((totalTreinos - base) / (nextLevelTreinos - base)) * 100));
-  return { totalTreinos, maxGlobalLoad, level, nextLevelTreinos, progress, ...computeStreaks(history) };
+  // Nível e conquistas: mesma conta da Evolução (utils/achievements, com as regras anti-abuso).
+  const { count: levelTreinos, level: lv, achievements } = computeGameAchievements(history);
+  return {
+    totalTreinos, maxGlobalLoad, levelTreinos, level: lv.name, nextLevelTreinos: lv.nextAt ?? levelTreinos, progress: lv.progress,
+    achievements, ...computeStreaks(history),
+  };
 };
 
-export const computeAchievements = (stats) => [
-  { id: 'first', label: 'Primeiro treino', hint: '1 treino', unlocked: stats.totalTreinos >= 1 },
-  { id: 'streak7', label: '7 dias seguidos', hint: 'Sequência de 7 dias', unlocked: stats.bestStreak >= 7 },
-  { id: 't10', label: '10 treinos', hint: '10 treinos', unlocked: stats.totalTreinos >= 10 },
-  { id: 't50', label: '50 treinos', hint: '50 treinos', unlocked: stats.totalTreinos >= 50 },
-  { id: 't100', label: '100 treinos', hint: '100 treinos', unlocked: stats.totalTreinos >= 100 },
-];
+/** Conquistas já calculadas em computeStats (mantido para quem lê `data.achievements`). */
+export const computeAchievements = (stats) => stats?.achievements || [];
 
 const EMPTY_ERRORS = { profile: null, history: null, trainings: null };
 

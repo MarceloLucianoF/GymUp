@@ -14,7 +14,7 @@ const col = (uid) => collection(db, 'users', uid, 'myWorkouts');
 const safeExerciseImage = (src) => (typeof src === 'string' && (/^\/exercises\/[a-z0-9-]+\.gif$/.test(src) || isSafePhoto(src, IMAGE_LIMITS.exercise.maxChars)) ? src : null);
 
 /** Ficha pronta para gravar: só os campos aceitos pelas regras, com limites. */
-export function buildMyWorkout({ name, exercises, source = 'manual', description = '', category = 'Pessoal', photo = null, createdAt = null }) {
+export function buildMyWorkout({ name, exercises, source = 'manual', description = '', category = 'Pessoal', photo = null, createdAt = null, warmupStretch }) {
   const list = (exercises || []).slice(0, 30).map((e) => ({ ...e, machineImage: safeExerciseImage(e.machineImage) }));
   const out = {
     name: String(name || '').trim().slice(0, 80) || 'Meu treino',
@@ -26,7 +26,17 @@ export function buildMyWorkout({ name, exercises, source = 'manual', description
     createdAt: createdAt || new Date().toISOString()
   };
   if (isSafePhoto(photo, IMAGE_LIMITS.workout.maxChars)) out.photo = photo;
+  if (typeof warmupStretch === 'boolean') out.warmupStretch = warmupStretch;
   return out;
+}
+
+// `warmupStretch` é campo novo: enquanto as regras publicadas não o aceitam, grava sem ele em vez de perder o treino.
+const withoutWarmup = ({ warmupStretch, ...rest }) => rest;
+async function writeTolerant(write, data) {
+  try { return await write(data); } catch (error) {
+    if (error?.code === 'permission-denied' && 'warmupStretch' in data) return write(withoutWarmup(data));
+    throw error;
+  }
 }
 
 export async function listMyWorkouts(uid) {
@@ -35,13 +45,13 @@ export async function listMyWorkouts(uid) {
 }
 
 export async function saveMyWorkout(uid, payload) {
-  const ref = await addDoc(col(uid), { ...buildMyWorkout(payload), updatedAt: serverTimestamp() });
+  const ref = await writeTolerant((data) => addDoc(col(uid), data), { ...buildMyWorkout(payload), updatedAt: serverTimestamp() });
   return toMyTrainingId(ref.id);
 }
 
 /** Edição do próprio treino: substitui o documento mantendo a data de criação e a origem. */
 export async function updateMyWorkout(uid, docId, payload) {
-  await setDoc(doc(db, 'users', uid, 'myWorkouts', docId), { ...buildMyWorkout(payload), updatedAt: serverTimestamp() });
+  await writeTolerant((data) => setDoc(doc(db, 'users', uid, 'myWorkouts', docId), data), { ...buildMyWorkout(payload), updatedAt: serverTimestamp() });
 }
 
 export const deleteMyWorkout = (uid, docId) => deleteDoc(doc(db, 'users', uid, 'myWorkouts', docId));

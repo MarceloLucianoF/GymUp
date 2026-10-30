@@ -117,3 +117,19 @@ export function buildWarmupStretch(library = []) {
 
 /** O treino já começa com o alongamento geral (para não inserir duas vezes)? */
 export const startsWithWarmup = (names = [], warmup = []) => warmup.length > 0 && warmup.every((w, i) => plain(names[i]) === plain(w.name));
+
+/**
+ * Etapa "Alongamento geral" na execução: só quando a ficha pede (`warmupStretch: true`) e ainda não começa
+ * com o alongamento (inserido pelo botão dos editores, que pode ter usado outra biblioteca: por isso várias sequências
+ * candidatas e, além delas, os 3 primeiros exercícios serem todos do alongamento também conta como "já tem").
+ */
+export function needsWarmupStep(workout, candidates = []) {
+  if (workout?.warmupStretch !== true) return false;
+  const lists = candidates.filter((w) => Array.isArray(w) && w.length > 0);
+  if (!lists.length) return false;
+  const names = (workout.exercises || []).map((e) => e?.name);
+  if (lists.some((w) => startsWithWarmup(names, w))) return false;
+  const known = new Set(lists.flat().map((w) => plain(w.name)));
+  const head = names.slice(0, 3);
+  return !(head.length === 3 && head.every((n) => known.has(plain(n))));
+}

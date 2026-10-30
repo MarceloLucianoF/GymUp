@@ -28,6 +28,8 @@ import { saveCheckIn } from '../../services/checkInService';
 import { fromMyTrainingId, isMyTrainingId, replaceExerciseInMyWorkout } from '../../services/myWorkouts';
 import { afterSetAction, supersetRole } from '../../utils/setTypes';
 import SwapExerciseModal from '../../components/training/SwapExerciseModal';
+import WarmupStretchStep from '../../components/training/WarmupStretchStep';
+import { buildWarmupStretch, needsWarmupStep } from '../../utils/stretchWorkout';
 import { buildSwapped } from '../../utils/exerciseSwap';
 import { useWorkoutNotification, workoutNotifSupported } from '../../hooks/useWorkoutNotification';
 import { suggestNext } from '../../utils/progression';
@@ -91,6 +93,8 @@ export default function TrainingExecutionPage() {
     const [showCelebration, setShowCelebration] = useState(false);
     const [celebrationStats, setCelebrationStats] = useState(null);
     const [sessionSummary, setSessionSummary] = useState(null);
+    // Etapa opcional de alongamento geral antes do 1º exercício (ficha com warmupStretch: true); null = sem etapa.
+    const [warmupSteps, setWarmupSteps] = useState(null);
 
     // Mantém a tela acesa durante o treino (some após a celebração)
     useWakeLock(!!training && !showCelebration);
@@ -204,6 +208,10 @@ export default function TrainingExecutionPage() {
                     toast.success("Treino em andamento restaurado!", { id: 'restore-session-toast' });
                 } else {
                     startedAtRef.current = Date.now();
+                    // Só no começo do treino (retomada não repete). Mesma sequência do botão dos editores; não registra séries.
+                    const warmupFromLib = buildWarmupStretch(combinedLibrary);
+                    const warmupDefault = buildWarmupStretch(defaultExercises);
+                    if (needsWarmupStep(loadedTraining, [warmupFromLib, warmupDefault])) setWarmupSteps(warmupFromLib.length ? warmupFromLib : warmupDefault);
                 }
 
                 setTraining(loadedTraining);
@@ -668,7 +676,12 @@ export default function TrainingExecutionPage() {
                     </div>
                 )}
                 
-                {viewMode === 'list' ? (
+                {warmupSteps ? (
+                    <WarmupStretchStep
+                        exercises={warmupSteps}
+                        onDone={(how) => { setWarmupSteps(null); if (how === 'done') toast.success('Alongamento feito. Bora para o treino!', { duration: 2000 }); }}
+                    />
+                ) : viewMode === 'list' ? (
                     // MODO LISTA: Renderiza todos
                     training.exercises.map((ex, i) => renderExerciseCard(ex, i, false))
                 ) : (
