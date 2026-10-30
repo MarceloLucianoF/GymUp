@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Dumbbell, Video, Timer, History, Sparkles, Check, ArrowRight, Trophy, Copy, StickyNote, Repeat2 } from 'lucide-react';
 import SetRow from './SetRow';
@@ -7,6 +7,8 @@ import { comboLabel, isSetType, planLabel, normalizePlanItem } from '../../utils
 import { dropLoad, fmtKg, suggestNext } from '../../utils/progression';
 import { extraPartsPlan, getLastReps, getSmartTip, getLastNote, getLastSessionSets, isPRSet, noteKey, NOTE_MAX } from '../../utils/training';
 
+const actionBtn = 'min-h-[40px] flex-1 whitespace-nowrap inline-flex items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-black active:scale-95 transition-all';
+
 // Card de exercício da execução do treino (modo lista ou foco).
 const ExecutionExerciseCard = ({
     ex, exIndex, isFocusMode = false, superset = null, onSwap,
@@ -14,6 +16,7 @@ const ExecutionExerciseCard = ({
     isLastExercise,
     onInput, onCheckSet, onAdjust, onCopyLast, onNote, onOpenLoadHistory, onZoom, onShowVideo, onNextExercise, onFinish
 }) => {
+    const [noteOpen, setNoteOpen] = useState(false);
     if (!ex) return null;
 
     const kind = exerciseKind(ex);
@@ -41,6 +44,7 @@ const ExecutionExerciseCard = ({
     const lastNote = getLastNote(rawHistoryDocs, exName);
     const hasLastSession = getLastSessionSets(rawHistoryDocs, exName).length > 0;
     const noteValue = sessionData[noteKey(exIndex)]?.note || '';
+    const showNote = noteOpen || !!noteValue;
 
     const isSetDone = (sIdx) => sessionData[`${exIndex}-${sIdx}`]?.completed;
     const allDone = setsArray.every((_, sIdx) => isSetDone(sIdx));
@@ -112,10 +116,10 @@ const ExecutionExerciseCard = ({
                     }
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className={`${isFocusMode ? 'text-xl' : 'text-lg'} font-black text-gray-800 dark:text-white leading-tight truncate`}>{exName}</h3>
+                    <h3 className={`${isFocusMode ? 'text-xl' : 'text-lg'} font-black text-gray-800 dark:text-white leading-tight line-clamp-2 break-words`}>{exName}</h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 uppercase font-bold">{ex.muscleGroup || 'Geral'}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] bg-brand/10 text-amber-800 dark:text-brand border border-brand/20 px-2 py-0.5 rounded font-bold">Meta: {prescriptionLabel(ex)}</span>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <span className="whitespace-nowrap text-[10px] bg-brand/10 text-amber-800 dark:text-brand border border-brand/20 px-2 py-0.5 rounded font-bold">Meta: {prescriptionLabel(ex)}</span>
                         {!cardio && !timed && lastLoad ? (
                             <button
                                 onClick={() => onOpenLoadHistory(exName)}
@@ -164,35 +168,42 @@ const ExecutionExerciseCard = ({
                 </div>
             )}
 
-            {/* Cópia da última sessão e nota do exercício */}
-            <div className="px-4 py-3 space-y-2 border-b border-gray-100 dark:border-gray-700/50">
-                <div className="flex flex-wrap items-center gap-2">
+            {/* Ações do exercício numa linha só (copiar, trocar, nota); a nota abre quando a pessoa pede ou já tem texto */}
+            <div className="px-4 py-2.5 space-y-2 border-b border-gray-100 dark:border-gray-700/50">
+                <div className="flex items-center gap-2">
                     {!cardio && hasLastSession && (
                         <button
-                            type="button" onClick={() => onCopyLast(exIndex, exName, setsCount)}
-                            className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/10 px-3 text-xs font-black text-amber-800 dark:text-brand active:scale-95 transition-all"
+                            type="button" onClick={() => onCopyLast(exIndex, exName, setsCount)} aria-label="Copiar da última sessão"
+                            className={`${actionBtn} border border-brand/30 bg-brand/10 text-amber-800 dark:text-brand`}
                         >
-                            <Copy className="w-4 h-4" aria-hidden="true" /> Copiar da última sessão
+                            <Copy className="w-4 h-4 shrink-0" aria-hidden="true" /> Copiar
                         </button>
                     )}
                     {onSwap && (
-                        <button type="button" onClick={() => onSwap(exIndex)} aria-label={`Trocar ${exName}`} className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-xs font-black text-gray-800 active:scale-95 transition-all dark:bg-white/10 dark:text-gray-100">
-                            <Repeat2 className="w-4 h-4" aria-hidden="true" /> Trocar exercício
+                        <button type="button" onClick={() => onSwap(exIndex)} aria-label={`Trocar ${exName}`} className={`${actionBtn} bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100`}>
+                            <Repeat2 className="w-4 h-4 shrink-0" aria-hidden="true" /> Trocar
                         </button>
                     )}
+                    <button type="button" onClick={() => setNoteOpen((v) => !v)} aria-expanded={showNote} aria-controls={`note-${exIndex}`}
+                        className={`${actionBtn} ${showNote || noteValue ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100'}`}>
+                        <StickyNote className="w-4 h-4 shrink-0" aria-hidden="true" /> Nota{noteValue ? ' ✓' : ''}
+                    </button>
                 </div>
                 {lastNote && (
                     <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-300">
                         <StickyNote className="w-4 h-4 shrink-0" aria-hidden="true" /> <span><b>Última nota:</b> {lastNote}</span>
                     </p>
                 )}
+                {showNote && (
                 <input
+                    id={`note-${exIndex}`}
                     type="text" maxLength={NOTE_MAX} value={noteValue}
                     onChange={(e) => onNote(exIndex, e.target.value)}
                     placeholder="Nota do exercício (ex.: ajustar banco no 4)"
                     aria-label={`Nota para ${exName}`}
                     className="w-full rounded-xl bg-gray-100 dark:bg-white/5 px-3 py-2 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand"
                 />
+                )}
             </div>
 
             {/* Séries */}
@@ -213,7 +224,7 @@ const ExecutionExerciseCard = ({
                         key={setIndex}
                         setIndex={setIndex}
                         data={sessionData[`${exIndex}-${setIndex}`] || {}}
-                        weightPlaceholder={loadHint}
+                        weightPlaceholder={loadHint ? String(loadHint).replace('.', ',') : loadHint}
                         repsPlaceholder={repsHintOf(setIndex)}
                         isFocusMode={isFocusMode}
                         kind={kind}
@@ -252,7 +263,7 @@ const ExecutionExerciseCard = ({
                             }}
                             className="w-full bg-gradient-to-r from-brand to-[#FF9800] text-black min-h-[60px] text-base font-black rounded-2xl shadow-lg shadow-brand/30 flex items-center justify-center gap-2 transition-all active:scale-95 animate-pulse-ring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
                         >
-                            <Check className="w-5 h-5" /> {cardio ? `CONCLUIR ${cardioMin} MIN` : (superset && !superset.last ? `CONCLUIR SÉRIE #${nextUndoneIndex + 1} (SEM DESCANSO)` : `CONCLUIR SÉRIE #${nextUndoneIndex + 1} & DESCANSAR`)}
+                            <Check className="w-5 h-5" /> {cardio ? `CONCLUIR ${cardioMin} MIN` : (superset && !superset.last ? `CONCLUIR SÉRIE #${nextUndoneIndex + 1} (SEM DESCANSO)` : `CONCLUIR SÉRIE #${nextUndoneIndex + 1} E DESCANSAR`)}
                         </button>
                     )}
                   </div>

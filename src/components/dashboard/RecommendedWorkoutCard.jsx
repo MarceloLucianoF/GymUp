@@ -36,13 +36,11 @@ const RecommendedWorkoutCard = ({ history = [], trainings, onStart, assignedTrai
         </div>
 
         <h2 className="font-display text-2xl font-black leading-tight sm:text-4xl">{nextTraining.name}</h2>
-        <p className="mt-1.5 line-clamp-2 max-w-lg text-sm text-black/75">
-          {nextTraining.description || 'Foco total no progresso e consistência.'}
-        </p>
+        {nextTraining.description && <p className="mt-1.5 line-clamp-2 max-w-lg text-sm text-black/75">{nextTraining.description}</p>}
 
-        {suggestion.reason && (
+        {(suggestion.reason || weekGoal > 0) && (
           <p className="mt-3 max-w-lg text-xs font-semibold text-black/80" data-testid="rotation-reason">
-            {suggestion.reason}{weekGoal > 0 ? ` ${goalSentence(suggestion.goal, trainedToday)}` : ''}
+            {[suggestion.reason, weekGoal > 0 ? goalSentence(suggestion.goal, trainedToday) : ''].filter(Boolean).join(' ')}
           </p>
         )}
 

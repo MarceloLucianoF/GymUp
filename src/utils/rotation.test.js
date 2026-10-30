@@ -71,7 +71,7 @@ describe('próxima ficha', () => {
     expect(met.goal.met).toBe(true);
     expect(goalSentence(met.goal, true)).toBe('Meta da semana cumprida (4 de 4): um treino a mais é bônus.');
     const open = suggestNext({ ...base, weekCount: 3, history: [done('a', 0)], trainedToday: true });
-    expect(goalSentence(open.goal, true)).toBe('Hoje já treinou. Faltam 1 treino para a meta (3 de 4).');
+    expect(goalSentence(open.goal, true)).toBe('Hoje já treinou. Falta 1 treino para a meta (3 de 4).');
     expect(goalSentence({ weeklyGoal: 0 })).toBe('');
   });
 
@@ -79,5 +79,17 @@ describe('próxima ficha', () => {
     expect(suggestNext({ trainings: [{ ...A, archived: true }], assignedId: 'a', history: [], now: NOW }).training).toBeNull();
     expect(whenLabel(0)).toBe('hoje');
     expect(whenLabel(3)).toBe('há 3 dias');
+  });
+});
+
+describe('rodízio dos treinos próprios (sem ficha atribuída)', () => {
+  it('com todos já feitos, sugere o que está há mais tempo sem ser feito', () => {
+    const now = new Date('2026-10-30T09:00:00');
+    const mine = ['A', 'B', 'C'].map((l) => ({ firestoreId: `my_${l}`, name: `Treino ${l}`, exercises: [{}] }));
+    const ago = (d) => new Date(now.getTime() - d * 86400e3).toISOString();
+    const history = [{ trainingId: 'my_A', trainingName: 'Treino A', date: ago(1) }, { trainingId: 'my_B', trainingName: 'Treino B', date: ago(2) }, { trainingId: 'my_C', trainingName: 'Treino C', date: ago(4) }];
+    const r = suggestNext({ trainings: mine, history, now });
+    expect(r.training.name).toBe('Treino C');
+    expect(r.reason).toMatch(/Seu último treino foi Treino A ontem/);
   });
 });

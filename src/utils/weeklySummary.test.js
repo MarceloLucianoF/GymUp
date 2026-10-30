@@ -79,7 +79,7 @@ describe('texto, identidade dos números e IA', () => {
   const f = buildWeeklySummary({ history: [w(9, 12), w(9, 13), w(9, 14)], weeklyGoal: 4, now: NOW });
 
   it('texto local usa só os números da tela', () => {
-    expect(localNarrative(f)).toBe('Você concluiu 3 de 4 treinos nesta semana, em 3 dias, somando 150 minutos e 3,0 t. Faltam 1 treino para a meta. Sequência atual: 3 dias. Novo recorde: Supino (50 kg).'.replace(' Novo recorde: Supino (50 kg).', ''));
+    expect(localNarrative(f)).toBe('Você concluiu 3 de 4 treinos nesta semana, em 3 dias, somando 150 minutos e 3,0 t. Falta 1 treino para a meta. Sequência atual: 3 dias. Novo recorde: Supino (50 kg).'.replace(' Novo recorde: Supino (50 kg).', ''));
   });
 
   it('hash muda quando os números mudam e não muda com a mesma semana repetida', () => {

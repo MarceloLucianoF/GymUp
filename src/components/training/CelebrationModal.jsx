@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Trophy, Share2, RotateCcw, Sparkles, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { buildShareText } from '../../utils/training';
 import { TREND_LABEL } from '../../utils/sessionSummary';
 import { fmtKg } from '../../utils/progression';
 import useBodyScrollLock from '../../hooks/useBodyScrollLock';
+import { shareCardBlob, shareCardData } from '../../utils/shareCard';
 
 const TREND_STYLE = {
     load: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200',
@@ -19,23 +20,49 @@ const TrendIcon = ({ trend }) => (trend === 'load' || trend === 'reps' ? <ArrowU
 const CelebrationModal = ({ stats, summary, onFinish, onRepeat }) => {
     useBodyScrollLock();
     const facts = summary?.facts;
-    const handleShare = async () => {
-        const text = buildShareText(stats);
+    // Imagem para stories/WhatsApp: gerada ao abrir (para a prévia) e reaproveitada no compartilhar.
+    const [card, setCard] = useState({ blob: null, url: '' });
+    const [sharing, setSharing] = useState(false);
+    useEffect(() => {
+        let alive = true; let url = '';
+        shareCardBlob(shareCardData(stats, facts)).then((blob) => {
+            if (!alive || !blob) return;
+            url = URL.createObjectURL(blob);
+            setCard({ blob, url });
+        }).catch(() => {});
+        return () => { alive = false; if (url) URL.revokeObjectURL(url); };
+    }, [stats, facts]);
+
+    const shareText = async (text) => {
         try {
-            if (navigator.share) {
-                await navigator.share({ title: 'Treino concluído', text });
-                return;
-            }
+            if (navigator.share) { await navigator.share({ title: 'Treino concluído', text }); return; }
             await navigator.clipboard.writeText(text);
             toast.success('Resumo copiado!');
         } catch (e) {
             if (e?.name === 'AbortError') return;
-            try {
-                await navigator.clipboard.writeText(text);
-                toast.success('Resumo copiado!');
-            } catch (err) {
-                toast.error('Não foi possível compartilhar.');
+            try { await navigator.clipboard.writeText(text); toast.success('Resumo copiado!'); }
+            catch (err) { toast.error('Não foi possível compartilhar.'); }
+        }
+    };
+
+    const handleShare = async () => {
+        const text = buildShareText(stats);
+        if (!card.blob) { await shareText(text); return; }
+        setSharing(true);
+        try {
+            const file = new File([card.blob], 'treino-bohtreinar.png', { type: 'image/png' });
+            if (navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Treino concluído', text });
+                return;
             }
+            // Computador ou navegador sem envio de arquivo: baixa a imagem.
+            const a = document.createElement('a');
+            a.href = card.url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+            toast.success('Imagem salva. Poste nos stories ou mande no WhatsApp.');
+        } catch (e) {
+            if (e?.name !== 'AbortError') await shareText(text);
+        } finally {
+            setSharing(false);
         }
     };
 
@@ -119,9 +146,18 @@ const CelebrationModal = ({ stats, summary, onFinish, onRepeat }) => {
                     </section>
                 )}
 
+                {card.url && (
+                    <figure className="mb-4 flex items-center gap-4 rounded-2xl bg-gray-50 p-3 text-left dark:bg-gray-800/80">
+                        <img src={card.url} alt="Prévia da imagem do treino para compartilhar" className="h-40 w-[90px] shrink-0 rounded-xl object-cover shadow-md" />
+                        <figcaption className="text-sm text-gray-700 dark:text-gray-200">
+                            <b className="block text-gray-900 dark:text-white">Imagem pronta para stories e WhatsApp</b>
+                            Com o treino, os números e seus recordes. Seu nome e seu e-mail não aparecem.
+                        </figcaption>
+                    </figure>
+                )}
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                    <button type="button" onClick={handleShare} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-amber-800 dark:text-brand text-sm font-black active:scale-95 transition-all">
-                        <Share2 className="w-4 h-4" aria-hidden="true" /> Compartilhar
+                    <button type="button" onClick={handleShare} disabled={sharing} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-amber-800 dark:text-brand text-sm font-black active:scale-95 transition-all disabled:opacity-60">
+                        <Share2 className="w-4 h-4" aria-hidden="true" /> {card.url ? 'Compartilhar imagem' : 'Compartilhar'}
                     </button>
                     {onRepeat && (
                         <button type="button" onClick={onRepeat} className="min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-brand/40 text-amber-800 dark:text-brand text-sm font-black active:scale-95 transition-all">
