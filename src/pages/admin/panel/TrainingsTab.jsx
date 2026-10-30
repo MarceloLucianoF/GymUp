@@ -3,6 +3,7 @@ import { Copy, Edit3, Layers, Plus, Search, Trash2, TriangleAlert, Users } from 
 import EmptyState from '../../../components/common/EmptyState';
 import { btnPrimary, inputCls } from '../../../components/coach/styles';
 import { GROUP_LABEL, trainingGroups, trainingIssues, updatedAtOf } from './adminUtils';
+import { plural } from '../../../utils/text';
 
 const actBtn = 'pressable inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 const fmtDate = (ms) => (ms ? new Date(ms).toLocaleDateString('pt-BR') : '—');
@@ -32,7 +33,7 @@ export default function TrainingsTab({ trainings, exerciseMap, usage, coachNames
           </select>
           <button type="button" onClick={onNew} className={btnPrimary}><Plus className="h-4 w-4" aria-hidden="true" /> Nova ficha</button>
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400" aria-live="polite">{rows.length} de {trainings.length} fichas</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400" aria-live="polite">{rows.length} de {trainings.length} {trainings.length === 1 ? 'ficha' : 'fichas'}</p>
       </div>
 
       {rows.length === 0 ? <EmptyState icon={Layers} title="Nenhuma ficha encontrada" description="Crie uma ficha ou mude o filtro." /> : (
@@ -51,9 +52,9 @@ export default function TrainingsTab({ trainings, exerciseMap, usage, coachNames
                   <span className="shrink-0 rounded-full bg-brand/15 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:text-brand">{t.difficulty || 'Ficha'}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
-                  <span className="font-bold">{(t.exercises || []).length} exercícios</span>
+                  <span className="font-bold">{plural((t.exercises || []).length, 'exercício', 'exercícios')}</span>
                   <span aria-hidden="true">·</span>
-                  <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden="true" /> {students} aluno(s) usando</span>
+                  <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden="true" /> {plural(students, 'aluno', 'alunos')} usando</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {groups.map((g) => <span key={g} className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-bold uppercase text-gray-700 dark:bg-white/10 dark:text-gray-300">{GROUP_LABEL[g] || g}</span>)}

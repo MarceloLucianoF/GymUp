@@ -42,7 +42,7 @@ const ExerciseZoomModal = ({ exercise, onClose }) => {
                     )}
                     {exercise.execution && (
                         <div>
-                            <h4 className="text-xs font-bold text-amber-700 dark:text-brand uppercase mb-1">Como Executar</h4>
+                            <h4 className="text-xs font-bold text-amber-700 dark:text-brand uppercase mb-1">Como executar</h4>
                             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{exercise.execution}</p>
                         </div>
                     )}

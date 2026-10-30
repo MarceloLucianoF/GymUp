@@ -1,6 +1,7 @@
 import { formatDate } from './format';
 import { dropLoad } from './progression';
 import { countsAsWork, isSetType, normalizeSetPlan, normalizeSetTypes, setVolume } from './setTypes';
+import { plural } from './text';
 
 // Normaliza/hidrata os exercícios de um treino cruzando a biblioteca (Firestore + defaults).
 export const hydrateExercises = (rawExercises, combinedLibrary) => rawExercises.map((ex, idx) => {
@@ -274,7 +275,7 @@ export const normalizeNote = (v) => (typeof v === 'string' ? v.trim().slice(0, N
 export const buildShareText = ({ trainingName, timeStr, volumeKg, completedSetsCount, newPRs = [] }) => {
     const lines = [
         `Treino concluído: ${trainingName || 'Treino'}`,
-        `Tempo ${timeStr} | Volume ${Math.round(volumeKg || 0)} kg | ${completedSetsCount || 0} séries`
+        `Tempo ${timeStr} | Volume ${Math.round(volumeKg || 0)} kg | ${plural(completedSetsCount || 0, 'série', 'séries')}`
     ];
     if (newPRs.length > 0) lines.push(`Recordes: ${newPRs.join(', ')}`);
     lines.push('Feito com BohTreinar');

@@ -535,7 +535,7 @@ export default function TrainingExecutionPage() {
         meta: mediaEx ? {
             title: `${mediaEx.name} · ${training?.name || 'Treino'}`,
             setLabel: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}${notifSug && notifSug.load > 0 ? ` · ${String(notifSug.load).replace('.', ',')} kg` : ''}`,
-            progress: `${Object.values(sessionData).filter((x) => x?.completed).length} de ${notifTotal} séries concluídas`,
+            progress: `${Object.values(sessionData).filter((x) => x?.completed).length} de ${notifTotal} ${notifTotal === 1 ? 'série concluída' : 'séries concluídas'}`,
             resting: !!restTimerObj,
             restEndsAt: restTimerObj?.endTime || null,
             image: typeof mediaEx.machineImage === 'string' && mediaEx.machineImage.startsWith('/') ? `${window.location.origin}${stillSrc(mediaEx.machineImage)}` : null
@@ -553,7 +553,7 @@ export default function TrainingExecutionPage() {
     }, [restEndsAt, notifEnabled, nativeApp]);
     // App Android: notificação nativa com o cronômetro do descanso correndo e botões que agem no treino.
     const nativeTitle = mediaEx ? `${mediaEx.name} · ${training?.name || 'Treino'}` : '';
-    const nativeBody = mediaEx ? `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}\n${Object.values(sessionData).filter((x) => x?.completed).length} de ${notifTotal} séries concluídas` : '';
+    const nativeBody = mediaEx ? `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}\n${Object.values(sessionData).filter((x) => x?.completed).length} de ${notifTotal} ${notifTotal === 1 ? 'série concluída' : 'séries concluídas'}` : '';
     useEffect(() => {
         if (!nativeApp || !notifEnabled || !nativeTitle) return;
         updateWorkoutTimer({ title: nativeTitle, body: nativeBody, endsAt: restEndsAt || 0, alertTitle: `Descanso acabou · ${mediaEx?.name || ''}`.slice(0, 80) });

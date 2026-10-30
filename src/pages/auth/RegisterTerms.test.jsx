@@ -20,8 +20,8 @@ jest.mock('react-hot-toast', () => {
 const Register = require('./Register').default;
 
 const fill = async () => {
-  await userEvent.type(screen.getByLabelText('Nome Completo'), 'Ana');
-  await userEvent.type(screen.getByLabelText('Email'), 'ana@b.com');
+  await userEvent.type(screen.getByLabelText('Nome completo'), 'Ana');
+  await userEvent.type(screen.getByLabelText('E-mail'), 'ana@b.com');
   await userEvent.type(screen.getByLabelText('Senha'), 'Treino#2026');
   await userEvent.type(screen.getByLabelText('Confirmar'), 'Treino#2026');
 };
@@ -32,7 +32,7 @@ describe('Register - aceite dos termos', () => {
   it('não envia sem marcar o aceite e foca o checkbox', async () => {
     render(<MemoryRouter><Register /></MemoryRouter>);
     await fill();
-    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar Gratuitamente' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar gratuitamente' }));
     expect(mockRegister).not.toHaveBeenCalled();
     expect(screen.getByRole('checkbox')).toHaveFocus();
     expect(screen.getByText(/Aceite os Termos/)).toHaveAttribute('role', 'alert');
@@ -44,8 +44,8 @@ describe('Register - aceite dos termos', () => {
     screen.getAllByRole('link', { name: 'Política de Privacidade' }).forEach((l) => expect(l).toHaveAttribute('href', '/privacidade'));
     await fill();
     await userEvent.click(screen.getByRole('checkbox'));
-    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar Gratuitamente' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar gratuitamente' }));
     await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Cadastrar Gratuitamente' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cadastrar gratuitamente' })).toBeEnabled());
   });
 });

@@ -26,6 +26,7 @@ import { useConfirm } from '../../hooks/useConfirm';
 import { endStudentLink } from '../../services/coachLinkService';
 import { chatState, studentStatus, timeAgo, startOfDay, toDate, DAY_MS } from '../../components/coach/helpers';
 import { btnPrimary, btnGhost, inputCls, labelCls, pageCls } from '../../components/coach/styles';
+import { plural } from '../../utils/text';
 
 const TABS = [
   { id: 'summary', label: 'Resumo' },
@@ -229,7 +230,7 @@ export default function StudentDetailsPage() {
               <div>
                 <h2 className="font-display text-base font-black text-gray-900 dark:text-white">Aderência (4 semanas)</h2>
                 <p className="font-display text-3xl font-black text-amber-700 dark:text-brand">{derived.adherence}%</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Meta de {student.weeklyGoal || 3} treinos por semana. Cada quadrado é um dia (o último é hoje).</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Meta de {plural(student.weeklyGoal || 3, 'treino', 'treinos')} por semana. Cada quadrado é um dia (o último é hoje).</p>
               </div>
             </section>
             <div className="grid gap-5 lg:grid-cols-2">
@@ -266,7 +267,7 @@ export default function StudentDetailsPage() {
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
                       <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden="true" />{Math.floor((item.duration || 0) / 60)} min</span>
                       <span className="inline-flex items-center gap-1"><Scale className="h-3 w-3" aria-hidden="true" />{formatTonnage(item.totalVolume)}</span>
-                      {Array.isArray(item.exercises) && <span className="inline-flex items-center gap-1"><Dumbbell className="h-3 w-3" aria-hidden="true" />{item.exercises.length} exercícios</span>}
+                      {Array.isArray(item.exercises) && <span className="inline-flex items-center gap-1"><Dumbbell className="h-3 w-3" aria-hidden="true" />{plural(item.exercises.length, 'exercício', 'exercícios')}</span>}
                     </div>
                   </li>
                 ))}

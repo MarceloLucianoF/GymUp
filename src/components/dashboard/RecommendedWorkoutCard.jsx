@@ -1,6 +1,7 @@
 import React from 'react';
 import { Target, Sparkles, Play, Clock, ClipboardList, Dumbbell } from 'lucide-react';
 import { suggestNext, goalSentence } from '../../utils/rotation';
+import { plural } from '../../utils/text';
 
 // --- CARD "TREINO DE HOJE" ---
 // Sugestão por rotação (determinística): ver utils/rotation.js.
@@ -47,7 +48,7 @@ const RecommendedWorkoutCard = ({ history = [], trainings, onStart, assignedTrai
 
         <div className="mt-4 flex items-center gap-4 text-xs font-bold text-black/80">
           <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" aria-hidden="true" /> ~{(nextTraining.exercises?.length || 0) * 5 + 10} min</span>
-          <span className="flex items-center gap-1.5"><ClipboardList className="h-3.5 w-3.5" aria-hidden="true" /> {nextTraining.exercises?.length || 0} exercícios</span>
+          <span className="flex items-center gap-1.5"><ClipboardList className="h-3.5 w-3.5" aria-hidden="true" /> {plural(nextTraining.exercises?.length || 0, 'exercício', 'exercícios')}</span>
         </div>
 
         {showWeekProgress && weekGoal > 0 && (

@@ -12,6 +12,7 @@ import EmptyState from '../../components/common/EmptyState';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import { estimateWorkout, toDate, timeAgo } from '../../components/coach/helpers';
 import { btnPrimary, inputCls, pageCls } from '../../components/coach/styles';
+import { plural } from '../../utils/text';
 
 const LEVEL_CLS = {
   Iniciante: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
@@ -102,7 +103,7 @@ export default function CoachTrainingsPage() {
       batch.delete(doc(db, 'trainings', t.firestoreId));
       await batch.commit();
       setTrainings((prev) => prev.filter((x) => x.firestoreId !== t.firestoreId));
-      toast.success(using.length ? `Ficha removida; ${using.length} aluno(s) sem ficha.` : 'Ficha removida.');
+      toast.success(using.length ? `Ficha removida; ${plural(using.length, 'aluno', 'alunos')} sem ficha.` : 'Ficha removida.');
     } catch (err) {
       console.error(err);
       toast.error('Erro ao remover.');
@@ -149,7 +150,7 @@ export default function CoachTrainingsPage() {
                     <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-gray-600 dark:text-gray-400">{t.description || 'Sem descrição.'}</p>
                     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-gray-600 dark:text-gray-400">
                       <span className="inline-flex items-center gap-1"><ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />{t.exercises?.length || 0} exerc.</span>
-                      {est.sets > 0 && <span className="inline-flex items-center gap-1"><Layers className="h-3.5 w-3.5" aria-hidden="true" />{est.sets} séries</span>}
+                      {est.sets > 0 && <span className="inline-flex items-center gap-1"><Layers className="h-3.5 w-3.5" aria-hidden="true" />{plural(est.sets, 'série', 'séries')}</span>}
                       {est.minutes > 0 && <span className="inline-flex items-center gap-1"><Timer className="h-3.5 w-3.5" aria-hidden="true" />~{est.minutes} min</span>}
                     </div>
                     {groups.length > 0 && (

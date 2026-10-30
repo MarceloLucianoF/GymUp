@@ -54,7 +54,7 @@ describe('resposta da IA (não confiável)', () => {
     expect(w.exercises[1].reps).toBe('10');
     expect(w.exercises[1].rest).toBe(0);
     expect(w.exercises[1].ref).toBeNull();
-    expect(w.warnings.join(' ')).toMatch(/não estão na biblioteca/);
+    expect(w.warnings.join(' ')).toMatch(/1 exercício não está na biblioteca/);
   });
   test('descarta exercício com link, contato, HTML e pedido de pagamento', () => {
     const raw = JSON.stringify({ name: 'Veja www.golpe.com', exercises: [
@@ -98,7 +98,7 @@ describe('tipos de exercício na importação', () => {
     expect(bike.kind).toBe('cardio'); expect(bike.durationMin).toBe(20);   // sem minutos informados: 20, nunca "3 x 10 de bicicleta"
     expect(prancha.kind).toBe('timed'); expect(prancha.seconds).toBe(45);
     expect(supino.kind).toBe('strength');
-    expect(w.warnings.join(' ')).toMatch(/^2 exercício\(s\) não estão/);   // só prancha e supino: cardio livre não conta como fora da biblioteca
+    expect(w.warnings.join(' ')).toMatch(/^2 exercícios não estão/);   // só prancha e supino: cardio livre não conta como fora da biblioteca
     const { toWorkoutExercise } = require('./workoutImport');
     expect(toWorkoutExercise(esteira, null, 0)).toMatchObject({ kind: 'cardio', sets: '1', reps: '25', rest: 0, durationMin: 25 });
     expect(toWorkoutExercise(prancha, null, 2)).toMatchObject({ kind: 'timed', sets: '3', reps: '45' });

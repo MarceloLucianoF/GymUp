@@ -3,6 +3,7 @@ import { FileJson } from 'lucide-react';
 import Drawer from './Drawer';
 import { btnGhost, btnPrimary } from '../../../components/coach/styles';
 import { parseImport } from './adminUtils';
+import { plural } from '../../../utils/text';
 
 const Count = ({ label, value, tone }) => (
   <div className={`rounded-2xl p-3 text-center ${tone}`}><p className="font-display text-2xl font-black">{value}</p><p className="text-xs font-bold uppercase">{label}</p></div>
@@ -45,7 +46,7 @@ export default function ImportModal({ kind, existing, onConfirm, onClose }) {
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
           <button type="button" onClick={confirm} disabled={!report || report.novos.length === 0 || busy} className={btnPrimary}>
-            {busy ? 'Importando...' : report ? `Importar ${report.novos.length} novo(s)` : 'Importar'}
+            {busy ? 'Importando...' : report ? `Importar ${plural(report.novos.length, 'novo', 'novos')}` : 'Importar'}
           </button>
         </div>
       )}

@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { ACTION_LABELS } from '../../../../shared/academy-contracts/index.js';
 import { useApp } from '../../components/AppFrame';
 import { ErrorState, PageHeader, TableSkeleton } from '../../components/ui';
-import { relativeTime } from '../../lib/format';
+import { relativeTime, plural } from '../../lib/format';
 import { useApi } from '../../session';
 
 function Stat({ label, value, to, hint }) {
@@ -29,7 +29,7 @@ export default function Dashboard() {
             <Stat label="Membros ativos" value={d.counts.members} to={`${base}/membros`} />
             <Stat label="Convites pendentes" value={d.counts.pendingInvites} to={`${base}/convites`} />
             <Stat label="Professores ativos" value={d.counts.coaches} to={staff ? `${base}/membros?role=coach` : undefined} />
-            <Stat label="Alunos sem professor" value={d.counts.studentsWithoutCoach} to={`${base}/alunos?coach=none`} hint={`de ${d.counts.students} alunos`} />
+            <Stat label="Alunos sem professor" value={d.counts.studentsWithoutCoach} to={`${base}/alunos?coach=none`} hint={`de ${plural(d.counts.students, 'aluno', 'alunos')}`} />
             {staff && <Stat label="Alunos sem ficha" value={d.counts.studentsWithoutTraining} to={`${base}/alunos?training=none`} hint="ainda sem treino atribuído" />}
             {staff && <Stat label="Fichas desatualizadas" value={d.counts.studentsOutdated} to={`${base}/alunos?training=outdated`} hint="aluno numa versão antiga" />}
             {staff && <Stat label="Fichas ativas" value={d.counts.activeTrainings} to={`${base}/fichas`} hint="com versão publicada" />}

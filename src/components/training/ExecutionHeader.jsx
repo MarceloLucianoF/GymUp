@@ -32,7 +32,7 @@ const ExecutionHeader = ({ onGoHome, trainingName, isOnline, elapsedTime, comple
                     </span>
                     <span className="font-mono font-black text-sm text-amber-800 dark:text-amber-400 dark:text-brand">{formatElapsed(elapsedTime)}</span>
                     <span>•</span>
-                    <span className="font-bold">{completedSetsCount}/{totalSetsInTraining} séries</span>
+                    <span className="font-bold">{completedSetsCount}/{totalSetsInTraining} {totalSetsInTraining === 1 ? 'série' : 'séries'}</span>
                 </p>
             </div>
 

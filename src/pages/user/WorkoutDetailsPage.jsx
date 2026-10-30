@@ -239,7 +239,7 @@ export default function WorkoutDetailsPage() {
 
         {/* Lista de Exercícios Detalhada */}
         <div className="space-y-4">
-            <h3 className="font-bold text-gray-700 dark:text-gray-300 ml-1 text-sm uppercase tracking-wider">Detalhes da Sessão</h3>
+            <h3 className="font-bold text-gray-700 dark:text-gray-300 ml-1 text-sm uppercase tracking-wider">Detalhes da sessão</h3>
             
             {workout.exercises?.map((ex, i) => (
                 <div key={i} style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }} className="surface animate-fade-up p-4 sm:p-5">
@@ -294,7 +294,7 @@ export default function WorkoutDetailsPage() {
             <div className="bg-yellow-50 dark:bg-yellow-900/10 p-5 rounded-2xl border border-yellow-200 dark:border-yellow-800/30 flex gap-3">
                 <FileText className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
                 <div>
-                    <h4 className="font-bold text-yellow-800 dark:text-yellow-500 mb-1 text-sm">Notas do Treino</h4>
+                    <h4 className="font-bold text-yellow-800 dark:text-yellow-500 mb-1 text-sm">Notas do treino</h4>
                     <p className="text-sm text-yellow-900 dark:text-yellow-100/80 italic">"{workout.notes}"</p>
                 </div>
             </div>

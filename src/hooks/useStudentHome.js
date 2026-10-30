@@ -7,6 +7,7 @@ import { fetchStudentCheckIns, invalidateCheckIns } from '../services/checkInsCa
 import { saveCheckIn } from '../services/checkInService';
 import { saveWeeklyGoal, reconcileWeeklyGoal } from '../services/goalService';
 import { computeAchievements as computeGameAchievements } from '../utils/achievements';
+import { plural } from '../utils/text';
 
 // --- Metas semanais (localStorage por usuário) ---
 export const GOAL_MIN = 2;
@@ -151,7 +152,7 @@ export function useStudentHome(user, userProfile) {
   const syncPending = useCallback(async () => {
     const synced = await activeWorkoutService.syncPendingCheckIns(uid, db, setDoc, doc, (id, data) => saveCheckIn(db, uid, id, data));
     if (synced > 0) invalidateCheckIns(uid);
-    if (synced > 0 && mounted.current) toast.success(`${synced} treino(s) pendente(s) sincronizado(s)!`, { id: 'offline-synced' });
+    if (synced > 0 && mounted.current) toast.success(`${plural(synced, 'treino pendente sincronizado', 'treinos pendentes sincronizados')}!`, { id: 'offline-synced' });
     return synced;
   }, [uid]);
 

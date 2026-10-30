@@ -17,7 +17,7 @@ export default function ForgotPassword() {
     e.preventDefault();
     if (loading) return; // evita duplo envio
     if (!email) {
-      setError('Informe seu email.');
+      setError('Informe seu e-mail.');
       emailRef.current?.focus();
       return;
     }
@@ -40,8 +40,8 @@ export default function ForgotPassword() {
         return;
       }
       console.error(error);
-      let msg = "Erro ao enviar email.";
-      if (error.code === 'auth/invalid-email') msg = "Email inválido.";
+      let msg = "Erro ao enviar e-mail.";
+      if (error.code === 'auth/invalid-email') msg = "E-mail inválido.";
       toast.error(msg);
       setError(msg);
       emailRef.current?.focus();
@@ -54,14 +54,14 @@ export default function ForgotPassword() {
     <div className="aurora-bg min-h-[100dvh] flex items-center justify-center bg-gray-50 dark:bg-[#0B0F19] p-4 overflow-hidden transition-colors">
       <div className="surface p-6 sm:p-8 w-full max-w-md animate-fade-up">
         <div className="text-center mb-6">
-          <h2 className="font-display text-2xl font-black text-gray-900 dark:text-white">Recuperar Senha</h2>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">Digite seu email para receber o link.</p>
+          <h2 className="font-display text-2xl font-black text-gray-900 dark:text-white">Recuperar senha</h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">Digite seu e-mail para receber o link.</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
           <AuthField
             ref={emailRef}
-            label="Email"
+            label="E-mail"
             type="email"
             inputMode="email"
             required
@@ -85,7 +85,7 @@ export default function ForgotPassword() {
             aria-busy={loading}
             className="w-full bg-gradient-to-r from-brand to-[#FF9800] text-black font-black min-h-[56px] rounded-2xl shadow-lg shadow-brand/25 transition-transform active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
           >
-            {loading ? 'Enviando...' : 'Enviar Link de Recuperação'}
+            {loading ? 'Enviando...' : 'Enviar link de recuperação'}
           </button>
         </form>
 

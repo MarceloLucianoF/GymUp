@@ -1,5 +1,6 @@
 import { KINDS, exerciseKind } from '../utils/exerciseKind';
 import { hasPlan, isSetType, normalizeSetPlan, normalizeSetTypes } from '../utils/setTypes';
+import { plural } from '../utils/text';
 
 // Importação de treino a partir de um PDF do próprio aluno.
 // O PDF é lido NO APARELHO (nada dele é enviado ou guardado): só o texto, já higienizado, vai para a IA, e a resposta da IA
@@ -257,7 +258,7 @@ export function parseImportedWorkout(raw, library = []) {
   }
   if (!exercises.length) throw new ImportError('vazio', 'Não achei exercícios neste documento. Confira se é uma ficha de treino.');
   if (dropped) warnings.push(`${dropped} item(ns) foram descartados por não parecerem exercícios.`);
-  if (unmatched) warnings.push(`${unmatched} exercício(s) não estão na biblioteca do app e ficam sem imagem de demonstração.`);
+  if (unmatched) warnings.push(`${plural(unmatched, 'exercício não está', 'exercícios não estão')} na biblioteca do app e ${unmatched === 1 ? 'fica' : 'ficam'} sem imagem de demonstração.`);
   const name = clean(data.name, IMPORT_LIMITS.maxName);
   return { name: !name || unsafe(name) ? 'Treino importado' : name, exercises, warnings };
 }

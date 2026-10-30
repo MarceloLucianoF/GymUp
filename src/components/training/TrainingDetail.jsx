@@ -43,7 +43,7 @@ function TrainingDetail({ training, allExercises, onBack, onCheckIn }) {
       {/* Barra de Progresso */}
       <div className="progress-bar-container">
         <div className="progress-bar-text">
-          Progresso: {progressCount} de {totalExercises} exercícios
+          Progresso: {progressCount} de {totalExercises} {totalExercises === 1 ? 'exercício' : 'exercícios'}
         </div>
         <div className="progress-bar-bg">
           <div className="progress-bar-fill" style={{ width: `${progressBarWidth}%` }}></div>

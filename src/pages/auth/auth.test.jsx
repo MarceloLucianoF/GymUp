@@ -28,7 +28,7 @@ describe('Login', () => {
 
   it('associa labels aos campos e define autocomplete', () => {
     wrap(<Login />);
-    expect(screen.getByLabelText('Email')).toHaveAttribute('autocomplete', 'email');
+    expect(screen.getByLabelText('E-mail')).toHaveAttribute('autocomplete', 'email');
     expect(screen.getByLabelText('Senha')).toHaveAttribute('autocomplete', 'current-password');
   });
 
@@ -44,12 +44,12 @@ describe('Login', () => {
   it('mostra erro com role=alert, foca o email e evita duplo envio', async () => {
     mockLogin.mockRejectedValueOnce(new Error('Credenciais inválidas'));
     wrap(<Login />);
-    await userEvent.type(screen.getByLabelText('Email'), 'a@b.com');
+    await userEvent.type(screen.getByLabelText('E-mail'), 'a@b.com');
     await userEvent.type(screen.getByLabelText('Senha'), 'secret1');
-    await userEvent.click(screen.getByRole('button', { name: 'Acessar Conta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Acessar conta' }));
     expect(await screen.findByText('Credenciais inválidas', { selector: 'p' })).toBeInTheDocument();
     expect(screen.getAllByRole('alert').some((el) => el.textContent === 'Credenciais inválidas')).toBe(true);
-    expect(screen.getByLabelText('Email')).toHaveFocus();
+    expect(screen.getByLabelText('E-mail')).toHaveFocus();
     expect(mockLogin).toHaveBeenCalledTimes(1);
   });
 });
@@ -57,11 +57,11 @@ describe('Login', () => {
 describe('Register', () => {
   it('foca o primeiro campo inválido e mostra erro', async () => {
     wrap(<Register />);
-    await userEvent.type(screen.getByLabelText('Nome Completo'), 'Ana');
-    await userEvent.type(screen.getByLabelText('Email'), 'ana@b.com');
+    await userEvent.type(screen.getByLabelText('Nome completo'), 'Ana');
+    await userEvent.type(screen.getByLabelText('E-mail'), 'ana@b.com');
     await userEvent.type(screen.getByLabelText('Senha'), '123');
     await userEvent.type(screen.getByLabelText('Confirmar'), '123');
-    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar Gratuitamente' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar gratuitamente' }));
     expect(screen.getByLabelText('Senha')).toHaveFocus();
     expect(screen.getByText('Senha muito curta (mínimo 8).', { selector: 'p' })).toHaveAttribute('role', 'alert');
     expect(screen.getByLabelText('Senha')).toHaveAttribute('autocomplete', 'new-password');

@@ -6,6 +6,7 @@ import { DIFFICULTIES, GROUP_LABEL, MUSCLE_GROUPS, exerciseIssues, filterExercis
 import { safeHttpUrl } from '../../../utils/safeUrl';
 
 import { stillSrc } from '../../../utils/exerciseMedia';
+import { plural } from '../../../utils/text';
 const selectCls = `${inputCls} min-h-[44px] cursor-pointer text-sm`;
 const fmtDate = (ms) => (ms ? new Date(ms).toLocaleDateString('pt-BR') : '—');
 const DIFF_CLS = {
@@ -83,7 +84,7 @@ export default function ExercisesTab({ exercises, initialFilters, onNew, onEdit,
           <select id="f-sort" value={filters.sort} onChange={set('sort')} className={selectCls}><option value="nome">Ordem: nome</option><option value="grupo">Ordem: grupo</option><option value="recentes">Ordem: recentes</option></select>
         </div>
         <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400" aria-live="polite">
-          <span>{rows.length} de {exercises.length} exercícios</span>
+          <span>{rows.length} de {exercises.length} {exercises.length === 1 ? 'exercício' : 'exercícios'}</span>
           {active > 0 && <button type="button" onClick={reset} className="min-h-[40px] font-bold text-amber-800 underline dark:text-brand">Limpar filtros ({active})</button>}
         </div>
       </div>
@@ -110,7 +111,7 @@ export default function ExercisesTab({ exercises, initialFilters, onNew, onEdit,
                         <div className="min-w-0"><p className="truncate font-bold text-gray-900 dark:text-white">{ex.name}</p>
                           <p className="font-mono text-[11px] text-gray-600 dark:text-gray-400">{ex.sets}x{ex.reps} · {ex.rest}s · atualizado {fmtDate(updatedAtOf(ex))}</p>
                           {ex.archived && <span className="text-[11px] font-bold uppercase text-gray-600 dark:text-gray-400">Arquivado</span>}
-                          {!ex.archived && exerciseIssues(ex).length > 0 && <p className="text-[11px] text-amber-800 dark:text-amber-300">{exerciseIssues(ex).length} pendência(s)</p>}
+                          {!ex.archived && exerciseIssues(ex).length > 0 && <p className="text-[11px] text-amber-800 dark:text-amber-300">{plural(exerciseIssues(ex).length, 'pendência', 'pendências')}</p>}
                         </div>
                       </div>
                     </td>

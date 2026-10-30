@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link2, UserX, Users } from 'lucide-react';
 import EmptyState from '../../../components/common/EmptyState';
 import { linkOverview } from './adminUtils';
+import { plural } from '../../../utils/text';
 
 const STATUS = {
   pending: ['Pendente', 'bg-amber-500/15 text-amber-900 dark:text-amber-200'],
@@ -25,9 +26,9 @@ export default function LinksTab({ users, links, error }) {
   return (
     <div className="space-y-5" role="tabpanel" id="panel-links" aria-labelledby="tab-links">
       <section aria-label="Resumo dos vínculos" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Vínculos ativos" value={o.active} hint={`${o.students} alunos no total`} />
+        <Kpi label="Vínculos ativos" value={o.active} hint={`${plural(o.students, 'aluno', 'alunos')} no total`} />
         <Kpi label="Alunos sem treinador" value={o.withoutCoach} />
-        <Kpi label="Treinadores sem alunos" value={o.coachesWithoutStudents} hint={`${o.coaches} treinadores`} />
+        <Kpi label="Treinadores sem alunos" value={o.coachesWithoutStudents} hint={plural(o.coaches, 'treinador', 'treinadores')} />
         <Kpi label="Solicitações pendentes" value={o.pending} hint={`${o.rejected} recusadas · ${o.revoked} encerradas`} />
       </section>
 

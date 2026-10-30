@@ -1,6 +1,7 @@
 import { isExempt } from './billing';
 // Métricas puras do treinador: aderência (4 semanas), recordes recentes e fila de ação do dia.
 import { toDate, startOfDay, daysSince, DAY_MS } from '../components/coach/helpers';
+import { plural } from './text';
 
 export const ADHERENCE_DAYS = 28;
 export const DEFAULT_WEEKLY_GOAL = 3;
@@ -91,7 +92,7 @@ export const buildActionQueue = ({ students = [], lastWorkouts = {}, checkIns = 
     }
     if (s.currentTrainingId && (days === null || days >= inactiveDays)) {
       items.push({ id: `inactive-${uid}`, type: 'inactive', student: s, days, weight: days === null ? 999 : days,
-        detail: days === null ? 'Ainda não treinou' : `${days} dias sem treinar` });
+        detail: days === null ? 'Ainda não treinou' : `${plural(days, 'dia', 'dias')} sem treinar` });
     }
     if (!s.currentTrainingId) {
       const created = toDate(s.createdAt);

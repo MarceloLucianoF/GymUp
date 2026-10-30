@@ -3,6 +3,7 @@ import React, { useId, useState } from 'react';
 import { Check, ChevronDown, Layers, Repeat, Timer } from 'lucide-react';
 import ExerciseExecution from './ExerciseExecution';
 import CheckInForm from '../training/CheckInForm';
+import { plural } from '../../utils/text';
 
 const Stat = ({ icon: Icon, children }) => (
   <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200">
@@ -40,7 +41,7 @@ function ExerciseCard({ exercise, isCompleted, onCheckIn, exerciseNumber }) {
       <div className="mt-4 flex flex-wrap gap-2">
         {exerciseKind(exercise) === 'cardio' ? <Stat icon={Timer}>{prescriptionLabel(exercise)}</Stat> : (
           <>
-            <Stat icon={Layers}>{exercise.sets} séries</Stat>
+            <Stat icon={Layers}>{plural(exercise.sets, 'série', 'séries')}</Stat>
             <Stat icon={Repeat}>{exerciseKind(exercise) === 'timed' ? `${exercise.reps} s` : `${exercise.reps} reps`}</Stat>
             <Stat icon={Timer}>{exercise.rest}s descanso</Stat>
           </>

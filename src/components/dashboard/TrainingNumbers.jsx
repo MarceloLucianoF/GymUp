@@ -78,7 +78,7 @@ export default function TrainingNumbers({ uid, weeklyGoal }) {
           <div className="h-full rounded-full bg-gradient-to-r from-brand to-[#FF9800] transition-all duration-1000" style={{ width: `${level.progress}%` }} />
         </div>
         <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-          {level.next ? `Faltam ${level.remaining} ${level.remaining === 1 ? 'treino' : 'treinos'} para o nível ${level.next}.` : 'Você chegou ao nível mais alto.'} Conta 1 treino por dia, com 10 min ou mais e 3 séries ou mais.
+          {level.next ? `${level.remaining === 1 ? 'Falta' : 'Faltam'} ${level.remaining} ${level.remaining === 1 ? 'treino' : 'treinos'} para o nível ${level.next}.` : 'Você chegou ao nível mais alto.'} Conta 1 treino por dia, com 10 min ou mais e 3 séries ou mais.
         </p>
       </div>
 

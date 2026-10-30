@@ -1,4 +1,5 @@
 import { safeHttpUrl } from '../../../utils/safeUrl';
+import { plural } from '../../../utils/text';
 
 export const MUSCLE_GROUPS = [['peito', 'Peito'], ['costas', 'Costas'], ['ombros', 'Ombros'], ['braços', 'Braços'], ['pernas', 'Pernas'], ['core', 'Core'], ['mobilidade', 'Alongamento e mobilidade']];
 export const GROUP_LABEL = Object.fromEntries(MUSCLE_GROUPS);
@@ -87,14 +88,14 @@ export function trainingIssues(training, exerciseMap) {
   const entries = training?.exercises || [];
   if (entries.length === 0) issues.push({ id: 'vazia', text: 'A ficha não tem exercícios.' });
   const missing = entries.filter((e) => !(e && typeof e === 'object') && !exerciseMap.has(e));
-  if (missing.length) issues.push({ id: 'orfaos', text: `${missing.length} exercício(s) não existem mais na biblioteca.` });
+  if (missing.length) issues.push({ id: 'orfaos', text: `${plural(missing.length, 'exercício não existe', 'exercícios não existem')} mais na biblioteca.` });
   const resolved = trainingExercises(training, exerciseMap);
   const archived = resolved.filter((ex) => ex.archived);
-  if (archived.length) issues.push({ id: 'arquivados', text: `${archived.length} exercício(s) arquivado(s) nesta ficha.` });
+  if (archived.length) issues.push({ id: 'arquivados', text: `${plural(archived.length, 'exercício arquivado', 'exercícios arquivados')} nesta ficha.` });
   const groups = new Set(resolved.map((ex) => ex.muscleGroup));
   if (/core/i.test(String(training?.name)) && !groups.has('core')) issues.push({ id: 'core', text: 'O nome cita CORE, mas a ficha não tem exercício de core.' });
   const noMedia = resolved.filter((ex) => mediaStatus(ex) === 'nenhuma').length;
-  if (noMedia) issues.push({ id: 'sem-midia', text: `${noMedia} exercício(s) sem imagem nem vídeo.` });
+  if (noMedia) issues.push({ id: 'sem-midia', text: `${plural(noMedia, 'exercício', 'exercícios')} sem imagem nem vídeo.` });
   return issues;
 }
 

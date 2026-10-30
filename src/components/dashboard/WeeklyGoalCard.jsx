@@ -3,6 +3,7 @@ import { Minus, Plus, Flame, SlidersHorizontal } from 'lucide-react';
 import ProgressRing from '../ui/ProgressRing';
 import WeekStrip from './WeekStrip';
 import { GOAL_MIN, GOAL_MAX } from '../../hooks/useStudentHome';
+import { plural } from '../../utils/text';
 
 const GoalButtons = ({ goal, onGoalChange, row = false }) => (
   <div className={`flex shrink-0 items-center ${row ? 'flex-row gap-1' : 'flex-col'}`} role="group" aria-label="Ajustar meta semanal">
@@ -15,7 +16,7 @@ const GoalButtons = ({ goal, onGoalChange, row = false }) => (
 export default function WeeklyGoalCard({ days, count, goal, onGoalChange, compact = false, streak = null }) {
   const [adjusting, setAdjusting] = useState(false);
   const pct = Math.min(100, Math.round((count / goal) * 100));
-  const hint = count >= goal ? 'Meta batida! Você é imparável.' : `Faltam ${goal - count} treino(s) para fechar a semana.`;
+  const hint = count >= goal ? 'Meta batida! Você é imparável.' : `${goal - count === 1 ? 'Falta' : 'Faltam'} ${plural(goal - count, 'treino', 'treinos')} para fechar a semana.`;
 
   if (compact) {
     return (
@@ -47,7 +48,7 @@ export default function WeeklyGoalCard({ days, count, goal, onGoalChange, compac
         </div>
         {adjusting && (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-gray-50 px-3 dark:bg-white/5">
-            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{goal} treinos por semana</span>
+            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{plural(goal, 'treino', 'treinos')} por semana</span>
             <GoalButtons goal={goal} onGoalChange={onGoalChange} row />
           </div>
         )}

@@ -13,6 +13,7 @@ import { KIND_LABELS, cardioMinutes, defaultsForKind, exerciseKind, repsFieldLab
 import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, mergeImported, parseImportedWorkout, parseLocalSection, splitWorkoutSections, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
 import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 import SwitchRow from '../ui/Switch';
+import { plural } from '../../utils/text';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -250,7 +251,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
                   <input type="checkbox" checked={sec.selected && !sec.saved} disabled={sec.saved} onChange={(e) => setSections((l) => l.map((x) => (x.id === sec.id ? { ...x, selected: e.target.checked } : x)))} className="h-5 w-5 accent-brand" aria-label={`Incluir ${sec.name}`} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold">{sec.name}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">{sec.saved ? 'Salvo' : `${sec.exercises.length} exercícios`}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{sec.saved ? 'Salvo' : plural(sec.exercises.length, 'exercício', 'exercícios')}</p>
                   </div>
                   {!sec.saved && <button type="button" onClick={() => reviewSection(sec)} className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-amber-800 dark:text-brand">Revisar</button>}
                 </li>
@@ -258,7 +259,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
             </ul>
             <button type="button" onClick={saveSections} disabled={!!busy} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-brand text-base font-black text-black disabled:opacity-60">
               {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
-              {busy || `Salvar ${sections.filter((x) => x.selected && !x.saved).length} treinos`}
+              {busy || `Salvar ${plural(sections.filter((x) => x.selected && !x.saved).length, 'treino', 'treinos')}`}
             </button>
           </div>
         )}

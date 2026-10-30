@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatDate } from '../../utils/format';
+import { plural } from '../../utils/text';
 
 export default function WeeklyChart({ history }) {
   // 1. Gera os últimos 7 dias (Dinâmico)
@@ -56,7 +57,7 @@ export default function WeeklyChart({ history }) {
               {/* Tooltip Flutuante (Só aparece se tiver treino) */}
               {item.count > 0 && (
                   <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg pointer-events-none whitespace-nowrap z-20 mb-2">
-                     {item.count} treinos
+                     {plural(item.count, 'treino', 'treinos')}
                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45"></div>
                   </div>
               )}

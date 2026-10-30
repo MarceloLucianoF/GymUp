@@ -252,7 +252,7 @@ export default function HistoryPage() {
                         {/* Infos Principais */}
                         <div className="flex-1 min-w-0">
                             <h2 className="text-lg font-bold text-gray-800 dark:text-white leading-tight truncate pr-6">
-                                {item.trainingName || 'Treino Sem Nome'}
+                                {item.trainingName || 'Treino sem nome'}
                             </h2>
                             <p className="text-xs text-gray-600 dark:text-gray-400 first-letter:uppercase mb-3">
                                 {dateObj.full}
