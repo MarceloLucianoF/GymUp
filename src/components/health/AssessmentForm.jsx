@@ -3,7 +3,8 @@ import { BIO_FIELDS, PERIMETERS } from '../../services/healthRecords';
 import { PROTOCOLS, SKINFOLD_SITES, bodyFatPercent, requiredSites } from '../../utils/bodyComposition';
 import { btnGhost, btnPrimary, inputCls, labelCls } from '../coach/styles';
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Data local (no Brasil, depois das 21h o UTC já é o dia seguinte).
+const today = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 function NumField({ id, label, unit, value, onChange }) {
   return (

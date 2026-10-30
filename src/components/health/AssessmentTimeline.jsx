@@ -70,11 +70,11 @@ export default function AssessmentTimeline({ items, canDelete, onDelete }) {
           <table className="w-full text-sm">
             <caption className="mb-2 text-left font-display text-sm font-black text-gray-900 dark:text-white">Comparação</caption>
             <thead>
-              <tr className="text-left text-xs uppercase text-gray-600 dark:text-gray-400">
+              <tr className="text-left text-[11px] uppercase text-gray-600 dark:text-gray-400">
                 <th scope="col" className="py-1 pr-2">Medida</th>
                 <th scope="col" className="py-1 pr-2">{asDate(chosen[0].date)}</th>
                 <th scope="col" className="py-1 pr-2">{asDate(chosen[1].date)}</th>
-                <th scope="col" className="py-1">Diferença</th>
+                <th scope="col" className="py-1"><abbr title="Diferença" className="no-underline sm:hidden">Dif.</abbr><span className="hidden sm:inline">Diferença</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/10">
