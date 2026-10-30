@@ -5,7 +5,8 @@ import { IMAGE_LIMITS, isSafePhoto } from '../utils/imageAttach';
 import { normalizeRoutine } from '../utils/routine';
 
 export const MY_PREFIX = 'my_';
-export const isMyTrainingId = (id) => typeof id === 'string' && id.startsWith(MY_PREFIX);
+// O documento da "Minha ficha" (ID fixo, ver ROUTINE_DOC_ID) não é um treino: nunca abre como treino.
+export const isMyTrainingId = (id) => typeof id === 'string' && id.startsWith(MY_PREFIX) && id !== `${MY_PREFIX}minha-ficha`;
 export const toMyTrainingId = (docId) => `${MY_PREFIX}${docId}`;
 export const fromMyTrainingId = (id) => id.slice(MY_PREFIX.length);
 

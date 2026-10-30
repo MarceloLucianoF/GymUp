@@ -1432,3 +1432,13 @@ test('meus treinos: campo opcional warmupStretch (etapa de alongamento) só bool
   await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w2'), { ...w, warmupStretch: false }));
   await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w3'), { ...w, warmupStretch: 'sim' }));
 });
+
+test('desafios: sobras de membros de um desafio apagado não leem umas às outras, mas cada uma pode sair', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    for (const u of ['stu1', 'stu2']) await setDoc(doc(d, `challenges/orfao/members/${u}`), { uid: u, displayName: 'Pessoa ' + u, handle: 'user_' + u, code: 'ORFAO123', joinedAt: '2026-10-30T10:00:00.000Z', updatedAt: '2026-10-30T10:00:00.000Z', activeDays: 0, lastDay: '' });
+  });
+  await assertFails(getDocs(collection(db('stu1'), 'challenges/orfao/members')));
+  await assertFails(getDoc(doc(db('stu1'), 'challenges/orfao/members/stu2')));
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'challenges/orfao/members/stu1')));
+});
