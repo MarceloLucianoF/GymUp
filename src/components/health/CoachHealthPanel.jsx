@@ -6,6 +6,7 @@ import Modal from '../common/Modal';
 import ErrorState from '../common/ErrorState';
 import AssessmentForm from './AssessmentForm';
 import AssessmentTimeline from './AssessmentTimeline';
+import AssessmentInsightCard from './AssessmentInsightCard';
 import { AnamnesisView } from './Anamnesis';
 import { HEALTH_PRINT_CSS } from './printStyles';
 import { btnGhost, btnPrimary } from '../coach/styles';
@@ -87,6 +88,7 @@ export default function CoachHealthPanel({ studentId, coachId, student }) {
         <p className="text-sm text-gray-600 dark:text-gray-400">{student?.displayName} · {formatDate(new Date())}</p>
         <button type="button" onClick={() => window.print()} className={`${btnGhost} print:hidden`}><Printer className="h-4 w-4" aria-hidden="true" /> Imprimir</button>
       </div>
+      <AssessmentInsightCard assessments={assessments} anamnesis={anamnesis} goal={student?.goal} audience="coach" />
       <section className="surface space-y-3 p-5" aria-labelledby="coach-anamnesis">
         <h2 id="coach-anamnesis" className="flex items-center gap-2 font-display text-base font-black text-gray-900 dark:text-white">
           <ClipboardList className="h-5 w-5 text-brand" aria-hidden="true" /> Anamnese
