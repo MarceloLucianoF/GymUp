@@ -10,6 +10,7 @@ import ErrorState from '../../components/common/ErrorState';
 import { SkeletonList } from '../../components/common/Skeleton';
 import AssessmentForm from '../../components/health/AssessmentForm';
 import AssessmentTimeline from '../../components/health/AssessmentTimeline';
+import AssessmentInsightCard from '../../components/health/AssessmentInsightCard';
 import { AnamnesisForm, AnamnesisView } from '../../components/health/Anamnesis';
 import { HEALTH_PRINT_CSS } from '../../components/health/printStyles';
 import { btnDanger, btnGhost, btnPrimary } from '../../components/coach/styles';
@@ -47,7 +48,8 @@ function ConsentCard({ coachId, coachName, consent, busy, onGrant, onRevoke }) {
           <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
             <li>ver suas anamneses (PAR-Q, lesões, cirurgias, medicamentos, doenças, objetivos e rotina);</li>
             <li>ver suas avaliações físicas e bioimpedâncias;</li>
-            <li>registrar avaliações físicas feitas por ele.</li>
+            <li>registrar avaliações físicas feitas por ele;</li>
+            <li>gerar uma análise por IA com os números das avaliações (sem seu nome nem os textos da anamnese).</li>
           </ul>
           <p className="text-xs text-gray-600 dark:text-gray-400">
             Ninguém mais vê esses dados, nem a administração do app. Você pode revogar a qualquer momento: o acesso acaba na hora.
@@ -163,6 +165,8 @@ export default function HealthRecordsPage() {
 
         {loading ? <SkeletonList /> : error ? <ErrorState onRetry={() => { setLoading(true); load(); }} /> : (
           <>
+            <AssessmentInsightCard assessments={assessments} anamnesis={latest} goal={userProfile?.goal} audience="student" />
+
             <ConsentCard coachId={coachId} coachName={coachName} consent={consent} busy={busy} onGrant={grant} onRevoke={revoke} />
 
             <section className="surface space-y-4 p-5" aria-labelledby="anamnesis-title">
