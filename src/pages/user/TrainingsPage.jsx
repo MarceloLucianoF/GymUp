@@ -5,11 +5,13 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuthContext } from '../../hooks/AuthContext';
-import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2, Pencil, ListChecks, Copy, Share2 } from 'lucide-react';
+import { Dumbbell, Footprints, Flame, Zap, Activity, Rocket, Clock, ChevronRight, ChevronDown, ClipboardList, Package, Layers, Sparkles, Search, FilePlus2, Trash2, Pencil, ListChecks, Copy, Share2, ListOrdered } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { sameDifficulty } from '../../utils/exerciseKind';
 import MyWorkoutModal from '../../components/training/MyWorkoutModal';
-import { deleteMyWorkout, listMyWorkouts, saveMyWorkout } from '../../services/myWorkouts';
+import { deleteMyWorkout, listMyWorkoutsAndRoutine, saveMyRoutine, saveMyWorkout } from '../../services/myWorkouts';
+import RoutineModal from '../../components/training/RoutineModal';
+import { sortByRoutine } from '../../utils/routine';
 import { duplicatePayload, workoutShareText } from '../../utils/workoutShare';
 import { listMyExercises, myExerciseToLibrary } from '../../services/myExercises';
 import { isSafePhoto } from '../../utils/imageAttach';
@@ -65,12 +67,15 @@ export default function TrainingsPage() {
   const [mineReload, setMineReload] = useState(0);
   const [editingMine, setEditingMine] = useState(null);
   const [myExercises, setMyExercises] = useState([]);
+  // Minha ficha: ordem (A, B, C...) e dia opcional dos treinos pessoais.
+  const [routine, setRoutine] = useState([]);
+  const [isRoutineOpen, setIsRoutineOpen] = useState(false);
 
   // Treinos pessoais (privados): digitados ou importados de PDF. Não vêm da loja de fichas.
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    listMyWorkouts(user.uid).then((rows) => { if (alive) setMine(rows); }).catch((err) => console.error('Erro ao buscar meus treinos:', err)).finally(() => { if (alive) setMineLoaded(true); });
+    listMyWorkoutsAndRoutine(user.uid).then(({ workouts, routine: r }) => { if (alive) { setMine(workouts); setRoutine(r.items); } }).catch((err) => console.error('Erro ao buscar meus treinos:', err)).finally(() => { if (alive) setMineLoaded(true); });
     listMyExercises(user.uid).then((rows) => { if (alive) setMyExercises(rows); }).catch(() => {});
     return () => { alive = false; };
   }, [user, mineReload]);
@@ -89,6 +94,10 @@ export default function TrainingsPage() {
       if (e?.name === 'AbortError') return;
       toast.error('Não consegui compartilhar.');
     }
+  };
+
+  const saveRoutine = async (items) => {
+    try { setRoutine(await saveMyRoutine(user.uid, items)); setIsRoutineOpen(false); toast.success(items.length ? 'Ficha salva.' : 'Ficha esvaziada.'); } catch { toast.error('Não consegui salvar a ficha.'); }
   };
 
   const removeMine = async (training) => {
@@ -188,7 +197,7 @@ export default function TrainingsPage() {
         (t.exercises || []).some(ex => (ex.name || '').toLowerCase().includes(term));
   });
 
-  const mineFiltered = mine.filter((t) => !term
+  const mineFiltered = sortByRoutine(mine, routine).filter((t) => !term
     || (t.name || '').toLowerCase().includes(term)
     || (t.description || '').toLowerCase().includes(term)
     || (t.exercises || []).some((ex) => (ex.name || '').toLowerCase().includes(term)));
@@ -248,6 +257,7 @@ export default function TrainingsPage() {
               </div>
               
               <div className="text-right">
+                  {training.routineLetter && <span className="mr-1 inline-block rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-black mb-1">Treino {training.routineLetter}</span>}
                   <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border mb-1 ${getDifficultyColor(training.difficulty)}`}>
                       {training.difficulty || 'Geral'}
                   </span>
@@ -369,11 +379,19 @@ export default function TrainingsPage() {
             {filter === MINE ? (
             /* Meus treinos: privados, só do aluno. Os treinos prontos ficam nas outras abas. */
             <div className="space-y-4">
-              <div className="flex items-center gap-3 px-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
                 <Dumbbell className="w-5 h-5 text-brand" aria-hidden="true" />
                 <h2 className="text-lg font-bold text-gray-800 dark:text-white">Meus treinos</h2>
                 <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{mine.length}</span>
+                {mine.length > 0 && (
+                  <button type="button" onClick={() => setIsRoutineOpen(true)} className="pressable ml-auto inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-brand/15 px-3 text-xs font-black text-amber-900 dark:text-brand">
+                    <ListOrdered className="w-4 h-4" aria-hidden="true" />{routine.length ? 'Organizar ficha' : 'Montar minha ficha'}
+                  </button>
+                )}
               </div>
+              {mine.length > 1 && routine.length === 0 && (
+                <p className="px-1 text-sm text-gray-600 dark:text-gray-300">Monte sua ficha para definir a ordem da semana (Treino A, B, C...). A Home passa a sugerir o próximo.</p>
+              )}
               {mine.length === 0 ? (
                 <button type="button" onClick={() => setIsMineOpen(true)} className="surface pressable w-full p-5 text-left">
                   <p className="font-bold text-gray-800 dark:text-white">Cadastre o treino que você já usa</p>
@@ -478,6 +496,8 @@ export default function TrainingsPage() {
           </div>
         )}
       </div>
+
+      {isRoutineOpen && <RoutineModal workouts={mine} items={routine} onClose={() => setIsRoutineOpen(false)} onSave={saveRoutine} />}
 
       <MyWorkoutModal isOpen={isMineOpen || !!editingMine} editing={editingMine} myExercises={myExercises} onClose={() => { setIsMineOpen(false); setEditingMine(null); }} user={user} onSaved={() => setMineReload((n) => n + 1)} />
 

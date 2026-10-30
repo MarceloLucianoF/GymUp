@@ -6,7 +6,9 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { useRole } from '../../hooks/useRole';
 import { useStudentHome, useWeeklyGoal } from '../../hooks/useStudentHome';
 import WeekTodayCard from '../../components/dashboard/WeekTodayCard';
-import { listMyWorkouts } from '../../services/myWorkouts';
+import RoutineTodayCard from '../../components/dashboard/RoutineTodayCard';
+import { listMyWorkoutsAndRoutine } from '../../services/myWorkouts';
+import { routineNext } from '../../utils/routine';
 import { weekStatus } from '../../utils/weekSchedule';
 import WeeklyChart from '../../components/dashboard/WeeklyChart';
 import StudentChatWidget from '../../components/chat/StudentChatWidget';
@@ -66,12 +68,15 @@ export default function Home() {
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [mineWorkouts, setMineWorkouts] = useState([]);
+  const [routineItems, setRoutineItems] = useState([]);
   useEffect(() => {
     if (!user?.uid) return undefined;
     let alive = true;
-    listMyWorkouts(user.uid).then((rows) => { if (alive) setMineWorkouts(rows); }).catch(() => {});
+    listMyWorkoutsAndRoutine(user.uid).then(({ workouts, routine }) => { if (alive) { setMineWorkouts(workouts); setRoutineItems(routine.items); } }).catch(() => {});
     return () => { alive = false; };
   }, [user?.uid]);
+  // Minha ficha (ordem A, B, C... escolhida pelo aluno): tem prioridade sobre a semana da IA, porque é a escolha explícita dele.
+  const routineToday = useMemo(() => routineNext({ items: routineItems, workouts: mineWorkouts, history }), [routineItems, mineWorkouts, history]);
   // Semana montada pela IA (treinos "Semana · Seg · ..."): vira o treino de hoje, a não ser que o treinador tenha prescrito uma ficha
   const weekToday = useMemo(() => weekStatus({ mine: mineWorkouts, history }), [mineWorkouts, history]);
 
@@ -181,6 +186,8 @@ export default function Home() {
                   action={<button type="button" onClick={() => navigate('/trainings')} className="btn-primary-gradient min-h-[44px] px-5 text-sm">Ver fichas de treino</button>}
                 />
               </div>
+            ) : routineToday && !userProfile?.currentTrainingId ? (
+              <RoutineTodayCard status={routineToday} onStart={(id) => navigate(`/training/${id}`)} />
             ) : weekToday && !userProfile?.currentTrainingId ? (
               <WeekTodayCard status={weekToday} onStart={(id) => navigate(`/training/${id}`)} />
             ) : (
