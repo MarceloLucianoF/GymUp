@@ -1459,3 +1459,78 @@ test('desafios: sobras de membros de um desafio apagado não leem umas às outra
   await assertFails(getDoc(doc(db('stu1'), 'challenges/orfao/members/stu2')));
   await assertSucceeds(deleteDoc(doc(db('stu1'), 'challenges/orfao/members/stu1')));
 });
+
+// ---------- Compartilhamento com o treinador (coachShares) ----------
+const seedShareData = () => env.withSecurityRulesDisabled(async (ctx) => {
+  const d = ctx.firestore();
+  await setDoc(doc(d, 'measurements/m1'), { userId: 'stu1', weight: 70, date: '2026-10-01' });
+  await setDoc(doc(d, 'users/stu1/myWorkouts/w1'), { name: 'Treino A', exercises: [{ name: 'Supino' }], createdAt: '2026-10-01' });
+});
+const share = (over = {}) => ({ coachId: 'coach1', workouts: true, measurements: true, updatedAt: '2026-10-30T10:00:00.000Z', ...over });
+
+test('coachShares: só o aluno cria, e só para o treinador atual, com os campos do contrato', async () => {
+  const ref = doc(db('stu1'), 'coachShares/stu1');
+  await assertFails(setDoc(ref, share({ coachId: 'coach2' })));
+  await assertFails(setDoc(ref, share({ extra: 1 })));
+  await assertFails(setDoc(ref, share({ workouts: 'sim' })));
+  await assertFails(setDoc(doc(db('coach1'), 'coachShares/stu1'), share()));
+  await assertFails(setDoc(doc(db('stu2'), 'coachShares/stu1'), share()));
+  await assertSucceeds(setDoc(ref, share({ measurements: false })));
+  await assertSucceeds(getDoc(doc(db('coach1'), 'coachShares/stu1')));
+  await assertFails(getDoc(doc(db('coach2'), 'coachShares/stu1')));
+  await assertFails(getDocs(collection(db('coach1'), 'coachShares')));
+});
+
+test('medidas: o treinador só lê com o item ligado e em nome dele', async () => {
+  await seedShareData();
+  const q = () => getDocs(query(collection(db('coach1'), 'measurements'), where('userId', '==', 'stu1')));
+  await assertSucceeds(getDocs(query(collection(db('stu1'), 'measurements'), where('userId', '==', 'stu1'))));
+  await assertFails(q());                                                         // sem autorização
+  await setDoc(doc(db('stu1'), 'coachShares/stu1'), share({ measurements: false }));
+  await assertFails(q());                                                         // item desligado
+  await setDoc(doc(db('stu1'), 'coachShares/stu1'), share());
+  await assertSucceeds(q());
+  await assertSucceeds(getDoc(doc(db('coach1'), 'measurements/m1')));
+  await assertFails(getDocs(query(collection(db('coach2'), 'measurements'), where('userId', '==', 'stu1'))));
+  await assertFails(setDoc(doc(db('coach1'), 'measurements/m2'), { userId: 'stu1', weight: 1, date: '2026-10-02' }));
+});
+
+test('treinos próprios: o treinador só lê com o item ligado; nunca grava', async () => {
+  await seedShareData();
+  const list = () => getDocs(collection(db('coach1'), 'users/stu1/myWorkouts'));
+  await assertFails(list());
+  await setDoc(doc(db('stu1'), 'coachShares/stu1'), share({ workouts: false }));
+  await assertFails(list());
+  await setDoc(doc(db('stu1'), 'coachShares/stu1'), share());
+  await assertSucceeds(list());
+  await assertFails(setDoc(doc(db('coach1'), 'users/stu1/myWorkouts/w2'), { name: 'X', exercises: [{ name: 'Y' }] }));
+  await assertFails(getDocs(collection(db('coach2'), 'users/stu1/myWorkouts')));
+});
+
+test('coachShares: autorização antiga não vale para outro treinador; o treinador atual pode apagar', async () => {
+  await seedShareData();
+  await setDoc(doc(db('stu1'), 'coachShares/stu1'), share());
+  // aluno troca de treinador: a autorização (coach1) não serve para coach2, nem para coach1 sem vínculo
+  await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'users/stu1'), { uid: 'stu1', role: 'user', displayName: 'Aluno 1', coachId: 'coach2' }));
+  await assertFails(getDocs(query(collection(db('coach2'), 'measurements'), where('userId', '==', 'stu1'))));
+  await assertFails(getDocs(query(collection(db('coach1'), 'measurements'), where('userId', '==', 'stu1'))));
+  await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'users/stu1'), { uid: 'stu1', role: 'user', displayName: 'Aluno 1', coachId: 'coach1' }));
+  await assertFails(deleteDoc(doc(db('coach2'), 'coachShares/stu1')));
+  await assertSucceeds(deleteDoc(doc(db('coach1'), 'coachShares/stu1')));
+  await setDoc(doc(db('stu1'), 'coachShares/stu1'), share());
+  await assertSucceeds(deleteDoc(doc(db('stu1'), 'coachShares/stu1')));
+});
+
+test('coachShares: o aluno encerra o vínculo apagando o compartilhamento no mesmo lote', async () => {
+  await seedShareData();
+  await setDoc(doc(db('stu1'), 'coachShares/stu1'), share());
+  const b = writeBatch(db('stu1'));
+  b.update(doc(db('stu1'), 'users/stu1'), { coachId: null, updatedAt: '2026-10-30T10:00:00.000Z' });
+  b.delete(doc(db('stu1'), 'healthConsents/stu1'));
+  b.delete(doc(db('stu1'), 'coachShares/stu1'));
+  await assertSucceeds(b.commit());
+  let left = true;
+  await env.withSecurityRulesDisabled(async (ctx) => { left = (await getDoc(doc(ctx.firestore(), 'coachShares/stu1'))).exists(); });
+  assert.equal(left, false);
+  await assertFails(getDocs(query(collection(db('coach1'), 'measurements'), where('userId', '==', 'stu1'))));
+});

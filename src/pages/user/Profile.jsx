@@ -17,6 +17,7 @@ import DeleteAccountModal from '../../components/account/DeleteAccountModal';
 import AccountSecurity from '../../components/account/AccountSecurity';
 import AccessibilitySettings from '../../components/account/AccessibilitySettings';
 import CoachPaymentStatus from '../../components/account/CoachPaymentStatus';
+import CoachShareSettings from '../../components/account/CoachShareSettings';
 import { btnDanger, btnGhost, btnPrimary } from '../../components/coach/styles';
 
 const TABS = [
@@ -369,6 +370,7 @@ export default function Profile() {
         <ProfileGroup id="perfil-treinador" icon={Users} title="Meu treinador">
             <MyCoachCard user={user} profile={{ ...userProfile, ...formData, coachId: userProfile?.coachId }} initialOpen={!!initialCoachCode} initialCode={initialCoachCode} />
             <CoachPaymentStatus profile={userProfile} />
+            <CoachShareSettings uid={user.uid} coachId={userProfile?.coachId} />
         </ProfileGroup>
             </div>
             )}

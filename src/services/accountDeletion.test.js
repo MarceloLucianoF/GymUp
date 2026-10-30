@@ -75,8 +75,8 @@ describe('deleteUserData', () => {
     });
     const steps = [];
     const counts = await deleteUserData('u1', { deps, onStep: (id, status) => steps.push(`${id}:${status}`) });
-    expect(counts).toEqual({ checkIns: 2, measurements: 1, health: 4, chats: 3, trainings: 1, notes: 1, social: 3, profile: 1 });   // social: perfil, índice da busca e handle
-    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'delete:healthConsents/u1', 'batch:2', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:profileSearch/u1', 'delete:publicProfiles/u1', 'delete:publicStats/u1', 'batch:1']);
+    expect(counts).toEqual({ checkIns: 2, measurements: 1, health: 5, chats: 3, trainings: 1, notes: 1, social: 3, profile: 1 });   // social: perfil, índice da busca e handle
+    expect(log.map((entry) => entry[0] + ':' + entry[1])).toEqual(['batch:2', 'delete:userStats/u1', 'batch:1', 'delete:healthConsents/u1', 'delete:coachShares/u1', 'batch:2', 'batch:1', 'batch:2', 'delete:chats/chatA', 'batch:1', 'delete:coachNotes/coachX_u1', 'delete:profileSearch/u1', 'delete:publicProfiles/u1', 'delete:publicStats/u1', 'batch:1']);
     expect(steps.slice(0, 2)).toEqual(['checkIns:running', 'checkIns:done']);
     expect(steps[steps.length - 1]).toBe('profile:done');
   });
@@ -98,11 +98,12 @@ describe('deleteUserData', () => {
   test('saúde: apaga o consentimento antes das avaliações e anamneses; falha para antes do perfil', async () => {
     const { deps, log } = makeDeps({ assessments: [{ id: 'a1' }], anamneses: [{ id: 'n1' }, { id: 'n2' }] });
     const counts = await deleteUserData('u1', { deps });
-    expect(counts.health).toBe(4);
+    expect(counts.health).toBe(5);
     const i = log.findIndex((e) => e[1] === 'healthConsents/u1');
     expect(i).toBeGreaterThan(-1);
-    expect(log[i + 1][2]).toBe('assessments/a1');
-    expect(log[i + 2][3]).toEqual(['anamneses/n1', 'anamneses/n2']);
+    expect(log[i + 1][1]).toBe('coachShares/u1');   // o compartilhamento com o treinador sai junto do consentimento
+    expect(log[i + 2][2]).toBe('assessments/a1');
+    expect(log[i + 3][3]).toEqual(['anamneses/n1', 'anamneses/n2']);
     const failing = makeDeps({ failOn: 'anamneses' });
     await expect(deleteUserData('u1', { deps: failing.deps })).rejects.toMatchObject({ step: 'health' });
     expect(failing.log.some((entry) => entry[3]?.includes('users/u1'))).toBe(false);

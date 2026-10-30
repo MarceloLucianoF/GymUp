@@ -171,6 +171,7 @@ export async function endMyLink(uid) {
   if (link) batch.update(doc(db, 'coachLinks', uid), { status: LINK_STATUS.revoked, updatedAt: now() });
   // Consentimento de saúde é para aquele professor: sai junto (não revive se o vínculo voltar).
   batch.delete(doc(db, 'healthConsents', uid));
+  batch.delete(doc(db, 'coachShares', uid));   // idem para o que compartilhava (treinos próprios, medidas)
   await batch.commit();
 }
 
@@ -218,9 +219,12 @@ export async function endStudentLink(studentId) {
   // antigo que voltaria a valer se o mesmo professor fosse vinculado de novo.
   const consent = await getDoc(doc(db, 'healthConsents', studentId)).catch(() => null);
   const myConsent = consent?.exists?.() && consent.data()?.coachId === auth.currentUser?.uid;
+  const share = await getDoc(doc(db, 'coachShares', studentId)).catch(() => null);
+  const myShare = share?.exists?.() && share.data()?.coachId === auth.currentUser?.uid;
   const batch = writeBatch(db);
   batch.update(doc(db, 'users', studentId), { coachId: null, updatedAt: now() });
   if (link) batch.update(doc(db, 'coachLinks', studentId), { status: LINK_STATUS.revoked, updatedAt: now() });
   if (myConsent) batch.delete(doc(db, 'healthConsents', studentId));
+  if (myShare) batch.delete(doc(db, 'coachShares', studentId));   // idem para o que o aluno compartilhou
   await batch.commit();
 }

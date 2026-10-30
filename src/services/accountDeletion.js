@@ -73,11 +73,12 @@ export async function deleteUserData(uid, { onStep = () => {}, deps = realDeps }
     return removed;
   });
   await run('measurements', async () => deleteRefs((await refsOf(deps, 'measurements', deps.where('userId', '==', uid))).map((d) => d.ref), deps));
-  // Saúde: o consentimento sai primeiro (corta o acesso do professor na hora); depois avaliações (inclusive as do
+  // Saúde: o consentimento e o compartilhamento saem primeiro (cortam o acesso do professor na hora); depois avaliações (inclusive as do
   // instrutor) e anamneses. As regras deixam o aluno apagar o próprio consentimento mesmo se ele não existir.
   await run('health', async () => {
     await deps.deleteDoc(deps.doc(deps.db, 'healthConsents', uid));
-    let removed = 1;
+    await deps.deleteDoc(deps.doc(deps.db, 'coachShares', uid));   // o que o aluno compartilhava com o treinador
+    let removed = 2;
     for (const name of ['assessments', 'anamneses']) {
       removed += await deleteRefs((await refsOf(deps, name, deps.where('userId', '==', uid))).map((d) => d.ref), deps);
     }
