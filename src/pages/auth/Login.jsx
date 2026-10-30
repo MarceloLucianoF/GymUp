@@ -85,7 +85,7 @@ export default function Login() {
               
               <AuthField
                 ref={emailRef}
-                label="Email"
+                label="E-mail"
                 type="email"
                 inputMode="email"
                 required
@@ -126,7 +126,7 @@ export default function Login() {
                     <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
                     Entrando...
                   </span>
-              ) : 'Acessar Conta'}
+              ) : 'Acessar conta'}
             </button>
           </form>
 

@@ -9,3 +9,6 @@ export const stripEmojis = (text) => String(text ?? '')
   .replace(/[ \t]+\n/g, '\n')         // espaço sobrando no fim da linha
   .replace(/^[ \t]+$/gm, '')         // linhas que ficaram só com espaços
   .trim();
+
+// Contador com a palavra no singular ou no plural: plural(1, 'série', 'séries') -> "1 série".
+export const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : many}`;

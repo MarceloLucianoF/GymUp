@@ -213,7 +213,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
     try {
       // Treino gerado para o aluno é pessoal: vai para "Meus treinos" (privado), não para a loja de fichas aberta a todos.
       await saveMyWorkout(user.uid, { name: target.name, category: target.category, description: target.description, exercises: target.exercises, source: 'ai' });
-      toast.success('Treino IA salvo em "Meus Treinos"!', { id: toastId });
+      toast.success('Treino IA salvo em "Meus treinos"!', { id: toastId });
       if (onWorkoutSaved) onWorkoutSaved();
       onClose();
     } catch (err) {
@@ -373,7 +373,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label htmlFor="gen-570" className={fieldLabel}>Objetivo Principal</label>
+                    <label htmlFor="gen-570" className={fieldLabel}>Objetivo principal</label>
                     <div className="relative">
                     <select id="gen-570"
                       value={selectedGoal}
@@ -392,7 +392,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   <p className="text-xs text-gray-300">Equipamentos: <b>{describeEquipment(userProfile?.gymEquipment)}</b>. <a href="/profile" className="font-bold text-brand underline">Alterar no perfil</a></p>
 
                   <div>
-                    <label htmlFor="gen-870" className={fieldLabel}>Foco Muscular</label>
+                    <label htmlFor="gen-870" className={fieldLabel}>Foco muscular</label>
                     <div className="relative">
                     <select id="gen-870"
                       value={selectedFocus}
@@ -415,16 +415,16 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   </div>
 
                   <div>
-                    <label htmlFor="gen-893" className={fieldLabel}>Duração Desejada</label>
+                    <label htmlFor="gen-893" className={fieldLabel}>Duração desejada</label>
                     <div className="relative">
                     <select id="gen-893"
                       value={selectedDuration}
                       onChange={e => setSelectedDuration(Number(e.target.value))}
                       className={selectCls}
                     >
-                      <option value={30}>30 minutos (Rápido)</option>
-                      <option value={45}>45 minutos (Padrão)</option>
-                      <option value={60}>60 minutos (Completo)</option>
+                      <option value={30}>30 minutos (rápido)</option>
+                      <option value={45}>45 minutos (padrão)</option>
+                      <option value={60}>60 minutos (completo)</option>
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
                     </div>
@@ -493,22 +493,22 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="card-premium-glass p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 text-center">
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">TMB (Metabolismo Basal)</span>
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">TMB (metabolismo basal)</span>
                   <p className="text-lg font-black text-gray-800 dark:text-white font-mono mt-0.5">{nutritionData.bmr} kcal</p>
                 </div>
                 <div className="card-premium-glass p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 text-center">
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Gasto Total (TDEE)</span>
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Gasto total (TDEE)</span>
                   <p className="text-lg font-black text-amber-800 dark:text-brand font-mono mt-0.5">{nutritionData.tdee} kcal</p>
                 </div>
                 <div className="col-span-2 sm:col-span-1 card-premium-glass p-3.5 rounded-2xl border border-[#FFC107]/30 text-center bg-[#FFC107]/5">
-                  <span className="text-xs font-bold text-amber-800 dark:text-brand uppercase">Meta Diária IA</span>
+                  <span className="text-xs font-bold text-amber-800 dark:text-brand uppercase">Meta diária IA</span>
                   <p className="text-lg font-black text-amber-800 dark:text-brand font-mono mt-0.5">{nutritionData.targetCalories} kcal</p>
                 </div>
               </div>
 
               {/* DIVISÃO DE MACRONUTRIENTES */}
               <div className="card-premium-glass p-4 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3">
-                <h4 className="text-xs font-black uppercase text-amber-800 dark:text-brand tracking-wider">Divisão de Macronutrientes por IA</h4>
+                <h4 className="text-xs font-black uppercase text-amber-800 dark:text-brand tracking-wider">Divisão de macronutrientes por IA</h4>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
                     <span className="text-xs font-bold text-red-700 dark:text-red-400 uppercase block">Proteínas</span>
@@ -536,7 +536,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                 
                 <div className="space-y-2">
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <span className="text-xs font-black text-amber-800 dark:text-brand uppercase block">Pré-Treino Recomendado</span>
+                    <span className="text-xs font-black text-amber-800 dark:text-brand uppercase block">Pré-treino recomendado</span>
                     <ul className="text-xs text-gray-700 dark:text-gray-300 mt-1 space-y-1">
                       {nutritionData.mealSuggestions.preWorkout.map((item, idx) => (
                         <li key={idx} className="flex items-start gap-1.5">
@@ -548,7 +548,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                   </div>
 
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <span className="text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase block">Pós-Treino Recomendado</span>
+                    <span className="text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase block">Pós-treino recomendado</span>
                     <ul className="text-xs text-gray-700 dark:text-gray-300 mt-1 space-y-1">
                       {nutritionData.mealSuggestions.postWorkout.map((item, idx) => (
                         <li key={idx} className="flex items-start gap-1.5">
@@ -561,7 +561,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
 
                   <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex justify-between items-center">
                     <div>
-                      <span className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase block">Hidratação Diária Recomendada</span>
+                      <span className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase block">Hidratação diária recomendada</span>
                       <span className="text-xs text-gray-600 dark:text-gray-300">Baseado no seu peso corporal ({userProfile?.weight || 70}kg)</span>
                     </div>
                     <span className="text-base font-black text-blue-700 dark:text-blue-400 font-mono">{(nutritionData.mealSuggestions.hydrationWaterMl / 1000).toFixed(1)} L/dia</span>

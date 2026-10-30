@@ -18,7 +18,7 @@ const ForgotPassword = require('./ForgotPassword').default;
 
 const submit = async (email) => {
   render(<MemoryRouter><ForgotPassword /></MemoryRouter>);
-  await userEvent.type(screen.getByLabelText('Email'), email);
+  await userEvent.type(screen.getByLabelText('E-mail'), email);
   await userEvent.click(screen.getByRole('button', { name: /enviar|recuperar/i }));
 };
 

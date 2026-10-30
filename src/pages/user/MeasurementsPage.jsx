@@ -127,11 +127,11 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                     <X className="w-4 h-4" />
                 </button>
                 
-                <h2 className="text-xl font-black text-gray-800 dark:text-white mb-6">Nova Medição</h2>
+                <h2 className="text-xl font-black text-gray-800 dark:text-white mb-6">Nova medição</h2>
                 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Peso Atual (kg)</label>
+                        <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Peso atual (kg)</label>
                         <input 
                             autoFocus
                             type="number" 
@@ -144,7 +144,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Foto do Shape (Opcional)</label>
+                        <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Foto do shape (opcional)</label>
                         <div className="flex justify-center">
                             <label className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors relative overflow-hidden">
                                 {preview ? (
@@ -165,7 +165,7 @@ const AddMeasurementModal = ({ onClose, onSave }) => {
                         type="submit" 
                         className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] disabled:opacity-50"
                     >
-                        {isSaving ? 'Salvando...' : 'Registrar Evolução'}
+                        {isSaving ? 'Salvando...' : 'Registrar evolução'}
                     </button>
                 </form>
             </div>
@@ -408,7 +408,7 @@ export default function MeasurementsPage() {
                 {/* Histórico em Lista */}
                 <div className="surface overflow-hidden">
                     <div className="p-4 border-b border-gray-100 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03]">
-                        <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300">Histórico Completo</h3>
+                        <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300">Histórico completo</h3>
                     </div>
                     <div className="divide-y divide-gray-100 dark:divide-white/10">
                         {[...measurements].reverse().map((item, i) => (

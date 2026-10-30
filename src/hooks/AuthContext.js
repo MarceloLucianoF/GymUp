@@ -22,8 +22,8 @@ const AuthContext = createContext();
 
 const translateError = (code) => {
     switch (code) {
-        case 'auth/email-already-in-use': return 'Este email já está em uso.';
-        case 'auth/invalid-email': return 'Email inválido.';
+        case 'auth/email-already-in-use': return 'Este e-mail já está em uso.';
+        case 'auth/invalid-email': return 'E-mail inválido.';
         case 'auth/weak-password': return 'Senha fraca: use ao menos 8 caracteres, com maiúscula, número e símbolo.';
         case 'auth/password-does-not-meet-requirements': return 'Senha fraca: use ao menos 8 caracteres, com maiúscula, número e símbolo.';
         // Mesma mensagem para e-mail inexistente e senha errada: não revela quais e-mails têm conta.

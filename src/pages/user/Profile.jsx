@@ -240,7 +240,7 @@ export default function Profile() {
                     {/* Dados Básicos */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="col-span-1 md:col-span-2">
-                            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Nome de Exibição</label>
+                            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Nome de exibição</label>
                             <input 
                                 type="text" 
                                 name="displayName"
@@ -252,7 +252,7 @@ export default function Profile() {
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
-                            <label htmlFor="profile-phone" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">WhatsApp / Telefone</label>
+                            <label htmlFor="profile-phone" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">WhatsApp ou telefone</label>
                             <input
                                 id="profile-phone"
                                 type="tel"
@@ -269,7 +269,7 @@ export default function Profile() {
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
-                            <label htmlFor="goal" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Meta Principal</label>
+                            <label htmlFor="goal" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2 block">Meta principal</label>
                             <select 
                                 id="goal"
                                 name="goal"
@@ -316,7 +316,7 @@ export default function Profile() {
                             <h2 className="text-lg font-bold text-gray-800 dark:text-white">Medidas</h2>
                             {imcData && (
                                 <div className="text-right">
-                                    <span className="text-[10px] text-gray-600 dark:text-gray-300 uppercase font-bold block">IMC Estimado</span>
+                                    <span className="text-[10px] text-gray-600 dark:text-gray-300 uppercase font-bold block">IMC estimado</span>
                                     <span className={`text-sm font-bold ${imcData.color}`}>{imcData.value} ({imcData.label})</span>
                                 </div>
                             )}
@@ -381,7 +381,7 @@ export default function Profile() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-bold text-gray-800 dark:text-white">
-                                    {theme === 'dark' ? 'Modo Escuro (Nativo)' : 'Modo Claro'}
+                                    {theme === 'dark' ? 'Modo escuro (nativo)' : 'Modo claro'}
                                 </p>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                                     {theme === 'dark' ? 'Identidade principal para uso no celular' : 'Visual claro alternativo'}
@@ -400,7 +400,7 @@ export default function Profile() {
                             className={`${btnPrimary} w-full min-h-[56px] text-base disabled:bg-none disabled:bg-gray-200 disabled:text-gray-600 disabled:opacity-100 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-gray-400`}
                         >
                             {isDirty ? (
-                                <><Save className="w-5 h-5 text-black" /> Salvar Alterações</>
+                                <><Save className="w-5 h-5 text-black" /> Salvar alterações</>
                             ) : (
                                 <><CheckCircle className="w-5 h-5" /> Tudo atualizado</>
                             )}

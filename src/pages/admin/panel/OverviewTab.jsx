@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, ChevronRight, Dumbbell, Film, ImageOff, Layers
 import { btnGhost, btnPrimary } from '../../../components/coach/styles';
 import { ACTION_LABEL, TARGET_LABEL } from './adminLog';
 import { ISSUE_LABEL } from './adminUtils';
+import { plural } from '../../../utils/text';
 
 const Kpi = ({ icon: Icon, label, value, hint, tone = 'brand' }) => {
   const tones = { brand: 'bg-brand/15 text-amber-800 dark:text-brand', blue: 'bg-sky-500/15 text-sky-800 dark:text-sky-300', green: 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300', rose: 'bg-rose-500/15 text-rose-800 dark:text-rose-300' };
@@ -33,11 +34,11 @@ export default function OverviewTab({ stats, issues, trainingAlerts, log, logErr
       </div>
 
       <section aria-label="Resumo" className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi icon={Dumbbell} label="Exercícios" value={stats.exercises} hint={stats.archived ? `${stats.archived} arquivado(s)` : 'Todos ativos'} />
+        <Kpi icon={Dumbbell} label="Exercícios" value={stats.exercises} hint={stats.archived ? plural(stats.archived, 'arquivado', 'arquivados') : 'Todos ativos'} />
         <Kpi icon={Layers} label="Fichas" value={stats.trainings} hint={`${stats.globalTrainings} globais`} tone="blue" />
         <Kpi icon={Users} label="Alunos" value={stats.students} tone="green" />
         <Kpi icon={UserCheck} label="Treinadores" value={stats.coaches} tone="green" />
-        <Kpi icon={Activity} label="Alunos ativos (7 dias)" value={stats.activeStudents7 ?? '—'} hint={stats.checkinsTotal == null ? '' : `${stats.checkinsTotal} treinos registrados no total`} tone="rose" />
+        <Kpi icon={Activity} label="Alunos ativos (7 dias)" value={stats.activeStudents7 ?? '—'} hint={stats.checkinsTotal == null ? '' : `${plural(stats.checkinsTotal, 'treino registrado', 'treinos registrados')} no total`} tone="rose" />
       </section>
 
       <div className="grid gap-5 lg:grid-cols-2">

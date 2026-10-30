@@ -23,6 +23,7 @@ import TrainingEditor from './panel/TrainingEditor';
 import ImportModal from './panel/ImportModal';
 import { logAdminAction } from './panel/adminLog';
 import { exerciseIssues, trainingIssues, usageByTraining } from './panel/adminUtils';
+import { plural } from '../../utils/text';
 
 const TABS = [['overview', 'Visão geral'], ['exercises', 'Exercícios'], ['trainings', 'Fichas'], ['links', 'Vínculos'], ['social', 'Social']];
 const withId = (d) => ({ firestoreId: d.id, ...d.data() });
@@ -154,7 +155,7 @@ export default function AdminPanel() {
     const ok = await confirm({
       title: `Excluir "${ex.name}"?`,
       message: used > 0
-        ? `Este exercício está em ${used} ficha(s). Excluir faz ele sumir delas. Prefira arquivar.`
+        ? `Este exercício está em ${plural(used, 'ficha', 'fichas')}. Excluir faz ele sumir ${used === 1 ? 'dela' : 'delas'}. Prefira arquivar.`
         : 'A exclusão é definitiva. Se só quer tirar das listas, use Arquivar.',
       confirmLabel: 'Excluir definitivamente', danger: true
     });
@@ -193,7 +194,7 @@ export default function AdminPanel() {
   const deleteTraining = async (tr, students) => {
     const ok = await confirm({
       title: `Excluir a ficha "${tr.name}"?`,
-      message: students > 0 ? `${students} aluno(s) usam esta ficha e ficarão sem treino atribuído.` : 'A exclusão é definitiva.',
+      message: students > 0 ? `${plural(students, 'aluno usa', 'alunos usam')} esta ficha e ${students === 1 ? 'ficará' : 'ficarão'} sem treino atribuído.` : 'A exclusão é definitiva.',
       confirmLabel: 'Excluir ficha', danger: true
     });
     if (!ok) return;
@@ -221,7 +222,7 @@ export default function AdminPanel() {
         batch.set(doc(collection(db, importKind)), data);
       });
       await batch.commit();
-      toast.success(`${report.novos.length} importado(s).`, { id: t });
+      toast.success(`${plural(report.novos.length, 'importado', 'importados')}.`, { id: t });
       await record({ action: 'importar', target: importKind, name: `${report.novos.length} itens`, detail: `${report.duplicados.length} duplicados e ${report.invalidos.length} inválidos ignorados` });
       setImportKind(null);
     } catch (error) {

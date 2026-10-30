@@ -28,7 +28,7 @@ export default function VideoModal({ videoUrl, onClose }) {
         <iframe
           className="w-full h-full"
           src={embedUrl}
-          title="YouTube video player"
+          title="Vídeo do YouTube"
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen

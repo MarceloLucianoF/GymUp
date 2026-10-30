@@ -89,7 +89,7 @@ export default function Register() {
 
     const nextErrors = {};
     if (!displayName.trim()) nextErrors.displayName = 'Informe seu nome.';
-    if (!email.trim()) nextErrors.email = 'Informe seu email.';
+    if (!email.trim()) nextErrors.email = 'Informe seu e-mail.';
     const passwordError = validatePassword(password);
     if (passwordError) nextErrors.password = passwordError;
     if (password !== confirmPassword) nextErrors.confirmPassword = 'As senhas não conferem!';
@@ -184,10 +184,10 @@ export default function Register() {
           </div>
 
           <form className="mt-5 space-y-5" onSubmit={handleSubmit} noValidate>
-            <AuthField ref={refs.displayName} label="Nome Completo" type="text" required autoFocus autoComplete="name"
+            <AuthField ref={refs.displayName} label="Nome completo" type="text" required autoFocus autoComplete="name"
               value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ex: João Silva" error={errors.displayName} />
 
-            <AuthField ref={refs.email} label="Email" type="email" inputMode="email" required autoComplete="email"
+            <AuthField ref={refs.email} label="E-mail" type="email" inputMode="email" required autoComplete="email"
               autoCapitalize="none" spellCheck={false}
               value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" error={errors.email} />
 
@@ -201,7 +201,7 @@ export default function Register() {
             {/* CAMPO DE CÓDIGO DO TREINADOR */}
             <div className="pt-2">
                 <label htmlFor="register-coach-code" className="text-xs font-bold text-amber-700 dark:text-brand uppercase ml-1 flex justify-between cursor-pointer group">
-                    <span>Código do Treinador (Opcional)</span>
+                    <span>Código do treinador (opcional)</span>
                     <span className="text-xs font-semibold normal-case">Peça ao seu coach</span>
                 </label>
                 <div className="relative mt-1">
@@ -270,7 +270,7 @@ export default function Register() {
                     <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
                     Processando...
                   </span>
-              ) : 'Cadastrar Gratuitamente'}
+              ) : 'Cadastrar gratuitamente'}
             </button>
           </form>
 

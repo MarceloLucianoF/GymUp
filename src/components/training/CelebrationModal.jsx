@@ -66,18 +66,18 @@ const CelebrationModal = ({ stats, summary, onFinish, onRepeat }) => {
 
                 <div className="grid grid-cols-2 gap-3 mb-8">
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Tempo Total</p>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Tempo total</p>
                         <p className="text-xl font-black text-amber-800 dark:text-brand font-mono mt-0.5">{stats.timeStr}</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Volume Total</p>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Volume total</p>
                         <p className="text-xl font-black text-gray-900 dark:text-white font-mono mt-0.5">{stats.volumeKg}kg</p>
                         {facts && facts.volumePct !== null && facts.volumePct !== 0 && (
                             <p className={`text-[11px] font-bold mt-0.5 ${facts.volumePct > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>{facts.volumePct > 0 ? '+' : ''}{facts.volumePct}% que da última vez</p>
                         )}
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Séries Concluídas</p>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">Séries concluídas</p>
                         <p className="text-xl font-black text-gray-900 dark:text-white font-mono mt-0.5">{stats.completedSetsCount}</p>
                     </div>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700">

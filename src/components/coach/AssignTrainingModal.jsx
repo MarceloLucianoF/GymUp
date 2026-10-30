@@ -7,6 +7,7 @@ import Modal from '../common/Modal';
 import EmptyState from '../common/EmptyState';
 import Avatar from './Avatar';
 import { btnGhost, btnPrimary } from './styles';
+import { plural } from '../../utils/text';
 
 // Atribui uma ficha do treinador ao aluno (users/{id}.currentTrainingId).
 // As regras permitem ao treinador vinculado alterar currentTrainingId para fichas que ele possui (ou null).
@@ -51,7 +52,7 @@ export default function AssignTrainingModal({ student, trainings, onClose, onAss
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand"><ClipboardList className="h-5 w-5" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-bold text-gray-900 dark:text-white">{t.name}</span>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">{t.difficulty || 'Ficha'} · {t.exercises?.length || 0} exercícios</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">{t.difficulty || 'Ficha'} · {plural(t.exercises?.length || 0, 'exercício', 'exercícios')}</span>
                 </span>
                 {current && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400"><Check className="h-3 w-3" /> Atual</span>}
               </button>

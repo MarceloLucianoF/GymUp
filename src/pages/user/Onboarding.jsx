@@ -8,6 +8,7 @@ import {
 import {
   TOTAL_STEPS, LIMITS, bmiCategory,
 } from '../../utils/onboarding';
+import { plural } from '../../utils/text';
 
 export const GOAL_OPTIONS = [
   { value: 'Hipertrofia', label: 'Hipertrofia', hint: 'Aumentar a massa muscular, com volume de treino moderado a alto e repetições intermediárias', icon: Dumbbell },
@@ -108,7 +109,7 @@ function Step({ step, data, setField, bmi, plan, coachError, onContinueWithoutCo
       return (
         <div className="space-y-4">
           <div className="rounded-3xl bg-brand/10 p-5 space-y-2">
-            <p className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white"><Flame aria-hidden="true" className="w-5 h-5 text-brand" /> {plan.days} dias por semana</p>
+            <p className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white"><Flame aria-hidden="true" className="w-5 h-5 text-brand" /> {plural(plan.days, 'dia', 'dias')} por semana</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Divisão:</strong> {plan.split}</p>
             <p className="text-sm text-gray-700 dark:text-gray-200"><strong>Foco ({data.goal}):</strong> {plan.focus}</p>
             {plan.adjusted && <p className="text-xs text-gray-600 dark:text-gray-400">Ajustamos a frequência para ficar entre 2 e 7 treinos por semana.</p>}

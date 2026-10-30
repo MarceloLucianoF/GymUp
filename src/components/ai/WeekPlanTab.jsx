@@ -6,6 +6,7 @@ import { saveMyWorkout } from '../../services/myWorkouts';
 import { DAY_LABELS, MAX_DAYS, MAX_STRENGTH_DAYS, MIN_DAYS, saveDescription, saveName, wantsRecoveryDay } from '../../utils/weekPlan';
 import { describeEquipment } from '../../utils/equipment';
 import { prescriptionLabel } from '../../utils/exerciseKind';
+import { plural } from '../../utils/text';
 
 const fieldLabel = 'mb-1.5 block text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400';
 const chip = (on) => `pressable min-h-[44px] min-w-[44px] rounded-2xl px-4 text-sm font-black transition ${on ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100'}`;
@@ -107,7 +108,7 @@ export default function WeekPlanTab({ user, userProfile, customExercises = [], o
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-gray-600 dark:text-gray-300">{DAY_LABELS[d.weekday]}</p>
                     <h5 className="text-base font-black text-gray-900 dark:text-white">{d.label}</h5>
-                    {d.workout && <p className="text-xs text-gray-600 dark:text-gray-300">{d.workout.exercises.length} exercícios · {d.workout.estimatedTime}</p>}
+                    {d.workout && <p className="text-xs text-gray-600 dark:text-gray-300">{plural(d.workout.exercises.length, 'exercício', 'exercícios')} · {d.workout.estimatedTime}</p>}
                   </div>
                   {d.workout && (saved[dayKey(d)]
                     ? <span className="inline-flex min-h-[40px] items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="w-4 h-4" aria-hidden="true" />Salvo</span>

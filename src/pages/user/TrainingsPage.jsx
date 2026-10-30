@@ -21,6 +21,7 @@ import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import ChipRow from '../../components/dashboard/ChipRow';
 import { fetchStudentCheckIns } from '../../services/checkInsCache';
+import { plural } from '../../utils/text';
 
 // --- COMPONENTES VISUAIS ---
 
@@ -268,7 +269,7 @@ export default function TrainingsPage() {
           </div>
 
           <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1 group-hover:text-brand-dark transition-colors line-clamp-1">
-              {training.name || 'Treino Sem Nome'}
+              {training.name || 'Treino sem nome'}
           </h3>
           
           <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mb-4">
@@ -451,7 +452,7 @@ export default function TrainingsPage() {
                           ))}
                         </div>
                         <div className="flex items-center gap-2 text-white/80">
-                          <span className="text-sm font-bold whitespace-nowrap">{pkgTrainings.length} treinos</span>
+                          <span className="text-sm font-bold whitespace-nowrap">{plural(pkgTrainings.length, 'treino', 'treinos')}</span>
                           <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`} />
                         </div>
                       </div>
@@ -473,7 +474,7 @@ export default function TrainingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 px-1">
                   <Layers className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  <h2 className="text-lg font-bold text-gray-600 dark:text-gray-300">Treinos Avulsos</h2>
+                  <h2 className="text-lg font-bold text-gray-600 dark:text-gray-300">Treinos avulsos</h2>
                   <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
                     {looseTrainings.length}
                   </span>

@@ -1,4 +1,13 @@
-import { stripEmojis } from './text';
+import { stripEmojis, plural } from './text';
+
+describe('plural', () => {
+  test('usa o singular só para 1', () => {
+    expect(plural(1, 'série', 'séries')).toBe('1 série');
+    expect(plural(0, 'série', 'séries')).toBe('0 séries');
+    expect(plural(3, 'aluno usa', 'alunos usam')).toBe('3 alunos usam');
+    expect(plural('1', 'treino', 'treinos')).toBe('1 treino');
+  });
+});
 
 describe('stripEmojis', () => {
   test('remove emojis comuns e limpa espaços', () => {

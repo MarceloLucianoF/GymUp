@@ -125,7 +125,7 @@ export default function Navbar() {
               <Link to="/profile" className="flex items-center gap-3 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" aria-label="Ver perfil">
                 <div className="text-right hidden lg:block">
                   <p className="text-sm font-bold text-gray-800 dark:text-white group-hover:text-brand transition-colors">{displayName}</p>
-                  <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider">Ver Perfil</p>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider">Ver perfil</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-2 border-transparent group-hover:border-brand transition-all shadow-sm">
                   {avatarUrl ? (
@@ -154,7 +154,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 min-w-0 pr-2">
             <Flame className="w-4 h-4 text-black fill-current animate-pulse shrink-0" aria-hidden="true" />
             <div className="min-w-0 text-xs">
-              <span className="font-black uppercase tracking-wider block leading-none text-[9px] opacity-80">Treino Ativo</span>
+              <span className="font-black uppercase tracking-wider block leading-none text-[9px] opacity-80">Treino ativo</span>
               <span className="font-bold truncate block">{activeSession.trainingName || 'Treino em andamento'} {activeSession.currentExerciseName ? `• ${activeSession.currentExerciseName}` : ''}</span>
             </div>
           </div>

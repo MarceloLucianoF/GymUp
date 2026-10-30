@@ -51,7 +51,7 @@ function SummaryTab({ month, setMonth, onPay }) {
             <Stat label="Em atraso (mês)" value={formatBRL(d.month_totals.overdueCents)} hint={`inadimplência ${d.month_totals.delinquencyPercent.toLocaleString('pt-BR')}%`} tone={d.month_totals.overdueCents > 0 ? 'bad' : undefined} />
           </section>
           <section className="stats" aria-label="Contratos">
-            <Stat label="Contratos ativos" value={d.contracts.active} hint={d.contracts.paused ? `${d.contracts.paused} pausado(s)` : undefined} />
+            <Stat label="Contratos ativos" value={d.contracts.active} hint={d.contracts.paused ? plural(d.contracts.paused, 'pausado', 'pausados') : undefined} />
             <Stat label="Receita recorrente mensal" value={formatBRL(d.contracts.monthlyRecurringCents)} hint="soma dos contratos ativos" />
             <Stat label="Ticket médio" value={formatBRL(d.contracts.averageTicketCents)} />
             <Stat label="Últimos 30 dias" value={`+${d.contracts.started30d} / -${d.contracts.ended30d}`} hint="entradas e saídas de contrato" />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CalendarCheck, Check, Moon, Play } from 'lucide-react';
 import { DAY_SHORT } from '../../utils/weekPlan';
+import { plural } from '../../utils/text';
 
 // Card "Hoje na sua semana": usa os treinos "Semana · Seg · ..." que o aluno salvou do plano da IA.
 export default function WeekTodayCard({ status, onStart }) {
@@ -11,8 +12,8 @@ export default function WeekTodayCard({ status, onStart }) {
 
   let badge = 'Hoje na sua semana';
   let title; let sub; let target = null; let cta = 'Começar';
-  if (allDone) { badge = 'Semana concluída'; title = 'Semana completa!'; sub = `Você fez os ${total} treinos planejados. Descanse e monte a próxima semana quando quiser.`; }
-  else if (focus) { title = focus.label; sub = `${focus.workout.exercises?.length || 0} exercícios · ${focus.workout.estimatedTime || ''}`.trim(); target = focus; }
+  if (allDone) { badge = 'Semana concluída'; title = 'Semana completa!'; sub = `Você fez ${total === 1 ? 'o treino planejado' : `os ${total} treinos planejados`}. Descanse e monte a próxima semana quando quiser.`; }
+  else if (focus) { title = focus.label; sub = `${plural(focus.workout.exercises?.length || 0, 'exercício', 'exercícios')} · ${focus.workout.estimatedTime || ''}`.trim(); target = focus; }
   else if (doneToday) { badge = 'Treino de hoje feito'; title = next ? `Próximo: ${next.dayLabel} · ${next.label}` : 'Hoje já está pago'; sub = next ? 'Aproveite o descanso.' : 'Falta só repor o que ficou atrasado.'; target = next || late; cta = next ? 'Adiantar' : 'Fazer agora'; }
   else { badge = 'Dia de descanso'; title = next ? `Próximo: ${next.dayLabel} · ${next.label}` : late ? `Atrasado: ${late.label}` : 'Descanso'; sub = next ? 'Hoje não tem treino planejado.' : late ? `Era de ${late.dayLabel.toLowerCase()}; ainda dá tempo.` : 'Sem treino planejado para hoje.'; target = next || late; cta = next ? 'Adiantar' : 'Fazer agora'; }
 

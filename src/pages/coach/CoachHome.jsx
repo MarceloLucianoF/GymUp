@@ -21,6 +21,7 @@ import InviteModal from '../../components/coach/InviteModal';
 import PageSkeleton from '../../components/coach/PageSkeleton';
 import { chatState, timeAgo } from '../../components/coach/helpers';
 import { btnPrimary, btnGhost, pageCls } from '../../components/coach/styles';
+import { plural } from '../../utils/text';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -123,7 +124,7 @@ export default function CoachHome() {
         <div className="grid gap-6 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
             <section className="surface h-full p-5">
-              <SectionTitle icon={Activity} action={<span className="text-xs font-bold text-gray-600 dark:text-gray-400">{weekTotal} treinos / 7 dias</span>}>Check-ins da semana</SectionTitle>
+              <SectionTitle icon={Activity} action={<span className="text-xs font-bold text-gray-600 dark:text-gray-400">{plural(weekTotal, 'treino', 'treinos')} / 7 dias</span>}>Check-ins da semana</SectionTitle>
               <BarChart data={weekly} ariaLabel="Check-ins por dia na última semana" />
             </section>
           </Reveal>
@@ -140,7 +141,7 @@ export default function CoachHome() {
                         <span className={`w-5 text-center font-display text-lg font-black ${i === 0 ? 'text-brand' : 'text-gray-600 dark:text-gray-400'}`}>{i + 1}</span>
                         <Avatar name={s.displayName} src={s.photoURL} size="sm" />
                         <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</span>
-                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{s.workouts30} treinos</span>
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{plural(s.workouts30, 'treino', 'treinos')}</span>
                       </button>
                     </li>
                   ))}
@@ -163,7 +164,7 @@ export default function CoachHome() {
                       <Avatar name={s.displayName} src={s.photoURL} size="sm" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{s.displayName || 'Aluno'}</p>
-                        <p className="text-xs font-medium text-rose-700 dark:text-rose-400">{typeof s.daysInactive === 'number' ? `${s.daysInactive} dias sem treinar` : 'Ainda não treinou'}</p>
+                        <p className="text-xs font-medium text-rose-700 dark:text-rose-400">{typeof s.daysInactive === 'number' ? `${plural(s.daysInactive, 'dia', 'dias')} sem treinar` : 'Ainda não treinou'}</p>
                       </div>
                       <button type="button" aria-label={`Abrir chat com ${s.displayName || 'aluno'}`} onClick={() => navigate('/coach/chat', { state: chatState(s) })} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100"><MessageSquare className="h-4 w-4" /></button>
                       <button type="button" aria-label={`Ver ${s.displayName || 'aluno'}`} onClick={() => navigate(`/coach/students/${s.uid}`)} className="pressable inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100"><Eye className="h-4 w-4" /></button>

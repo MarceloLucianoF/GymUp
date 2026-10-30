@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { lastPushError, nativeFcmToken, nativeNotificationPermission, pushEnabled, retryNativeFcm, sendTestPush } from '../../services/pushService';
 import { stopWorkoutTimer, updateWorkoutTimer } from '../../services/workoutTimerNative';
 import { btnGhost } from '../coach/styles';
+import { plural } from '../../utils/text';
 
 const Row = ({ label, ok, value }) => (
   <li className="flex items-start justify-between gap-3 py-1.5 text-sm">
@@ -43,7 +44,7 @@ export default function AppDiagnostics() {
     try {
       if (!nativeFcmToken()) { const m = await retryNativeFcm(); if (m) { toast.error(`Cadastro falhou: ${m}`); return; } }
       const r = await sendTestPush();
-      toast(r.sent > 0 ? `Aviso enviado para ${r.sent} aparelho(s). Deve chegar em segundos.` : `Nenhum aviso entregue (${r.devices} aparelho(s) cadastrado(s)).`, { duration: 6000 });
+      toast(r.sent > 0 ? `Aviso enviado para ${plural(r.sent, 'aparelho', 'aparelhos')}. Deve chegar em segundos.` : `Nenhum aviso entregue (${plural(r.devices, 'aparelho cadastrado', 'aparelhos cadastrados')}).`, { duration: 6000 });
     } catch (e) { toast.error(`Falhou: ${e.message}`); }
     finally { setBusy(''); load(); }
   };

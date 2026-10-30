@@ -3,6 +3,7 @@ import { MessageSquare, Eye, Check, ClipboardList, Trophy, AlertOctagon, Clock, 
 import Avatar from './Avatar';
 import EmptyState from '../common/EmptyState';
 import { brl } from './helpers';
+import { plural } from '../../utils/text';
 
 const META = {
   overdue: { icon: AlertOctagon, cls: 'bg-rose-500/10 text-rose-700 dark:text-rose-400', label: 'Cobrança' },
@@ -56,7 +57,7 @@ export default function ActionQueue({ items, busyId, onMessage, onView, onMarkPa
           );
         })}
       </ul>
-      {items.length > shown.length && <p className="mt-3 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400"><ListChecks className="h-3.5 w-3.5" aria-hidden="true" />+{items.length - shown.length} itens na fila</p>}
+      {items.length > shown.length && <p className="mt-3 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400"><ListChecks className="h-3.5 w-3.5" aria-hidden="true" />+{plural(items.length - shown.length, 'item', 'itens')} na fila</p>}
     </>
   );
 }

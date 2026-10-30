@@ -21,10 +21,10 @@ function CheckInForm({ exercise, onSubmit, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="check-in-form">
-      <h4 className="check-in-form-title">Registrar Exercício: {exercise.name}</h4>
+      <h4 className="check-in-form-title">Registrar exercício: {exercise.name}</h4>
 
       <div className="form-group">
-        <label htmlFor="setsCompleted">Séries Realizadas:</label>
+        <label htmlFor="setsCompleted">Séries realizadas:</label>
         <input
           type="number"
           id="setsCompleted"
@@ -36,7 +36,7 @@ function CheckInForm({ exercise, onSubmit, onCancel }) {
       </div>
 
       <div className="form-group">
-        <label htmlFor="repsCompleted">Repetições por Série:</label>
+        <label htmlFor="repsCompleted">Repetições por série:</label>
         <input
           type="number"
           id="repsCompleted"

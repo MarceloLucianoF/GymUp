@@ -75,7 +75,7 @@ export default function BulkAssignModal({ students, trainings, onClose, onDone, 
                   ))}
                 </ul>
               )}
-              {plan.same.length > 0 && <p className="text-xs text-gray-600 dark:text-gray-400">{plan.same.length} já tem esta ficha e será ignorado: {plan.same.map((s) => s.displayName || 'Aluno').join(', ')}.</p>}
+              {plan.same.length > 0 && <p className="text-xs text-gray-600 dark:text-gray-400">{plan.same.length === 1 ? '1 já tem esta ficha e será ignorado' : `${plan.same.length} já têm esta ficha e serão ignorados`}: {plan.same.map((s) => s.displayName || 'Aluno').join(', ')}.</p>}
             </div>
           )}
         </div>

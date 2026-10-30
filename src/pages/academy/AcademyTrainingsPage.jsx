@@ -18,6 +18,7 @@ import {
   applyBatch, assignVersion, canAuthorTrainings, copyTemplateToAcademy, listOfficialTemplates, countByVersion, createDraft, deleteDraft, draftChanged, duplicateSeries, listAssignedForAcademy, listSeries, listVersions,
   loadExerciseLibrary, MAX_EXERCISES, publishDraft, saveDraft, setArchived, toDraftExercise, versionIdOf
 } from '../../services/academyTrainingService';
+import { plural } from '../../utils/text';
 
 const norm = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -104,7 +105,7 @@ function TemplateModal({ templates, onClose, onPick, busy }) {
           {templates.map((t) => (
             <li key={t.id} className="rounded-2xl bg-gray-50 p-3 dark:bg-white/5">
               <p className="font-bold text-gray-900 dark:text-white">{t.name}</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">{t.exercises?.length || 0} exercícios · {t.description}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{plural(t.exercises?.length || 0, 'exercício', 'exercícios')} · {t.description}</p>
               <button type="button" disabled={busy} onClick={() => onPick(t)} className={`${btnPrimary} mt-2 text-xs`}>Copiar para minha academia</button>
             </li>
           ))}
@@ -259,7 +260,7 @@ export default function AcademyTrainingsPage() {
               {archived ? `Arquivada · ${using} ${using === 1 ? 'aluno ainda usa' : 'alunos ainda usam'} · ` : ''}
               {origin ? `${origin} · ` : ''}{s.currentVersion === 0 ? 'Rascunho (nunca publicada)' : `Publicada: versão ${s.currentVersion}`}
               {!archived && s.currentVersion > 0 && changed ? ' · rascunho com alterações' : ''}
-              {` · ${s.draft?.exercises?.length || 0} exercícios no rascunho`}
+              {` · ${plural(s.draft?.exercises?.length || 0, 'exercício', 'exercícios')} no rascunho`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -280,7 +281,7 @@ export default function AcademyTrainingsPage() {
               const n = counts[versionIdOf(s.id, v.version)] || 0;
               return (
                 <li key={v.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm dark:bg-white/5">
-                  <span className="font-semibold text-gray-900 dark:text-white">Versão {v.version} · {v.exercises?.length || 0} exercícios</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">Versão {v.version} · {plural(v.exercises?.length || 0, 'exercício', 'exercícios')}</span>
                   <span className="text-xs text-gray-600 dark:text-gray-400" data-testid={`uso-${v.id}`}>{n} {n === 1 ? 'aluno usa' : 'alunos usam'}</span>
                 </li>
               );

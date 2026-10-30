@@ -34,7 +34,7 @@ function Compare({ detail }) {
       {diff.status === 'error' && <ErrorState error={diff.error} onRetry={reload} />}
       {d && (
         <div aria-live="polite">
-          <p className="muted small">{d.summary.added} incluído(s), {d.summary.removed} removido(s), {d.summary.changed} alterado(s), {d.summary.moved} que mudaram de posição, {d.summary.same} igual(is).{d.nameChanged ? ' O nome mudou.' : ''}{d.descriptionChanged ? ' A descrição mudou.' : ''}</p>
+          <p className="muted small">{plural(d.summary.added, 'incluído', 'incluídos')}, {plural(d.summary.removed, 'removido', 'removidos')}, {plural(d.summary.changed, 'alterado', 'alterados')}, {d.summary.moved} {d.summary.moved === 1 ? 'mudou' : 'mudaram'} de posição, {plural(d.summary.same, 'igual', 'iguais')}.{d.nameChanged ? ' O nome mudou.' : ''}{d.descriptionChanged ? ' A descrição mudou.' : ''}</p>
           <div className="table-wrap">
             <table className="table">
               <caption className="visually-hidden">Diferenças entre {d.from} e {d.to}</caption>
