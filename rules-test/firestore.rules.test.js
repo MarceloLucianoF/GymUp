@@ -1245,6 +1245,7 @@ test('saúde: professor encerra o vínculo e apaga o consentimento no mesmo lote
   await assertSucceeds(b.commit());
   await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'users/stuH'), { coachId: 'coach1' }); });   // vinculado de novo
   await assertFails(getDoc(doc(db('coach1'), 'assessments/aH')));                                     // sem consentimento novo
+});
 
 // ---- desafios em grupo (dias ativos) ----
 const dayUTC = (offset = 0) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
@@ -1423,4 +1424,11 @@ test('desafios: sair a qualquer momento (contador desce junto); o dono encerra o
   });
   await assertFails(deleteDoc(doc(db('stu2'), `challenges/${CH}/members/stu3`)));
   await assertSucceeds(deleteDoc(doc(db('stu2'), `challenges/${CH}/members/stu2`)));
+});
+
+test('meus treinos: campo opcional warmupStretch (etapa de alongamento) só booleano', async () => {
+  const w = { name: 'Meu treino', exercises: [{ name: 'Supino' }], source: 'manual', createdAt: '2026-10-30' };
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w1'), { ...w, warmupStretch: true }));
+  await assertSucceeds(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w2'), { ...w, warmupStretch: false }));
+  await assertFails(setDoc(doc(db('stu1'), 'users/stu1/myWorkouts/w3'), { ...w, warmupStretch: 'sim' }));
 });

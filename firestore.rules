@@ -680,7 +680,8 @@ service cloud.firestore {
     match /users/{userId}/myWorkouts/{workoutId} {
       allow get, list: if signedIn() && request.auth.uid == userId;
       allow create, update: if signedIn() && request.auth.uid == userId && hasRole('user')
-        && request.resource.data.keys().hasOnly(['name', 'category', 'description', 'estimatedTime', 'exercises', 'createdAt', 'updatedAt', 'source', 'photo'])
+        && request.resource.data.keys().hasOnly(['name', 'category', 'description', 'estimatedTime', 'exercises', 'createdAt', 'updatedAt', 'source', 'photo', 'warmupStretch'])
+        && (!('warmupStretch' in request.resource.data) || request.resource.data.warmupStretch is bool)   // etapa de alongamento antes do treino
         && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 140000 && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')))
         && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
         && request.resource.data.exercises is list && request.resource.data.exercises.size() > 0 && request.resource.data.exercises.size() <= 30
