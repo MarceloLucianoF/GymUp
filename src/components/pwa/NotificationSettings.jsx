@@ -67,7 +67,7 @@ export default function NotificationSettings({ uid, className = 'mt-6', embedded
           <SwitchRow label="Lembrar quando eu ficar 7 dias sem treinar" hint="Aviso com o app fechado, uma vez aos 7 e aos 14 dias"
             checked={prefs.inactivityReminder !== false} onChange={toggleInactivity} />
         )}
-        <SwitchRow label="Vibrar"checked={prefs.vibrate} onChange={(v) => updatePrefs({ vibrate: v })} />
+        <SwitchRow label="Vibrar" checked={prefs.vibrate} onChange={(v) => updatePrefs({ vibrate: v })} />
         <SwitchRow label="Som curto" checked={prefs.sound} onChange={(v) => updatePrefs({ sound: v })} />
         <SwitchRow label="Lembrete de treino" checked={prefs.reminder} onChange={(v) => updatePrefs({ reminder: v })} />
       </div>

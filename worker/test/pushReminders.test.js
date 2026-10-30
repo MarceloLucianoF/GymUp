@@ -236,3 +236,30 @@ test('nudge: entrega que falha não consome o limite de 24 h', async () => {
     assert.equal(box('ana').st.m.has('nudgeAt'), false);
   } finally { globalThis.fetch = real; }
 });
+
+test('inatividade: envio com erro tenta de novo em 1 h, no máximo 3 vezes, sem alarme no passado', async () => {
+  const { env, box } = fakeEnv(await vapidJwk());
+  const now = Date.now();
+  await subscribe(env);
+  await handlePushRequest(req('inactivity', { lastWorkoutAt: new Date(now - 8 * DAY).toISOString() }), env, { verify, now });
+  const b = box('ana');
+  b.obj.deliver = async () => { throw new Error('falha no envio'); };
+  let t = b.st.alarm;
+  for (let i = 1; i <= 3; i += 1) {
+    await withClock(t, () => b.obj.alarm());
+    const ina = b.st.m.get('inactivity');
+    assert.equal(ina.retries, i);
+    assert.equal(ina.times[0], t + 3600 * 1000);
+    assert.ok(b.st.alarm > t);
+    t = b.st.alarm;
+  }
+  await withClock(t, () => b.obj.alarm());               // quarta falha: desiste
+  assert.equal(b.st.m.has('inactivity'), false);
+  assert.equal(b.st.alarm, null);
+});
+
+test('nome: só letras, números, espaço e . \' - (variantes Unicode de ponto também caem)', () => {
+  assert.equal(safeName('João D\'Ávila-Souza'), 'João D\'Ávila-Souza');
+  for (const bad of ['golpe．com', 'Ana: clique', 'Ana 🔥']) assert.equal(safeName(bad), '', bad);
+  assert.equal(safeName('Ana\nB'), 'Ana B');   // quebra de linha vira espaço antes do filtro
+});

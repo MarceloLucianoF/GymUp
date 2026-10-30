@@ -30,10 +30,12 @@ const INACTIVITY_DAYS = [7, 14];
 const NUDGE_GAP_MS = DAY_MS;
 const ALARM_SLACK_MS = 1000;   // o alarme pode disparar um pouco antes do horário registrado
 const UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
-// Nome mostrado no aviso: até 40 caracteres, sem links nem marcação (texto com cara de URL é descartado, não recortado).
+// Nome mostrado no aviso: até 40 caracteres, só letras, números, espaço e . ' - (lista do que pode, não do que não pode:
+// nada de links, marcação ou variantes Unicode de ponto). Texto com cara de URL é descartado, não recortado.
 export const safeName = (v) => {
   const name = clip(v, 40);
-  return !name || /:\/\/|www\.|[<>@]|\.[a-z]{2,}(\/|\b)/i.test(name) ? '' : name;
+  if (!name || !/^[\p{L}\p{N} .'-]+$/u.test(name)) return '';
+  return /www\.|\.[a-z]{2,}(\/|\b)/i.test(name) ? '' : name;
 };
 export function inactivityPayload(info, at) {
   const days = Math.max(1, Math.round((at - info.lastWorkoutAt) / DAY_MS));
@@ -86,6 +88,7 @@ export async function handlePushRequest(request, env, deps = {}) {
   if (raw.length > 4000) return json(413, { error: 'Corpo grande demais.' }, cors);
   let body = {};
   if (raw) { try { body = JSON.parse(raw); } catch { return json(400, { error: 'Corpo inválido.' }, cors); } }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'Corpo inválido.' }, cors);
   const box = (id) => env.PUSH_BOX.get(env.PUSH_BOX.idFromName(id));
   const call = (id, op, data) => box(id).fetch('https://push-box/' + op, { method: 'POST', body: JSON.stringify(data) }).then((r) => r.json());
 
@@ -140,8 +143,12 @@ export async function handlePushRequest(request, env, deps = {}) {
     } catch { return json(502, { error: 'Não foi possível conferir o vínculo.' }, cors); }
     if (!coach || !['coach', 'admin'].includes(coach.role)) return json(403, { error: 'Apenas treinadores.' }, cors);
     const who = safeName(coach.displayName) || 'Seu treinador';
-    const payload = { kind: 'nudge', title: 'Lembrete do seu treinador', body: `${who}: faz ${days} dias do seu último treino. Bora voltar?`, url: '/home', tag: 'bt-nudge' };
-    const r = await call(studentId, 'nudge', { payload, now });
+    // Dias reais desde o último treino registrado no perfil do aluno, quando houver (o número do cliente é só o padrão).
+    const lastAt = Date.parse(student.lastWorkoutDate || '');
+    const realDays = Number.isFinite(lastAt) ? Math.max(1, Math.floor((now - lastAt) / DAY_MS)) : days;
+    const payload = { kind: 'nudge', title: 'Lembrete do seu treinador', body: `${who}: faz ${realDays} dias do seu último treino. Bora voltar?`, url: '/home', tag: 'bt-nudge' };
+    let r;
+    try { r = await call(studentId, 'nudge', { payload, now }); } catch { return json(502, { error: 'Não foi possível enviar o lembrete.' }, cors); }
     return json(200, r.sent ? { sent: true } : { sent: false, reason: r.reason === 'rate-limited' ? 'rate-limited' : 'no-subscription' }, cors);
   }
   if (route === 'like' && request.method === 'POST') {
@@ -268,9 +275,13 @@ export class PushBox {
       if (Number.isFinite(last) && data.now - last < NUDGE_GAP_MS) return json(200, { sent: false, reason: 'rate-limited' });
       // Marca antes de enviar (o envio é assíncrono: dois toques seguidos não viram dois avisos); desfaz se nada foi entregue.
       await this.state.storage.put('nudgeAt', data.now);
-      const sent = await this.deliver(data.payload, 24 * 3600, 'normal');
+      let sent = 0;
+      try { sent = await this.deliver(data.payload, 24 * 3600, 'normal'); }
+      finally {
+        // Nada entregue (ou erro no envio): o aluno não fica 24 h sem poder ser lembrado.
+        if (!(sent > 0)) { if (last === undefined) await this.state.storage.delete('nudgeAt'); else await this.state.storage.put('nudgeAt', last); }
+      }
       if (sent > 0) return json(200, { sent: true });
-      if (last === undefined) await this.state.storage.delete('nudgeAt'); else await this.state.storage.put('nudgeAt', last);
       return json(200, { sent: false, reason: 'no-subscription' });
     }
     if (op === 'like') {
@@ -321,9 +332,18 @@ export class PushBox {
       const due = ina.times.filter((t) => t <= now + ALARM_SLACK_MS);
       const left = ina.times.filter((t) => t > now + ALARM_SLACK_MS);
       if (due.length) {
-        if (left.length) await st.put('inactivity', { ...ina, times: left }); else await st.delete('inactivity');
-        // Vários vencidos de uma vez (alarme atrasado): um aviso só, com o mais recente.
-        await this.deliver(inactivityPayload(ina, Math.max(...due)), 24 * 3600, 'normal');
+        // Vários vencidos de uma vez (alarme atrasado): um aviso só, com o mais recente. Só tira da fila depois de enviar,
+        // para uma falha no envio não perder o lembrete (o alarme tenta de novo).
+        try {
+          await this.deliver(inactivityPayload(ina, Math.max(...due)), 24 * 3600, 'normal');
+          if (left.length) await st.put('inactivity', { ...ina, times: left }); else await st.delete('inactivity');
+        } catch (e) {
+          // Tenta de novo em 1 h (no máximo 3 vezes), sem deixar o horário vencido no passado (o alarme dispararia sem parar).
+          console.warn('Lembrete de inatividade não enviado:', e?.message || e);
+          const retries = (ina.retries || 0) + 1;
+          const times = retries <= 3 ? [now + 3600 * 1000, ...left] : left;
+          if (times.length) await st.put('inactivity', { ...ina, times, retries }); else await st.delete('inactivity');
+        }
       }
     }
     await this.rearm();
