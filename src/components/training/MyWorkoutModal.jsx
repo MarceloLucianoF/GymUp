@@ -137,7 +137,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
       if (removed.suspicious) notes.push('Trechos suspeitos do documento (pedidos de pagamento ou instruções para a IA) foram ignorados.');
       if (removed.truncated || truncatedPages) notes.push(`Só o começo do documento foi lido (até ${IMPORT_LIMITS.maxPages} páginas).`);
       setName(parsed.name);
-      setItems(parsed.exercises.map((e) => ({ ...blank(e.name, e.ref), kind: e.kind, setTypes: e.setTypes || null, sets: e.kind === 'cardio' ? '1' : e.sets, reps: e.kind === 'cardio' ? String(e.durationMin) : e.kind === 'timed' ? String(e.seconds) : e.reps, rest: e.kind === 'cardio' ? 0 : e.rest, note: e.note })));
+      setItems(toItems(parsed.exercises));
       setWarnings(notes);
       setSource('pdf');
       setStep('edit');
@@ -150,7 +150,8 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     }
   };
 
-  const toItems = (exercises) => exercises.map((e) => ({ ...blank(e.name, e.ref), kind: e.kind, setTypes: e.setTypes || null, sets: e.kind === 'cardio' ? '1' : e.sets, reps: e.kind === 'cardio' ? String(e.durationMin) : e.kind === 'timed' ? String(e.seconds) : e.reps, rest: e.kind === 'cardio' ? 0 : e.rest, note: e.note }));
+  // Revisão da importação: mostra o nome da biblioteca quando casou, e é esse nome que será gravado.
+  const toItems = (exercises) => exercises.map((e) => ({ ...blank(e.ref?.name || e.name, e.ref), kind: e.kind, setTypes: e.setTypes || null, sets: e.kind === 'cardio' ? '1' : e.sets, reps: e.kind === 'cardio' ? String(e.durationMin) : e.kind === 'timed' ? String(e.seconds) : e.reps, rest: e.kind === 'cardio' ? 0 : e.rest, note: e.note }));
   const reviewSection = (sec) => { setReviewing(sec.id); setName(sec.name); setItems(toItems(sec.exercises)); setWarnings(sec.warnings || []); setStep('edit'); };
   const saveSections = async () => {
     const chosen = sections.filter((sec) => sec.selected && !sec.saved);
@@ -192,7 +193,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     try {
       const letters = assignSupersetLetters(valid.slice(0, 30).map((it) => it.link));
       const exs = valid.slice(0, 30).map((it, i) => toWorkoutExercise({
-        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), kind: it.kind, photo: it.ref ? null : it.photo, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note,
+        name: it.name.trim().slice(0, IMPORT_LIMITS.maxName), keepName: true, kind: it.kind, photo: it.ref ? null : it.photo, durationMin: Math.min(180, Math.max(1, parseInt(it.reps, 10) || 20)), seconds: Math.min(600, Math.max(1, parseInt(it.reps, 10) || 30)), sets: Math.min(10, Math.max(1, Number(it.sets) || 3)), reps: String(it.reps || '10').slice(0, 12), rest: Math.min(600, Math.max(0, Number(it.rest) || 0)), note: it.note,
         setTypes: hasPlan(it.setTypes) ? normalizeSetTypes(it.setTypes, Math.min(10, Math.max(1, Number(it.sets) || 3))) : null,
         setPlan: normalizeSetPlan(it.setPlan, Math.min(10, Math.max(1, Number(it.sets) || 3))), superset: letters[i]
       }, it.ref, i));
