@@ -12,6 +12,7 @@ import { buildWarmupStretch, startsWithWarmup } from '../../utils/stretchWorkout
 import { KIND_LABELS, cardioMinutes, defaultsForKind, exerciseKind, repsFieldLabel, repsPlaceholder } from '../../utils/exerciseKind';
 import { IMPORT_LIMITS, ImportError, buildImportMessages, extractPdfText, matchLibrary, mergeImported, parseImportedWorkout, parseLocalSection, splitWorkoutSections, sanitizeDocumentText, toWorkoutExercise } from '../../services/workoutImport';
 import useBodyScrollLock from '../../hooks/useBodyScrollLock';
+import SwitchRow from '../ui/Switch';
 
 const plain = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -48,6 +49,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
   const [warnings, setWarnings] = useState([]);
   const [source, setSource] = useState('manual');
   const [photo, setPhoto] = useState(null);
+  const [warmupStretch, setWarmupStretch] = useState(true);   // etapa de alongamento na execução: ligada nos treinos novos
   const [query, setQuery] = useState('');
   const fileRef = useRef(null);
   const photoRef = useRef(null);
@@ -61,6 +63,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     setItems(saved.map((ex, i) => ({ ...fromSaved(ex), link: links[i] })));
     setPhoto(isSafePhoto(editing.workout.photo) ? editing.workout.photo : null);
     setSource(editing.workout.source || 'manual');
+    setWarmupStretch(editing.workout.warmupStretch === true);
     setWarnings([]); setQuery(''); setBusy(''); setStep('edit');
   }, [isOpen, editing]);
 
@@ -77,7 +80,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
   const warmup = useMemo(() => buildWarmupStretch(library), [library]);
   if (!isOpen) return null;
 
-  const reset = () => { setSections([]); setReviewing(null); setStep('choose'); setName(''); setItems([]); setWarnings([]); setQuery(''); setSource('manual'); setPhoto(null); setBusy(''); };
+  const reset = () => { setSections([]); setReviewing(null); setStep('choose'); setName(''); setItems([]); setWarnings([]); setQuery(''); setSource('manual'); setPhoto(null); setWarmupStretch(true); setBusy(''); };
   const close = () => { reset(); onClose(); };
   const startManual = () => { setSource('manual'); setName('Meu treino'); setItems([]); setStep('edit'); };
 
@@ -155,7 +158,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
     try {
       for (const sec of chosen) {
         const exs = sec.exercises.slice(0, 30).map((e, i) => toWorkoutExercise(e, e.ref, i));
-        await saveMyWorkout(user.uid, { name: sec.name.slice(0, 80), exercises: exs, source: 'pdf', photo: null, description: 'Importado de um PDF seu.' });
+        await saveMyWorkout(user.uid, { name: sec.name.slice(0, 80), exercises: exs, source: 'pdf', photo: null, description: 'Importado de um PDF seu.', warmupStretch: true });
       }
       toast.success(chosen.length === 1 ? 'Treino salvo em "Meus treinos".' : `${chosen.length} treinos salvos em "Meus treinos".`);
       onSaved?.();
@@ -193,10 +196,10 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
         setPlan: normalizeSetPlan(it.setPlan, Math.min(10, Math.max(1, Number(it.sets) || 3))), superset: letters[i]
       }, it.ref, i));
       if (editing) {
-        await updateMyWorkout(user.uid, editing.docId, { name, exercises: exs, source, photo, createdAt: editing.workout.createdAt, description: editing.workout.description });
+        await updateMyWorkout(user.uid, editing.docId, { name, exercises: exs, source, photo, createdAt: editing.workout.createdAt, description: editing.workout.description, warmupStretch });
         toast.success('Treino atualizado.');
       } else {
-        await saveMyWorkout(user.uid, { name, exercises: exs, source, photo, description: source === 'pdf' ? 'Importado de um PDF seu.' : 'Montado por você.' });
+        await saveMyWorkout(user.uid, { name, exercises: exs, source, photo, description: source === 'pdf' ? 'Importado de um PDF seu.' : 'Montado por você.', warmupStretch });
         toast.success('Treino salvo em "Meus treinos".');
       }
       onSaved?.();
@@ -344,6 +347,7 @@ export default function MyWorkoutModal({ isOpen, onClose, user, library = LIBRAR
                 {hasWarmup ? 'Alongamento geral já está no início' : `Adicionar alongamento geral antes do treino (${warmup.length} exercícios)`}
               </button>
             )}
+            <SwitchRow label="Alongamento geral antes do treino" hint="Na hora de treinar, mostra uma etapa opcional de 5 min, com Pular. Não conta séries nem volume." checked={warmupStretch} onChange={setWarmupStretch} />
             <div className="flex gap-2">
               <button type="button" onClick={editing ? close : reset} disabled={!!busy} className="min-h-[48px] flex-1 rounded-2xl bg-gray-100 font-bold dark:bg-white/10">{editing ? 'Cancelar' : 'Voltar'}</button>
               <button type="button" onClick={save} disabled={!!busy || items.length === 0} className="btn-primary-gradient min-h-[48px] flex-[2] font-black disabled:opacity-50">{busy || (editing ? 'Salvar alterações' : 'Salvar em Meus treinos')}</button>

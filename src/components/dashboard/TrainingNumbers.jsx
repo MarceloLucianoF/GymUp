@@ -9,7 +9,8 @@ import VolumeTrend from './VolumeTrend';
 import AchievementBadges from './AchievementBadges';
 import WeeklyChart from './WeeklyChart';
 import { fetchStudentCheckIns } from '../../services/checkInsCache';
-import { computeStats, computeAchievements, GOAL_DEFAULT } from '../../hooks/useStudentHome';
+import { computeStats, GOAL_DEFAULT } from '../../hooks/useStudentHome';
+import { computeAchievements } from '../../utils/achievements';
 import { useWeeklySummary } from '../../hooks/useWeeklySummary';
 import { recentRecords } from '../../utils/records';
 
@@ -43,10 +44,11 @@ export default function TrainingNumbers({ uid, weeklyGoal }) {
   }, [uid]);
 
   const stats = useMemo(() => computeStats(history), [history]);
-  const achievements = useMemo(() => computeAchievements(stats), [stats]);
+  const goal = Number(weeklyGoal) || GOAL_DEFAULT;
+  const game = useMemo(() => computeAchievements(history, { weeklyGoal: goal }), [history, goal]);
+  const level = game.level;
   const records = useMemo(() => recentRecords(history), [history]);
   const month = useMemo(() => monthNumbers(history), [history]);
-  const goal = Number(weeklyGoal) || GOAL_DEFAULT;
   const summary = useWeeklySummary({ uid, history, weeklyGoal: goal, ready: state === 'ready' });
   const volumeSpark = history.slice(0, 8).map((h) => Number(h.totalVolume) || 0).reverse();
 
@@ -68,14 +70,16 @@ export default function TrainingNumbers({ uid, weeklyGoal }) {
       </div>
 
       <div className="surface p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400"><Target className="h-4 w-4 text-brand" aria-hidden="true" /> Nível {stats.level}</h3>
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{stats.totalTreinos}/{stats.nextLevelTreinos}</span>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400"><Target className="h-4 w-4 text-brand" aria-hidden="true" /> Nível {level.name}</h3>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{level.next ? `${level.count}/${level.nextAt}` : `${level.count} treinos`}</span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10" role="progressbar" aria-valuenow={Math.round(stats.progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso para o próximo nível">
-          <div className="h-full rounded-full bg-gradient-to-r from-brand to-[#FF9800] transition-all duration-1000" style={{ width: `${stats.progress}%` }} />
+        <div className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10" role="progressbar" aria-valuenow={Math.round(level.progress)} aria-valuemin={0} aria-valuemax={100} aria-label={level.next ? `Progresso até o nível ${level.next}` : 'Nível máximo'}>
+          <div className="h-full rounded-full bg-gradient-to-r from-brand to-[#FF9800] transition-all duration-1000" style={{ width: `${level.progress}%` }} />
         </div>
-        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Faltam {Math.max(0, stats.nextLevelTreinos - stats.totalTreinos)} treinos para o próximo nível.</p>
+        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+          {level.next ? `Faltam ${level.remaining} ${level.remaining === 1 ? 'treino' : 'treinos'} para o nível ${level.next}.` : 'Você chegou ao nível mais alto.'} Conta 1 treino por dia, com 10 min ou mais e 3 séries ou mais.
+        </p>
       </div>
 
       <Reveal><WeeklySummaryCard facts={summary.facts} narrative={summary.narrative} period={summary.period} onPeriod={summary.setPeriod} /></Reveal>
@@ -86,12 +90,8 @@ export default function TrainingNumbers({ uid, weeklyGoal }) {
         <WeeklyChart history={history} />
       </Reveal>
 
-      <Reveal>
-        <div className="grid gap-3 md:grid-cols-2 md:gap-4">
-          <VolumeTrend history={history} />
-          <AchievementBadges achievements={achievements} />
-        </div>
-      </Reveal>
+      <Reveal><VolumeTrend history={history} /></Reveal>
+      <Reveal><AchievementBadges achievements={game.achievements} /></Reveal>
     </section>
   );
 }
