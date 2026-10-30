@@ -6,7 +6,7 @@ const path = require('path');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds
 } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, collectionGroup, query, where, orderBy, startAt, endAt, limit, writeBatch, deleteField, Timestamp, serverTimestamp } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, collection, collectionGroup, query, where, orderBy, startAt, endAt, limit, writeBatch, deleteField, Timestamp, serverTimestamp, increment } = require('firebase/firestore');
 
 let env;
 const cache = new Map();
@@ -1245,4 +1245,182 @@ test('saúde: professor encerra o vínculo e apaga o consentimento no mesmo lote
   await assertSucceeds(b.commit());
   await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'users/stuH'), { coachId: 'coach1' }); });   // vinculado de novo
   await assertFails(getDoc(doc(db('coach1'), 'assessments/aH')));                                     // sem consentimento novo
+
+// ---- desafios em grupo (dias ativos) ----
+const dayUTC = (offset = 0) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+const CH = 'ch1';
+const CODE = 'DESAF123';
+const chDoc = (over = {}) => ({ name: 'Outubro forte', durationDays: 7, startDay: dayUTC(0), endDay: dayUTC(6), ownerId: 'stu1', code: CODE, memberCount: 1, status: 'active', createdAt: serverTimestamp(), ...over });
+const chMember = (uid, over = {}) => ({ uid, displayName: 'Pessoa ' + uid, handle: 'user_' + uid, code: CODE, joinedAt: serverTimestamp(), activeDays: 0, lastDay: '', updatedAt: serverTimestamp(), ...over });
+const createCh = (uid = 'stu1', { ch = {}, member = {}, code = CODE, codeDoc = true, memberDoc = true, id = CH } = {}) => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.set(doc(d, 'challenges/' + id), chDoc({ ownerId: uid, code, ...ch }));
+  if (codeDoc) b.set(doc(d, 'challengeCodes/' + code), { challengeId: id });
+  if (memberDoc) b.set(doc(d, `challenges/${id}/members/${uid}`), chMember(uid, { code, ...member }));
+  return b.commit();
+};
+const joinCh = (uid, { code = CODE, bump = 1, member = {}, id = CH, withCount = true } = {}) => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.set(doc(d, `challenges/${id}/members/${uid}`), chMember(uid, { code, ...member }));
+  if (withCount) b.update(doc(d, 'challenges/' + id), { memberCount: increment(bump) });
+  return b.commit();
+};
+const leaveCh = (uid, { bump = -1, id = CH, withCount = true } = {}) => {
+  const d = db(uid);
+  const b = writeBatch(d);
+  b.delete(doc(d, `challenges/${id}/members/${uid}`));
+  if (withCount) b.update(doc(d, 'challenges/' + id), { memberCount: increment(bump) });
+  return b.commit();
+};
+// Desafio que começou há `ago` dias com stu1 (dono) e stu2 como membros.
+const seedCh = async ({ ago = 3, durationDays = 7, status = 'active', memberCount = 2 } = {}) => {
+  await seedSocial();
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const d = ctx.firestore();
+    const now = Timestamp.now();
+    await setDoc(doc(d, 'challenges/' + CH), { ...chDoc({ startDay: dayUTC(-ago), endDay: dayUTC(-ago + durationDays - 1), durationDays, status, memberCount }), createdAt: now });
+    await setDoc(doc(d, 'challengeCodes/' + CODE), { challengeId: CH });
+    await setDoc(doc(d, `challenges/${CH}/members/stu1`), { ...chMember('stu1'), joinedAt: now, updatedAt: now });
+    await setDoc(doc(d, `challenges/${CH}/members/stu2`), { ...chMember('stu2'), joinedAt: now, updatedAt: now });
+  });
+};
+const reseedCh = async (opts) => { await env.clearFirestore(); await seedCh(opts); };
+const score = (uid, activeDays, lastDay, over = {}) => updateDoc(doc(db(uid), `challenges/${CH}/members/${uid}`), { activeDays, lastDay, updatedAt: serverTimestamp(), ...over });
+
+test('desafios: criar exige código e o dono como primeiro membro, no mesmo lote, com formato válido', async () => {
+  await seedSocial();
+  await assertFails(createCh('stu1', { codeDoc: false }));
+  await assertFails(createCh('stu1', { memberDoc: false }));
+  for (const ch of [{ memberCount: 2 }, { durationDays: 10, endDay: dayUTC(9) }, { endDay: dayUTC(7) }, { name: 'x'.repeat(41) }, { name: '   ' },
+    { name: 'entra em spam.com/x' }, { startDay: dayUTC(-3), endDay: dayUTC(3) }, { startDay: dayUTC(2), endDay: dayUTC(8) }, { extra: 1 },
+    { status: 'ended' }, { createdAt: Timestamp.fromMillis(Date.now() - 86_400_000) }, { startDay: '2026-13-01' }, { durationDays: '7' }]) {
+    await assertFails(createCh('stu1', { ch }));
+  }
+  await assertFails(createCh('stu1', { member: { displayName: 'Outra pessoa' } }));      // nome diferente do perfil social
+  await assertFails(createCh('stu1', { member: { activeDays: 1, lastDay: dayUTC(0) } }));  // placar começa zerado
+  await assertFails(createCh('coach1'));                                                  // sem perfil social
+  await assertFails(createCh('stu1', { ch: { ownerId: 'stu2' } }));
+  await assertSucceeds(createCh('stu1', { ch: { durationDays: 30, endDay: dayUTC(29) } }));
+  // o código já está reservado: outro desafio não o reaproveita nem aponta o código para si
+  await assertFails(createCh('stu2', { id: 'ch2' }));
+  await assertFails(setDoc(doc(db('stu2'), 'challengeCodes/' + CODE), { challengeId: 'ch2' }));
+  await assertFails(deleteDoc(doc(db('stu2'), 'challengeCodes/' + CODE)));
+  await assertSucceeds(createCh('stu2', { id: 'ch2', code: 'OUTRO234' }));
+});
+
+test('desafios: só membros leem o desafio e a lista; o código é legível por quem o tem', async () => {
+  await seedCh();
+  await assertSucceeds(getDoc(doc(db('stu2'), 'challenges/' + CH)));
+  await assertSucceeds(getDocs(collection(db('stu2'), `challenges/${CH}/members`)));
+  await assertFails(getDoc(doc(db('stu3'), 'challenges/' + CH)));
+  await assertFails(getDocs(collection(db('stu3'), `challenges/${CH}/members`)));
+  await assertFails(getDoc(doc(db('stu3'), `challenges/${CH}/members/stu1`)));
+  await assertFails(getDoc(doc(db('admin1'), 'challenges/' + CH)));
+  await assertFails(getDoc(doc(anonDb(), 'challenges/' + CH)));
+  await assertFails(getDocs(collection(db('stu1'), 'challenges')));
+  await assertSucceeds(getDoc(doc(db('stu3'), 'challengeCodes/' + CODE)));
+  await assertFails(getDoc(doc(anonDb(), 'challengeCodes/' + CODE)));
+  await assertFails(getDocs(collection(db('stu3'), 'challengeCodes')));
+  await assertSucceeds(getDoc(doc(db('stu3'), `challenges/${CH}/members/stu3`)));        // o próprio (inexistente), para saber se já entrou
+  await assertSucceeds(getDocs(query(collectionGroup(db('stu2'), 'members'), where('uid', '==', 'stu2'))));
+  await assertFails(getDocs(query(collectionGroup(db('stu3'), 'members'), where('uid', '==', 'stu2'))));
+  await assertFails(getDocs(collectionGroup(db('stu2'), 'members')));
+});
+
+test('desafios: entrar pelo código sobe o contador junto; limite de 50, encerrado e terminado barram', async () => {
+  await seedCh();
+  await assertFails(joinCh('stu3', { code: 'ERRADO12' }));                    // código diferente do desafio
+  await assertFails(joinCh('stu3', { withCount: false }));
+  await assertFails(joinCh('stu3', { bump: 2 }));
+  await assertFails(joinCh('stu3', { member: { displayName: 'Pessoa stu1' } }));
+  await assertFails(joinCh('stu3', { member: { activeDays: 3, lastDay: dayUTC(-1) } }));
+  await assertFails(updateDoc(doc(db('stu3'), 'challenges/' + CH), { memberCount: increment(1) }));   // contador sem membro
+  await assertFails(updateDoc(doc(db('stu3'), 'challenges/' + CH), { name: 'Meu agora' }));
+  await assertSucceeds(joinCh('stu3'));
+  await assertSucceeds(getDoc(doc(db('stu3'), 'challenges/' + CH)));
+  await assertFails(joinCh('stu3'));                                           // já é membro
+  await assertFails(joinCh('stu2'));                                           // idem
+
+  await reseedCh({ memberCount: 50 });
+  await assertFails(joinCh('stu3'));                                           // cheio
+  await reseedCh({ memberCount: 49 });
+  await assertSucceeds(joinCh('stu3'));                                        // 50º
+  await reseedCh({ status: 'ended' });
+  await assertFails(joinCh('stu3'));
+  await reseedCh({ ago: 10 });                                                 // terminou há 4 dias
+  await assertFails(joinCh('stu3'));
+});
+
+test('desafios: placar sobe no máximo 1 dia por dia, dentro do período e nunca no futuro', async () => {
+  await seedCh({ ago: 3 });                                                    // começou há 3 dias (hoje é o 4º dia)
+  await assertFails(score('stu2', 2, dayUTC(-3)));                             // 2 dias num dia só
+  await assertFails(score('stu2', 1, dayUTC(-4)));                             // antes do início
+  await assertFails(score('stu2', 1, dayUTC(2)));                              // no futuro
+  await assertFails(score('stu2', 1, ''));
+  await assertFails(score('stu2', 5, dayUTC(0)));                              // mais que os dias decorridos
+  await assertFails(score('stu2', 31, dayUTC(0)));
+  await assertFails(score('stu2', 1, dayUTC(-3), { code: 'OUTRO123' }));
+  await assertFails(score('stu2', 1, dayUTC(-3), { displayName: 'Outro nome' }));
+  await assertFails(score('stu2', 1, dayUTC(-3), { updatedAt: Timestamp.fromMillis(Date.now() - 60_000) }));
+  await assertFails(updateDoc(doc(db('stu1'), `challenges/${CH}/members/stu2`), { activeDays: 1, lastDay: dayUTC(-3), updatedAt: serverTimestamp() }));   // placar de outro
+  await assertSucceeds(score('stu2', 1, dayUTC(-3)));
+  await assertSucceeds(score('stu2', 3, dayUTC(-1)));                          // recupera 2 dias de uma vez (2 dias de calendário depois)
+  await assertFails(score('stu2', 5, dayUTC(0)));                              // +2 em 1 dia
+  await assertFails(score('stu2', 2, dayUTC(-1)));                             // nunca diminui
+  await assertFails(score('stu2', 3, dayUTC(0)));                              // mesmo número, outro dia
+  await assertSucceeds(score('stu2', 4, dayUTC(0)));
+  await assertFails(score('stu2', 5, dayUTC(0)));                              // o mesmo dia não conta duas vezes
+  await assertSucceeds(score('stu2', 4, dayUTC(0)));                           // regravar igual é inofensivo
+  // nome e @ podem acompanhar o perfil social
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'publicProfiles/stu2'), { displayName: 'Nome novo' }); });
+  await assertSucceeds(score('stu2', 4, dayUTC(0), { displayName: 'Nome novo' }));
+
+  // depois do fim e com o desafio encerrado o placar congela
+  await reseedCh({ ago: 10 });
+  await assertFails(score('stu2', 1, dayUTC(-2)));                             // fora do período (terminou há 4 dias)
+  await assertSucceeds(score('stu2', 1, dayUTC(-8)));                          // dia dentro do período
+  await reseedCh({ status: 'ended' });
+  await assertFails(score('stu2', 1, dayUTC(-3)));
+});
+
+test('desafios: sair a qualquer momento (contador desce junto); o dono encerra ou apaga', async () => {
+  await seedCh();
+  await assertFails(leaveCh('stu2', { withCount: false }));
+  await assertFails(leaveCh('stu2', { bump: -2 }));
+  await assertFails(deleteDoc(doc(db('stu3'), `challenges/${CH}/members/stu2`)));
+  await assertFails(deleteDoc(doc(db('stu1'), `challenges/${CH}/members/stu2`)));   // dono não expulsa sem apagar o desafio
+  await assertFails(leaveCh('stu1'));                                               // o dono não sai
+  await assertSucceeds(leaveCh('stu2'));
+  await assertFails(getDoc(doc(db('stu2'), 'challenges/' + CH)));                   // perdeu o acesso
+  await assertSucceeds(joinCh('stu2'));                                             // pode voltar com o código
+
+  // encerrar: só o dono, só o status
+  await assertFails(updateDoc(doc(db('stu2'), 'challenges/' + CH), { status: 'ended' }));
+  await assertFails(updateDoc(doc(db('stu1'), 'challenges/' + CH), { status: 'ended', name: 'Outro' }));
+  await assertSucceeds(updateDoc(doc(db('stu1'), 'challenges/' + CH), { status: 'ended' }));
+  await assertFails(updateDoc(doc(db('stu1'), 'challenges/' + CH), { status: 'active' }));
+  await assertSucceeds(leaveCh('stu2'));                                            // sair de encerrado continua valendo
+
+  // apagar: só o dono, liberando o código no mesmo lote, com os membros
+  await reseedCh();
+  await assertFails(deleteDoc(doc(db('stu2'), 'challenges/' + CH)));
+  await assertFails(deleteDoc(doc(db('stu1'), 'challenges/' + CH)));               // sem liberar o código
+  const d = db('stu1');
+  const b = writeBatch(d);
+  b.delete(doc(d, `challenges/${CH}/members/stu2`));
+  b.delete(doc(d, `challenges/${CH}/members/stu1`));
+  b.delete(doc(d, 'challengeCodes/' + CODE));
+  b.delete(doc(d, 'challenges/' + CH));
+  await assertSucceeds(b.commit());
+
+  // sobra de desafio que não existe mais: cada um apaga só a própria
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const f = ctx.firestore();
+    await setDoc(doc(f, `challenges/${CH}/members/stu2`), { ...chMember('stu2'), joinedAt: Timestamp.now(), updatedAt: Timestamp.now() });
+    await setDoc(doc(f, `challenges/${CH}/members/stu3`), { ...chMember('stu3'), joinedAt: Timestamp.now(), updatedAt: Timestamp.now() });
+  });
+  await assertFails(deleteDoc(doc(db('stu2'), `challenges/${CH}/members/stu3`)));
+  await assertSucceeds(deleteDoc(doc(db('stu2'), `challenges/${CH}/members/stu2`)));
 });

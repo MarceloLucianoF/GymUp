@@ -11,13 +11,14 @@ import { btnGhost, btnPrimary, inputCls, labelCls, pageCls } from '../../compone
 import { useAuthContext } from '../../hooks/AuthContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import useSocial from '../../hooks/useSocial';
+import ChallengesTab from '../../components/social/ChallengesTab';
 import usePageMeta from '../../hooks/usePageMeta';
 import { REPORT_REASONS, addComment, commentsOnMyPosts, deleteComment, deleteMyPosts, deletePost, likesOnMyPosts, likesSeenAt, listComments, listFeed, markLikesSeen, reportComment, reportPost, setLike } from '../../services/feedService';
 import { COMMENT_MAX, checkComment, newLikes, postLine, timeAgo } from '../../utils/feed';
 import { notifyComment, notifyLike } from '../../services/pushService';
 import { findByHandleOrCode, otherOf, relationOf, respond, saveSocialProfile, searchProfiles, sendRequest, validateHandle, normalizeHandle } from '../../services/socialService';
 
-const TABS = [['ranking', 'Ranking'], ['activity', 'Atividade'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
+const TABS = [['ranking', 'Ranking'], ['challenges', 'Desafios'], ['activity', 'Atividade'], ['friends', 'Amigos'], ['search', 'Buscar'], ['profile', 'Meu perfil']];
 const medal = (pos) => (pos === 1 ? 'bg-amber-400 text-black' : pos === 2 ? 'bg-gray-300 text-black' : pos === 3 ? 'bg-orange-300 text-black' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-200');
 const smallBtn = 'pressable inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 text-xs font-bold';
 const Person = ({ p, fallback = 'Usuário' }) => (
@@ -379,7 +380,7 @@ export default function Friends() {
   const { confirm, dialog } = useConfirm();
   const [params] = useSearchParams();
   const social = useSocial(user?.uid);
-  const [tab, setTab] = useState(params.get('buscar') ? 'search' : params.get('aba') === 'atividade' ? 'activity' : 'ranking');
+  const [tab, setTab] = useState(params.get('buscar') ? 'search' : params.get('desafio') || params.get('aba') === 'desafios' ? 'challenges' : params.get('aba') === 'atividade' ? 'activity' : 'ranking');
   const uid = user?.uid;
   const pendingIn = useMemo(() => social.friendships.filter((f) => relationOf(f, uid) === 'pending-in').length, [social.friendships, uid]);
 
@@ -407,6 +408,7 @@ export default function Friends() {
         <PageHeader eyebrow="Social" title="Amigos" subtitle="Compare consistência com quem treina com você, sem expor seus dados de saúde." />
         <Tabs tabs={TABS.map(([id, label]) => ({ id, label: id === 'friends' && pendingIn ? `${label} (${pendingIn})` : label }))} value={tab} onChange={setTab} />
         {tab === 'ranking' && <RankingTab social={social} onGo={setTab} onJoin={join} />}
+        {tab === 'challenges' && <ChallengesTab uid={uid} profile={social.profile} initialCode={params.get('desafio') || ''} onGo={setTab} />}
         {tab === 'activity' && <ActivityTab social={social} uid={uid} onGo={setTab} />}
         {tab === 'friends' && <FriendsTab social={social} uid={uid} act={act} onGo={setTab} />}
         {tab === 'search' && <SearchTab social={social} uid={uid} initialQuery={params.get('buscar') || ''} reload={social.reload} />}

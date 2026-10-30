@@ -219,3 +219,27 @@ describe('deleteUserData - atividade social', () => {
     expect(deleted.indexOf('socialPosts/p1/likes/x')).toBeLessThan(deleted.indexOf('socialPosts/p1'));
   });
 });
+
+describe('deleteUserData - desafios em grupo', () => {
+  test('sai dos desafios de outros (contador desce junto) antes de apagar o perfil social', async () => {
+    const { deps, log } = makeDeps();
+    const baseGet = deps.getDocs;
+    const memberRef = { path: 'challenges/c1/members/u1', id: 'u1', parent: { id: 'members', parent: { id: 'c1', parent: { id: 'challenges', parent: null } } } };
+    deps.collectionGroup = (db, name) => ({ path: `group:${name}` });
+    deps.increment = (n) => ({ inc: n });
+    deps.doc = (db, ...path) => ({ path: path.join('/') });
+    deps.getDocs = async (q) => ((q.path || q.col.path) === 'group:members' ? { docs: [{ ref: memberRef, data: () => ({ uid: 'u1' }) }] } : baseGet(q));
+    const baseDoc = deps.getDoc;
+    deps.getDoc = async (ref) => (ref.path === 'challenges/c1' ? { exists: () => true, data: () => ({ ownerId: 'u2', code: 'ABCD2345' }) } : baseDoc(ref));
+    const baseBatch = deps.writeBatch;
+    deps.writeBatch = () => {
+      const b = baseBatch();
+      const ops = [];
+      return { delete: (r) => { ops.push(`delete:${r.path}`); b.delete(r); }, update: (r) => ops.push(`update:${r.path}`), commit: async () => { log.push(['ops', ops]); await b.commit(); } };
+    };
+    await deleteUserData('u1', { deps });
+    const challengeIdx = log.findIndex((e) => e[0] === 'ops' && e[1].includes('delete:challenges/c1/members/u1'));
+    expect(log[challengeIdx][1]).toEqual(['delete:challenges/c1/members/u1', 'update:challenges/c1']);
+    expect(challengeIdx).toBeLessThan(log.findIndex((e) => e[0] === 'delete' && e[1] === 'publicProfiles/u1'));
+  });
+});
