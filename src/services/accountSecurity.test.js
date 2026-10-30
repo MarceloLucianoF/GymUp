@@ -1,5 +1,5 @@
 import * as fa from 'firebase/auth';
-import { changePassword, connectGoogle, createPassword, disconnectGoogle, friendlySecurityError, loginMethods, passwordProblem } from './accountSecurity';
+import { changeEmail, changePassword, connectGoogle, createPassword, disconnectGoogle, friendlySecurityError, loginMethods, passwordProblem } from './accountSecurity';
 
 jest.mock('firebase/auth', () => ({
   EmailAuthProvider: { credential: jest.fn((email, pw) => ({ email, pw })) },
@@ -11,7 +11,8 @@ jest.mock('firebase/auth', () => ({
   reauthenticateWithPopup: jest.fn(async () => ({})),
   sendPasswordResetEmail: jest.fn(async () => {}),
   unlink: jest.fn(async () => ({})),
-  updatePassword: jest.fn(async () => {})
+  updatePassword: jest.fn(async () => {}),
+  verifyBeforeUpdateEmail: jest.fn(async () => {})
 }));
 jest.mock('./nativeApp', () => ({ isNativeApp: () => false, nativeGoogleCredential: jest.fn() }));
 
@@ -57,4 +58,19 @@ test('mensagens amigáveis', () => {
   expect(friendlySecurityError({ code: 'auth/invalid-credential' })).toBe('Senha atual incorreta.');
   expect(friendlySecurityError({ code: 'auth/credential-already-in-use' })).toMatch(/outro usuário/);
   expect(friendlySecurityError({ code: 'x' })).toMatch(/Tente de novo/);
+});
+
+test('trocar e-mail: valida, confirma a senha e manda o link ao novo endereço', async () => {
+  await expect(changeEmail(pwUser, 'invalido', { password: 'x' })).rejects.toThrow('e-mail válido');
+  await expect(changeEmail(pwUser, 'A@B.com', { password: 'x' })).rejects.toThrow('já é o seu');
+  await expect(changeEmail(pwUser, 'novo@b.com', {})).rejects.toThrow('senha atual');
+  expect(await changeEmail(pwUser, ' Novo@B.com ', { password: 'velha123' })).toBe('novo@b.com');
+  expect(fa.reauthenticateWithCredential).toHaveBeenCalledWith(pwUser, { email: 'a@b.com', pw: 'velha123' });
+  expect(fa.verifyBeforeUpdateEmail).toHaveBeenCalledWith(pwUser, 'novo@b.com', expect.objectContaining({ url: expect.stringMatching(/\/login$/) }));
+});
+
+test('trocar e-mail sem senha (só Google) confirma com o Google', async () => {
+  await changeEmail(googleUser, 'novo@b.com');
+  expect(fa.reauthenticateWithPopup).toHaveBeenCalled();
+  expect(fa.verifyBeforeUpdateEmail).toHaveBeenCalled();
 });

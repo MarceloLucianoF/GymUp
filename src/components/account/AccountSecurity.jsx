@@ -5,7 +5,7 @@ import { auth } from '../../firebase/config';
 import { useConfirm } from '../../hooks/useConfirm';
 import { btnGhost, btnPrimary, inputCls, labelCls } from '../coach/styles';
 import {
-  MIN_PASSWORD, changePassword, connectGoogle, createPassword, disconnectGoogle, friendlySecurityError, loginMethods, passwordProblem, sendResetLink
+  MIN_PASSWORD, changeEmail, changePassword, connectGoogle, createPassword, disconnectGoogle, friendlySecurityError, loginMethods, passwordProblem, sendResetLink
 } from '../../services/accountSecurity';
 
 const rowCls = 'flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gray-50 p-4 dark:bg-white/5';
@@ -72,11 +72,51 @@ function PasswordForm({ mode, onDone, onCancel }) {
   );
 }
 
+/** Troca de e-mail: o link vai para o novo endereço e a troca só vale depois de aberto. */
+function EmailForm({ user, hasPassword, onDone, onCancel }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setError('');
+    try { onDone(await changeEmail(auth.currentUser, email, { password })); }
+    catch (err) { setError(friendlySecurityError(err)); }
+    finally { setBusy(false); }
+  };
+  return (
+    <form onSubmit={submit} className="space-y-3 rounded-2xl bg-gray-50 p-4 dark:bg-white/5" noValidate>
+      <div>
+        <label htmlFor="email-new" className={labelCls}>Novo e-mail</label>
+        <input id="email-new" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
+      </div>
+      {hasPassword && (
+        <div>
+          <label htmlFor="email-pw" className={labelCls}>Senha atual</label>
+          <input id="email-pw" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} />
+        </div>
+      )}
+      <p className="text-xs text-gray-600 dark:text-gray-400">
+        Vamos mandar um link para o novo e-mail. A troca só vale depois que você abrir o link; até lá, continue entrando com {user.email}.
+        {!hasPassword && ' Antes, vamos pedir para confirmar com o Google.'}
+      </p>
+      {error && <p role="alert" className="text-sm font-bold text-rose-700 dark:text-rose-400">{error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? 'Enviando…' : 'Enviar link'}</button>
+        <button type="button" onClick={onCancel} disabled={busy} className={btnGhost}>Cancelar</button>
+      </div>
+    </form>
+  );
+}
+
 // Conta e segurança: e-mail, formas de entrar (senha e Google) e redefinição por e-mail.
 export default function AccountSecurity({ user }) {
   const { confirm, dialog } = useConfirm();
   const [methods, setMethods] = useState(() => loginMethods(user));
   const [form, setForm] = useState(null);   // 'change' | 'create' | null
+  const [emailForm, setEmailForm] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const refresh = () => setMethods(loginMethods(auth.currentUser));
 
@@ -105,8 +145,17 @@ export default function AccountSecurity({ user }) {
             <p className="truncate text-sm text-gray-600 dark:text-gray-400">{user.email || 'Sem e-mail'}</p>
           </div>
         </div>
-        {user.emailVerified && <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Verificado</span>}
+        <div className="flex items-center gap-3">
+          {user.emailVerified && <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Verificado</span>}
+          {!emailForm && user.email && <button type="button" onClick={() => setEmailForm(true)} className={btnGhost}>Trocar e-mail</button>}
+        </div>
       </div>
+      {emailForm && <EmailForm user={user} hasPassword={methods.password} onCancel={() => setEmailForm(false)} onDone={(next) => { setEmailForm(false); setPendingEmail(next); toast.success('Pedido enviado. Confira a caixa de entrada do novo e-mail.'); }} />}
+      {pendingEmail && (
+        <p role="status" className="rounded-2xl bg-amber-500/15 p-3 text-sm text-amber-900 dark:text-amber-200">
+          Se <b>{pendingEmail}</b> não for usado por outra conta, ele recebe um link. Abra o link para concluir a troca e depois entre de novo com o novo e-mail.
+        </p>
+      )}
 
       <div className={rowCls}>
         <div className="flex min-w-0 items-center gap-3">

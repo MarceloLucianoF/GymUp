@@ -60,6 +60,11 @@ describe('buildActionQueue', () => {
     expect(q[2]).toMatchObject({ isNew: true, detail: 'Aluno novo sem ficha' });
     expect(q[3].detail).toBe('Recorde em Agachamento: 110 kg');
   });
+
+  it('quem já treina sem ficha do treinador não aparece como aluno novo', () => {
+    const q = buildActionQueue({ students: [{ uid: 'c', displayName: 'C', createdAt: new Date(2024, 5, 18).toISOString() }], lastWorkouts: { c: new Date(2024, 5, 19) }, checkIns: [], now: NOW });
+    expect(q[0]).toMatchObject({ type: 'nofile', detail: 'Treina por conta própria, sem ficha sua' });
+  });
   it('não sinaliza quem está em dia', () => {
     const q = buildActionQueue({ students, lastWorkouts, checkIns, now: NOW });
     expect(q.find((i) => i.student.uid === 'e')).toBeUndefined();

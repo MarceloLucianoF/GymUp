@@ -1,5 +1,5 @@
 import {
-  createChallenge, joinChallenge, leaveAllChallenges, leaveChallenge, listMyChallenges, newChallengeCode, syncMyScores
+  createChallenge, joinChallenge, leaveAllChallenges, leaveChallenge, listMyChallenges, newChallengeCode, syncMyScores, syncScoresAfterWorkout
 } from './challengeService';
 
 jest.mock('../firebase/config', () => ({ db: {} }));
@@ -145,4 +145,22 @@ test('exclusão de conta: sai dos desafios dos outros e apaga os próprios intei
     ['batch', ['delete:challenges/dele/members/u1', 'update:challenges/dele']]
   ]);
   expect(store.has('challenges/dele/members/u2')).toBe(true);
+});
+
+test('ao concluir o treino, sobe o placar só dos desafios em andamento', async () => {
+  const { deps, log } = makeDeps({
+    'challenges/c1': { name: 'Ativo', startDay: '2026-10-26', endDay: '2026-11-01', status: 'active' },
+    'challenges/c1/members/u1': { uid: 'u1', activeDays: 1, lastDay: '2026-10-27' },
+    'challenges/c2': { name: 'Encerrado', startDay: '2026-10-01', endDay: '2026-10-07', status: 'ended' },
+    'challenges/c2/members/u1': { uid: 'u1', activeDays: 3, lastDay: '2026-10-06' }
+  });
+  const day = (d) => ({ date: new Date(`${d}T12:00:00`).toISOString() });
+  const fetchCheckIns = jest.fn(async () => [day('2026-10-27'), day('2026-10-30')]);
+  expect(await syncScoresAfterWorkout('u1', fetchCheckIns, { deps, today: '2026-10-30' })).toBe(1);
+  expect(log.filter((l) => l[0] === 'update')).toEqual([['update', 'challenges/c1/members/u1', { activeDays: 2, lastDay: '2026-10-30', updatedAt: 'TS' }]]);
+  // sem desafio ativo não lê os check-ins
+  const empty = makeDeps();
+  const none = jest.fn();
+  expect(await syncScoresAfterWorkout('u1', none, { deps: empty.deps })).toBe(0);
+  expect(none).not.toHaveBeenCalled();
 });

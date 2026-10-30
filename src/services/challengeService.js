@@ -151,6 +151,17 @@ export async function syncMyScores(uid, challenges, checkIns, profile, { today =
   return out;
 }
 
+/**
+ * Depois de concluir um treino: atualiza o placar dos desafios em andamento sem precisar abrir a aba Desafios.
+ * Sem perfil, só o placar muda (nome e @ continuam sendo acompanhados quando a aba abre). Devolve quantos desafios foram vistos.
+ */
+export async function syncScoresAfterWorkout(uid, fetchCheckIns, { today = dayKey(new Date()), deps = realDeps } = {}) {
+  const active = (await listMyChallenges(uid, { deps })).filter((c) => c.status === 'active');
+  if (!active.length) return 0;
+  await syncMyScores(uid, active, await fetchCheckIns(uid), null, { today, deps });
+  return active.length;
+}
+
 export const scoreboard = (ch, uid) => rankMembers(ch?.members, uid);
 
 /** Exclusão de conta: sai de todos os desafios e apaga os que a pessoa criou. Retorna quantos documentos saíram. */

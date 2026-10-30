@@ -2,7 +2,7 @@
 // No app Android o Google vem da conta do celular (o popup é bloqueado dentro do app), como no login.
 import {
   EmailAuthProvider, GoogleAuthProvider, browserPopupRedirectResolver, linkWithCredential, linkWithPopup,
-  reauthenticateWithCredential, reauthenticateWithPopup, sendPasswordResetEmail, unlink, updatePassword
+  reauthenticateWithCredential, reauthenticateWithPopup, sendPasswordResetEmail, unlink, updatePassword, verifyBeforeUpdateEmail
 } from 'firebase/auth';
 import { isNativeApp, nativeGoogleCredential } from './nativeApp';
 
@@ -57,6 +57,26 @@ export async function disconnectGoogle(user) {
   return unlink(user, 'google.com');
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Troca de e-mail: confirma quem é (senha atual ou Google) e manda um link ao NOVO e-mail. A troca só acontece quando a pessoa
+ * abre o link (página /auth/action); até lá continua entrando com o e-mail atual. Depois, o perfil copia o novo no próximo login.
+ */
+export async function changeEmail(user, newEmail, { password } = {}) {
+  const next = String(newEmail || '').trim().toLowerCase();
+  if (!EMAIL_RE.test(next)) throw fail('app/invalid-email', 'Digite um e-mail válido.');
+  if (next === String(user?.email || '').toLowerCase()) throw fail('app/same-email', 'Esse já é o seu e-mail.');
+  if (loginMethods(user).password) {
+    if (!password) throw fail('app/missing-password', 'Informe a senha atual.');
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+  } else {
+    await googleCredentialOrPopup(user);
+  }
+  await verifyBeforeUpdateEmail(user, next, { url: `${window.location.origin}/login` });
+  return next;
+}
+
 export const sendResetLink = (auth, email) => sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
 
 export function friendlySecurityError(error) {
@@ -64,7 +84,9 @@ export function friendlySecurityError(error) {
   if (code.startsWith('app/')) return error.message;
   if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Senha atual incorreta.';
   if (code === 'auth/weak-password') return 'Senha fraca: use pelo menos 8 caracteres com letras e números.';
-  if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use') return 'Essa conta Google já está ligada a outro usuário do BohTreinar.';
+  if (code === 'auth/email-already-in-use') return 'Esse e-mail já é usado por outra conta.';
+  if (code === 'auth/invalid-email' || code === 'auth/invalid-new-email') return 'Digite um e-mail válido.';
+  if (code === 'auth/credential-already-in-use') return 'Essa conta Google já está ligada a outro usuário do BohTreinar.';
   if (code === 'auth/provider-already-linked') return 'O Google já está conectado.';
   if (code === 'auth/user-mismatch') return 'Escolha a mesma conta Google que você usa para entrar.';
   if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return 'Operação cancelada.';

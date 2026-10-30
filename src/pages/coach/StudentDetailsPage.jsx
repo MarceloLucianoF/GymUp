@@ -221,6 +221,9 @@ export default function StudentDetailsPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">Ficha atual</p>
                 <p className="truncate font-bold text-gray-900 dark:text-white">{student.currentTrainingId ? (currentTraining?.name || 'Ficha de outro autor') : 'Sem ficha ativa'}</p>
+                {!student.currentTrainingId && derived.workouts30 > 0 && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Treina com treinos próprios ({derived.workouts30} em 30 dias). Atribua uma ficha para acompanhar a carga de cada exercício.</p>
+                )}
               </div>
               <button type="button" onClick={() => setAssigning(true)} className={btnGhost}>{student.currentTrainingId ? 'Trocar' : 'Atribuir'}</button>
             </section>

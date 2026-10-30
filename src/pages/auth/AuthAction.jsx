@@ -55,7 +55,7 @@ export default function AuthAction() {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!oobCode || !['resetPassword', 'verifyEmail', 'recoverEmail'].includes(mode)) {
+      if (!oobCode || !['resetPassword', 'verifyEmail', 'recoverEmail', 'verifyAndChangeEmail'].includes(mode)) {
         setError('Link incompleto ou inválido. Peça um novo.'); setPhase('error'); return;
       }
       try {
@@ -103,7 +103,7 @@ export default function AuthAction() {
     );
   }
   if (phase === 'done') {
-    const text = mode === 'resetPassword' ? 'Senha alterada. Entre com a nova senha.' : mode === 'recoverEmail' ? 'E-mail restaurado.' : 'E-mail confirmado.';
+    const text = mode === 'resetPassword' ? 'Senha alterada. Entre com a nova senha.' : mode === 'recoverEmail' ? 'E-mail restaurado.' : mode === 'verifyAndChangeEmail' ? 'E-mail alterado. Entre de novo usando o novo e-mail.' : 'E-mail confirmado.';
     return (
       <Shell title="Tudo certo">
         <p role="status" className="text-center text-gray-700 dark:text-gray-300">{text}</p>
