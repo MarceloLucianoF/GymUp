@@ -12,14 +12,16 @@ const withTimeout = (promise, ms) => new Promise((resolve, reject) => {
   promise.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
 });
 
-export async function generateWeekPlan({ days = 3, goal = 'Hipertrofia', experience = 'iniciante', durationMinutes = 45, equipment = [], customExercises = [], includeCardio = false, includeStretch = false, onProgress, ai = aiService, timeoutMs = 35000 } = {}) {
+// `variety` ({ lists, frequent }): fichas recentes do aluno, para a semana nova não repetir a anterior. A experiência e os dias
+// entram no pedido à IA junto do guia de treino (aiTrainingGuide), que já vai em cada ficha pelo gerador.
+export async function generateWeekPlan({ days = 3, goal = 'Hipertrofia', experience = 'iniciante', durationMinutes = 45, equipment = [], customExercises = [], includeCardio = false, includeStretch = false, onProgress, ai = aiService, timeoutMs = 35000, variety = {} } = {}) {
   const split = chooseSplit(days, experience);
   const used = {};                      // foco -> nomes já usados em dias anteriores do mesmo foco
   const results = new Array(split.length).fill(null);
   let done = 0;
 
   const buildDay = async (item, index) => {
-    const base = { goal, muscleFocus: item.focus, durationMinutes, customExercises, equipment, excludeNames: [...(used[item.focus] || [])] };
+    const base = { goal, muscleFocus: item.focus, durationMinutes, customExercises, equipment, excludeNames: [...(used[item.focus] || [])], prefs: { experience, daysPerWeek: days }, variety };
     let workout = null; let error = null;
     try { workout = await withTimeout(ai.generateAIWorkout(base), timeoutMs); } catch (e) {
       if (e instanceof InsufficientExercisesError) error = e.message;

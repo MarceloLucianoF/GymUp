@@ -7,6 +7,7 @@ import { DAY_LABELS, MAX_DAYS, MAX_STRENGTH_DAYS, MIN_DAYS, saveDescription, sav
 import { describeEquipment } from '../../utils/equipment';
 import { prescriptionLabel } from '../../utils/exerciseKind';
 import { plural } from '../../utils/text';
+import { rememberGenerated, varietyContext } from '../../utils/aiVariety';
 
 const fieldLabel = 'mb-1.5 block text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400';
 const chip = (on) => `pressable min-h-[44px] min-w-[44px] rounded-2xl px-4 text-sm font-black transition ${on ? 'bg-gradient-to-r from-brand to-[#FF9800] text-black' : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100'}`;
@@ -35,8 +36,9 @@ export default function WeekPlanTab({ user, userProfile, customExercises = [], o
   const build = async () => {
     setBusy(true); setPlan(null); setText(null); setSaved({}); setProgress({ done: 0, total: days, label: '' });
     try {
-      const result = await generateWeekPlan({ days, goal, experience: userProfile?.experience, durationMinutes: minutes, equipment: userProfile?.gymEquipment, customExercises, includeCardio: cardio, includeStretch: stretch, onProgress: setProgress });
+      const result = await generateWeekPlan({ days, goal, experience: userProfile?.experience, durationMinutes: minutes, equipment: userProfile?.gymEquipment, customExercises, includeCardio: cardio, includeStretch: stretch, onProgress: setProgress, variety: varietyContext({ extraLists: plan ? plan.days.filter((d) => d.kind === 'strength' && d.workout).map((d) => d.workout.exercises) : [] }) });
       if (!result.days.some((d) => d.workout)) { toast.error(result.warnings[0] || 'Não consegui montar a semana com os seus equipamentos.'); setBusy(false); return; }
+      result.days.filter((d) => d.kind === 'strength' && d.workout).forEach((d) => rememberGenerated(d.workout));
       setPlan(result);
       setBusy(false);
       const t = await resolvePlanText(result);   // texto local na hora; a IA pode trocar em segundo plano

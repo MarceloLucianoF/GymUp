@@ -4,6 +4,8 @@ import { describeEquipment } from '../../utils/equipment';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Utensils, MessageSquare, CheckCircle2, ChevronRight, ChevronDown, RefreshCw, Zap, Trash2, CalendarDays } from 'lucide-react';
 import WeekPlanTab from './WeekPlanTab';
+import WorkoutCustomizer, { EMPTY_PREFS, emphasisOptions } from './WorkoutCustomizer';
+import { rememberGenerated, varietyContext } from '../../utils/aiVariety';
 import { aiService, InsufficientExercisesError, localFallbackText } from '../../services/aiService';
 import { modelLabel, failureMessage } from '../../services/aiMeta';
 import Markdown from '../common/Markdown';
@@ -60,6 +62,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
   const [generatedWorkout, setGeneratedWorkout] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [customPrefs, setCustomPrefs] = useState(EMPTY_PREFS); // etapa opcional "Personalizar"
 
   // Nutrition State
   const [nutritionData, setNutritionData] = useState(null);
@@ -130,6 +133,7 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
 
     let metaSeen = null;
     let workoutSeen = null;
+    let clarifySeen = null;
     const failMessage = (text, retry = true) => ({ id: `${Date.now()}-e`, sender: 'ai', text, retryText: retry ? userText : null });
     try {
       // Teto de espera: além dele o pedido é tratado como lento (a resposta tardia é descartada).
@@ -141,10 +145,13 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
           conversationHistory: messages,
           customExercises,
           signal: abortController.signal,
+          variety: varietyContext({ historyDocs }),
+          onClarify: (c) => { clarifySeen = c; },
           onMeta: (meta) => { metaSeen = meta; if (requestRef.current === requestId) setAiMeta(meta); },
           onWorkout: (workout) => {
             if (requestRef.current !== requestId) return;
             workoutSeen = workout;
+            rememberGenerated(workout);
             setGeneratedWorkout(workout);
             toast.success('Treino gerado! Salve em Meus treinos pelo botão na conversa.');
           }
@@ -157,7 +164,10 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
         setAiMeta({ provider: 'local', reason: 'lento' });
         setMessages(prev => [...prev, failMessage(localFallbackText(userProfile, 'lento'))]);
       } else {
-        setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText, workout: workoutSeen, retryText: metaSeen?.provider === 'local' && !workoutSeen ? userText : null }]);
+        // Pergunta de esclarecimento: a mensagem guarda o pedido original (junta com a resposta) e as opções em chips.
+        const clarify = clarifySeen ? { clarifyFor: clarifySeen.original, quickReplies: clarifySeen.options } : {};
+        const retry = metaSeen?.provider === 'local' && metaSeen?.reason !== 'regras' && !workoutSeen;
+        setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: responseText, workout: workoutSeen, retryText: retry ? userText : null, ...clarify }]);
       }
     } catch (err) {
       console.error(err);
@@ -188,13 +198,18 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
   const handleGenerateWorkout = async () => {
     setIsGenerating(true);
     try {
+      // Respostas do "Personalizar" (o que ficou em branco vem do perfil) e fichas recentes para não repetir a mesma lista.
+      const prefs = { ...customPrefs, experience: customPrefs.experience || userProfile?.experience || '', daysPerWeek: customPrefs.daysPerWeek || userProfile?.weeklyGoal || 0 };
       const workout = await aiService.generateAIWorkout({
         goal: selectedGoal,
         muscleFocus: selectedFocus,
         durationMinutes: selectedDuration,
         customExercises,
-        equipment: userProfile?.gymEquipment
+        equipment: userProfile?.gymEquipment,
+        prefs,
+        variety: varietyContext({ historyDocs, extraLists: generatedWorkout ? [generatedWorkout.exercises] : [] })
       });
+      rememberGenerated(workout);
       setGeneratedWorkout(workout);
       toast.success(workout.composition?.division ? `Treino gerado (${workout.composition.division}).` : 'Treino com IA gerado com sucesso!');
     } catch (error) {
@@ -298,6 +313,13 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                           </button>
                         </div>
                       )}
+                      {msg.quickReplies && msg.id === messages[messages.length - 1]?.id && (
+                        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Respostas rápidas">
+                          {msg.quickReplies.map((option) => (
+                            <button key={option} type="button" onClick={() => sendQuestion(option)} disabled={isTyping} className={`${chipCls} min-h-[44px] disabled:opacity-50`}>{option}</button>
+                          ))}
+                        </div>
+                      )}
                       {msg.retryText && (
                         <button type="button" onClick={() => sendQuestion(msg.retryText, { addUserMessage: false })} disabled={isTyping}
                           className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-[#FF9800] px-3 text-xs font-black text-black disabled:opacity-50">
@@ -389,14 +411,18 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-300">Equipamentos: <b>{describeEquipment(userProfile?.gymEquipment)}</b>. <a href="/profile" className="font-bold text-brand underline">Alterar no perfil</a></p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Equipamentos: <b>{describeEquipment(userProfile?.gymEquipment)}</b>. <a href="/profile" className="font-bold text-amber-800 underline dark:text-brand">Alterar no perfil</a></p>
 
                   <div>
                     <label htmlFor="gen-870" className={fieldLabel}>Foco muscular</label>
                     <div className="relative">
                     <select id="gen-870"
                       value={selectedFocus}
-                      onChange={e => setSelectedFocus(e.target.value)}
+                      onChange={e => {
+                        setSelectedFocus(e.target.value);
+                        // ênfase de outro grupo não vale para o foco novo
+                        if (customPrefs.emphasis && !emphasisOptions(e.target.value).some(([v]) => v === customPrefs.emphasis)) setCustomPrefs((p) => ({ ...p, emphasis: '' }));
+                      }}
                       className={selectCls}
                     >
                       <option value="Peito e Tríceps">Peito + Tríceps + Ombros</option>
@@ -430,6 +456,8 @@ export default function AICoachModal({ isOpen, onClose, userProfile, user, custo
                     </div>
                   </div>
                 </div>
+
+                <WorkoutCustomizer focus={selectedFocus} value={customPrefs} onChange={setCustomPrefs} defaultExperience={userProfile?.experience || ''} defaultDays={userProfile?.weeklyGoal || 0} />
 
                 <button
                   type="button"
