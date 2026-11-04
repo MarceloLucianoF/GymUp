@@ -4,6 +4,7 @@ import { useAuthContext } from '../../hooks/AuthContext';
 import { likesOnMyPosts, likesSeenAt } from '../../services/feedService';
 import { getSocialProfile } from '../../services/socialService';
 import { likeAlertText, newLikes } from '../../utils/feed';
+import { pushEnabled } from '../../services/pushService';
 
 const EVERY_MS = 15 * 60 * 1000;   // cada conferência lê os 5 posts mais novos e as curtidas deles
 const notifiedKey = (uid) => `bt_likes_notified:${uid}`;
@@ -25,13 +26,17 @@ export default function LikeAlerts() {
         const since = [likesSeenAt(uid), read(notifiedKey(uid))].sort().pop();
         const fresh = newLikes(await likesOnMyPosts(uid), since);
         if (!alive || !fresh.length) return;
-        write(notifiedKey(uid), fresh[0].at);
+
         const names = {};
         await Promise.all([...new Set(fresh.map((l) => l.likerId))].slice(0, 3).map(async (id) => {
           try { const p = await getSocialProfile(id); if (p?.displayName) names[id] = p.displayName; } catch (_) { /* sem permissão: "Um amigo" */ }
         }));
         const text = likeAlertText(fresh, names);
         const canNotify = typeof Notification !== 'undefined' && Notification.permission === 'granted' && 'serviceWorker' in navigator;
+        // Com os avisos do servidor (push) ligados, quem avisa com o app fechado é o servidor: aqui não repete a notificação
+        // e não marca como avisada (se o servidor segurou pelo limite, o aviso aparece na tela quando a pessoa voltar).
+        if (document.hidden && pushEnabled()) return;
+        write(notifiedKey(uid), fresh[0].at);
         if (document.hidden && canNotify) {
           const reg = await navigator.serviceWorker.ready;
           await reg.showNotification('Curtidas no BohTreinar', { body: text, tag: 'bt-likes', icon: '/icon-192.png', badge: '/icon-192.png', data: { url: '/amigos?aba=atividade' } });

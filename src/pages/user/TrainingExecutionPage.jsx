@@ -33,6 +33,7 @@ import WarmupStretchStep from '../../components/training/WarmupStretchStep';
 import { buildWarmupStretch, needsWarmupStep } from '../../utils/stretchWorkout';
 import { buildSwapped } from '../../utils/exerciseSwap';
 import { useWorkoutNotification, workoutNotifSupported } from '../../hooks/useWorkoutNotification';
+import { restAlertPlan } from '../../utils/restAlert';
 import { suggestNext } from '../../utils/progression';
 import { prescriptionLabel } from '../../utils/exerciseKind';
 import { stillSrc } from '../../utils/exerciseMedia';
@@ -555,10 +556,14 @@ export default function TrainingExecutionPage() {
     const restPushText = mediaEx ? { title: `Descanso acabou · ${mediaEx.name}`.slice(0, 80), body: `Série ${Math.min(mediaDone + 1, Math.max(1, parseInt(mediaEx.sets, 10) || 3))} de ${Math.max(1, parseInt(mediaEx.sets, 10) || 3)} · Meta ${prescriptionLabel(mediaEx)}` } : {};
     const restPushRef = useRef(restPushText);
     restPushRef.current = restPushText;
+    // restPushOk: o servidor confirmou o aviso deste descanso (só então o app deixa de avisar por conta própria).
+    const restPushOk = useRef(false);
     useEffect(() => {
+        restPushOk.current = false;
         if (!notifEnabled || nativeApp) return undefined;   // no app o próprio aparelho avisa (WorkoutTimer)
-        scheduleRestPush(restEndsAt, restPushRef.current);
-        return () => { if (restEndsAt) scheduleRestPush(null); };
+        let alive = true;
+        scheduleRestPush(restEndsAt, restPushRef.current).then((ok) => { if (alive) restPushOk.current = ok; });
+        return () => { alive = false; restPushOk.current = false; if (restEndsAt) scheduleRestPush(null); };
     }, [restEndsAt, notifEnabled, nativeApp]);
     // App Android: notificação nativa com o cronômetro do descanso correndo e botões que agem no treino.
     const nativeTitle = mediaEx ? `${mediaEx.name} · ${training?.name || 'Treino'}` : '';
@@ -737,7 +742,13 @@ export default function TrainingExecutionPage() {
                 <RestTimer 
                     endTime={restTimerObj.endTime}
                     duration={restTimerObj.duration} 
-                    onFinish={() => { setRestTimerObj(null); alertRestOver(); toast.success("Bora pra próxima!", { duration: 2000 }); }} 
+                    localAlert={() => restAlertPlan({ hidden: true, serverPush: restPushOk.current, workoutNotif: notifEnabled && notifPerm === 'granted' }).local}
+                    onFinish={() => {
+                        setRestTimerObj(null);
+                        const plan = restAlertPlan({ hidden: document.hidden, serverPush: restPushOk.current, workoutNotif: notifEnabled && notifPerm === 'granted' });
+                        if (plan.workoutAlert) alertRestOver();
+                        toast.success("Bora pra próxima!", { duration: 2000 });
+                    }} 
                     onClose={() => setRestTimerObj(null)} 
                     onAdjust={(ms) => setRestTimerObj(prev => prev ? ({ ...prev, endTime: prev.endTime + ms }) : null)}
                     onGoHome={goHome}

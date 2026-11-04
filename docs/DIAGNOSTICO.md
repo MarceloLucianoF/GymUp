@@ -964,3 +964,9 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
   - **C: Pernas Completo** (8): hack, afundo, extensora, mesa e cadeira flexora, hip thrust, panturrilha, crunch.
   - Prescrição por exercício (multiarticular 4×8-10 com 90-120 s; isolador 3×12-15 com 45-60 s). Antes: A peito+dorsal (3 de costas), B pernas+ombros, C braços+core.
 - Conferido no app (conta fictícia apagada): Home sugere "Treino A: Peito, Ombros e Tríceps"; Treino B com 9 exercícios e imagens.
+
+## Atualização — anti-spam das notificações (04/11/2026)
+- **Fim do descanso, um aviso só** (`src/utils/restAlert.js`): com a aba escondida podiam chegar três (push do servidor, notificação fixa do treino vibrando e o aviso local "Descanso concluído"). Agora: push do servidor quando ele **confirmou** o agendamento (`scheduleRestPush` devolve true só com `scheduled` do Worker e permissão concedida); senão a notificação do treino; senão o aviso local. Se o push falhar, os outros canais continuam valendo (nunca fica sem aviso).
+- **Curtidas e comentários:** limites por quem recebe (`SOCIAL_LIMITS` em `worker/src/push.js`): curtida 1 a cada 5 min e 4/h (antes 30 s e 20/h); comentário 1/min e 10/h; cotas separadas; 1 por pessoa e post. A vaga é conferida e reservada de forma exclusiva (`blockConcurrencyWhile`) antes do envio e devolvida se nada chegar (duas curtidas simultâneas não furam o limite). O aviso local de curtidas (`LikeAlerts`) não repete a notificação quando o push está ligado e não marca como avisada, para aparecer na tela ao voltar se o servidor segurou pelo limite.
+- **Demais avisos, já limitados:** volta ao treino (7 e 14 dias, reagenda a cada treino), lembrete do treinador (1 por aluno a cada 24 h), alerta da IA (2 falhas seguidas, no máximo 1 por dia).
+- Simulação (`worker/test/pushSpam.test.js`): post viral com 40 curtidas em 1 h gera no máximo 4 avisos; 15 comentários em 5 min geram no máximo 5.
