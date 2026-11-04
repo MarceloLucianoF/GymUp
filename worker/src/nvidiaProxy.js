@@ -6,19 +6,26 @@ const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 // Estar no catálogo NÃO garante que a chave consegue chamar o modelo (404): por isso existe o modo 'auto'.
 const AUTO = 'auto';
 const AUTO_ORDER = [
-  // Verificados em 13/10/2026 pelo próprio Worker: estes respondem. nemotron-3-super e gpt-oss-20b são modelos de RACIOCÍNIO
-  // (gastam parte de max_tokens pensando; com orçamento curto devolvem conteúdo vazio) e o Gemma-4 responde direto.
-  'nvidia/nemotron-3-super-120b-a12b',
-  'openai/gpt-oss-20b',
-  'google/gemma-4-31b-it',
-  // Trava até o prazo em alguns dias: por último.
-  'z-ai/glm-5.3-flash'
-  // Aposentados pela NVIDIA (HTTP 404 em 13/10/2026) e retirados daqui: llama-3.1-nemotron-70b/51b/ultra-253b, mistral-nemo-12b,
-  // gemma-3-12b, mistral-large-2 e nemotron-nano-3-30b. Eles gastavam as 8 tentativas e o Gemma-4 nunca era alcançado.
-  // Para conferir a lista, rode `node scripts/check-nvidia-models.mjs`.
+  // Medidos em 03/11/2026 pelo próprio Worker com a chave de produção (ficha curta em JSON e semana de 5 dias com 2200 tokens):
+  // nemotron-3.5-super-vl 3,7 s / 23 s (estável); mistral-large-4 10-13 s / 44 s; nemotron-3.5-lightning 5,8 s (curto; no longo estourou);
+  // nemotron-3.5-bolt 10-12 s / 52 s; gemma-4 17 s (curto).
+  'nvidia/nemotron-3.5-super-vl-120b-a12b',
+  'mistralai/mistral-large-4-1t-a52b',
+  'nvidia/nemotron-3.5-lightning-30b-a3b',
+  'nvidia/nemotron-3.5-bolt-e4b',
+  'google/gemma-4-31b-it'
+  // Fora da fila em 03/11/2026: nemotron-3-super-120b-a12b (HTTP 404, aposentado para a chave), gpt-oss-20b, glm-5.3-flash,
+  // deepseek-v4.1-flash, nemotron-3-ultra, step-5-preview e minimax-m3.1-flash (passam de 20 s num pedido curto);
+  // kimi-k2.6, gemma-3-12b, mistral-7b e phi-3.5-moe (HTTP 404). Para medir de novo: ~/bohtreinar-ops/ai_check.cjs.
 ];
 const DEFAULT_MODEL = AUTO;
-const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER]);
+// Candidatos aceitos só quando pedidos pelo nome (fora da fila 'auto'): permitem medir um modelo novo com a chave do Worker
+// antes de promovê-lo à fila. Ver scripts/check-nvidia-models.mjs e ~/bohtreinar-ops/ai_check.cjs.
+const PROBE_MODELS = [
+  'openai/gpt-oss-20b', 'z-ai/glm-5.3-flash', 'deepseek-ai/deepseek-v4.1-flash', 'meta/muse-glimmer-30b',
+  'stepfun-ai/step-5-preview', 'minimaxai/minimax-m3.1-flash'
+];
+const ALLOWED_MODELS = new Set([AUTO, ...AUTO_ORDER, ...PROBE_MODELS]);
 // Status que significam "este modelo não serve para esta chave": tenta o próximo.
 const SKIP_STATUS = new Set([400, 404, 410, 422]);
 const MAX_ATTEMPTS = 8;

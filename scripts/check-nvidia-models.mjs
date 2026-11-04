@@ -3,7 +3,9 @@
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../worker/src/nvidiaProxy.js', import.meta.url), 'utf8');
-const block = source.slice(source.indexOf('const DEFAULT_MODEL'), source.indexOf(']);', source.indexOf('const ALLOWED_MODELS')));
+// Fila do modo 'auto' e candidatos de teste (as duas listas do proxy).
+const listOf = (name) => { const i = source.indexOf(`const ${name} = [`); return i < 0 ? '' : source.slice(i, source.indexOf('];', i)); };
+const block = listOf('AUTO_ORDER') + listOf('PROBE_MODELS');
 const wanted = [...block.matchAll(/'([^']+\/[^']+)'/g)].map((m) => m[1]);
 const unique = [...new Set(wanted)];
 
