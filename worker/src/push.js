@@ -10,6 +10,7 @@
 //   POST   /api/push/nudge         { studentId, days }    o treinador vinculado lembra o aluno (conferido no Firestore, 1 a cada 24 h)
 // O alarme do Durable Object é um só: descanso e lembrete de inatividade são combinados e ele aponta para o mais próximo (rearm).
 import { verifyFirebaseIdToken } from '../../shared/firebaseAuth.js';
+import { ackHealth, recordHealth } from './aiMonitor.js';
 import { sendPush, validEndpoint, validKeys, vapidPublicKey } from './webPush.js';
 import { sendFcm, serviceAccountOf } from './fcm.js';
 
@@ -232,6 +233,13 @@ export class PushBox {
       const previous = (await this.state.storage.get('owner')) || null;
       await this.state.storage.put('owner', data.uid);
       return json(200, { previous });
+    }
+    // Monitor da IA (DO 'sys:ai-health'): histórico das verificações e decisão de alerta (ver aiMonitor.js).
+    if (op === 'health') return json(200, await recordHealth(this.state.storage, data));
+    if (op === 'health-ack') return json(200, await ackHealth(this.state.storage, data));
+    if (op === 'health-read') {
+      const st = this.state.storage;
+      return json(200, { state: (await st.get('state')) || 'ok', fails: (await st.get('fails')) || 0, lastAlertAt: (await st.get('lastAlertAt')) || null, history: (await st.get('history')) || [] });
     }
     if (op === 'test') {
       const subs = await this.subs();

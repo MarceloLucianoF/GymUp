@@ -1,5 +1,6 @@
 import { handleNvidiaRequest } from './nvidiaProxy.js';
 import { handlePushRequest, PushBox } from './push.js';
+import { handleAiHealth, monitorAi } from './aiMonitor.js';
 
 export { PushBox };
 
@@ -16,6 +17,7 @@ export default {
 
     if (pathname === '/api/nvidia') return handleNvidiaRequest(request, env);
     if (pathname.startsWith('/api/push/')) return handlePushRequest(request, env);
+    if (pathname === '/api/ai-health') return handleAiHealth(request, env);
     if (pathname.startsWith('/api/')) return new Response('Not found', { status: 404 });
 
     // Demais rotas: app estático (SPA) servido pelo binding de assets.
@@ -24,5 +26,10 @@ export default {
     Object.entries(SECURITY_HEADERS).forEach(([key, value]) => headers.set(key, value));
     if (pathname.startsWith('/static/')) headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  },
+
+  // Cron (wrangler.jsonc > triggers): verificação da IA a cada 6 h, com alerta por push aos administradores.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(monitorAi(env).catch((e) => console.error('Monitor da IA falhou:', e?.message || e)));
   }
 };

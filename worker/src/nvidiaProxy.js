@@ -35,10 +35,15 @@ const MAX_TOKENS_CAP = 2400;
 const TOTAL_TIMEOUT_MS = 42_000;
 // Respostas longas (importar uma ficha inteira de PDF, semana pela IA) levam mais de 40 s: prazo maior só para elas.
 const LONG_TOKENS = 2000;
-const LONG_ATTEMPT_TIMEOUT_MS = 55_000;
+// 40 s por tentativa: o primeiro da fila responde a semana inteira em ~23 s, e um travado deixa tempo para o segundo.
+const LONG_ATTEMPT_TIMEOUT_MS = 40_000;
 const LONG_TOTAL_TIMEOUT_MS = 85_000;
-let lastWorkingModel = null;
-export const resetModelCache = () => { lastWorkingModel = null; };
+// A ordem da fila é a medida (o mais rápido primeiro) e não muda com o uso. Modelo que estoura o prazo fica 10 min no fim
+// da fila (nesta instância do Worker), para os próximos pedidos não perderem tempo com ele.
+const SLOW_PENALTY_MS = 10 * 60 * 1000;
+const slowUntil = new Map();
+export const resetModelCache = () => { slowUntil.clear(); };
+const isSlow = (m, now = Date.now()) => (slowUntil.get(m) || 0) > now;
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant']);
 const ALLOWED_BODY_FIELDS = new Set(['messages', 'model', 'temperature', 'max_tokens']);
 const MAX_BODY_BYTES = 64 * 1024;
@@ -144,7 +149,10 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
   if (!env.NVIDIA_API_KEY) return json(503, { error: 'Serviço de IA indisponível.' }, cors);
 
   const candidates = model === AUTO
-    ? [...new Set([ALLOWED_MODELS.has(env.NVIDIA_MODEL) && env.NVIDIA_MODEL !== AUTO ? env.NVIDIA_MODEL : null, lastWorkingModel, ...AUTO_ORDER].filter(Boolean))].slice(0, MAX_ATTEMPTS)
+    ? (() => {
+      const queue = [...new Set([ALLOWED_MODELS.has(env.NVIDIA_MODEL) && env.NVIDIA_MODEL !== AUTO ? env.NVIDIA_MODEL : null, ...AUTO_ORDER].filter(Boolean))];
+      return [...queue.filter((m) => !isSlow(m)), ...queue.filter((m) => isSlow(m))].slice(0, MAX_ATTEMPTS);
+    })()
     : [model];
 
   // Cada modelo tem um prazo próprio: um modelo travado não consome o tempo todo e o modo 'auto' passa ao próximo.
@@ -162,16 +170,19 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), Math.min(attemptMs, remaining));
       try {
+        const attemptStart = Date.now();
         const upstream = await fetchImpl(NVIDIA_API_URL, {
           method: 'POST',
           headers: { Authorization: `Bearer ${env.NVIDIA_API_KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' },
           signal: controller.signal,
           body: JSON.stringify({ model: candidate, messages, temperature, max_tokens: budgets.get(candidate) || maxTokens })
         });
+        // Registro de cada chamada (modelo, status, tempo) para acompanhar a latência: `wrangler tail --format json | grep nvidia_call`.
+        console.log(JSON.stringify({ event: 'nvidia_call', model: candidate, status: upstream.status, ms: Date.now() - attemptStart, long }));
         if (!upstream.ok) {
           lastStatus = upstream.status;
           console.warn(`NVIDIA recusou: HTTP ${upstream.status} (modelo ${candidate})`);
-          if (SKIP_STATUS.has(upstream.status) && model === AUTO) continue; // modelo indisponível para esta chave
+          if (SKIP_STATUS.has(upstream.status) && model === AUTO) { slowUntil.set(candidate, Date.now() + SLOW_PENALTY_MS); continue; } // indisponível para esta chave
           break; // 401/403/429/5xx: trocar de modelo não resolve
         }
         const data = await upstream.json();
@@ -187,13 +198,13 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
           if (model === AUTO) continue; // sem texto final: tenta o próximo
           return json(502, { error: 'Resposta inválida do provedor de IA.' }, cors);
         }
-        lastWorkingModel = candidate;
         return json(200, { model: candidate, choices: [{ message: { role: 'assistant', content: content.trim() } }] }, cors);
       } catch (error) {
         if (error?.name !== 'AbortError') throw error;
         console.warn(`NVIDIA sem resposta no prazo (modelo ${candidate})`);
+        console.log(JSON.stringify({ event: 'nvidia_call', model: candidate, status: 504, ms: Math.min(attemptMs, remaining), long, timeout: true }));
         lastStatus = 504;
-        if (lastWorkingModel === candidate) lastWorkingModel = null; // o modelo lembrado travou: não insistir nele
+        slowUntil.set(candidate, Date.now() + SLOW_PENALTY_MS); // travou: vai para o fim da fila por 10 min
         if (model !== AUTO) return json(504, { error: 'Tempo limite do provedor de IA excedido.' }, cors);
       } finally {
         clearTimeout(timer);
