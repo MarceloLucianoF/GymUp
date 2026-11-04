@@ -45,6 +45,16 @@ const slowUntil = new Map();
 export const resetModelCache = () => { slowUntil.clear(); };
 const isSlow = (m, now = Date.now()) => (slowUntil.get(m) || 0) > now;
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant']);
+
+// Modelos Nemotron são de raciocínio: sem "/no_think" gastam o orçamento pensando e devolvem o texto final vazio em pedidos
+// longos (medido em 03/11/2026: semana de 5 dias vazia em 23 s sem a diretiva; completa em 10-12 s com ela).
+export function withoutThinking(model, messages) {
+  if (!/^nvidia\/nemotron/.test(model)) return messages;
+  const i = messages.findIndex((m) => m.role === 'system');
+  if (i < 0) return [{ role: 'system', content: '/no_think' }, ...messages];
+  if (/\/no_think\b/.test(messages[i].content)) return messages;
+  return messages.map((m, k) => (k === i ? { ...m, content: `/no_think\n${m.content}` } : m));
+}
 const ALLOWED_BODY_FIELDS = new Set(['messages', 'model', 'temperature', 'max_tokens']);
 const MAX_BODY_BYTES = 64 * 1024;
 const RATE_LIMIT = { windowMs: 60_000, max: 20, maxEntries: 5000 };
@@ -175,7 +185,7 @@ export async function handleNvidiaRequest(request, env, deps = {}) {
           method: 'POST',
           headers: { Authorization: `Bearer ${env.NVIDIA_API_KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' },
           signal: controller.signal,
-          body: JSON.stringify({ model: candidate, messages, temperature, max_tokens: budgets.get(candidate) || maxTokens })
+          body: JSON.stringify({ model: candidate, messages: withoutThinking(candidate, messages), temperature, max_tokens: budgets.get(candidate) || maxTokens })
         });
         // Registro de cada chamada (modelo, status, tempo) para acompanhar a latência: `wrangler tail --format json | grep nvidia_call`.
         console.log(JSON.stringify({ event: 'nvidia_call', model: candidate, status: upstream.status, ms: Date.now() - attemptStart, long }));

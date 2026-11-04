@@ -111,7 +111,7 @@ test('normalizeMessages limita tamanho e quantidade', () => {
 });
 
 // ---- modo 'auto': escolhe o primeiro modelo que a chave consegue chamar ----
-import { resetModelCache } from '../src/nvidiaProxy.js';
+import { resetModelCache, withoutThinking } from '../src/nvidiaProxy.js';
 
 const okBody = (text = 'ok') => new Response(JSON.stringify({ choices: [{ message: { content: text } }] }), { status: 200 });
 const statusOf = (code) => new Response('detalhe interno', { status: code });
@@ -307,4 +307,18 @@ test('lista enxuta: modelos aposentados não são aceitos e nenhuma tentativa em
   assert.deepEqual(tried, ['nvidia/nemotron-3.5-super-vl-120b-a12b', 'mistralai/mistral-large-4-1t-a52b', 'nvidia/nemotron-3.5-lightning-30b-a3b', 'nvidia/nemotron-3.5-bolt-e4b', 'google/gemma-4-31b-it']);
   const retired = await handleNvidiaRequest(request({ ...valid, model: 'nvidia/nemotron-3-super-120b-a12b' }), env, { verify: okVerify, fetchImpl: async () => okBody() });
   assert.equal(retired.status, 400);
+});
+
+test('nemotron: o proxy desliga o raciocínio (/no_think) sem mexer nos outros modelos', async () => {
+  const user = [{ role: 'user', content: 'oi' }];
+  assert.deepEqual(withoutThinking('nvidia/nemotron-3.5-super-vl-120b-a12b', user), [{ role: 'system', content: '/no_think' }, ...user]);
+  const sys = [{ role: 'system', content: 'Seja breve.' }, ...user];
+  assert.equal(withoutThinking('nvidia/nemotron-3.5-bolt-e4b', sys)[0].content, '/no_think\nSeja breve.');
+  assert.equal(withoutThinking('nvidia/nemotron-3.5-bolt-e4b', [{ role: 'system', content: '/no_think\nx' }, ...user])[0].content, '/no_think\nx');
+  assert.deepEqual(withoutThinking('mistralai/mistral-large-4-1t-a52b', sys), sys);
+  resetRateLimit(); resetModelCache();
+  let sent;
+  await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async (u, init) => { sent = JSON.parse(init.body); return okBody(); } });
+  assert.equal(sent.model, 'nvidia/nemotron-3.5-super-vl-120b-a12b');
+  assert.match(sent.messages[0].content, /^\/no_think/);
 });
