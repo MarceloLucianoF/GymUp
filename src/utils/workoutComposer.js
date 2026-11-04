@@ -1,6 +1,7 @@
 import { equipmentOf } from './equipment';
 import { catalogKey } from './exerciseCatalog';
 import { defaultsForKind, exerciseKind } from './exerciseKind';
+import { guideReasons, matchesTerm, pickBySlots, subOf, termsOf } from './exerciseSlots';
 // Composição de fichas por IA com a biblioteca como fonte de verdade.
 // Fluxo: pedido -> foco (spec) -> filtro determinístico da biblioteca -> candidatos enviados à IA (só metadados necessários)
 // -> resposta validada por ID e por composição -> se falhar, montagem determinística (a ficha é válida mesmo sem IA).
@@ -167,6 +168,12 @@ export function parseRequest(text) {
     const legacy = { peito: 'Peito e Tríceps', costas: 'Costas e Bíceps', ombros: 'Ombros e ABS', core: 'Ombros e ABS' }[others[0]];
     return legacy ? { parts: [{ group: 'legacy', legacy }], mixed: false, label: legacy } : specOf([{ group: others[0] }]);
   }
+  // Os pares clássicos ("costas e bíceps", "peito e tríceps", "ombros e abdômen") são o dia de grupo grande do guia, não meio a meio.
+  const pair = others.join('+');
+  const classic = (pair === 'costas+bracos' && /biceps/.test(t) && !/triceps/.test(t) && 'Costas e Bíceps')
+    || (pair === 'peito+bracos' && /triceps/.test(t) && !/biceps/.test(t) && 'Peito e Tríceps')
+    || (pair === 'ombros+core' && 'Ombros e ABS');
+  if (classic) return { parts: [{ group: 'legacy', legacy: classic }], mixed: false, label: classic };
   if (others.length > 1) return specOf(others.map((g) => ({ group: g })));
   return null;
 }
@@ -214,9 +221,13 @@ function pickLegs(focus, pool, count) {
   return picked.slice(0, count);
 }
 
-function pickGroup(part, pool, count, pickLegacy) {
+// Peito, costas e ombros seguem as vagas do guia (puxada + remadas + isolador; reto + inclinado + crucifixo...).
+const SLOT_GROUPS = ['peito', 'costas', 'ombros'];
+
+function pickGroup(part, pool, count, pickLegacy, prefs = {}) {
   if (part.group === 'pernas') return pickLegs(part.focus, pool, count);
-  if (part.group === 'legacy') return pickLegacy(part.legacy, pool, count);
+  if (part.group === 'legacy') return pickLegacy(part.legacy, pool, count, prefs);
+  if (SLOT_GROUPS.includes(part.group)) return pickBySlots(pool.filter((e) => e.primaryGroup === part.group), part.group, count, { emphasis: prefs.emphasis });
   const list = pool.filter((e) => e.primaryGroup === part.group).sort(byCompoundFirst);
   const picked = [];
   const used = new Map();
@@ -253,11 +264,68 @@ export function withOwn(picks, lib, max = 2) {
   return out;
 }
 
+/**
+ * "Incluir" do Personalizar: até 2 exercícios da biblioteca cujo nome tem o termo pedido entram no lugar do último do MESMO grupo
+ * (a divisão não muda). Termo de outro grupo ou sem correspondência é ignorado.
+ */
+export function withIncluded(picks, lib, includeText, max = 2) {
+  const terms = termsOf(includeText);
+  if (!terms.length) return picks;
+  const out = [...picks];
+  let added = 0;
+  for (const term of terms) {
+    if (added >= max) break;
+    if (out.some((p) => matchesTerm(p.name, [term]))) continue;
+    const want = (lib || []).find((e) => matchesTerm(e.name, [term]) && !out.includes(e));
+    if (!want) continue;
+    let idx = -1;
+    for (let i = out.length - 1; i >= 0; i -= 1) {
+      if (out[i].primaryGroup === want.primaryGroup && !matchesTerm(out[i].name, terms) && !out[i].ref?.mine) { idx = i; break; }
+    }
+    if (idx >= 0) { out[idx] = want; added += 1; }
+  }
+  return out;
+}
+
+// Mesma "vaga" para trocar por equivalente: região do peito/costas/ombro ou subgrupo (quadríceps, bíceps...).
+const slotKey = (e) => `${e.primaryGroup}:${SLOT_GROUPS.includes(e.primaryGroup) ? subOf(e.primaryGroup, e.name) : e.primarySub}`;
+const sameList = (picks, names) => {
+  const a = new Set(picks.map((e) => catalogKey(e.name)));
+  const b = new Set((names || []).map(catalogKey));
+  return a.size === b.size && [...a].every((k) => b.has(k));
+};
+
+/**
+ * Variedade: se a ficha sair com exatamente a mesma lista de uma ficha recente (`recentLists`: listas de nomes), troca 1-2 exercícios
+ * (2 quando a ficha tem 6 ou mais) por equivalentes da biblioteca da mesma vaga, tentando outras combinações até não repetir.
+ * Sem equivalente disponível, devolve a ficha como está.
+ */
+export function avoidExactRepeat(picks, lib, recentLists = []) {
+  const lists = (recentLists || []).filter((l) => Array.isArray(l) && l.length);
+  if (!lists.length || !lists.some((l) => sameList(picks, l))) return picks;
+  const swaps = picks.length >= 6 ? 2 : 1;
+  // do fim para o começo: preserva os multiarticulares principais e troca acessórios primeiro
+  const order = picks.map((_, i) => picks.length - 1 - i).filter((i) => !picks[i].ref?.mine);
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const out = [...picks];
+    let done = 0;
+    for (const i of order) {
+      if (done >= swaps) break;
+      const alts = (lib || []).filter((e) => slotKey(e) === slotKey(picks[i]) && !out.includes(e) && !picks.includes(e));
+      const alt = alts[(attempt + done) % (alts.length || 1)];
+      if (alt) { out[i] = alt; done += 1; }
+    }
+    if (done && !lists.some((l) => sameList(out, l))) return out;
+  }
+  return picks;
+}
+
 export function composeDeterministic(spec, lib, total) {
   const counts = allocate(spec, total);
+  const prefs = spec.prefs || {};
   const picks = [];
-  spec.parts.forEach((part, i) => { pickGroup(part, lib, counts[i], legacyPicker).forEach((e) => { if (!picks.includes(e)) picks.push(e); }); });
-  return withOwn(picks, lib);
+  spec.parts.forEach((part, i) => { pickGroup(part, lib, counts[i], legacyPicker, prefs).forEach((e) => { if (!picks.includes(e)) picks.push(e); }); });
+  return withIncluded(withOwn(picks, lib), lib, prefs.include);
 }
 
 /** Candidatos enviados à IA: só o que serve ao foco (nunca a biblioteca inteira). */
@@ -266,8 +334,8 @@ export function candidatesFor(spec, lib, cap = 24) {
   const add = (e) => { if (!out.includes(e)) out.push(e); };
   spec.parts.forEach((part) => {
     if (part.group === 'pernas') pickLegs(part.focus, lib, 40).forEach(add);
-    else if (part.group === 'legacy') legacyPicker(part.legacy, lib, 24).forEach(add);
-    else pickGroup(part, lib, 12, legacyPicker).forEach(add);
+    else if (part.group === 'legacy') legacyPicker(part.legacy, lib, 24, spec.prefs || {}).forEach(add);
+    else pickGroup(part, lib, 12, legacyPicker, spec.prefs || {}).forEach(add);
   });
   return out.slice(0, cap);
 }
@@ -343,12 +411,20 @@ function extractJson(text) {
   try { return JSON.parse(s.slice(start, end + 1)); } catch (e) { return null; }
 }
 
-export function buildPrompt({ spec, counts, goal, durationMinutes, catalog, references = [] }) {
-  const split = spec.parts.map((p, i) => `${counts[i]} de ${p.group === 'pernas' ? `pernas (${LEG_FOCUS_LABEL[p.focus]})` : (GROUP_LABEL[p.group] || p.legacy)}`).join(' e ');
+/** Distribuição por grupo da montagem local ("6 de costas e 2 de braços"): é o que a IA precisa respeitar nos focos antigos. */
+const splitFromPicks = (picks) => {
+  const counts = {};
+  picks.forEach((e) => { counts[e.primaryGroup] = (counts[e.primaryGroup] || 0) + 1; });
+  return Object.entries(counts).map(([g, n]) => `${n} de ${GROUP_LABEL[g] || g}`).join(' e ');
+};
+
+export function buildPrompt({ spec, counts, goal, durationMinutes, catalog, references = [], split: splitOverride, extra = [] }) {
+  const split = splitOverride || spec.parts.map((p, i) => `${counts[i]} de ${p.group === 'pernas' ? `pernas (${LEG_FOCUS_LABEL[p.focus]})` : (GROUP_LABEL[p.group] || p.legacy)}`).join(' e ');
   return `Monte uma ficha de treino em português. Objetivo: ${goal}. Duração: ${durationMinutes} min. Foco obrigatório: ${spec.label}. Distribuição: ${split}.\n`
     + 'Escolha SOMENTE pelo campo "id" dos candidatos abaixo; nunca invente exercícios nem use outros grupos musculares.\n'
     + `Candidatos: ${JSON.stringify(catalog)}\n`
     + (references.length ? `Modelos oficiais de referência (apenas para inspirar a ordem): ${JSON.stringify(references)}\n` : '')
+    + extra.filter(Boolean).map((line) => `${line}\n`).join('')
     + 'Responda só com JSON: {"name":"...","description":"curta, sem emojis","exercises":[{"id":"...","sets":3,"reps":"8-12","rest":60}]}.';
 }
 
@@ -360,7 +436,7 @@ function prepare({ spec, library, total, goal }) {
   if (candidates.length < need) {
     throw new InsufficientExercisesError(`A biblioteca tem poucos exercícios para ${spec.label} (${candidates.length}). Cadastre mais exercícios desse grupo para gerar a ficha.`);
   }
-  const det = composeDeterministic(spec, lib, total);
+  const det = avoidExactRepeat(composeDeterministic(spec, lib, total), lib, spec.prefs?.recentLists);
   const expected = {};
   det.forEach((e) => { expected[e.primaryGroup] = (expected[e.primaryGroup] || 0) + 1; });
   const base = defaultsForGoal(goal);
@@ -376,7 +452,8 @@ function prepare({ spec, library, total, goal }) {
       return { ...e, kind, sets: String(e.ref?.sets > 0 ? e.ref.sets : own.sets), reps: String(refReps > 0 ? refReps : own.reps), rest: kind === 'cardio' ? 0 : (e.ref?.rest ?? own.rest) };
     })
   });
-  return { lib, counts, candidates, need, det, expected, base, finish };
+  const split = spec.parts.some((p) => p.group === 'legacy') ? splitFromPicks(det) : null;
+  return { lib, counts, candidates, need, det, expected, base, finish, split };
 }
 
 /** Montagem sem IA (síncrona): é a ficha de reserva e sempre respeita o foco e a biblioteca. */
@@ -389,12 +466,12 @@ export function composeLocalPlan({ spec, library, total, goal }) {
  * Gera a ficha. `askModel(prompt)` devolve texto/JSON da IA (ou lança erro). Qualquer falha (IA fora do ar, ID inventado, grupo errado)
  * cai na montagem determinística: o resultado é sempre válido e só usa exercícios da biblioteca.
  */
-export async function generatePlan({ spec, library, total, goal, durationMinutes, askModel, references = [] }) {
-  const { lib, counts, candidates, need, det, expected, base, finish } = prepare({ spec, library, total, goal });
+export async function generatePlan({ spec, library, total, goal, durationMinutes, askModel, references = [], extraPrompt = [] }) {
+  const { lib, counts, candidates, need, det, expected, base, finish, split } = prepare({ spec, library, total, goal });
 
   if (typeof askModel === 'function') {
     try {
-      const raw = await askModel(buildPrompt({ spec, counts, goal, durationMinutes, catalog: catalogPayload(candidates), references }));
+      const raw = await askModel(buildPrompt({ spec, counts, goal, durationMinutes, catalog: catalogPayload(candidates), references, split, extra: extraPrompt }));
       const plan = extractJson(raw);
       const byId = new Map(candidates.map((c) => [c.id, c]));
       const seen = new Set();
@@ -404,10 +481,12 @@ export async function generatePlan({ spec, library, total, goal, durationMinutes
         seen.add(base2.id);
         return { ...base2, sets: Math.min(6, Math.max(1, Number(item.sets) || base.sets)), reps: String(item.reps || base.reps).slice(0, 20), rest: Math.min(300, Math.max(20, Number(item.rest) || base.rest)) };
       }).filter(Boolean).slice(0, total);
-      const ownPicks = withOwn(aiPicks, lib);
+      // A IA também precisa cumprir o guia (mínimos de peito/costas) e não pode devolver a mesma lista de uma ficha recente.
+      const ownPicks = avoidExactRepeat(withIncluded(withOwn(aiPicks, lib), lib, spec.prefs?.include), lib, spec.prefs?.recentLists);
       const check = checkComposition(ownPicks, spec, total, expected);
-      if (ownPicks.length >= need && check.ok) return finish(ownPicks, 'ia', { name: plan.name, description: plan.description });
-      return finish(det, 'local', { reason: 'ia_invalida', reasons: check.reasons });
+      const reasons = [...check.reasons, ...guideReasons(ownPicks, det)];
+      if (ownPicks.length >= need && !reasons.length) return finish(ownPicks, 'ia', { name: plan.name, description: plan.description });
+      return finish(det, 'local', { reason: 'ia_invalida', reasons });
     } catch (e) {
       return finish(det, 'local', { reason: 'ia_indisponivel' });
     }
