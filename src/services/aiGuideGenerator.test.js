@@ -11,22 +11,25 @@ const group = (w, g) => w.exercises.filter((e) => canonicalGroup(e.muscleGroup) 
 const subsOf = (w, g) => group(w, g).map((e) => subOf(g, e.name));
 const n = (arr, v) => arr.filter((x) => x === v).length;
 
-test('hipertrofia, costas e bíceps em 60 min: 6 de costas + 2 de bíceps, com puxada, remadas e isolador', () => {
+test('hipertrofia, costas e bíceps em 60 min: 7 de costas + 2 de bíceps, com puxada, remadas e isolador', () => {
   const w = aiService.generateLocalWorkout({ goal: 'Hipertrofia', muscleFocus: 'Costas e Bíceps', durationMinutes: 60 });
-  expect(w.exercises).toHaveLength(8);
-  expect(group(w, 'costas')).toHaveLength(6);
+  expect(w.exercises).toHaveLength(9);
+  expect(group(w, 'costas')).toHaveLength(7);
   expect(group(w, 'bracos')).toHaveLength(2);
   const s = subsOf(w, 'costas');
   expect(n(s, 'vertical')).toBeGreaterThanOrEqual(1);
   expect(n(s, 'remada')).toBeGreaterThanOrEqual(2);
   expect(n(s, 'isolador')).toBeGreaterThanOrEqual(1);
   expect(group(w, 'peito')).toHaveLength(0);   // nunca peito + costas no mesmo dia
+  // prescrição de hipertrofia: multiarticular 4×8-10 (90 s), isolador 3×12-15 (60 s)
+  expect(w.exercises.find((e) => /Puxada Aberta/.test(e.name))).toMatchObject({ sets: '4', reps: '8-10', rest: 90 });
+  expect(w.exercises.find((e) => /Rosca/.test(e.name))).toMatchObject({ sets: '3', reps: '12-15', rest: 60 });
 });
 
-test('peito e tríceps em 60 min: 5 de peito (inclinado, reto e crucifixo), 2 de tríceps e 1 de ombro', () => {
+test('peito e tríceps em 60 min: 6 de peito (inclinado, reto e crucifixo), 2 de tríceps e 1 de ombro', () => {
   const w = aiService.generateLocalWorkout({ goal: 'Hipertrofia', muscleFocus: 'Peito e Tríceps', durationMinutes: 60 });
-  expect(w.exercises).toHaveLength(8);
-  expect(group(w, 'peito')).toHaveLength(5);
+  expect(w.exercises).toHaveLength(9);
+  expect(group(w, 'peito')).toHaveLength(6);
   expect(group(w, 'bracos')).toHaveLength(2);
   expect(group(w, 'ombros')).toHaveLength(1);
   ['superior', 'medio', 'isolador'].forEach((sub) => expect(subsOf(w, 'peito')).toContain(sub));
@@ -41,8 +44,8 @@ test('pares clássicos escritos no pedido viram o dia de grupo grande; peito + c
 
 test('tamanho da sessão: iniciante até 6, pedido explícito manda, outros objetivos seguem a duração', () => {
   const back = parseRequest('treino de costas');
-  expect(sessionSize({ goal: 'Hipertrofia', durationMinutes: 60, spec: back })).toBe(8);
-  expect(sessionSize({ goal: 'Hipertrofia', durationMinutes: 45, spec: back })).toBe(7);
+  expect(sessionSize({ goal: 'Hipertrofia', durationMinutes: 60, spec: back })).toBe(9);
+  expect(sessionSize({ goal: 'Hipertrofia', durationMinutes: 45, spec: back })).toBe(8);
   expect(sessionSize({ goal: 'Hipertrofia', durationMinutes: 60, spec: back, experience: 'iniciante' })).toBe(6);
   expect(sessionSize({ goal: 'Hipertrofia', durationMinutes: 30, spec: back, count: 9 })).toBe(9);
   expect(sessionSize({ goal: 'Emagrecimento', durationMinutes: 60, spec: back })).toBe(6);
@@ -59,7 +62,7 @@ test('personalizar: ênfase, evitar e incluir entram na ficha local', () => {
 
   const withPullover = aiService.generateLocalWorkout({ goal: 'Hipertrofia', muscleFocus: 'Costas e Bíceps', durationMinutes: 45, prefs: { include: 'remada invertida' } });
   expect(withPullover.exercises.map((e) => e.name)).toContain('Remada Invertida');
-  expect(group(withPullover, 'costas')).toHaveLength(5);
+  expect(group(withPullover, 'costas')).toHaveLength(6);
 
   const legs = aiService.generateLocalWorkout({ goal: 'Hipertrofia', muscleFocus: 'Pernas Completo', durationMinutes: 60, prefs: { emphasis: 'gluteos' } });
   expect(legs.composition.focus).toBe('Glúteos');
@@ -75,7 +78,7 @@ test('variedade: gerar de novo com a ficha anterior como recente troca 1-2 exerc
   const changed = b.filter((x) => !a.includes(x));
   expect(changed.length).toBeGreaterThanOrEqual(1);
   expect(changed.length).toBeLessThanOrEqual(2);
-  expect(group(second, 'costas')).toHaveLength(6);
+  expect(group(second, 'costas')).toHaveLength(7);
   const third = aiService.generateLocalWorkout({ ...req, variety: { lists: [b, a] } });
   const c = third.exercises.map((e) => e.name);
   expect(new Set(c)).not.toEqual(new Set(a));

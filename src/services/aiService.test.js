@@ -120,7 +120,7 @@ describe('exercícios próprios do aluno no gerador', () => {
     const own = names.filter((n) => /condomínio|prédio/.test(n));   // costas
     expect(own.length).toBeGreaterThanOrEqual(1);
     expect(own.length).toBeLessThanOrEqual(2);
-    expect(names.length).toBe(7);   // hipertrofia em dia de costas (45 min): 5 de costas + 2 de bíceps, com ou sem exercícios próprios
+    expect(names.length).toBe(8);   // hipertrofia em dia de costas (45 min): 6 de costas + 2 de bíceps, com ou sem exercícios próprios
     expect(w.exercises.find((e) => /condomínio/.test(e.name))?.machineImage).toMatch(/^data:image\/jpeg/);
     expect(w.exercises.every((e) => e.kind === undefined || ['strength', 'timed', 'cardio'].includes(e.kind))).toBe(true);
     expect(w.exercises.every((e) => !('kind' in e) || e.kind !== undefined)).toBe(true);   // nunca "undefined" (o Firestore recusa)

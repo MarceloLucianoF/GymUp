@@ -506,7 +506,8 @@ export const sessionSize = ({ goal, durationMinutes = 45, spec, count, experienc
   let total = durationMinutes >= 60 ? 6 : 5;
   const only = spec?.parts?.length === 1 ? spec.parts[0] : null;
   const bigDay = !!only && (['Peito e Tríceps', 'Costas e Bíceps'].includes(only.legacy) || ['peito', 'costas'].includes(only.group));
-  if (/hipertrofia/.test(plain(goal)) && bigDay) total = durationMinutes >= 60 ? 8 : durationMinutes >= 45 ? 7 : 6;
+  // Dia de peito ou costas em hipertrofia: 6-7 do grupo grande + 2 do menor (retorno de quem treina natural: 3-5 de costas era pouco).
+  if (/hipertrofia/.test(plain(goal)) && bigDay) total = durationMinutes >= 60 ? 9 : durationMinutes >= 45 ? 8 : 6;
   if (plain(experience) === 'iniciante') total = Math.min(total, 6);
   return total;
 };

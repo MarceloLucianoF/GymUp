@@ -58,7 +58,7 @@ describe('askAICoach: segurança e esclarecimento (NVIDIA principal)', () => {
     expect(second).toMatch(/Montei a ficha/);
     const w = onWorkout.mock.calls[0][0];
     expect(w.composition.focus).toBe('Costas e Bíceps');
-    expect(w.exercises.length).toBe(7);
+    expect(w.exercises.length).toBe(8);   // 45 min: 6 de costas + 2 de bíceps
   });
 
   test('depois da pergunta, outra dúvida qualquer segue normal (não vira ficha)', async () => {

@@ -403,6 +403,14 @@ const GOAL_DEFAULTS = {
 };
 export const defaultsForGoal = (goal) => GOAL_DEFAULTS[goal] || { sets: 3, reps: '8-12', rest: 60 };
 
+// Hipertrofia: multiarticular com mais séries e descanso; isolador com mais repetições (o guia pede para não repetir a mesma prescrição).
+const ISOLATION_RE = /crucifixo|crossover|peck|voador|eleva[cç][aã]o|rosca|tr[ií]ceps|extensora|flexora|panturrilha|pullover|face pull|abdutora|adutora|abdominal|crunch|encolhimento|kickback|coice/i;
+export const isIsolation = (name) => ISOLATION_RE.test(String(name || ''));
+export function prescriptionFor(goal, name) {
+  if (GOAL_DEFAULTS[goal]) return GOAL_DEFAULTS[goal];
+  return isIsolation(name) ? { sets: 3, reps: '12-15', rest: 60 } : { sets: 4, reps: '8-10', rest: 90 };
+}
+
 function extractJson(text) {
   if (text && typeof text === 'object') return text;
   const s = String(text || '');
@@ -446,7 +454,10 @@ function prepare({ spec, library, total, goal }) {
     // Prancha e cardio não seguem as repetições do objetivo: usam a prescrição do próprio exercício (segundos ou minutos).
     exercises: picks.map((e) => {
       const kind = exerciseKind(e.ref || e);
-      if (kind === 'strength') return { ...e, sets: String(e.sets ?? base.sets), reps: String(e.reps ?? base.reps), rest: e.rest ?? base.rest };
+      if (kind === 'strength') {
+        const p = prescriptionFor(goal, e.name || e.ref?.name);
+        return { ...e, sets: String(e.sets ?? p.sets), reps: String(e.reps ?? p.reps), rest: e.rest ?? p.rest };
+      }
       const own = defaultsForKind(kind);
       const refReps = parseInt(e.ref?.reps, 10);
       return { ...e, kind, sets: String(e.ref?.sets > 0 ? e.ref.sets : own.sets), reps: String(refReps > 0 ? refReps : own.reps), rest: kind === 'cardio' ? 0 : (e.ref?.rest ?? own.rest) };
@@ -467,7 +478,7 @@ export function composeLocalPlan({ spec, library, total, goal }) {
  * cai na montagem determinística: o resultado é sempre válido e só usa exercícios da biblioteca.
  */
 export async function generatePlan({ spec, library, total, goal, durationMinutes, askModel, references = [], extraPrompt = [] }) {
-  const { lib, counts, candidates, need, det, expected, base, finish, split } = prepare({ spec, library, total, goal });
+  const { lib, counts, candidates, need, det, expected, finish, split } = prepare({ spec, library, total, goal });
 
   if (typeof askModel === 'function') {
     try {
@@ -479,7 +490,8 @@ export async function generatePlan({ spec, library, total, goal, durationMinutes
         const base2 = byId.get(String(item?.id || ''));
         if (!base2 || seen.has(base2.id)) return null; // fora da biblioteca permitida ou repetido
         seen.add(base2.id);
-        return { ...base2, sets: Math.min(6, Math.max(1, Number(item.sets) || base.sets)), reps: String(item.reps || base.reps).slice(0, 20), rest: Math.min(300, Math.max(20, Number(item.rest) || base.rest)) };
+        const p = prescriptionFor(goal, base2.name);   // a IA omitiu séries/reps/descanso: usa a prescrição do guia
+        return { ...base2, sets: Math.min(6, Math.max(1, Number(item.sets) || p.sets)), reps: String(item.reps || p.reps).slice(0, 20), rest: Math.min(300, Math.max(20, Number(item.rest) || p.rest)) };
       }).filter(Boolean).slice(0, total);
       // A IA também precisa cumprir o guia (mínimos de peito/costas) e não pode devolver a mesma lista de uma ficha recente.
       const ownPicks = avoidExactRepeat(withIncluded(withOwn(aiPicks, lib), lib, spec.prefs?.include), lib, spec.prefs?.recentLists);
