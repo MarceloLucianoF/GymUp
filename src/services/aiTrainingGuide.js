@@ -16,6 +16,7 @@ Volume e sessão:
 - Pernas: agachamento ou leg press, cadeia posterior (stiff ou flexora), isoladores (extensora, abdutora) e panturrilha.
 - Ordem: multiarticulares primeiro, isoladores no fim.
 - Hipertrofia: 6-12 repetições (isoladores até 15), descanso de 60-120 s. Força: 3-6 repetições, 2-3 min. Resistência e emagrecimento: 12-20 repetições, 30-60 s. Termine as séries a 1-3 repetições da falha.
+- Séries: 4 nos multiarticulares principais (supinos, puxadas, remadas, agachamento/leg press) e 3 nos isoladores; não repita a mesma prescrição em todos os exercícios.
 - Progressão: ao fechar o topo da faixa em todas as séries com boa técnica, suba a carga 2-5% e registre.
 Ênfase por região (exemplos da biblioteca):
 - Peito superior: Supino Inclinado (halter, barra ou máquina). Médio: Supino Reto, Chest Press, Peck Deck. Inferior: Supino Declinado, Mergulho nas Paralelas, crossover de cima para baixo.
