@@ -129,16 +129,17 @@ test('auto: pula modelos 404 e usa o primeiro que responde; devolve o modelo usa
   assert.equal(data.choices[0].message.content, 'olá');
 });
 
-test('auto: lembra o último modelo que funcionou e começa por ele', async () => {
+test('auto: modelo indisponível (404) vai para o fim da fila nos próximos pedidos', async () => {
   resetRateLimit(); resetModelCache();
   let calls = [];
   const first = async (url, init) => { calls.push(bodyModel(init)); return calls.length < 2 ? statusOf(404) : okBody(); };
   await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: first });
-  const worked = calls[1];
+  const [gone, worked] = calls;
   calls = [];
   await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async (url, init) => { calls.push(bodyModel(init)); return okBody(); } });
   assert.equal(calls.length, 1);
   assert.equal(calls[0], worked);
+  assert.notEqual(calls[0], gone);
 });
 
 test('auto: 401/403/429 interrompem (trocar de modelo não ajuda) e informam o status', async () => {
@@ -209,7 +210,19 @@ test('auto: modelo que trava passa ao próximo e deixa de ser o preferido', asyn
     assert.equal(calls.length, 2);
     assert.equal(data.choices[0].message.content, 'veio do segundo');
     assert.notEqual(calls[0], calls[1]);
+    // o que travou vai para o fim da fila nos próximos pedidos; o que respondeu não "fura" a ordem medida
+    const next = [];
+    await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async (u, init) => { next.push(bodyModel(init)); return okBody(); } });
+    assert.equal(next[0], calls[1]);
   } finally { global.setTimeout = original; }
+});
+
+test('auto: a ordem medida não muda porque um modelo de baixo respondeu antes', async () => {
+  resetRateLimit(); resetModelCache();
+  await handleNvidiaRequest(request({ ...valid, model: 'google/gemma-4-31b-it' }), env, { verify: okVerify, fetchImpl: async () => okBody() });
+  const tried = [];
+  await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async (u, init) => { tried.push(bodyModel(init)); return okBody(); } });
+  assert.equal(tried[0], 'nvidia/nemotron-3.5-super-vl-120b-a12b');
 });
 
 test('modelo explícito que trava → 504 sem tentar outro', async () => {

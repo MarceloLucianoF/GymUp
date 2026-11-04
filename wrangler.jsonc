@@ -25,6 +25,9 @@
   "migrations": [{ "tag": "v1-push", "new_sqlite_classes": ["PushBox"] }],
   "vars": {
     "FIREBASE_PROJECT_ID": "workout-tracker-app-20e43",
-    "ALLOWED_ORIGINS": "https://bohtreinar.marcelo-labs.workers.dev"
-  }
+    "ALLOWED_ORIGINS": "https://bohtreinar.marcelo-labs.workers.dev",
+    "ALERT_UIDS": "seB4s8Dal7WGN0UBeS4vpfmDCBp2"
+  },
+  // Verificação da IA a cada 6 h (worker/src/aiMonitor.js): alerta por push aos ALERT_UIDS se cair ou ficar lenta.
+  "triggers": { "crons": ["0 */6 * * *"] }
 }
