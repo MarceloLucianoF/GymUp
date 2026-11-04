@@ -184,8 +184,8 @@ test('auto: NVIDIA_MODEL (variável do Worker) é tentado primeiro quando permit
   resetRateLimit(); resetModelCache();
   let calls = [];
   const spy = async (url, init) => { calls.push(bodyModel(init)); return okBody(); };
-  await handleNvidiaRequest(request(valid), { ...env, NVIDIA_MODEL: 'nvidia/nemotron-3-super-120b-a12b' }, { verify: okVerify, fetchImpl: spy });
-  assert.equal(calls[0], 'nvidia/nemotron-3-super-120b-a12b');
+  await handleNvidiaRequest(request(valid), { ...env, NVIDIA_MODEL: 'nvidia/nemotron-3.5-bolt-e4b' }, { verify: okVerify, fetchImpl: spy });
+  assert.equal(calls[0], 'nvidia/nemotron-3.5-bolt-e4b');
 
   resetRateLimit(); resetModelCache(); calls = [];
   await handleNvidiaRequest(request(valid), { ...env, NVIDIA_MODEL: 'modelo/inventado' }, { verify: okVerify, fetchImpl: spy });
@@ -289,6 +289,9 @@ test('lista enxuta: modelos aposentados não são aceitos e nenhuma tentativa em
   assert.equal(dead.status, 400);
   const tried = [];
   await handleNvidiaRequest(request(valid), env, { verify: okVerify, fetchImpl: async (u, init) => { tried.push(JSON.parse(init.body).model); return statusOf(404); } });
-  assert.ok(tried.length <= 4);
-  assert.deepEqual(new Set(tried), new Set(['nvidia/nemotron-3-super-120b-a12b', 'openai/gpt-oss-20b', 'google/gemma-4-31b-it', 'z-ai/glm-5.3-flash']));
+  assert.ok(tried.length <= 5);
+  // Ordem medida em 03/11/2026: o mais rápido primeiro; candidatos de teste (PROBE_MODELS) nunca entram no modo auto.
+  assert.deepEqual(tried, ['nvidia/nemotron-3.5-super-vl-120b-a12b', 'mistralai/mistral-large-4-1t-a52b', 'nvidia/nemotron-3.5-lightning-30b-a3b', 'nvidia/nemotron-3.5-bolt-e4b', 'google/gemma-4-31b-it']);
+  const retired = await handleNvidiaRequest(request({ ...valid, model: 'nvidia/nemotron-3-super-120b-a12b' }), env, { verify: okVerify, fetchImpl: async () => okBody() });
+  assert.equal(retired.status, 400);
 });

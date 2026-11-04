@@ -932,3 +932,8 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 
 ## Atualização — aviso aos treinadores (30/10/2026)
 - Painel do treinador mostra uma vez o aviso "Novidade: o aluno escolhe o que você vê" (medidas/fotos só com autorização, treinos próprios do aluno, botão Lembrar, análise por IA na aba Saúde e como pedir a autorização). Fecha em "Entendi" ou no X; a escolha fica no aparelho (`localStorage`, por treinador e por versão do aviso em `NOTICE_ID`, `src/components/coach/CoachNotice.jsx`). Para um aviso novo, trocar o `NOTICE_ID`.
+
+## Atualização — IA dando timeout: fila de modelos da NVIDIA (03/11/2026)
+- **Sintoma:** a IA não gerava e dava tempo esgotado. **Causa:** a chave está válida (sem 401/403), mas o primeiro modelo da fila (`nemotron-3-super-120b-a12b`) passou a dar HTTP 404 e os seguintes (`gpt-oss-20b`, `glm-5.3-flash`) passavam de 20 s até para responder "OK"; só o Gemma 4 respondia, perto de 31 s no modo auto, e pedidos maiores estouravam o prazo total.
+- **Medição** (Worker de produção, conta fictícia apagada, `~/bohtreinar-ops/ai_check.cjs`): `nemotron-3.5-super-vl-120b-a12b` 3,7 s (ficha curta) e 23 s (semana de 5 dias, 2200 tokens), estável em duas rodadas; `mistral-large-4` 10-13 s / 44 s; `nemotron-3.5-lightning` 5,8 s no curto; `nemotron-3.5-bolt` 10-12 s / 52 s; Gemma 4 17 s. 404 para a chave: kimi-k2.6, gemma-3-12b, mistral-7b, phi-3.5-moe. Lentos (>20 s no curto): deepseek-v4.1-flash, nemotron-3-ultra, step-5-preview, minimax-m3.1-flash.
+- **Fila nova do modo auto:** super-vl → mistral-large-4 → lightning → bolt → gemma-4. `PROBE_MODELS` lista candidatos aceitos só pelo nome (para medir antes de promover). `scripts/check-nvidia-models.mjs` voltou a ler as duas listas.
