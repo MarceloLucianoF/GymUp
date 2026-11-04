@@ -956,3 +956,11 @@ O painel (`/dashboard`) foi desenhado quando havia pouca informação; agora há
 - **Testes:** `aiSafety`, `aiTrainingGuide`, `aiGuideGenerator`, `aiChatSafety` (fetch simulado, nenhuma API paga), `exerciseSlots`, `aiVariety`, `WorkoutCustomizer`; `aiService.test.js` atualizado (costas em 45 min agora tem 7 exercícios).
 - **Pendente:** validação visual do "Personalizar" e dos chips do chat em 390 px nos dois temas não executada; o filtro é por padrões (palavras novas ou gírias podem passar, e o system prompt é a segunda barreira); a Semana não tem "Personalizar" próprio (usa experiência e dias do perfil e as fichas recentes); a divisão de 6 dias ainda termina com um dia de corpo todo.
 - **Volume e prescrição (04/11/2026, retorno do aluno natural):** dia de peito ou costas em hipertrofia passou a ter 8 exercícios em 45 min (6 do grupo + 2 do menor) e 9 em 60 min (7 + 2). Prescrição deixou de ser 3×8-12 para tudo: multiarticular 4×8-10 com 90 s, isolador 3×12-15 com 60 s (`prescriptionFor` em `workoutComposer.js`; vale para a montagem local e quando a IA omite séries/reps). O guia da IA pede o mesmo.
+
+## Atualização — programa do catálogo (04/11/2026)
+- As fichas globais do catálogo (pacote `hffxv0ZYYDi6iXJBTqF9`, que todo aluno novo vê no "Treino de hoje") foram trocadas, com aprovação do dono, via MCP (prévia e depois `apply`), mantendo os mesmos IDs (atribuições existentes recebem a versão nova):
+  - **A: Peito, Ombros e Tríceps** (8): supino inclinado, reto e declinado + crossover (peito superior, médio e inferior), desenvolvimento, elevação lateral, 2 de tríceps.
+  - **B: Costas e Bíceps** (9): barra fixa, puxada aberta, remada curvada, cavalinho, remada neutra, pullover, crucifixo inverso + 2 de bíceps.
+  - **C: Pernas Completo** (8): hack, afundo, extensora, mesa e cadeira flexora, hip thrust, panturrilha, crunch.
+  - Prescrição por exercício (multiarticular 4×8-10 com 90-120 s; isolador 3×12-15 com 45-60 s). Antes: A peito+dorsal (3 de costas), B pernas+ombros, C braços+core.
+- Conferido no app (conta fictícia apagada): Home sugere "Treino A: Peito, Ombros e Tríceps"; Treino B com 9 exercícios e imagens.
