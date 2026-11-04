@@ -130,10 +130,18 @@ export async function disablePush({ all = false } = {}) {
   } catch (_) { return false; /* sem rede: a inscrição morta é limpa no próximo envio */ }
 }
 
-/** Agenda o aviso de fim do descanso no servidor (endsAt em ms) ou cancela (null). */
-export function scheduleRestPush(endsAt, { title, body } = {}) {
-  if (!pushSupported() || !pushEnabled()) return;   // no app Android o aviso chega pelo FCM
-  api('rest', 'POST', { endsAt: endsAt || null, title, body }).catch(() => { /* o aviso local continua valendo */ });
+/**
+ * Agenda o aviso de fim do descanso no servidor (endsAt em ms) ou cancela (null).
+ * Devolve true só quando o servidor confirmou o agendamento e o aparelho pode mostrar notificações: é isso que permite ao app
+ * não repetir o aviso (ver utils/restAlert.js). Qualquer falha devolve false e o aviso local continua valendo.
+ */
+export async function scheduleRestPush(endsAt, { title, body } = {}) {
+  if (!pushSupported() || !pushEnabled()) return false;   // no app Android o aviso chega pelo FCM
+  if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') return false;
+  try {
+    const r = await api('rest', 'POST', { endsAt: endsAt || null, title, body });
+    return !!endsAt && r?.scheduled === true;
+  } catch (_) { return false; }
 }
 
 /** Pede ao Worker para avisar o autor de um post curtido (ele confere a curtida no Firestore). */

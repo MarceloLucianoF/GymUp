@@ -25,7 +25,6 @@ const jwkOf = (env) => {
   } catch { return null; }
 };
 const sha = async (text) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map((b) => b.toString(16).padStart(2, '0')).join('');
-const LIKE_GAP_MS = 30 * 1000;
 const DAY_MS = 24 * 3600 * 1000;
 const INACTIVITY_DAYS = [7, 14];
 const NUDGE_GAP_MS = DAY_MS;
@@ -43,7 +42,9 @@ export function inactivityPayload(info, at) {
   const coach = info.coachName ? ` Seu treinador ${info.coachName} está esperando você.` : '';
   return { kind: 'inactivity', title: 'Bora voltar?', body: `Faz ${days} dias do seu último treino.${coach}`, url: '/home', tag: 'bt-inactivity' };
 }
-const LIKES_PER_HOUR = 20;
+// Anti-spam para quem recebe (o resto fica na aba Atividade): curtida no máximo 1 a cada 5 min e 4 por hora;
+// comentário (mais importante) 1 por minuto e 10 por hora. Cotas separadas: uma rajada de curtidas não cala um comentário.
+export const SOCIAL_LIMITS = { like: { gapMs: 5 * 60 * 1000, perHour: 4 }, comment: { gapMs: 60 * 1000, perHour: 10 } };
 
 async function limited(binding, key) {
   if (!binding?.limit) return null;
@@ -293,20 +294,32 @@ export class PushBox {
       return json(200, { sent: false, reason: 'no-subscription' });
     }
     if (op === 'like') {
-      // Uma vez por pessoa e post, no máximo 1 aviso a cada 30 s e 20 por hora para quem recebe (o resto aparece na aba Atividade).
-      // Curtidas e comentários têm cotas separadas (bucket), para uma rajada de um não calar o outro.
+      // Uma vez por pessoa e post, dentro de SOCIAL_LIMITS para quem recebe (curtidas e comentários com cotas separadas).
       const b = data.bucket === 'comment' ? 'comment' : 'like';
+      const lim = SOCIAL_LIMITS[b];
       const seenKey = b === 'like' ? 'likesSeen' : 'commentsSeen';
       const timesKey = b === 'like' ? 'likeTimes' : 'commentTimes';
-      const seen = (await this.state.storage.get(seenKey)) || [];
-      if (seen.includes(data.key)) return json(200, { sent: 0, reason: 'repetida' });
+      // Confere e reserva a vaga de uma vez só (exclusivo): o envio libera o DO para outra requisição, e duas curtidas
+      // juntas furariam o limite. Se nada for entregue, a vaga é devolvida.
       const now = Date.now();
-      const recent = ((await this.state.storage.get(timesKey)) || []).filter((t) => now - t < 3600 * 1000);
-      if (recent.length >= LIKES_PER_HOUR || (recent.length && now - recent[recent.length - 1] < LIKE_GAP_MS)) return json(200, { sent: 0, reason: 'limite' });
-      const sent = await this.deliver(data.payload, 24 * 3600, 'low');
-      if (sent > 0) {
+      const reserve = async () => {
+        const seen = (await this.state.storage.get(seenKey)) || [];
+        if (seen.includes(data.key)) return 'repetida';
+        const recent = ((await this.state.storage.get(timesKey)) || []).filter((t) => now - t < 3600 * 1000);
+        if (recent.length >= lim.perHour || (recent.length && now - recent[recent.length - 1] < lim.gapMs)) return 'limite';
         await this.state.storage.put(seenKey, [...seen, data.key].slice(-300));
         await this.state.storage.put(timesKey, [...recent, now]);
+        return null;
+      };
+      const refused = this.state.blockConcurrencyWhile ? await this.state.blockConcurrencyWhile(reserve) : await reserve();
+      if (refused) return json(200, { sent: 0, reason: refused });
+      let sent = 0;
+      try { sent = await this.deliver(data.payload, 24 * 3600, 'low'); }
+      finally {
+        if (!(sent > 0)) {
+          await this.state.storage.put(seenKey, ((await this.state.storage.get(seenKey)) || []).filter((k) => k !== data.key));
+          await this.state.storage.put(timesKey, ((await this.state.storage.get(timesKey)) || []).filter((t) => t !== now));
+        }
       }
       return json(200, { sent });
     }

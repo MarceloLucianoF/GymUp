@@ -6,18 +6,20 @@ import { useNotifications } from '../../hooks/useNotifications';
 import useBodyScrollLock from '../../hooks/useBodyScrollLock';
 
 // Overlay de descanso (tela cheia). Não fecha por clique fora para evitar pulos acidentais.
-const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust, onGoHome }) => {
+const RestTimer = ({ endTime, duration, onFinish, onClose, onAdjust, onGoHome, localAlert = true }) => {
     useBodyScrollLock();
     const { user } = useAuthContext();
     const { prefs, notify } = useNotifications(user?.uid);
 
-    // Ao terminar: notificação local se a aba estiver oculta (vibração e bipe respeitam as preferências do perfil, aplicadas no hook).
+    // Ao terminar: notificação local se a aba estiver oculta e nenhum outro canal avisar (localAlert: ver utils/restAlert.js).
     const handleFinish = useCallback(() => {
-        if (prefs.restDone && typeof document !== 'undefined' && document.hidden) {
+        // localAlert pode ser função: a decisão é lida na hora em que o descanso acaba (o push pode ter sido confirmado depois).
+        const allowLocal = typeof localAlert === 'function' ? localAlert() : localAlert;
+        if (allowLocal && prefs.restDone && typeof document !== 'undefined' && document.hidden) {
             notify('Descanso concluído', 'Próxima série!', { tag: 'rest-done' });
         }
         onFinish();
-    }, [prefs.restDone, notify, onFinish]);
+    }, [localAlert, prefs.restDone, notify, onFinish]);
 
     const { remaining, isPaused, togglePause } = useRestTimer({ endTime, onFinish: handleFinish, onAdjust, vibrate: prefs.vibrate, sound: prefs.sound });
 
